@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Турнирная таблица</h2>
+<table>
+    <tr><th>Место</th><th>Игрок</th><th>Очки</th></tr>
+    {% for row in table %}
+    <tr><td>{{ row.place }}</td><td>{{ row.username }}</td><td>{{ row.points }}</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

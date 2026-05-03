@@ -1,0 +1,547 @@
+# football_site/app.py
+import os
+import sqlite3
+import threading
+import time
+from datetime import datetime, timedelta, timezone
+import requests
+import schedule
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+
+# ---------- НАСТРОЙКИ ----------
+API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
+LEAGUE_IDS = [2000]                        # ЧМ-2026, можно добавить другие лиги через запятую
+INVITE_CODE = "FIFA2026"                  # инвайт-код
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123"
+MSK_OFFSET = 3                            # UTC+3
+DATABASE = "site.db"
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+# ---------- РАБОТА С БД ----------
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_match_id INTEGER UNIQUE,
+            home_team TEXT,
+            away_team TEXT,
+            kickoff_time TEXT,
+            deadline TEXT,
+            status TEXT DEFAULT 'SCHEDULED',
+            home_score INTEGER,
+            away_score INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS predictions (
+            user_id INTEGER,
+            match_id INTEGER,
+            home_goals INTEGER,
+            away_goals INTEGER,
+            points INTEGER DEFAULT 0,
+            UNIQUE(user_id, match_id),
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(match_id) REFERENCES matches(id)
+        );
+    ''')
+    # Создаём админа, если его ещё нет
+    cur.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))
+    if not cur.fetchone():
+        cur.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)",
+                    (ADMIN_USERNAME, ADMIN_PASSWORD))
+    conn.commit()
+    conn.close()
+
+# ---------- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ----------
+@app.before_request
+def load_user():
+    g.is_admin = False
+    if 'user_id' in session:
+        conn = get_db()
+        user = conn.execute("SELECT is_admin FROM users WHERE id = ?",
+                            (session['user_id'],)).fetchone()
+        conn.close()
+        if user and user['is_admin'] == 1:
+            g.is_admin = True
+
+# ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        conn = get_db()
+        user = conn.execute("SELECT is_admin FROM users WHERE id = ?",
+                            (session['user_id'],)).fetchone()
+        conn.close()
+        if not user or user['is_admin'] != 1:
+            flash("Доступ запрещён", "error")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated
+
+def msk_now():
+    """Текущее время в UTC с timezone"""
+    return datetime.now(timezone.utc)
+
+def to_msk(utc_time_str):
+    """Преобразует ISO-строку в читаемое время МСК"""
+    if not utc_time_str:
+        return "—"
+    # Убираем возможный Z на конце и парсим
+    clean_str = utc_time_str.replace('Z', '+00:00')
+    dt_utc = datetime.fromisoformat(clean_str)
+    dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+    return dt_msk.strftime("%d.%m %H:%M МСК")
+
+def parse_utc_time(utc_str):
+    """Парсит время из БД всегда как UTC"""
+    if not utc_str:
+        return None
+    clean_str = utc_str.replace('Z', '+00:00')
+    return datetime.fromisoformat(clean_str)
+
+def is_before_deadline(match):
+    """Проверяет, что дедлайн ещё не наступил"""
+    deadline = parse_utc_time(match['deadline'])
+    return msk_now() < deadline
+
+def calculate_points(real_home, real_away, pred_home, pred_away):
+    """Начисление очков по правилам ТЗ"""
+    if real_home is None or real_away is None:
+        return 0
+    real_diff = real_home - real_away
+    pred_diff = pred_home - pred_away
+
+    def outcome(diff):
+        if diff > 0: return 1
+        elif diff == 0: return 0
+        else: return -1
+
+    real_out = outcome(real_diff)
+    pred_out = outcome(pred_diff)
+
+    # 1. Точный счёт
+    if real_home == pred_home and real_away == pred_away:
+        if abs(real_diff) >= 3:
+            return 11
+        else:
+            return 10
+
+    # 2. Исход + точная разница
+    if real_out == pred_out and real_diff == pred_diff:
+        return 7
+
+    # 3. Исход + ошибка в разнице на 1 гол
+    if real_out == pred_out and abs(real_diff - pred_diff) == 1:
+        return 5
+
+    # 4. Исход + обе разницы >=3 (ошибка >1)
+    if real_out == pred_out and abs(real_diff) >= 3 and abs(pred_diff) >= 3:
+        return 4
+
+    # 5. Просто угадан исход (все остальные случаи)
+    if real_out == pred_out:
+        return 3
+
+    return 0
+
+def calculate_all_points():
+    """Пересчёт очков для всех завершённых матчей"""
+    conn = get_db()
+    finished = conn.execute(
+        "SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'"
+    ).fetchall()
+    for match in finished:
+        preds = conn.execute(
+            "SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = ?",
+            (match['id'],)
+        ).fetchall()
+        for p in preds:
+            pts = calculate_points(match['home_score'], match['away_score'],
+                                   p['home_goals'], p['away_goals'])
+            conn.execute(
+                "UPDATE predictions SET points = ? WHERE user_id = ? AND match_id = ?",
+                (pts, p['user_id'], match['id'])
+            )
+    conn.commit()
+    conn.close()
+
+# ---------- РАБОТА С API ----------
+def fetch_matches():
+    """Получает матчи из football-data.org"""
+    headers = {'X-Auth-Token': API_KEY}
+    all_matches = []
+    for league_id in LEAGUE_IDS:
+        url = f"https://api.football-data.org/v4/competitions/{league_id}/matches"
+        params = {'status': 'SCHEDULED,TIMED,FINISHED,IN_PLAY,PAUSED,POSTPONED,CANCELLED'}
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                all_matches.extend(data.get('matches', []))
+            else:
+                print(f"API error: {resp.status_code}")
+        except Exception as e:
+            print(f"API request failed: {e}")
+    return all_matches
+
+def update_matches():
+    """Синхронизация: добавляет новые матчи, обновляет статусы/счёт"""
+    matches_data = fetch_matches()
+    if not matches_data:
+        return
+    conn = get_db()
+    for match in matches_data:
+        api_id = match['id']
+        home_team = match['homeTeam']['name']
+        away_team = match['awayTeam']['name']
+        utc_time = match['utcDate']  # ISO 8601 с Z
+        status = match['status']
+
+        # Результат (берём extraTime, если есть, иначе fullTime)
+        score = None
+        if status == 'FINISHED':
+            score_data = match.get('score', {})
+            extra = score_data.get('extraTime')
+            full = score_data.get('fullTime')
+            score = extra if extra and extra.get('home') is not None else full
+
+        home_score = None
+        away_score = None
+        if score and score.get('home') is not None and score.get('away') is not None:
+            home_score = score['home']
+            away_score = score['away']
+
+        # Парсим время матча
+        clean_time = utc_time.replace('Z', '+00:00')
+        kickoff_utc = datetime.fromisoformat(clean_time)
+        kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
+        
+        # Расчёт дедлайна
+        deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+        if deadline_msk >= kickoff_msk:
+            # Матч начинается раньше 12:00 МСК -> дедлайн за 1 час до начала
+            deadline_msk = kickoff_msk - timedelta(hours=1)
+        deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+
+        # Сохраняем в БД в ISO формате без timezone (для простоты)
+        existing = conn.execute(
+            "SELECT id, status FROM matches WHERE api_match_id = ?", (api_id,)
+        ).fetchone()
+
+        if not existing:
+            conn.execute(
+                """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (api_id, home_team, away_team,
+                 kickoff_utc.isoformat(), deadline_utc.isoformat(),
+                 status, home_score, away_score)
+            )
+        else:
+            conn.execute(
+                """UPDATE matches SET status = ?, home_score = ?, away_score = ?,
+                   kickoff_time = ?, deadline = ?
+                   WHERE api_match_id = ?""",
+                (status, home_score, away_score,
+                 kickoff_utc.isoformat(), deadline_utc.isoformat(), api_id)
+            )
+            # Если матч перенесён/отменён – сбрасываем очки
+            if status in ('POSTPONED', 'CANCELLED'):
+                conn.execute(
+                    "UPDATE predictions SET points = 0 WHERE match_id = ?",
+                    (existing['id'],)
+                )
+    conn.commit()
+    conn.close()
+    calculate_all_points()
+
+def run_scheduler():
+    """Фоновый поток для периодического обновления"""
+    schedule.every().hour.at(":00").do(update_matches)
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+# ---------- МАРШРУТЫ ----------
+@app.route('/')
+@login_required
+def index():
+    conn = get_db()
+    now = msk_now()
+    matches = conn.execute(
+        """SELECT id, home_team, away_team, kickoff_time, deadline, status
+           FROM matches
+           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
+        (now.isoformat(),)
+    ).fetchall()
+    conn.close()
+    return render_template('index.html', matches=matches, to_msk=to_msk)
+
+@app.route('/predict', methods=['GET', 'POST'])
+@login_required
+def predict():
+    conn = get_db()
+    now = msk_now()
+    if request.method == 'POST':
+        match_id = request.form.get('match_id')
+        home_goals = request.form.get('home_goals')
+        away_goals = request.form.get('away_goals')
+
+        # Валидация чисел
+        try:
+            home_goals = int(home_goals)
+            away_goals = int(away_goals)
+            if home_goals < 0 or away_goals < 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            flash("Некорректный ввод: голы должны быть целыми неотрицательными числами", "error")
+            return redirect(url_for('predict'))
+
+        # Проверка матча
+        match = conn.execute(
+            "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = ?",
+            (match_id,)
+        ).fetchone()
+        if not match or match['status'] not in ('SCHEDULED', 'TIMED') or \
+           not is_before_deadline(match):
+            flash("Ставки на этот матч закрыты", "error")
+            return redirect(url_for('predict'))
+
+        # Сохраняем/обновляем прогноз
+        conn.execute(
+            """INSERT OR REPLACE INTO predictions (user_id, match_id, home_goals, away_goals)
+               VALUES (?, ?, ?, ?)""",
+            (session['user_id'], match_id, home_goals, away_goals)
+        )
+        conn.commit()
+        flash(f"✅ Ставка на матч {match['home_team']} – {match['away_team']}: {home_goals}:{away_goals} принята", "success")
+        return redirect(url_for('my_predictions'))
+
+    # GET: показать форму
+    matches = conn.execute(
+        """SELECT id, home_team, away_team, kickoff_time, deadline
+           FROM matches
+           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
+        (now.isoformat(),)
+    ).fetchall()
+    conn.close()
+    return render_template('predict.html', matches=matches, to_msk=to_msk)
+
+@app.route('/my-predictions')
+@login_required
+def my_predictions():
+    conn = get_db()
+    now = msk_now()
+    uid = session['user_id']
+
+    # Ожидающие (дедлайн не прошёл)
+    pending = conn.execute(
+        """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals,
+                  m.kickoff_time, m.deadline
+           FROM predictions p JOIN matches m ON p.match_id = m.id
+           WHERE p.user_id = ? AND m.deadline > ?""",
+        (uid, now.isoformat())
+    ).fetchall()
+
+    # Ожидают результата (дедлайн прошёл, не FINISHED и не отменён)
+    awaiting = conn.execute(
+        """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
+           FROM predictions p JOIN matches m ON p.match_id = m.id
+           WHERE p.user_id = ? AND m.deadline <= ? AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
+        (uid, now.isoformat())
+    ).fetchall()
+
+    # Завершённые
+    finished = conn.execute(
+        """SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score,
+                  p.home_goals, p.away_goals, p.points
+           FROM predictions p JOIN matches m ON p.match_id = m.id
+           WHERE p.user_id = ? AND m.status = 'FINISHED'""",
+        (uid,)
+    ).fetchall()
+
+    # Отменённые/перенесённые
+    cancelled = conn.execute(
+        """SELECT m.id, m.home_team, m.away_team, m.status, p.points
+           FROM predictions p JOIN matches m ON p.match_id = m.id
+           WHERE p.user_id = ? AND m.status IN ('POSTPONED', 'CANCELLED')""",
+        (uid,)
+    ).fetchall()
+    conn.close()
+    return render_template('my_predictions.html',
+                           pending=pending, awaiting=awaiting,
+                           finished=finished, cancelled=cancelled, to_msk=to_msk)
+
+@app.route('/table')
+@login_required
+def table():
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT u.username, COALESCE(SUM(p.points), 0) as total
+           FROM users u LEFT JOIN predictions p ON u.id = p.user_id
+           GROUP BY u.id ORDER BY total DESC"""
+    ).fetchall()
+    conn.close()
+    table_data = []
+    for idx, row in enumerate(rows, 1):
+        table_data.append({'place': idx, 'username': row['username'], 'points': row['total']})
+    return render_template('table.html', table=table_data)
+
+@app.route('/admin', methods=['GET', 'POST'])
+@admin_required
+def admin():
+    conn = get_db()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'update_matches':
+            update_matches()
+            flash("Данные матчей обновлены из API", "success")
+        elif action == 'add_match':
+            home = request.form['home_team']
+            away = request.form['away_team']
+            try:
+                kickoff_msk_str = request.form['kickoff_msk']  # "YYYY-MM-DD HH:MM"
+                dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
+                utc = dt_msk - timedelta(hours=MSK_OFFSET)
+                # Рассчитываем дедлайн
+                deadline_msk = dt_msk.replace(hour=11, minute=0)
+                if deadline_msk >= dt_msk:
+                    deadline_msk = dt_msk - timedelta(hours=1)
+                deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+                conn.execute(
+                    """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status)
+                       VALUES (?, ?, ?, ?, 'SCHEDULED')""",
+                    (home, away, utc.isoformat(), deadline_utc.isoformat())
+                )
+                conn.commit()
+                flash(f"Матч {home} – {away} добавлен", "success")
+            except:
+                flash("Неверный формат даты", "error")
+        elif action == 'set_result':
+            match_id = request.form['match_id']
+            home_score = request.form['home_score']
+            away_score = request.form['away_score']
+            try:
+                home_score = int(home_score)
+                away_score = int(away_score)
+            except:
+                flash("Результат должен быть числами", "error")
+                conn.close()
+                return redirect(url_for('admin'))
+            conn.execute(
+                "UPDATE matches SET status='FINISHED', home_score=?, away_score=? WHERE id=?",
+                (home_score, away_score, match_id)
+            )
+            conn.commit()
+            calculate_all_points()
+            flash("Результат внесён, очки пересчитаны", "success")
+        elif action == 'cancel_match':
+            match_id = request.form['match_id']
+            conn.execute(
+                "UPDATE matches SET status='CANCELLED' WHERE id=?",
+                (match_id,)
+            )
+            conn.execute(
+                "UPDATE predictions SET points=0 WHERE match_id=?",
+                (match_id,)
+            )
+            conn.commit()
+            flash("Матч отменён, очки сброшены", "success")
+
+    # Получаем данные для отображения
+    free_matches = conn.execute(
+        "SELECT id, home_team, away_team, kickoff_time, status FROM matches "
+        "WHERE status IN ('SCHEDULED', 'TIMED')"
+    ).fetchall()
+    all_matches = conn.execute(
+        "SELECT id, home_team, away_team, kickoff_time, status FROM matches"
+    ).fetchall()
+    users = conn.execute("SELECT id, username FROM users").fetchall()
+    conn.close()
+    return render_template('admin.html',
+                           free_matches=free_matches,
+                           all_matches=all_matches,
+                           users=users)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        conn = get_db()
+        user = conn.execute(
+            "SELECT id FROM users WHERE username = ? AND password = ?",
+            (username, password)
+        ).fetchone()
+        conn.close()
+        if user:
+            session['user_id'] = user['id']
+            session.permanent = True
+            app.permanent_session_lifetime = timedelta(days=7)
+            return redirect(url_for('index'))
+        flash("Неверное имя или пароль", "error")
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        invite = request.form['invite_code']
+        if invite != INVITE_CODE:
+            flash("Неверный инвайт-код", "error")
+            return redirect(url_for('register'))
+        conn = get_db()
+        try:
+            conn.execute(
+                "INSERT INTO users (username, password) VALUES (?, ?)",
+                (username, password)
+            )
+            conn.commit()
+            flash("Регистрация успешна, теперь войдите", "success")
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash("Такой пользователь уже существует", "error")
+        conn.close()
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('login'))
+
+# ---------- ЗАПУСК ----------
+if __name__ == '__main__':
+    init_db()
+    update_matches()
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    # Koyeb требует хост 0.0.0.0 и порт из переменной окружения
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)

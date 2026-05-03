@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Сделать ставку</h2>
+{% if matches %}
+<form method="post">
+    <label>Выберите матч</label>
+    <select name="match_id" required>
+        {% for m in matches %}
+        <option value="{{ m.id }}">{{ m.home_team }} – {{ m.away_team }} (дедлайн {{ to_msk(m.deadline) }})</option>
+        {% endfor %}
+    </select>
+    <label>Голы хозяев</label>
+    <input type="number" name="home_goals" min="0" required>
+    <label>Голы гостей</label>
+    <input type="number" name="away_goals" min="0" required>
+    <button type="submit">Отправить</button>
+</form>
+{% else %}
+<p>Нет доступных матчей для ставок.</p>
+{% endif %}
+{% endblock %}

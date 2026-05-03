@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Доступные матчи для ставок</h2>
+{% if matches %}
+  {% for m in matches %}
+    <p>
+      <b>[{{ m.id }}] {{ m.home_team }} – {{ m.away_team }}</b><br>
+      Начало: {{ to_msk(m.kickoff_time) }}<br>
+      Дедлайн ставок: {{ to_msk(m.deadline) }}
+    </p>
+  {% endfor %}
+{% else %}
+  <p>Нет доступных матчей.</p>
+{% endif %}
+{% endblock %}
