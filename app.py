@@ -118,6 +118,8 @@ def to_msk(utc_time_str):
         dt_utc = datetime.fromisoformat(clean_str)
     except:
         dt_utc = datetime.fromisoformat(utc_time_str)
+    if dt_utc.tzinfo is None:
+        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
     dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
     return dt_msk.strftime("%d.%m %H:%M МСК")
 
@@ -126,14 +128,22 @@ def parse_utc_time(utc_str):
         return None
     clean_str = utc_str.replace('Z', '+00:00')
     try:
-        return datetime.fromisoformat(clean_str)
+        dt = datetime.fromisoformat(clean_str)
     except:
         dt = datetime.fromisoformat(utc_str)
-        return dt.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 def is_before_deadline(match):
     deadline = parse_utc_time(match['deadline'])
-    return msk_now() < deadline
+    now = msk_now()
+    # Убираем timezone у обоих перед сравнением
+    if deadline.tzinfo is not None:
+        deadline = deadline.replace(tzinfo=None)
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
+    return now < deadline
 
 def calculate_points(real_home, real_away, pred_home, pred_away):
     if real_home is None or real_away is None:
