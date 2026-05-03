@@ -3,7 +3,7 @@ import os
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import requests
 import schedule
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
@@ -107,45 +107,42 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-def msk_now():
-    return datetime.now(timezone.utc)
+def utc_now():
+    """Текущее время в UTC без timezone (naive)"""
+    return datetime.utcnow()
 
 def to_msk(utc_time_str):
+    """Преобразует ISO-строку в читаемое время МСК"""
     if not utc_time_str:
         return "—"
-    clean_str = utc_time_str.replace('Z', '+00:00')
+    # Убираем всё что связано с timezone
+    clean_str = utc_time_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
     try:
         dt_utc = datetime.fromisoformat(clean_str)
     except:
         dt_utc = datetime.fromisoformat(utc_time_str)
-    if dt_utc.tzinfo is None:
-        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
     dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
     return dt_msk.strftime("%d.%m %H:%M МСК")
 
 def parse_utc_time(utc_str):
+    """Парсит время из БД как наивное UTC"""
     if not utc_str:
         return None
-    clean_str = utc_str.replace('Z', '+00:00')
+    clean_str = utc_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
     try:
-        dt = datetime.fromisoformat(clean_str)
+        return datetime.fromisoformat(clean_str)
     except:
-        dt = datetime.fromisoformat(utc_str)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
+        return datetime.fromisoformat(utc_str)
 
 def is_before_deadline(match):
+    """Проверяет, что дедлайн ещё не наступил"""
     deadline = parse_utc_time(match['deadline'])
-    now = msk_now()
-    # Убираем timezone у обоих перед сравнением
-    if deadline.tzinfo is not None:
-        deadline = deadline.replace(tzinfo=None)
-    if now.tzinfo is not None:
-        now = now.replace(tzinfo=None)
-    return now < deadline
+    if deadline is None:
+        return False
+    return utc_now() < deadline
 
 def calculate_points(real_home, real_away, pred_home, pred_away):
+    """Начисление очков по правилам ТЗ"""
     if real_home is None or real_away is None:
         return 0
     real_diff = real_home - real_away
@@ -180,6 +177,7 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
     return 0
 
 def calculate_all_points():
+    """Пересчёт очков для всех завершённых матчей"""
     conn = get_db()
     finished = conn.execute(
         "SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'"
@@ -226,7 +224,7 @@ def update_matches():
         api_id = match['id']
         home_team = match['homeTeam']['name']
         away_team = match['awayTeam']['name']
-        utc_time = match['utcDate']
+        utc_time = match['utcDate'].replace('Z', '')
         status = match['status']
 
         score = None
@@ -242,8 +240,7 @@ def update_matches():
             home_score = score['home']
             away_score = score['away']
 
-        clean_time = utc_time.replace('Z', '+00:00')
-        kickoff_utc = datetime.fromisoformat(clean_time)
+        kickoff_utc = datetime.fromisoformat(utc_time)
         kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
         
         deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
@@ -292,7 +289,7 @@ def run_scheduler():
 @login_required
 def index():
     conn = get_db()
-    now = msk_now()
+    now = utc_now()
     matches = conn.execute(
         """SELECT id, home_team, away_team, kickoff_time, deadline, status
            FROM matches
@@ -306,7 +303,7 @@ def index():
 @login_required
 def predict():
     conn = get_db()
-    now = msk_now()
+    now = utc_now()
     if request.method == 'POST':
         match_id = request.form.get('match_id')
         home_goals = request.form.get('home_goals')
@@ -352,7 +349,7 @@ def predict():
 @login_required
 def my_predictions():
     conn = get_db()
-    now = msk_now()
+    now = utc_now()
     uid = session['user_id']
 
     pending = conn.execute(
