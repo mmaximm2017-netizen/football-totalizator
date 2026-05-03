@@ -115,7 +115,6 @@ def to_msk(utc_time_str):
     """Преобразует ISO-строку в читаемое время МСК"""
     if not utc_time_str:
         return "—"
-    # Убираем всё что связано с timezone
     clean_str = utc_time_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
     try:
         dt_utc = datetime.fromisoformat(clean_str)
@@ -258,7 +257,7 @@ def update_matches():
                    home_score, away_score)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (api_id, home_team, away_team,
-                 kickoff_utc.isoformat(), deadline_utc.isoformat(),
+                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
                  status, home_score, away_score)
             )
         else:
@@ -267,7 +266,7 @@ def update_matches():
                    kickoff_time = ?, deadline = ?
                    WHERE api_match_id = ?""",
                 (status, home_score, away_score,
-                 kickoff_utc.isoformat(), deadline_utc.isoformat(), api_id)
+                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), api_id)
             )
             if status in ('POSTPONED', 'CANCELLED'):
                 conn.execute(
@@ -294,7 +293,7 @@ def index():
         """SELECT id, home_team, away_team, kickoff_time, deadline, status
            FROM matches
            WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
-        (now.isoformat(),)
+        (now.strftime("%Y-%m-%dT%H:%M:%S"),)
     ).fetchall()
     conn.close()
     return render_template('index.html', matches=matches, to_msk=to_msk)
@@ -340,7 +339,7 @@ def predict():
         """SELECT id, home_team, away_team, kickoff_time, deadline
            FROM matches
            WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
-        (now.isoformat(),)
+        (now.strftime("%Y-%m-%dT%H:%M:%S"),)
     ).fetchall()
     conn.close()
     return render_template('predict.html', matches=matches, to_msk=to_msk)
@@ -357,14 +356,14 @@ def my_predictions():
                   m.kickoff_time, m.deadline
            FROM predictions p JOIN matches m ON p.match_id = m.id
            WHERE p.user_id = ? AND m.deadline > ?""",
-        (uid, now.isoformat())
+        (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
     ).fetchall()
 
     awaiting = conn.execute(
         """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
            FROM predictions p JOIN matches m ON p.match_id = m.id
            WHERE p.user_id = ? AND m.deadline <= ? AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
-        (uid, now.isoformat())
+        (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
     ).fetchall()
 
     finished = conn.execute(
@@ -410,19 +409,17 @@ def admin():
         if action == 'update_matches':
             update_matches()
             flash("Данные матчей обновлены из API", "success")
-               elif action == 'add_match':
+        elif action == 'add_match':
             home = request.form['home_team']
             away = request.form['away_team']
             try:
                 kickoff_msk_str = request.form['kickoff_msk']
                 dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
-                # Сохраняем время как наивное UTC (без timezone)
                 utc = dt_msk - timedelta(hours=MSK_OFFSET)
                 deadline_msk = dt_msk.replace(hour=11, minute=0)
                 if deadline_msk >= dt_msk:
                     deadline_msk = dt_msk - timedelta(hours=1)
                 deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
-                # Убираем timezone — сохраняем как чистую строку без +00:00
                 conn.execute(
                     """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status)
                        VALUES (?, ?, ?, ?, 'SCHEDULED')""",
