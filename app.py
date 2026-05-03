@@ -410,21 +410,24 @@ def admin():
         if action == 'update_matches':
             update_matches()
             flash("Данные матчей обновлены из API", "success")
-        elif action == 'add_match':
+               elif action == 'add_match':
             home = request.form['home_team']
             away = request.form['away_team']
             try:
                 kickoff_msk_str = request.form['kickoff_msk']
                 dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
+                # Сохраняем время как наивное UTC (без timezone)
                 utc = dt_msk - timedelta(hours=MSK_OFFSET)
                 deadline_msk = dt_msk.replace(hour=11, minute=0)
                 if deadline_msk >= dt_msk:
                     deadline_msk = dt_msk - timedelta(hours=1)
                 deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+                # Убираем timezone — сохраняем как чистую строку без +00:00
                 conn.execute(
                     """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status)
                        VALUES (?, ?, ?, ?, 'SCHEDULED')""",
-                    (home, away, utc.isoformat(), deadline_utc.isoformat())
+                    (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"), 
+                     deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"))
                 )
                 conn.commit()
                 flash(f"Матч {home} – {away} добавлен", "success")
