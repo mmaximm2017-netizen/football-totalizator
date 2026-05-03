@@ -10,15 +10,19 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 
 # ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
-LEAGUE_IDS = [2000]                        # ЧМ-2026, можно добавить другие лиги через запятую
-INVITE_CODE = "FIFA2026"                  # инвайт-код
+LEAGUE_IDS = [2000]                        # ЧМ-2026
+INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
-MSK_OFFSET = 3                            # UTC+3
-DATABASE = "site.db"
+MSK_OFFSET = 3
+DATABASE = "/opt/render/project/src/data/site.db" if os.path.exists("/opt/render") else "site.db"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# ---------- СОЗДАЁМ ПАПКУ ДЛЯ БД НА RENDER ----------
+if "/opt/render" in os.getcwd():
+    os.makedirs("/opt/render/project/src/data", exist_ok=True)
 
 # ---------- РАБОТА С БД ----------
 def get_db():
@@ -58,7 +62,6 @@ def init_db():
             FOREIGN KEY(match_id) REFERENCES matches(id)
         );
     ''')
-    # Создаём админа, если его ещё нет
     cur.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))
     if not cur.fetchone():
         cur.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)",
@@ -105,33 +108,34 @@ def admin_required(f):
     return decorated
 
 def msk_now():
-    """Текущее время в UTC с timezone"""
     return datetime.now(timezone.utc)
 
 def to_msk(utc_time_str):
-    """Преобразует ISO-строку в читаемое время МСК"""
     if not utc_time_str:
         return "—"
-    # Убираем возможный Z на конце и парсим
     clean_str = utc_time_str.replace('Z', '+00:00')
-    dt_utc = datetime.fromisoformat(clean_str)
+    try:
+        dt_utc = datetime.fromisoformat(clean_str)
+    except:
+        dt_utc = datetime.fromisoformat(utc_time_str)
     dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
     return dt_msk.strftime("%d.%m %H:%M МСК")
 
 def parse_utc_time(utc_str):
-    """Парсит время из БД всегда как UTC"""
     if not utc_str:
         return None
     clean_str = utc_str.replace('Z', '+00:00')
-    return datetime.fromisoformat(clean_str)
+    try:
+        return datetime.fromisoformat(clean_str)
+    except:
+        dt = datetime.fromisoformat(utc_str)
+        return dt.replace(tzinfo=timezone.utc)
 
 def is_before_deadline(match):
-    """Проверяет, что дедлайн ещё не наступил"""
     deadline = parse_utc_time(match['deadline'])
     return msk_now() < deadline
 
 def calculate_points(real_home, real_away, pred_home, pred_away):
-    """Начисление очков по правилам ТЗ"""
     if real_home is None or real_away is None:
         return 0
     real_diff = real_home - real_away
@@ -145,33 +149,27 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
     real_out = outcome(real_diff)
     pred_out = outcome(pred_diff)
 
-    # 1. Точный счёт
     if real_home == pred_home and real_away == pred_away:
         if abs(real_diff) >= 3:
             return 11
         else:
             return 10
 
-    # 2. Исход + точная разница
     if real_out == pred_out and real_diff == pred_diff:
         return 7
 
-    # 3. Исход + ошибка в разнице на 1 гол
     if real_out == pred_out and abs(real_diff - pred_diff) == 1:
         return 5
 
-    # 4. Исход + обе разницы >=3 (ошибка >1)
     if real_out == pred_out and abs(real_diff) >= 3 and abs(pred_diff) >= 3:
         return 4
 
-    # 5. Просто угадан исход (все остальные случаи)
     if real_out == pred_out:
         return 3
 
     return 0
 
 def calculate_all_points():
-    """Пересчёт очков для всех завершённых матчей"""
     conn = get_db()
     finished = conn.execute(
         "SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'"
@@ -193,7 +191,6 @@ def calculate_all_points():
 
 # ---------- РАБОТА С API ----------
 def fetch_matches():
-    """Получает матчи из football-data.org"""
     headers = {'X-Auth-Token': API_KEY}
     all_matches = []
     for league_id in LEAGUE_IDS:
@@ -211,7 +208,6 @@ def fetch_matches():
     return all_matches
 
 def update_matches():
-    """Синхронизация: добавляет новые матчи, обновляет статусы/счёт"""
     matches_data = fetch_matches()
     if not matches_data:
         return
@@ -220,10 +216,9 @@ def update_matches():
         api_id = match['id']
         home_team = match['homeTeam']['name']
         away_team = match['awayTeam']['name']
-        utc_time = match['utcDate']  # ISO 8601 с Z
+        utc_time = match['utcDate']
         status = match['status']
 
-        # Результат (берём extraTime, если есть, иначе fullTime)
         score = None
         if status == 'FINISHED':
             score_data = match.get('score', {})
@@ -237,19 +232,15 @@ def update_matches():
             home_score = score['home']
             away_score = score['away']
 
-        # Парсим время матча
         clean_time = utc_time.replace('Z', '+00:00')
         kickoff_utc = datetime.fromisoformat(clean_time)
         kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
         
-        # Расчёт дедлайна
         deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
         if deadline_msk >= kickoff_msk:
-            # Матч начинается раньше 12:00 МСК -> дедлайн за 1 час до начала
             deadline_msk = kickoff_msk - timedelta(hours=1)
         deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
 
-        # Сохраняем в БД в ISO формате без timezone (для простоты)
         existing = conn.execute(
             "SELECT id, status FROM matches WHERE api_match_id = ?", (api_id,)
         ).fetchone()
@@ -271,7 +262,6 @@ def update_matches():
                 (status, home_score, away_score,
                  kickoff_utc.isoformat(), deadline_utc.isoformat(), api_id)
             )
-            # Если матч перенесён/отменён – сбрасываем очки
             if status in ('POSTPONED', 'CANCELLED'):
                 conn.execute(
                     "UPDATE predictions SET points = 0 WHERE match_id = ?",
@@ -282,7 +272,6 @@ def update_matches():
     calculate_all_points()
 
 def run_scheduler():
-    """Фоновый поток для периодического обновления"""
     schedule.every().hour.at(":00").do(update_matches)
     while True:
         schedule.run_pending()
@@ -313,7 +302,6 @@ def predict():
         home_goals = request.form.get('home_goals')
         away_goals = request.form.get('away_goals')
 
-        # Валидация чисел
         try:
             home_goals = int(home_goals)
             away_goals = int(away_goals)
@@ -323,7 +311,6 @@ def predict():
             flash("Некорректный ввод: голы должны быть целыми неотрицательными числами", "error")
             return redirect(url_for('predict'))
 
-        # Проверка матча
         match = conn.execute(
             "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = ?",
             (match_id,)
@@ -333,7 +320,6 @@ def predict():
             flash("Ставки на этот матч закрыты", "error")
             return redirect(url_for('predict'))
 
-        # Сохраняем/обновляем прогноз
         conn.execute(
             """INSERT OR REPLACE INTO predictions (user_id, match_id, home_goals, away_goals)
                VALUES (?, ?, ?, ?)""",
@@ -343,7 +329,6 @@ def predict():
         flash(f"✅ Ставка на матч {match['home_team']} – {match['away_team']}: {home_goals}:{away_goals} принята", "success")
         return redirect(url_for('my_predictions'))
 
-    # GET: показать форму
     matches = conn.execute(
         """SELECT id, home_team, away_team, kickoff_time, deadline
            FROM matches
@@ -360,7 +345,6 @@ def my_predictions():
     now = msk_now()
     uid = session['user_id']
 
-    # Ожидающие (дедлайн не прошёл)
     pending = conn.execute(
         """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals,
                   m.kickoff_time, m.deadline
@@ -369,7 +353,6 @@ def my_predictions():
         (uid, now.isoformat())
     ).fetchall()
 
-    # Ожидают результата (дедлайн прошёл, не FINISHED и не отменён)
     awaiting = conn.execute(
         """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
            FROM predictions p JOIN matches m ON p.match_id = m.id
@@ -377,7 +360,6 @@ def my_predictions():
         (uid, now.isoformat())
     ).fetchall()
 
-    # Завершённые
     finished = conn.execute(
         """SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score,
                   p.home_goals, p.away_goals, p.points
@@ -386,7 +368,6 @@ def my_predictions():
         (uid,)
     ).fetchall()
 
-    # Отменённые/перенесённые
     cancelled = conn.execute(
         """SELECT m.id, m.home_team, m.away_team, m.status, p.points
            FROM predictions p JOIN matches m ON p.match_id = m.id
@@ -426,10 +407,9 @@ def admin():
             home = request.form['home_team']
             away = request.form['away_team']
             try:
-                kickoff_msk_str = request.form['kickoff_msk']  # "YYYY-MM-DD HH:MM"
+                kickoff_msk_str = request.form['kickoff_msk']
                 dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
                 utc = dt_msk - timedelta(hours=MSK_OFFSET)
-                # Рассчитываем дедлайн
                 deadline_msk = dt_msk.replace(hour=11, minute=0)
                 if deadline_msk >= dt_msk:
                     deadline_msk = dt_msk - timedelta(hours=1)
@@ -441,8 +421,8 @@ def admin():
                 )
                 conn.commit()
                 flash(f"Матч {home} – {away} добавлен", "success")
-            except:
-                flash("Неверный формат даты", "error")
+            except Exception as e:
+                flash(f"Неверный формат даты: {e}", "error")
         elif action == 'set_result':
             match_id = request.form['match_id']
             home_score = request.form['home_score']
@@ -473,8 +453,13 @@ def admin():
             )
             conn.commit()
             flash("Матч отменён, очки сброшены", "success")
+        elif action == 'reset_all_points':
+            conn.execute("UPDATE predictions SET points = 0")
+            conn.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
+            conn.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
+            conn.commit()
+            flash("Все очки обнулены! Турнирная таблица сброшена.", "success")
 
-    # Получаем данные для отображения
     free_matches = conn.execute(
         "SELECT id, home_team, away_team, kickoff_time, status FROM matches "
         "WHERE status IN ('SCHEDULED', 'TIMED')"
@@ -542,6 +527,5 @@ if __name__ == '__main__':
     update_matches()
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    # Koyeb требует хост 0.0.0.0 и порт из переменной окружения
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

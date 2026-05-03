@@ -44,6 +44,12 @@
     <button type="submit">Отменить матч</button>
 </form>
 
+<h3>Сбросить турнирную таблицу</h3>
+<form method="post" onsubmit="return confirm('Точно обнулить все очки и результаты? Это действие необратимо!')">
+    <input type="hidden" name="action" value="reset_all_points">
+    <button type="submit" style="background:#c62828;">Обнулить все очки</button>
+</form>
+
 <h3>Список пользователей</h3>
 <table>
     <tr><th>ID</th><th>Имя</th></tr>
