@@ -141,7 +141,7 @@ def is_before_deadline(match):
     return utc_now() < deadline
 
 def calculate_points(real_home, real_away, pred_home, pred_away):
-    """Начисление очков по правилам ТЗ"""
+    """Начисление очков с бонусами для крупных разниц (≥3) и 2 очками за ошибку в 1 гол"""
     if real_home is None or real_away is None:
         return 0
     real_diff = real_home - real_away
@@ -155,24 +155,37 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
     real_out = outcome(real_diff)
     pred_out = outcome(pred_diff)
 
+    # Флаг крупной реальной разницы
+    big_margin = abs(real_diff) >= 3
+
+    # 1. Точный счёт
     if real_home == pred_home and real_away == pred_away:
         if abs(real_diff) >= 3:
             return 11
         else:
             return 10
 
+    # 2. Исход + точная разница (но не точный счёт)
     if real_out == pred_out and real_diff == pred_diff:
-        return 7
+        return 8 if big_margin else 7
 
+    # 3. Исход + ошибка в разнице на 1 гол
     if real_out == pred_out and abs(real_diff - pred_diff) == 1:
-        return 5
+        return 6 if big_margin else 5
 
+    # 4. Исход + обе разницы >=3 (ошибка >1)
     if real_out == pred_out and abs(real_diff) >= 3 and abs(pred_diff) >= 3:
         return 4
 
+    # 5. Ошибка в разнице ровно на 1 гол (исход может быть любым)
+    if abs(real_diff - pred_diff) == 1:
+        return 2
+
+    # 6. Исход угадан (все остальные случаи)
     if real_out == pred_out:
         return 3
 
+    # 7. Исход не угадан
     return 0
 
 def calculate_all_points():
@@ -241,7 +254,7 @@ def update_matches():
 
         kickoff_utc = datetime.fromisoformat(utc_time)
         kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
-        
+
         deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
         if deadline_msk >= kickoff_msk:
             deadline_msk = kickoff_msk - timedelta(hours=1)
@@ -385,6 +398,41 @@ def my_predictions():
                            pending=pending, awaiting=awaiting,
                            finished=finished, cancelled=cancelled, to_msk=to_msk)
 
+@app.route('/match/<int:match_id>/predictions')
+@login_required
+def match_predictions(match_id):
+    conn = get_db()
+    # Получаем информацию о матче
+    match = conn.execute(
+        "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = ?",
+        (match_id,)
+    ).fetchone()
+
+    if not match:
+        conn.close()
+        flash("Матч не найден", "error")
+        return redirect(url_for('index'))
+
+    # Проверяем, прошёл ли дедлайн
+    if not is_before_deadline(match):
+        # Дедлайн прошёл — можно показывать ставки
+        predictions = conn.execute(
+            """SELECT u.username, p.home_goals, p.away_goals, p.points
+               FROM predictions p JOIN users u ON p.user_id = u.id
+               WHERE p.match_id = ?
+               ORDER BY u.username""",
+            (match_id,)
+        ).fetchall()
+        conn.close()
+        return render_template('match_predictions.html',
+                               match=match,
+                               predictions=predictions,
+                               to_msk=to_msk)
+    else:
+        conn.close()
+        flash("Ставки других игроков будут доступны после закрытия приёма прогнозов", "error")
+        return redirect(url_for('index'))
+
 @app.route('/table')
 @login_required
 def table():
@@ -423,7 +471,7 @@ def admin():
                 conn.execute(
                     """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status)
                        VALUES (?, ?, ?, ?, 'SCHEDULED')""",
-                    (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"), 
+                    (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"),
                      deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"))
                 )
                 conn.commit()

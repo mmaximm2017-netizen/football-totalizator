@@ -6,7 +6,8 @@
     <p>
       <b>[{{ m.id }}] {{ m.home_team }} – {{ m.away_team }}</b><br>
       Начало: {{ to_msk(m.kickoff_time) }}<br>
-      Дедлайн ставок: {{ to_msk(m.deadline) }}
+      Дедлайн ставок: {{ to_msk(m.deadline) }}<br>
+      <a href="/match/{{ m.id }}/predictions">📋 Ставки участников</a>
     </p>
   {% endfor %}
 {% else %}

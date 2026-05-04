@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Ставки на матч</h2>
+<p><b>{{ match.home_team }} – {{ match.away_team }}</b></p>
+<p>Начало: {{ to_msk(match.kickoff_time) }}</p>
+<p>Дедлайн: {{ to_msk(match.deadline) }}</p>
+
+{% if predictions %}
+<table>
+    <tr>
+        <th>Игрок</th>
+        <th>Прогноз</th>
+        {% if match.status == 'FINISHED' %}
+        <th>Очки</th>
+        {% endif %}
+    </tr>
+    {% for p in predictions %}
+    <tr>
+        <td>{{ p.username }}</td>
+        <td>{{ p.home_goals }}:{{ p.away_goals }}</td>
+        {% if match.status == 'FINISHED' %}
+        <td>{{ p.points }}</td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Никто ещё не сделал ставку на этот матч.</p>
+{% endif %}
+
+<p><a href="/">← На главную</a></p>
+{% endblock %}
