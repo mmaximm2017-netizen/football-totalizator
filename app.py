@@ -265,27 +265,42 @@ def fetch_rpl_matches():
     return all_matches
 
 def fetch_rcup_matches():
-    """Кубок России через Understat (если доступен)"""
-    if not UNDERSTAT_AVAILABLE:
-        print(">>> Understat не установлен — Кубок России пропущен")
+    """Кубок России через soccerdata (парсинг Flashscore)"""
+    try:
+        import soccerdata
+        print(">>> Пытаемся загрузить Кубок России через soccerdata...")
+        
+        # Создаём объект для Кубка России
+        # Конструктор принимает leagues=['RUS_Кубок России'] или ID лиги
+        # Точный ID лиги для Кубка России нужно подобрать
+        rcup = soccerdata.Flashscore(leagues=['RUS'], seasons=['2025/2026'])
+        
+        # Пробуем получить расписание
+        schedule_df = rcup.read_schedule()
+        
+        all_matches = []
+        if not schedule_df.empty:
+            for idx, row in schedule_df.iterrows():
+                all_matches.append({
+                    'id': f"rcup_{idx}",
+                    'home_team': row['home_team'],
+                    'away_team': row['away_team'],
+                    'utcDate': row['date'].strftime("%Y-%m-%d %H:%M:%S"),
+                    'status': 'SCHEDULED',
+                    'score': {
+                        'fullTime': {
+                            'home': None,
+                            'away': None
+                        }
+                    }
+                })
+        
+        print(f">>> Кубок России загружено: {len(all_matches)} матчей")
+        return all_matches
+        
+    except Exception as e:
+        print(f">>> Кубок России soccerdata failed: {e}")
         return []
-    
-    all_matches = []
-    for league_code in ["RCUP", "Russian Cup"]:
-        try:
-            understat = UnderstatClient()
-            print(f">>> Пытаемся загрузить Кубок России с кодом '{league_code}'...")
-            league_data = understat.league(league=league_code).get_match_data(season="2025")
-            if league_data:
-                print(f">>> Кубок России: код '{league_code}' вернул {len(league_data)} матчей")
-                for match in league_data:
-                    all_matches.append(create_match_from_understat(match, "rcup"))
-                break
-        except Exception as e:
-            print(f">>> Кубок России с кодом '{league_code}': {e}")
-    
-    print(f">>> Кубок России загружено: {len(all_matches)} матчей")
-    return all_matches
 
 def update_matches():
     matches_data = fetch_matches()
