@@ -6,13 +6,20 @@ import time
 from datetime import datetime, timedelta
 import requests
 import schedule
-from understatapi import UnderstatClient
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+
+# Пробуем импортировать Understat — если не получится, просто отключим РПЛ
+try:
+    from understatapi import UnderstatClient
+    UNDERSTAT_AVAILABLE = True
+except ImportError:
+    UNDERSTAT_AVAILABLE = False
+    print("Understat не установлен. РПЛ будет недоступна.")
 
 # ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
 LEAGUE_IDS = [2000]                        # ЧМ-2026
-RPL_LEAGUE_NAME = "RFPL"                  # РПЛ через Understat
+RPL_LEAGUE_NAME = "RFPL"                  # РПЛ через Understat (если доступен)
 INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
@@ -110,7 +117,8 @@ def admin_required(f):
     return decorated
 
 def utc_now():
-    return datetime.utcnow()
+    from datetime import timezone
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def to_msk(utc_time_str):
     if not utc_time_str:
@@ -223,14 +231,18 @@ def fetch_matches():
     return all_matches
 
 def fetch_rpl_matches():
-    """РПЛ через Understat"""
+    """РПЛ через Understat (если доступен)"""
+    if not UNDERSTAT_AVAILABLE:
+        print("Understat не установлен — РПЛ пропущена")
+        return []
+    
     all_matches = []
     try:
         understat = UnderstatClient()
-        league_data = understat.league(league=RPL_LEAGUE_NAME).get_match_data(season="2026")
+        league_data = understat.league(league=RPL_LEAGUE_NAME).get_match_data(season="2025")
         for match in league_data:
             all_matches.append({
-                'id': f"rpl_{match['id']}",  # префикс чтобы не пересекалось с football-data.org
+                'id': f"rpl_{match['id']}",
                 'home_team': match['h']['title'],
                 'away_team': match['a']['title'],
                 'utcDate': match['datetime'],
@@ -242,15 +254,21 @@ def fetch_rpl_matches():
                     }
                 }
             })
+        print(f"РПЛ через Understat: загружено {len(all_matches)} матчей")
     except Exception as e:
         print(f"Understat API request failed: {e}")
     return all_matches
 
 def update_matches():
     matches_data = fetch_matches()
-    rpl_matches = fetch_rpl_matches()
-    if rpl_matches:
-        matches_data.extend(rpl_matches)
+    
+    # Пробуем добавить РПЛ
+    try:
+        rpl_matches = fetch_rpl_matches()
+        if rpl_matches:
+            matches_data.extend(rpl_matches)
+    except Exception as e:
+        print(f"Не удалось загрузить РПЛ: {e}")
 
     if not matches_data:
         return
