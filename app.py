@@ -6,11 +6,13 @@ import time
 from datetime import datetime, timedelta
 import requests
 import schedule
+from understatapi import UnderstatClient
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 
 # ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
 LEAGUE_IDS = [2000]                        # ЧМ-2026
+RPL_LEAGUE_NAME = "RFPL"                  # РПЛ через Understat
 INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
@@ -108,40 +110,41 @@ def admin_required(f):
     return decorated
 
 def utc_now():
-    """Текущее время в UTC без timezone (naive)"""
     return datetime.utcnow()
 
 def to_msk(utc_time_str):
-    """Преобразует ISO-строку в читаемое время МСК"""
     if not utc_time_str:
         return "—"
     clean_str = utc_time_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
     try:
         dt_utc = datetime.fromisoformat(clean_str)
     except:
-        dt_utc = datetime.fromisoformat(utc_time_str)
+        try:
+            dt_utc = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
+        except:
+            dt_utc = datetime.fromisoformat(utc_time_str)
     dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
     return dt_msk.strftime("%d.%m %H:%M МСК")
 
 def parse_utc_time(utc_str):
-    """Парсит время из БД как наивное UTC"""
     if not utc_str:
         return None
     clean_str = utc_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
     try:
         return datetime.fromisoformat(clean_str)
     except:
-        return datetime.fromisoformat(utc_str)
+        try:
+            return datetime.strptime(utc_str, "%Y-%m-%d %H:%M:%S")
+        except:
+            return datetime.fromisoformat(utc_str)
 
 def is_before_deadline(match):
-    """Проверяет, что дедлайн ещё не наступил"""
     deadline = parse_utc_time(match['deadline'])
     if deadline is None:
         return False
     return utc_now() < deadline
 
 def calculate_points(real_home, real_away, pred_home, pred_away):
-    """Начисление очков с бонусами для крупных разниц (≥3) и 2 очками за ошибку в 1 гол"""
     if real_home is None or real_away is None:
         return 0
     real_diff = real_home - real_away
@@ -155,41 +158,32 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
     real_out = outcome(real_diff)
     pred_out = outcome(pred_diff)
 
-    # Флаг крупной реальной разницы
     big_margin = abs(real_diff) >= 3
 
-    # 1. Точный счёт
     if real_home == pred_home and real_away == pred_away:
         if abs(real_diff) >= 3:
             return 11
         else:
             return 10
 
-    # 2. Исход + точная разница (но не точный счёт)
     if real_out == pred_out and real_diff == pred_diff:
         return 8 if big_margin else 7
 
-    # 3. Исход + ошибка в разнице на 1 гол
     if real_out == pred_out and abs(real_diff - pred_diff) == 1:
         return 6 if big_margin else 5
 
-    # 4. Исход + обе разницы >=3 (ошибка >1)
     if real_out == pred_out and abs(real_diff) >= 3 and abs(pred_diff) >= 3:
         return 4
 
-    # 5. Ошибка в разнице ровно на 1 гол (исход может быть любым)
     if abs(real_diff - pred_diff) == 1:
         return 2
 
-    # 6. Исход угадан (все остальные случаи)
     if real_out == pred_out:
         return 3
 
-    # 7. Исход не угадан
     return 0
 
 def calculate_all_points():
-    """Пересчёт очков для всех завершённых матчей"""
     conn = get_db()
     finished = conn.execute(
         "SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'"
@@ -211,6 +205,7 @@ def calculate_all_points():
 
 # ---------- РАБОТА С API ----------
 def fetch_matches():
+    """ЧМ-2026 из football-data.org"""
     headers = {'X-Auth-Token': API_KEY}
     all_matches = []
     for league_id in LEAGUE_IDS:
@@ -222,22 +217,53 @@ def fetch_matches():
                 data = resp.json()
                 all_matches.extend(data.get('matches', []))
             else:
-                print(f"API error: {resp.status_code}")
+                print(f"football-data.org API error: {resp.status_code}")
         except Exception as e:
-            print(f"API request failed: {e}")
+            print(f"football-data.org API request failed: {e}")
+    return all_matches
+
+def fetch_rpl_matches():
+    """РПЛ через Understat"""
+    all_matches = []
+    try:
+        understat = UnderstatClient()
+        league_data = understat.league(league=RPL_LEAGUE_NAME).get_match_data(season="2026")
+        for match in league_data:
+            all_matches.append({
+                'id': f"rpl_{match['id']}",  # префикс чтобы не пересекалось с football-data.org
+                'home_team': match['h']['title'],
+                'away_team': match['a']['title'],
+                'utcDate': match['datetime'],
+                'status': 'SCHEDULED' if match.get('status', '').upper() != 'FINISHED' else 'FINISHED',
+                'score': {
+                    'fullTime': {
+                        'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
+                        'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
+                    }
+                }
+            })
+    except Exception as e:
+        print(f"Understat API request failed: {e}")
     return all_matches
 
 def update_matches():
     matches_data = fetch_matches()
+    rpl_matches = fetch_rpl_matches()
+    if rpl_matches:
+        matches_data.extend(rpl_matches)
+
     if not matches_data:
         return
+
     conn = get_db()
     for match in matches_data:
         api_id = match['id']
-        home_team = match['homeTeam']['name']
-        away_team = match['awayTeam']['name']
-        utc_time = match['utcDate'].replace('Z', '')
-        status = match['status']
+        home_team = match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown'))
+        away_team = match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown'))
+        utc_time = match.get('utcDate', match.get('datetime', ''))
+        if isinstance(utc_time, str):
+            utc_time = utc_time.replace('Z', '')
+        status = match.get('status', 'SCHEDULED')
 
         score = None
         if status == 'FINISHED':
@@ -249,19 +275,22 @@ def update_matches():
         home_score = None
         away_score = None
         if score and score.get('home') is not None and score.get('away') is not None:
-            home_score = score['home']
-            away_score = score['away']
+            home_score = int(score['home'])
+            away_score = int(score['away'])
 
-        kickoff_utc = datetime.fromisoformat(utc_time)
+        if ' ' in utc_time:
+            kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
+        else:
+            kickoff_utc = datetime.fromisoformat(utc_time)
+
         kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
-
         deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
         if deadline_msk >= kickoff_msk:
             deadline_msk = kickoff_msk - timedelta(hours=1)
         deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
 
         existing = conn.execute(
-            "SELECT id, status FROM matches WHERE api_match_id = ?", (api_id,)
+            "SELECT id, status FROM matches WHERE api_match_id = ?", (str(api_id),)
         ).fetchone()
 
         if not existing:
@@ -269,7 +298,7 @@ def update_matches():
                 """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
                    home_score, away_score)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (api_id, home_team, away_team,
+                (str(api_id), home_team, away_team,
                  kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
                  status, home_score, away_score)
             )
@@ -279,7 +308,7 @@ def update_matches():
                    kickoff_time = ?, deadline = ?
                    WHERE api_match_id = ?""",
                 (status, home_score, away_score,
-                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), api_id)
+                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), str(api_id))
             )
             if status in ('POSTPONED', 'CANCELLED'):
                 conn.execute(
@@ -402,7 +431,6 @@ def my_predictions():
 @login_required
 def match_predictions(match_id):
     conn = get_db()
-    # Получаем информацию о матче
     match = conn.execute(
         "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = ?",
         (match_id,)
@@ -413,9 +441,7 @@ def match_predictions(match_id):
         flash("Матч не найден", "error")
         return redirect(url_for('index'))
 
-    # Проверяем, прошёл ли дедлайн
     if not is_before_deadline(match):
-        # Дедлайн прошёл — можно показывать ставки
         predictions = conn.execute(
             """SELECT u.username, p.home_goals, p.away_goals, p.points
                FROM predictions p JOIN users u ON p.user_id = u.id
