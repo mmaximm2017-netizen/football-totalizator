@@ -8,18 +8,17 @@ import requests
 import schedule
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 
-# Пробуем импортировать Understat — если не получится, просто отключим РПЛ
+# Пробуем импортировать Understat — если не получится, просто отключим РПЛ и Кубок России
 try:
     from understatapi import UnderstatClient
     UNDERSTAT_AVAILABLE = True
 except ImportError:
     UNDERSTAT_AVAILABLE = False
-    print("Understat не установлен. РПЛ будет недоступна.")
+    print("Understat не установлен. РПЛ и Кубок России будут недоступны.")
 
 # ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
 LEAGUE_IDS = [2000]                        # ЧМ-2026
-RPL_LEAGUE_NAME = "RFPL"                  # РПЛ через Understat (если доступен)
 INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
@@ -230,6 +229,22 @@ def fetch_matches():
             print(f"football-data.org API request failed: {e}")
     return all_matches
 
+def create_match_from_understat(match, prefix):
+    """Преобразует матч из Understat в стандартный формат"""
+    return {
+        'id': f"{prefix}_{match['id']}",
+        'home_team': match['h']['title'],
+        'away_team': match['a']['title'],
+        'utcDate': match['datetime'],
+        'status': 'SCHEDULED' if match.get('status', '').upper() != 'FINISHED' else 'FINISHED',
+        'score': {
+            'fullTime': {
+                'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
+                'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
+            }
+        }
+    }
+
 def fetch_rpl_matches():
     """РПЛ через Understat (если доступен)"""
     if not UNDERSTAT_AVAILABLE:
@@ -256,41 +271,26 @@ def fetch_rcup_matches():
         return []
     
     all_matches = []
-    # Пробуем два возможных названия лиги для Кубка России
     for league_code in ["RCUP", "Russian Cup"]:
         try:
             understat = UnderstatClient()
-            print(f">>> Пытаемся загрузить Кубок России через Understat с кодом '{league_code}'...")
+            print(f">>> Пытаемся загрузить Кубок России с кодом '{league_code}'...")
             league_data = understat.league(league=league_code).get_match_data(season="2025")
             if league_data:
-                print(f">>> Кубок России: Understat с кодом '{league_code}' вернул {len(league_data)} матчей")
+                print(f">>> Кубок России: код '{league_code}' вернул {len(league_data)} матчей")
                 for match in league_data:
                     all_matches.append(create_match_from_understat(match, "rcup"))
-                break  # Нашли рабочий код, выходим из цикла
+                break
         except Exception as e:
             print(f">>> Кубок России с кодом '{league_code}': {e}")
     
     print(f">>> Кубок России загружено: {len(all_matches)} матчей")
     return all_matches
 
-def create_match_from_understat(match, prefix):
-    """Преобразует матч из Understat в стандартный формат"""
-    return {
-        'id': f"{prefix}_{match['id']}",
-        'home_team': match['h']['title'],
-        'away_team': match['a']['title'],
-        'utcDate': match['datetime'],
-        'status': 'SCHEDULED' if match.get('status', '').upper() != 'FINISHED' else 'FINISHED',
-        'score': {
-            'fullTime': {
-                'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
-                'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
-            }
-        }
-    }
+def update_matches():
     matches_data = fetch_matches()
     
-        # Пробуем добавить РПЛ
+    # Пробуем добавить РПЛ
     try:
         rpl_matches = fetch_rpl_matches()
         if rpl_matches:
