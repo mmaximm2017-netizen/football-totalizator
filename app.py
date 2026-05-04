@@ -305,21 +305,13 @@ def fetch_rcup_matches():
 def update_matches():
     matches_data = fetch_matches()
     
-    # Пробуем добавить РПЛ
-    try:
-        rpl_matches = fetch_rpl_matches()
-        if rpl_matches:
-            matches_data.extend(rpl_matches)
-    except Exception as e:
-        print(f"Не удалось загрузить РПЛ: {e}")
-
-    # Пробуем добавить Кубок России
-    try:
-        rcup_matches = fetch_rcup_matches()
-        if rcup_matches:
-            matches_data.extend(rcup_matches)
-    except Exception as e:
-        print(f"Не удалось загрузить Кубок России: {e}")
+        # Кубок России пока отключён (добавляется вручную)
+    # try:
+    #     rcup_matches = fetch_rcup_matches()
+    #     if rcup_matches:
+    #         matches_data.extend(rcup_matches)
+    # except Exception as e:
+    #     print(f"Не удалось загрузить Кубок России: {e}")
 
     if not matches_data:
         return
