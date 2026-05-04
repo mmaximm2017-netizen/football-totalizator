@@ -8,13 +8,13 @@ import requests
 import schedule
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 
-# Пробуем импортировать Understat — если не получится, просто отключим РПЛ и Кубок России
+# Пробуем импортировать Understat — если не получится, просто отключим РПЛ
 try:
     from understatapi import UnderstatClient
     UNDERSTAT_AVAILABLE = True
 except ImportError:
     UNDERSTAT_AVAILABLE = False
-    print("Understat не установлен. РПЛ и Кубок России будут недоступны.")
+    print("Understat не установлен. РПЛ будет недоступна.")
 
 # ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
@@ -57,7 +57,8 @@ def init_db():
             deadline TEXT,
             status TEXT DEFAULT 'SCHEDULED',
             home_score INTEGER,
-            away_score INTEGER
+            away_score INTEGER,
+            league TEXT DEFAULT 'other'
         );
         CREATE TABLE IF NOT EXISTS predictions (
             user_id INTEGER,
@@ -70,6 +71,12 @@ def init_db():
             FOREIGN KEY(match_id) REFERENCES matches(id)
         );
     ''')
+    # Добавляем колонку league, если её нет (для старых баз)
+    try:
+        cur.execute("ALTER TABLE matches ADD COLUMN league TEXT DEFAULT 'other'")
+    except:
+        pass
+    
     cur.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))
     if not cur.fetchone():
         cur.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)",
@@ -222,14 +229,16 @@ def fetch_matches():
             resp = requests.get(url, headers=headers, params=params, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                all_matches.extend(data.get('matches', []))
+                for m in data.get('matches', []):
+                    m['league'] = 'wc2026'  # Метка турнира
+                    all_matches.append(m)
             else:
                 print(f"football-data.org API error: {resp.status_code}")
         except Exception as e:
             print(f"football-data.org API request failed: {e}")
     return all_matches
 
-def create_match_from_understat(match, prefix):
+def create_match_from_understat(match, prefix, league_tag):
     """Преобразует матч из Understat в стандартный формат"""
     return {
         'id': f"{prefix}_{match['id']}",
@@ -242,7 +251,8 @@ def create_match_from_understat(match, prefix):
                 'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
                 'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
             }
-        }
+        },
+        'league': league_tag  # Метка турнира
     }
 
 def fetch_rpl_matches():
@@ -258,60 +268,22 @@ def fetch_rpl_matches():
         league_data = understat.league(league="RFPL").get_match_data(season="2025")
         print(f">>> РПЛ: Understat вернул {len(league_data)} матчей")
         for match in league_data:
-            all_matches.append(create_match_from_understat(match, "rpl"))
+            all_matches.append(create_match_from_understat(match, "rpl", "rpl"))
         print(f">>> РПЛ загружено: {len(all_matches)} матчей")
     except Exception as e:
         print(f">>> РПЛ Understat API request failed: {e}")
     return all_matches
 
-def fetch_rcup_matches():
-    """Кубок России через soccerdata (парсинг Flashscore)"""
-    try:
-        import soccerdata
-        print(">>> Пытаемся загрузить Кубок России через soccerdata...")
-        
-        # Создаём объект для Кубка России
-        # Конструктор принимает leagues=['RUS_Кубок России'] или ID лиги
-        # Точный ID лиги для Кубка России нужно подобрать
-        rcup = soccerdata.Flashscore(leagues=['RUS'], seasons=['2025/2026'])
-        
-        # Пробуем получить расписание
-        schedule_df = rcup.read_schedule()
-        
-        all_matches = []
-        if not schedule_df.empty:
-            for idx, row in schedule_df.iterrows():
-                all_matches.append({
-                    'id': f"rcup_{idx}",
-                    'home_team': row['home_team'],
-                    'away_team': row['away_team'],
-                    'utcDate': row['date'].strftime("%Y-%m-%d %H:%M:%S"),
-                    'status': 'SCHEDULED',
-                    'score': {
-                        'fullTime': {
-                            'home': None,
-                            'away': None
-                        }
-                    }
-                })
-        
-        print(f">>> Кубок России загружено: {len(all_matches)} матчей")
-        return all_matches
-        
-    except Exception as e:
-        print(f">>> Кубок России soccerdata failed: {e}")
-        return []
-
 def update_matches():
     matches_data = fetch_matches()
     
-        # Кубок России пока отключён (добавляется вручную)
-    # try:
-    #     rcup_matches = fetch_rcup_matches()
-    #     if rcup_matches:
-    #         matches_data.extend(rcup_matches)
-    # except Exception as e:
-    #     print(f"Не удалось загрузить Кубок России: {e}")
+    # Пробуем добавить РПЛ
+    try:
+        rpl_matches = fetch_rpl_matches()
+        if rpl_matches:
+            matches_data.extend(rpl_matches)
+    except Exception as e:
+        print(f"Не удалось загрузить РПЛ: {e}")
 
     if not matches_data:
         return
@@ -325,6 +297,7 @@ def update_matches():
         if isinstance(utc_time, str):
             utc_time = utc_time.replace('Z', '')
         status = match.get('status', 'SCHEDULED')
+        league = match.get('league', 'other')
 
         score = None
         if status == 'FINISHED':
@@ -357,19 +330,20 @@ def update_matches():
         if not existing:
             conn.execute(
                 """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
-                   home_score, away_score)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   home_score, away_score, league)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (str(api_id), home_team, away_team,
                  kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
-                 status, home_score, away_score)
+                 status, home_score, away_score, league)
             )
         else:
             conn.execute(
                 """UPDATE matches SET status = ?, home_score = ?, away_score = ?,
-                   kickoff_time = ?, deadline = ?
+                   kickoff_time = ?, deadline = ?, league = ?
                    WHERE api_match_id = ?""",
                 (status, home_score, away_score,
-                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), str(api_id))
+                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
+                 league, str(api_id))
             )
             if status in ('POSTPONED', 'CANCELLED'):
                 conn.execute(
@@ -392,14 +366,27 @@ def run_scheduler():
 def index():
     conn = get_db()
     now = utc_now()
-    matches = conn.execute(
-        """SELECT id, home_team, away_team, kickoff_time, deadline, status
-           FROM matches
-           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
-        (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-    ).fetchall()
+    
+    # Получаем фильтр из параметра URL (?league=...)
+    league_filter = request.args.get('league', 'all')
+    
+    if league_filter == 'all':
+        matches = conn.execute(
+            """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
+               FROM matches
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
+            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
+        ).fetchall()
+    else:
+        matches = conn.execute(
+            """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
+               FROM matches
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ? AND league = ?""",
+            (now.strftime("%Y-%m-%dT%H:%M:%S"), league_filter)
+        ).fetchall()
+    
     conn.close()
-    return render_template('index.html', matches=matches, to_msk=to_msk)
+    return render_template('index.html', matches=matches, to_msk=to_msk, current_filter=league_filter)
 
 @app.route('/predict', methods=['GET', 'POST'])
 @login_required
@@ -439,7 +426,7 @@ def predict():
         return redirect(url_for('my_predictions'))
 
     matches = conn.execute(
-        """SELECT id, home_team, away_team, kickoff_time, deadline
+        """SELECT id, home_team, away_team, kickoff_time, deadline, league
            FROM matches
            WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
         (now.strftime("%Y-%m-%dT%H:%M:%S"),)
@@ -547,6 +534,7 @@ def admin():
         elif action == 'add_match':
             home = request.form['home_team']
             away = request.form['away_team']
+            league = request.form.get('league', 'other')
             try:
                 kickoff_msk_str = request.form['kickoff_msk']
                 dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
@@ -556,10 +544,10 @@ def admin():
                     deadline_msk = dt_msk - timedelta(hours=1)
                 deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
                 conn.execute(
-                    """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status)
-                       VALUES (?, ?, ?, ?, 'SCHEDULED')""",
+                    """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status, league)
+                       VALUES (?, ?, ?, ?, 'SCHEDULED', ?)""",
                     (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"),
-                     deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"))
+                     deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league)
                 )
                 conn.commit()
                 flash(f"Матч {home} – {away} добавлен", "success")
