@@ -26,7 +26,7 @@ ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
 
 # Подключение к Supabase
-DATABASE_URL = "postgresql://postgres.opjsytsvblgffibyebem:Mm0042006Mm%40@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
+DATABASE_URL = "postgresql://postgres.opjsytsvblgffibyebem:Tr0mb0nFootb4ll2026@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
