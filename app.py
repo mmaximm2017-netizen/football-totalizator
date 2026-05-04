@@ -233,13 +233,16 @@ def fetch_matches():
 def fetch_rpl_matches():
     """РПЛ через Understat (если доступен)"""
     if not UNDERSTAT_AVAILABLE:
-        print("Understat не установлен — РПЛ пропущена")
+        print(">>> Understat не установлен — РПЛ пропущена")
         return []
     
+    print(">>> Пытаемся загрузить РПЛ через Understat...")
     all_matches = []
     try:
         understat = UnderstatClient()
+        print(">>> UnderstatClient создан")
         league_data = understat.league(league=RPL_LEAGUE_NAME).get_match_data(season="2025")
+        print(f">>> Understat вернул {len(league_data)} матчей")
         for match in league_data:
             all_matches.append({
                 'id': f"rpl_{match['id']}",
@@ -254,9 +257,9 @@ def fetch_rpl_matches():
                     }
                 }
             })
-        print(f"РПЛ через Understat: загружено {len(all_matches)} матчей")
+        print(f">>> РПЛ через Understat: загружено {len(all_matches)} матчей")
     except Exception as e:
-        print(f"Understat API request failed: {e}")
+        print(f">>> Understat API request failed: {e}")
     return all_matches
 
 def update_matches():
