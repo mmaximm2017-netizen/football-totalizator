@@ -240,38 +240,71 @@ def fetch_rpl_matches():
     all_matches = []
     try:
         understat = UnderstatClient()
-        print(">>> UnderstatClient создан")
-        league_data = understat.league(league=RPL_LEAGUE_NAME).get_match_data(season="2025")
-        print(f">>> Understat вернул {len(league_data)} матчей")
+        league_data = understat.league(league="RFPL").get_match_data(season="2025")
+        print(f">>> РПЛ: Understat вернул {len(league_data)} матчей")
         for match in league_data:
-            all_matches.append({
-                'id': f"rpl_{match['id']}",
-                'home_team': match['h']['title'],
-                'away_team': match['a']['title'],
-                'utcDate': match['datetime'],
-                'status': 'SCHEDULED' if match.get('status', '').upper() != 'FINISHED' else 'FINISHED',
-                'score': {
-                    'fullTime': {
-                        'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
-                        'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
-                    }
-                }
-            })
-        print(f">>> РПЛ через Understat: загружено {len(all_matches)} матчей")
+            all_matches.append(create_match_from_understat(match, "rpl"))
+        print(f">>> РПЛ загружено: {len(all_matches)} матчей")
     except Exception as e:
-        print(f">>> Understat API request failed: {e}")
+        print(f">>> РПЛ Understat API request failed: {e}")
     return all_matches
 
-def update_matches():
+def fetch_rcup_matches():
+    """Кубок России через Understat (если доступен)"""
+    if not UNDERSTAT_AVAILABLE:
+        print(">>> Understat не установлен — Кубок России пропущен")
+        return []
+    
+    all_matches = []
+    # Пробуем два возможных названия лиги для Кубка России
+    for league_code in ["RCUP", "Russian Cup"]:
+        try:
+            understat = UnderstatClient()
+            print(f">>> Пытаемся загрузить Кубок России через Understat с кодом '{league_code}'...")
+            league_data = understat.league(league=league_code).get_match_data(season="2025")
+            if league_data:
+                print(f">>> Кубок России: Understat с кодом '{league_code}' вернул {len(league_data)} матчей")
+                for match in league_data:
+                    all_matches.append(create_match_from_understat(match, "rcup"))
+                break  # Нашли рабочий код, выходим из цикла
+        except Exception as e:
+            print(f">>> Кубок России с кодом '{league_code}': {e}")
+    
+    print(f">>> Кубок России загружено: {len(all_matches)} матчей")
+    return all_matches
+
+def create_match_from_understat(match, prefix):
+    """Преобразует матч из Understat в стандартный формат"""
+    return {
+        'id': f"{prefix}_{match['id']}",
+        'home_team': match['h']['title'],
+        'away_team': match['a']['title'],
+        'utcDate': match['datetime'],
+        'status': 'SCHEDULED' if match.get('status', '').upper() != 'FINISHED' else 'FINISHED',
+        'score': {
+            'fullTime': {
+                'home': int(match['goals']['h']) if match.get('goals') and match['goals']['h'] is not None else None,
+                'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
+            }
+        }
+    }
     matches_data = fetch_matches()
     
-    # Пробуем добавить РПЛ
+        # Пробуем добавить РПЛ
     try:
         rpl_matches = fetch_rpl_matches()
         if rpl_matches:
             matches_data.extend(rpl_matches)
     except Exception as e:
         print(f"Не удалось загрузить РПЛ: {e}")
+
+    # Пробуем добавить Кубок России
+    try:
+        rcup_matches = fetch_rcup_matches()
+        if rcup_matches:
+            matches_data.extend(rcup_matches)
+    except Exception as e:
+        print(f"Не удалось загрузить Кубок России: {e}")
 
     if not matches_data:
         return
