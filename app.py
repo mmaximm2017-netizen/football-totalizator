@@ -26,9 +26,7 @@ ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
 
 # Подключение к Supabase
-DATABASE_URL = "postgresql://postgres:Mm0042006Mm@@db.opjsytsvblgffibyebem.supabase.co:5432/postgres"
-# Исправляем @@ на @ (если в пароле есть @, он дублируется)
-DATABASE_URL = DATABASE_URL.replace("@@", "@")
+DATABASE_URL = "postgresql://postgres.opjsytsvblgffibyebem:Mm0042006Mm%40@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
