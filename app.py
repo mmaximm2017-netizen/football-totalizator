@@ -147,15 +147,10 @@ def parse_utc_time(utc_str):
         except:
             return datetime.fromisoformat(utc_str)
 
-def is_before_deadline(match):
-    # match[4] — это deadline (нулевой индекс: id=0, home_team=1, away_team=2, kickoff_time=3, deadline=4, status=5, ...)
-    # Но в некоторых запросах порядок может быть другим, поэтому используем словарь
-    if isinstance(match, dict):
-        deadline_str = match.get('deadline')
-    else:
-        # Кортеж из БД: id, home_team, away_team, kickoff_time, deadline, status, ...
-        deadline_str = match[4] if len(match) > 4 else None
-    
+def is_before_deadline(match_tuple):
+    """Проверяет, прошёл ли дедлайн. 
+    match_tuple — кортеж из БД: (id, home_team, away_team, deadline, status)"""
+    deadline_str = match_tuple[3]  # deadline — 4-й элемент (индекс 3)
     if not deadline_str:
         return False
     deadline = parse_utc_time(deadline_str)
@@ -420,10 +415,10 @@ def predict():
             (match_id,)
         )
         m = cur.fetchone()
-        match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'deadline': m[3], 'status': m[4]} if m else None
+        match_dict = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'deadline': m[3], 'status': m[4]} if m else None
         
-        if not match or match['status'] not in ('SCHEDULED', 'TIMED') or \
-           not is_before_deadline(tuple(m)):
+        if not match_dict or match_dict['status'] not in ('SCHEDULED', 'TIMED') or \
+           not is_before_deadline(m):
             flash("Ставки на этот матч закрыты", "error")
             cur.close()
             conn.close()
@@ -435,7 +430,7 @@ def predict():
                ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
             (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
         )
-        flash(f"✅ Ставка на матч {match['home_team']} – {match['away_team']}: {home_goals}:{away_goals} принята", "success")
+        flash(f"✅ Ставка на матч {match_dict['home_team']} – {match_dict['away_team']}: {home_goals}:{away_goals} принята", "success")
         cur.close()
         conn.close()
         return redirect(url_for('my_predictions'))
@@ -518,7 +513,7 @@ def match_predictions(match_id):
         flash("Матч не найден", "error")
         return redirect(url_for('index'))
 
-    if not is_before_deadline(tuple(m)):
+    if not is_before_deadline(m):
         cur.execute(
             """SELECT u.username, p.home_goals, p.away_goals, p.points
                FROM predictions p JOIN users u ON p.user_id = u.id
