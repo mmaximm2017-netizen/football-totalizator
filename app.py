@@ -25,8 +25,9 @@ ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
 
-# Подключение к Supabase
+# Подключение к Render PostgreSQL
 DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a/football_ou1f"
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
@@ -147,7 +148,7 @@ def parse_utc_time(utc_str):
             return datetime.fromisoformat(utc_str)
 
 def is_before_deadline(match):
-    deadline = parse_utc_time(match[4])  # deadline — 5-е поле (индекс 4)
+    deadline = parse_utc_time(match[4])
     if deadline is None:
         return False
     return utc_now() < deadline
@@ -367,14 +368,16 @@ def index():
         cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s""",
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+               ORDER BY kickoff_time""",
             (now.strftime("%Y-%m-%dT%H:%M:%S"),)
         )
     else:
         cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s AND league = %s""",
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s AND league = %s
+               ORDER BY kickoff_time""",
             (now.strftime("%Y-%m-%dT%H:%M:%S"), league_filter)
         )
     matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]} for m in cur.fetchall()]
@@ -430,7 +433,8 @@ def predict():
     cur.execute(
         """SELECT id, home_team, away_team, kickoff_time, deadline, league
            FROM matches
-           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s""",
+           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+           ORDER BY kickoff_time""",
         (now.strftime("%Y-%m-%dT%H:%M:%S"),)
     )
     matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
