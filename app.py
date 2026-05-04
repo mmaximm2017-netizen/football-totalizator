@@ -1,14 +1,15 @@
 # football_site/app.py
 import os
-import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta
 import requests
 import schedule
+import psycopg2
+import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 
-# Пробуем импортировать Understat — если не получится, просто отключим РПЛ
+# Пробуем импортировать Understat
 try:
     from understatapi import UnderstatClient
     UNDERSTAT_AVAILABLE = True
@@ -23,34 +24,34 @@ INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
-DATABASE = "/opt/render/project/src/data/site.db" if os.path.exists("/opt/render") else "site.db"
+
+# Подключение к Supabase
+DATABASE_URL = "postgresql://postgres:Mm0042006Mm@@db.opjsytsvblgffibyebem.supabase.co:5432/postgres"
+# Исправляем @@ на @ (если в пароле есть @, он дублируется)
+DATABASE_URL = DATABASE_URL.replace("@@", "@")
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# ---------- СОЗДАЁМ ПАПКУ ДЛЯ БД НА RENDER ----------
-if "/opt/render" in os.getcwd():
-    os.makedirs("/opt/render/project/src/data", exist_ok=True)
-
 # ---------- РАБОТА С БД ----------
 def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.autocommit = True
     return conn
 
 def init_db():
     conn = get_db()
     cur = conn.cursor()
-    cur.executescript('''
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             is_admin INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS matches (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            api_match_id INTEGER UNIQUE,
+            id SERIAL PRIMARY KEY,
+            api_match_id TEXT UNIQUE,
             home_team TEXT,
             away_team TEXT,
             kickoff_time TEXT,
@@ -61,27 +62,19 @@ def init_db():
             league TEXT DEFAULT 'other'
         );
         CREATE TABLE IF NOT EXISTS predictions (
-            user_id INTEGER,
-            match_id INTEGER,
+            user_id INTEGER REFERENCES users(id),
+            match_id INTEGER REFERENCES matches(id),
             home_goals INTEGER,
             away_goals INTEGER,
             points INTEGER DEFAULT 0,
-            UNIQUE(user_id, match_id),
-            FOREIGN KEY(user_id) REFERENCES users(id),
-            FOREIGN KEY(match_id) REFERENCES matches(id)
+            UNIQUE(user_id, match_id)
         );
     ''')
-    # Добавляем колонку league, если её нет (для старых баз)
-    try:
-        cur.execute("ALTER TABLE matches ADD COLUMN league TEXT DEFAULT 'other'")
-    except:
-        pass
-    
-    cur.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))
+    cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
     if not cur.fetchone():
-        cur.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)",
+        cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
                     (ADMIN_USERNAME, ADMIN_PASSWORD))
-    conn.commit()
+    cur.close()
     conn.close()
 
 # ---------- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ----------
@@ -90,10 +83,12 @@ def load_user():
     g.is_admin = False
     if 'user_id' in session:
         conn = get_db()
-        user = conn.execute("SELECT is_admin FROM users WHERE id = ?",
-                            (session['user_id'],)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
+        user = cur.fetchone()
+        cur.close()
         conn.close()
-        if user and user['is_admin'] == 1:
+        if user and user[0] == 1:
             g.is_admin = True
 
 # ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
@@ -113,10 +108,12 @@ def admin_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         conn = get_db()
-        user = conn.execute("SELECT is_admin FROM users WHERE id = ?",
-                            (session['user_id'],)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
+        user = cur.fetchone()
+        cur.close()
         conn.close()
-        if not user or user['is_admin'] != 1:
+        if not user or user[0] != 1:
             flash("Доступ запрещён", "error")
             return redirect(url_for('index'))
         return f(*args, **kwargs)
@@ -153,7 +150,7 @@ def parse_utc_time(utc_str):
             return datetime.fromisoformat(utc_str)
 
 def is_before_deadline(match):
-    deadline = parse_utc_time(match['deadline'])
+    deadline = parse_utc_time(match[4])  # deadline — 5-е поле (индекс 4)
     if deadline is None:
         return False
     return utc_now() < deadline
@@ -199,22 +196,22 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
 
 def calculate_all_points():
     conn = get_db()
-    finished = conn.execute(
-        "SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'"
-    ).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'")
+    finished = cur.fetchall()
     for match in finished:
-        preds = conn.execute(
-            "SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = ?",
-            (match['id'],)
-        ).fetchall()
+        cur.execute(
+            "SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s",
+            (match[0],)
+        )
+        preds = cur.fetchall()
         for p in preds:
-            pts = calculate_points(match['home_score'], match['away_score'],
-                                   p['home_goals'], p['away_goals'])
-            conn.execute(
-                "UPDATE predictions SET points = ? WHERE user_id = ? AND match_id = ?",
-                (pts, p['user_id'], match['id'])
+            pts = calculate_points(match[1], match[2], p[1], p[2])
+            cur.execute(
+                "UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
+                (pts, p[0], match[0])
             )
-    conn.commit()
+    cur.close()
     conn.close()
 
 # ---------- РАБОТА С API ----------
@@ -230,7 +227,7 @@ def fetch_matches():
             if resp.status_code == 200:
                 data = resp.json()
                 for m in data.get('matches', []):
-                    m['league'] = 'wc2026'  # Метка турнира
+                    m['league'] = 'wc2026'
                     all_matches.append(m)
             else:
                 print(f"football-data.org API error: {resp.status_code}")
@@ -252,11 +249,11 @@ def create_match_from_understat(match, prefix, league_tag):
                 'away': int(match['goals']['a']) if match.get('goals') and match['goals']['a'] is not None else None
             }
         },
-        'league': league_tag  # Метка турнира
+        'league': league_tag
     }
 
 def fetch_rpl_matches():
-    """РПЛ через Understat (если доступен)"""
+    """РПЛ через Understat"""
     if not UNDERSTAT_AVAILABLE:
         print(">>> Understat не установлен — РПЛ пропущена")
         return []
@@ -277,7 +274,6 @@ def fetch_rpl_matches():
 def update_matches():
     matches_data = fetch_matches()
     
-    # Пробуем добавить РПЛ
     try:
         rpl_matches = fetch_rpl_matches()
         if rpl_matches:
@@ -289,6 +285,7 @@ def update_matches():
         return
 
     conn = get_db()
+    cur = conn.cursor()
     for match in matches_data:
         api_id = match['id']
         home_team = match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown'))
@@ -323,34 +320,33 @@ def update_matches():
             deadline_msk = kickoff_msk - timedelta(hours=1)
         deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
 
-        existing = conn.execute(
-            "SELECT id, status FROM matches WHERE api_match_id = ?", (str(api_id),)
-        ).fetchone()
+        cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
+        existing = cur.fetchone()
 
         if not existing:
-            conn.execute(
+            cur.execute(
                 """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
                    home_score, away_score, league)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (str(api_id), home_team, away_team,
                  kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
                  status, home_score, away_score, league)
             )
         else:
-            conn.execute(
-                """UPDATE matches SET status = ?, home_score = ?, away_score = ?,
-                   kickoff_time = ?, deadline = ?, league = ?
-                   WHERE api_match_id = ?""",
+            cur.execute(
+                """UPDATE matches SET status = %s, home_score = %s, away_score = %s,
+                   kickoff_time = %s, deadline = %s, league = %s
+                   WHERE api_match_id = %s""",
                 (status, home_score, away_score,
                  kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
                  league, str(api_id))
             )
             if status in ('POSTPONED', 'CANCELLED'):
-                conn.execute(
-                    "UPDATE predictions SET points = 0 WHERE match_id = ?",
-                    (existing['id'],)
+                cur.execute(
+                    "UPDATE predictions SET points = 0 WHERE match_id = (SELECT id FROM matches WHERE api_match_id = %s)",
+                    (str(api_id),)
                 )
-    conn.commit()
+    cur.close()
     conn.close()
     calculate_all_points()
 
@@ -365,26 +361,27 @@ def run_scheduler():
 @login_required
 def index():
     conn = get_db()
+    cur = conn.cursor()
     now = utc_now()
     
-    # Получаем фильтр из параметра URL (?league=...)
     league_filter = request.args.get('league', 'all')
     
     if league_filter == 'all':
-        matches = conn.execute(
+        cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s""",
             (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-        ).fetchall()
+        )
     else:
-        matches = conn.execute(
+        cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ? AND league = ?""",
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s AND league = %s""",
             (now.strftime("%Y-%m-%dT%H:%M:%S"), league_filter)
-        ).fetchall()
-    
+        )
+    matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]} for m in cur.fetchall()]
+    cur.close()
     conn.close()
     return render_template('index.html', matches=matches, to_msk=to_msk, current_filter=league_filter)
 
@@ -392,6 +389,7 @@ def index():
 @login_required
 def predict():
     conn = get_db()
+    cur = conn.cursor()
     now = utc_now()
     if request.method == 'POST':
         match_id = request.form.get('match_id')
@@ -407,30 +405,39 @@ def predict():
             flash("Некорректный ввод: голы должны быть целыми неотрицательными числами", "error")
             return redirect(url_for('predict'))
 
-        match = conn.execute(
-            "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = ?",
+        cur.execute(
+            "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s",
             (match_id,)
-        ).fetchone()
+        )
+        m = cur.fetchone()
+        match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'deadline': m[3], 'status': m[4]} if m else None
+        
         if not match or match['status'] not in ('SCHEDULED', 'TIMED') or \
-           not is_before_deadline(match):
+           not is_before_deadline(tuple(m)):
             flash("Ставки на этот матч закрыты", "error")
+            cur.close()
+            conn.close()
             return redirect(url_for('predict'))
 
-        conn.execute(
-            """INSERT OR REPLACE INTO predictions (user_id, match_id, home_goals, away_goals)
-               VALUES (?, ?, ?, ?)""",
-            (session['user_id'], match_id, home_goals, away_goals)
+        cur.execute(
+            """INSERT INTO predictions (user_id, match_id, home_goals, away_goals)
+               VALUES (%s, %s, %s, %s)
+               ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
+            (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
         )
-        conn.commit()
         flash(f"✅ Ставка на матч {match['home_team']} – {match['away_team']}: {home_goals}:{away_goals} принята", "success")
+        cur.close()
+        conn.close()
         return redirect(url_for('my_predictions'))
 
-    matches = conn.execute(
+    cur.execute(
         """SELECT id, home_team, away_team, kickoff_time, deadline, league
            FROM matches
-           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > ?""",
+           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s""",
         (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-    ).fetchall()
+    )
+    matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+    cur.close()
     conn.close()
     return render_template('predict.html', matches=matches, to_msk=to_msk)
 
@@ -438,38 +445,45 @@ def predict():
 @login_required
 def my_predictions():
     conn = get_db()
+    cur = conn.cursor()
     now = utc_now()
     uid = session['user_id']
 
-    pending = conn.execute(
+    cur.execute(
         """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals,
                   m.kickoff_time, m.deadline
            FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = ? AND m.deadline > ?""",
+           WHERE p.user_id = %s AND m.deadline > %s""",
         (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
-    ).fetchall()
+    )
+    pending = [{'id': p[0], 'home_team': p[1], 'away_team': p[2], 'home_goals': p[3], 'away_goals': p[4], 'kickoff_time': p[5], 'deadline': p[6]} for p in cur.fetchall()]
 
-    awaiting = conn.execute(
+    cur.execute(
         """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
            FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = ? AND m.deadline <= ? AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
+           WHERE p.user_id = %s AND m.deadline <= %s AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
         (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
-    ).fetchall()
+    )
+    awaiting = [{'id': a[0], 'home_team': a[1], 'away_team': a[2], 'home_goals': a[3], 'away_goals': a[4]} for a in cur.fetchall()]
 
-    finished = conn.execute(
+    cur.execute(
         """SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score,
                   p.home_goals, p.away_goals, p.points
            FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = ? AND m.status = 'FINISHED'""",
+           WHERE p.user_id = %s AND m.status = 'FINISHED'""",
         (uid,)
-    ).fetchall()
+    )
+    finished = [{'id': f[0], 'home_team': f[1], 'away_team': f[2], 'home_score': f[3], 'away_score': f[4], 'home_goals': f[5], 'away_goals': f[6], 'points': f[7]} for f in cur.fetchall()]
 
-    cancelled = conn.execute(
+    cur.execute(
         """SELECT m.id, m.home_team, m.away_team, m.status, p.points
            FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = ? AND m.status IN ('POSTPONED', 'CANCELLED')""",
+           WHERE p.user_id = %s AND m.status IN ('POSTPONED', 'CANCELLED')""",
         (uid,)
-    ).fetchall()
+    )
+    cancelled = [{'id': c[0], 'home_team': c[1], 'away_team': c[2], 'status': c[3], 'points': c[4]} for c in cur.fetchall()]
+
+    cur.close()
     conn.close()
     return render_template('my_predictions.html',
                            pending=pending, awaiting=awaiting,
@@ -479,30 +493,37 @@ def my_predictions():
 @login_required
 def match_predictions(match_id):
     conn = get_db()
-    match = conn.execute(
-        "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = ?",
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = %s",
         (match_id,)
-    ).fetchone()
+    )
+    m = cur.fetchone()
+    match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5]} if m else None
 
     if not match:
+        cur.close()
         conn.close()
         flash("Матч не найден", "error")
         return redirect(url_for('index'))
 
-    if not is_before_deadline(match):
-        predictions = conn.execute(
+    if not is_before_deadline(tuple(m)):
+        cur.execute(
             """SELECT u.username, p.home_goals, p.away_goals, p.points
                FROM predictions p JOIN users u ON p.user_id = u.id
-               WHERE p.match_id = ?
+               WHERE p.match_id = %s
                ORDER BY u.username""",
             (match_id,)
-        ).fetchall()
+        )
+        predictions = [{'username': p[0], 'home_goals': p[1], 'away_goals': p[2], 'points': p[3]} for p in cur.fetchall()]
+        cur.close()
         conn.close()
         return render_template('match_predictions.html',
                                match=match,
                                predictions=predictions,
                                to_msk=to_msk)
     else:
+        cur.close()
         conn.close()
         flash("Ставки других игроков будут доступны после закрытия приёма прогнозов", "error")
         return redirect(url_for('index'))
@@ -511,21 +532,25 @@ def match_predictions(match_id):
 @login_required
 def table():
     conn = get_db()
-    rows = conn.execute(
+    cur = conn.cursor()
+    cur.execute(
         """SELECT u.username, COALESCE(SUM(p.points), 0) as total
            FROM users u LEFT JOIN predictions p ON u.id = p.user_id
            GROUP BY u.id ORDER BY total DESC"""
-    ).fetchall()
+    )
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     table_data = []
     for idx, row in enumerate(rows, 1):
-        table_data.append({'place': idx, 'username': row['username'], 'points': row['total']})
+        table_data.append({'place': idx, 'username': row[0], 'points': int(row[1])})
     return render_template('table.html', table=table_data)
 
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
 def admin():
     conn = get_db()
+    cur = conn.cursor()
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'update_matches':
@@ -543,13 +568,12 @@ def admin():
                 if deadline_msk >= dt_msk:
                     deadline_msk = dt_msk - timedelta(hours=1)
                 deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
-                conn.execute(
+                cur.execute(
                     """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status, league)
-                       VALUES (?, ?, ?, ?, 'SCHEDULED', ?)""",
+                       VALUES (%s, %s, %s, %s, 'SCHEDULED', %s)""",
                     (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"),
                      deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league)
                 )
-                conn.commit()
                 flash(f"Матч {home} – {away} добавлен", "success")
             except Exception as e:
                 flash(f"Неверный формат даты: {e}", "error")
@@ -562,42 +586,33 @@ def admin():
                 away_score = int(away_score)
             except:
                 flash("Результат должен быть числами", "error")
+                cur.close()
                 conn.close()
                 return redirect(url_for('admin'))
-            conn.execute(
-                "UPDATE matches SET status='FINISHED', home_score=?, away_score=? WHERE id=?",
+            cur.execute(
+                "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
                 (home_score, away_score, match_id)
             )
-            conn.commit()
             calculate_all_points()
             flash("Результат внесён, очки пересчитаны", "success")
         elif action == 'cancel_match':
             match_id = request.form['match_id']
-            conn.execute(
-                "UPDATE matches SET status='CANCELLED' WHERE id=?",
-                (match_id,)
-            )
-            conn.execute(
-                "UPDATE predictions SET points=0 WHERE match_id=?",
-                (match_id,)
-            )
-            conn.commit()
+            cur.execute("UPDATE matches SET status='CANCELLED' WHERE id=%s", (match_id,))
+            cur.execute("UPDATE predictions SET points=0 WHERE match_id=%s", (match_id,))
             flash("Матч отменён, очки сброшены", "success")
         elif action == 'reset_all_points':
-            conn.execute("UPDATE predictions SET points = 0")
-            conn.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
-            conn.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
-            conn.commit()
+            cur.execute("UPDATE predictions SET points = 0")
+            cur.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
+            cur.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
             flash("Все очки обнулены! Турнирная таблица сброшена.", "success")
 
-    free_matches = conn.execute(
-        "SELECT id, home_team, away_team, kickoff_time, status FROM matches "
-        "WHERE status IN ('SCHEDULED', 'TIMED')"
-    ).fetchall()
-    all_matches = conn.execute(
-        "SELECT id, home_team, away_team, kickoff_time, status FROM matches"
-    ).fetchall()
-    users = conn.execute("SELECT id, username FROM users").fetchall()
+    cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches WHERE status IN ('SCHEDULED', 'TIMED')")
+    free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+    cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches")
+    all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+    cur.execute("SELECT id, username FROM users")
+    users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
+    cur.close()
     conn.close()
     return render_template('admin.html',
                            free_matches=free_matches,
@@ -610,13 +625,13 @@ def login():
         username = request.form['username']
         password = request.form['password']
         conn = get_db()
-        user = conn.execute(
-            "SELECT id FROM users WHERE username = ? AND password = ?",
-            (username, password)
-        ).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE username = %s AND password = %s", (username, password))
+        user = cur.fetchone()
+        cur.close()
         conn.close()
         if user:
-            session['user_id'] = user['id']
+            session['user_id'] = user[0]
             session.permanent = True
             app.permanent_session_lifetime = timedelta(days=7)
             return redirect(url_for('index'))
@@ -633,16 +648,17 @@ def register():
             flash("Неверный инвайт-код", "error")
             return redirect(url_for('register'))
         conn = get_db()
+        cur = conn.cursor()
         try:
-            conn.execute(
-                "INSERT INTO users (username, password) VALUES (?, ?)",
+            cur.execute(
+                "INSERT INTO users (username, password) VALUES (%s, %s)",
                 (username, password)
             )
-            conn.commit()
             flash("Регистрация успешна, теперь войдите", "success")
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
             flash("Такой пользователь уже существует", "error")
+        cur.close()
         conn.close()
     return render_template('register.html')
 
