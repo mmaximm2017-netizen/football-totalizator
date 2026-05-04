@@ -148,7 +148,17 @@ def parse_utc_time(utc_str):
             return datetime.fromisoformat(utc_str)
 
 def is_before_deadline(match):
-    deadline = parse_utc_time(match[4])
+    # match[4] — это deadline (нулевой индекс: id=0, home_team=1, away_team=2, kickoff_time=3, deadline=4, status=5, ...)
+    # Но в некоторых запросах порядок может быть другим, поэтому используем словарь
+    if isinstance(match, dict):
+        deadline_str = match.get('deadline')
+    else:
+        # Кортеж из БД: id, home_team, away_team, kickoff_time, deadline, status, ...
+        deadline_str = match[4] if len(match) > 4 else None
+    
+    if not deadline_str:
+        return False
+    deadline = parse_utc_time(deadline_str)
     if deadline is None:
         return False
     return utc_now() < deadline
