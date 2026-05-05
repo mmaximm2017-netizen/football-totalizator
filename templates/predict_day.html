@@ -1,41 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Ставки на {{ day_label }}</h2>
-<p><a href="/predict">← Назад к дням</a></p>
+<h2 style="margin-bottom: 16px;">🎯 Ставки на {{ day_label }}</h2>
+<a href="/predict" style="color: #2e7d32; text-decoration: none; font-weight: 600;">← Назад к дням</a>
 
 {% if matches %}
-<table>
-    <tr>
-        <th>Матч</th>
-        <th>Дедлайн</th>
-        <th>Ваш прогноз</th>
-        <th>Действие</th>
-    </tr>
-    {% for m in matches %}
-    <tr>
-        <td>{{ m.home_team }} – {{ m.away_team }}</td>
-        <td>{{ to_msk(m.deadline) }}</td>
-        <td>
-            <form method="post" style="display: inline; margin: 0;">
-                <input type="hidden" name="match_id" value="{{ m.id }}">
-                <input type="number" name="home_goals" min="0" value="{{ m.pred_home if m.has_prediction else '' }}" style="width: 50px;" {% if m.deadline_passed %}disabled{% endif %}>
-                :
-                <input type="number" name="away_goals" min="0" value="{{ m.pred_away if m.has_prediction else '' }}" style="width: 50px;" {% if m.deadline_passed %}disabled{% endif %}>
-        </td>
-        <td>
+  {% for m in matches %}
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="flex: 1; min-width: 150px;">
+            <div style="font-weight: 600; font-size: 15px;">{{ m.home_team }} – {{ m.away_team }}</div>
+            <div class="match-info">⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
+        </div>
+        <form method="post" style="display: flex; align-items: center; gap: 6px;">
+            <input type="hidden" name="match_id" value="{{ m.id }}">
+            <input type="number" name="home_goals" min="0" value="{{ m.pred_home if m.has_prediction else '' }}" style="width: 48px; padding: 10px;" {% if m.deadline_passed %}disabled{% endif %}>
+            <span style="font-weight: bold;">:</span>
+            <input type="number" name="away_goals" min="0" value="{{ m.pred_away if m.has_prediction else '' }}" style="width: 48px; padding: 10px;" {% if m.deadline_passed %}disabled{% endif %}>
             {% if m.deadline_passed %}
-                <button type="button" disabled style="background: #999;">Приём закрыт</button>
+                <button type="button" class="btn btn-disabled">Закрыт</button>
             {% elif m.has_prediction %}
-                <button type="submit" style="background: #1565c0;">Изменить ставку</button>
+                <button type="submit" class="btn btn-secondary">Изменить</button>
             {% else %}
-                <button type="submit">Сделать ставку</button>
+                <button type="submit" class="btn btn-primary">Ставка</button>
             {% endif %}
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+        </form>
+    </div>
+  </div>
+  {% endfor %}
 {% else %}
-<p>Нет доступных матчей на этот день.</p>
+  <div class="card" style="text-align: center; padding: 30px;">
+    <p>Нет доступных матчей на этот день.</p>
+  </div>
 {% endif %}
 {% endblock %}

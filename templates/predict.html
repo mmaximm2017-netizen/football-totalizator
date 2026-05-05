@@ -1,18 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Доступные дни для ставок</h2>
+<h2 style="margin-bottom: 16px;">📅 Доступные дни для ставок</h2>
 
 {% if days %}
-<ul style="list-style: none; padding: 0;">
+<ul class="day-list">
     {% for d in days %}
-    <li style="margin: 10px 0;">
-        <a href="/predict/{{ d.key }}" style="font-size: 18px; text-decoration: none; color: #2e7d32;">
-            📅 {{ d.label }} — {{ d.count }} матчей
+    <li>
+        <a href="/predict/{{ d.key }}">
+            <span>📅 {{ d.label }}</span>
+            <span class="badge">{{ d.count }} матч.</span>
         </a>
     </li>
     {% endfor %}
 </ul>
 {% else %}
-<p>Нет доступных матчей для ставок.</p>
+<div class="card" style="text-align: center; padding: 30px;">
+    <p>Нет доступных матчей для ставок.</p>
+</div>
 {% endif %}
 {% endblock %}

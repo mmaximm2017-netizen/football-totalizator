@@ -1,29 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Доступные матчи для ставок</h2>
 
-<div style="margin-bottom: 20px;">
-    <a href="/?league=all" style="margin-right: 15px; {% if current_filter == 'all' %}font-weight: bold; color: #2e7d32;{% endif %}">Все</a>
-    <a href="/?league=wc2026" style="margin-right: 15px; {% if current_filter == 'wc2026' %}font-weight: bold; color: #2e7d32;{% endif %}">🏆 ЧМ-2026</a>
-    <a href="/?league=rpl" style="margin-right: 15px; {% if current_filter == 'rpl' %}font-weight: bold; color: #2e7d32;{% endif %}">🇷🇺 РПЛ</a>
-    <a href="/?league=rcup" style="margin-right: 15px; {% if current_filter == 'rcup' %}font-weight: bold; color: #2e7d32;{% endif %}">🏆 Кубок России</a>
-    <a href="/?league=other" style="{% if current_filter == 'other' %}font-weight: bold; color: #2e7d32;{% endif %}">📋 Другое</a>
+<div class="filter-bar">
+    <a href="/?league=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">Все</a>
+    <a href="/?league=wc2026" class="filter-btn {% if current_filter == 'wc2026' %}active{% endif %}">🏆 ЧМ-2026</a>
+    <a href="/?league=rpl" class="filter-btn {% if current_filter == 'rpl' %}active{% endif %}">🇷🇺 РПЛ</a>
+    <a href="/?league=rcup" class="filter-btn {% if current_filter == 'rcup' %}active{% endif %}">🏆 Кубок</a>
+    <a href="/?league=other" class="filter-btn {% if current_filter == 'other' %}active{% endif %}">Другое</a>
 </div>
 
 {% if matches %}
   {% for m in matches %}
-    <p>
-      <b>[{{ m.id }}] {{ m.home_team }} – {{ m.away_team }}</b>
-      {% if m.league == 'wc2026' %}<span style="color: #2e7d32;">(ЧМ-2026)</span>
-      {% elif m.league == 'rpl' %}<span style="color: #1565c0;">(РПЛ)</span>
-      {% elif m.league == 'rcup' %}<span style="color: #c62828;">(Кубок России)</span>
-      {% endif %}<br>
-      Начало: {{ to_msk(m.kickoff_time) }}<br>
-      Дедлайн ставок: {{ to_msk(m.deadline) }}<br>
-      <a href="/match/{{ m.id }}/predictions">📋 Ставки участников</a>
-    </p>
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <span class="badge-league {% if m.league == 'wc2026' %}badge-wc{% elif m.league == 'rpl' %}badge-rpl{% elif m.league == 'rcup' %}badge-rcup{% endif %}">
+                {% if m.league == 'wc2026' %}ЧМ-2026{% elif m.league == 'rpl' %}РПЛ{% elif m.league == 'rcup' %}Кубок России{% else %}Другое{% endif %}
+            </span>
+            <div class="match-teams" style="margin-top: 6px; font-size: 16px;">{{ m.home_team }} – {{ m.away_team }}</div>
+            <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
+        </div>
+        <div>
+            <a href="/match/{{ m.id }}/predictions" style="font-size: 20px; text-decoration: none;">📋</a>
+        </div>
+    </div>
+  </div>
   {% endfor %}
 {% else %}
-  <p>Нет доступных матчей в выбранной категории.</p>
+  <div class="card" style="text-align: center; padding: 30px;">
+    <p>Нет доступных матчей</p>
+  </div>
 {% endif %}
+
 {% endblock %}
