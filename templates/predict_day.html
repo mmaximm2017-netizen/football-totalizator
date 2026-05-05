@@ -4,22 +4,37 @@
 <p><a href="/predict">← Назад к дням</a></p>
 
 {% if matches %}
-<form method="post">
-    <label>Выберите матч</label>
-    <select name="match_id" required style="max-width: 100%; width: 100%;">
-        <option value="">— Выберите матч —</option>
-        {% for m in matches %}
-        <option value="{{ m.id }}">
-            {{ m.home_team }} – {{ m.away_team }} ({{ to_msk(m.kickoff_time) }})
-        </option>
-        {% endfor %}
-    </select>
-    <label>Голы хозяев</label>
-    <input type="number" name="home_goals" min="0" required>
-    <label>Голы гостей</label>
-    <input type="number" name="away_goals" min="0" required>
-    <button type="submit">Отправить</button>
-</form>
+<table>
+    <tr>
+        <th>Матч</th>
+        <th>Дедлайн</th>
+        <th>Ваш прогноз</th>
+        <th>Действие</th>
+    </tr>
+    {% for m in matches %}
+    <tr>
+        <td>{{ m.home_team }} – {{ m.away_team }}</td>
+        <td>{{ to_msk(m.deadline) }}</td>
+        <td>
+            <form method="post" style="display: inline; margin: 0;">
+                <input type="hidden" name="match_id" value="{{ m.id }}">
+                <input type="number" name="home_goals" min="0" value="{{ m.pred_home if m.has_prediction else '' }}" style="width: 50px;" {% if m.deadline_passed %}disabled{% endif %}>
+                :
+                <input type="number" name="away_goals" min="0" value="{{ m.pred_away if m.has_prediction else '' }}" style="width: 50px;" {% if m.deadline_passed %}disabled{% endif %}>
+        </td>
+        <td>
+            {% if m.deadline_passed %}
+                <button type="button" disabled style="background: #999;">Приём закрыт</button>
+            {% elif m.has_prediction %}
+                <button type="submit" style="background: #1565c0;">Изменить ставку</button>
+            {% else %}
+                <button type="submit">Сделать ставку</button>
+            {% endif %}
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
 {% else %}
 <p>Нет доступных матчей на этот день.</p>
 {% endif %}
