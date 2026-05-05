@@ -1,12 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Сделать ставку</h2>
-{% if matches %}
+
+{% if grouped_matches %}
 <form method="post">
     <label>Выберите матч</label>
-    <select name="match_id" required>
-        {% for m in matches %}
-        <option value="{{ m.id }}">{{ m.home_team }} – {{ m.away_team }} (дедлайн {{ to_msk(m.deadline) }})</option>
+    <select name="match_id" required style="max-width: 100%; width: 100%;">
+        <option value="">— Выберите матч —</option>
+        {% for group in grouped_matches %}
+        <optgroup label="📅 {{ group.day }}">
+            {% for m in group.matches %}
+            <option value="{{ m.id }}">
+                {{ m.home_team }} – {{ m.away_team }} ({{ to_msk(m.kickoff_time) }})
+            </option>
+            {% endfor %}
+        </optgroup>
         {% endfor %}
     </select>
     <label>Голы хозяев</label>

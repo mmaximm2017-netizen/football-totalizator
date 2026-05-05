@@ -1,10 +1,9 @@
 # football_site/app.py
 import os
-import threading
-import time
+import logging
 from datetime import datetime, timedelta
+from collections import defaultdict
 import requests
-import schedule
 import psycopg2
 import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
@@ -27,6 +26,10 @@ MSK_OFFSET = 3
 
 # Подключение к Render PostgreSQL
 DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a/football_ou1f"
+
+# Логирование
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -233,9 +236,9 @@ def fetch_matches():
                     m['league'] = 'wc2026'
                     all_matches.append(m)
             else:
-                print(f"football-data.org API error: {resp.status_code}")
+                logger.error(f"football-data.org API error: {resp.status_code}")
         except Exception as e:
-            print(f"football-data.org API request failed: {e}")
+            logger.error(f"football-data.org API request failed: {e}")
     return all_matches
 
 def create_match_from_understat(match, prefix, league_tag):
@@ -258,20 +261,20 @@ def create_match_from_understat(match, prefix, league_tag):
 def fetch_rpl_matches():
     """РПЛ через Understat"""
     if not UNDERSTAT_AVAILABLE:
-        print(">>> Understat не установлен — РПЛ пропущена")
+        logger.info(">>> Understat не установлен — РПЛ пропущена")
         return []
     
-    print(">>> Пытаемся загрузить РПЛ через Understat...")
+    logger.info(">>> Пытаемся загрузить РПЛ через Understat...")
     all_matches = []
     try:
         understat = UnderstatClient()
         league_data = understat.league(league="RFPL").get_match_data(season="2025")
-        print(f">>> РПЛ: Understat вернул {len(league_data)} матчей")
+        logger.info(f">>> РПЛ: Understat вернул {len(league_data)} матчей")
         for match in league_data:
             all_matches.append(create_match_from_understat(match, "rpl", "rpl"))
-        print(f">>> РПЛ загружено: {len(all_matches)} матчей")
+        logger.info(f">>> РПЛ загружено: {len(all_matches)} матчей")
     except Exception as e:
-        print(f">>> РПЛ Understat API request failed: {e}")
+        logger.error(f">>> РПЛ Understat API request failed: {e}")
     return all_matches
 
 def update_matches():
@@ -282,7 +285,7 @@ def update_matches():
         if rpl_matches:
             matches_data.extend(rpl_matches)
     except Exception as e:
-        print(f"Не удалось загрузить РПЛ: {e}")
+        logger.error(f"Не удалось загрузить РПЛ: {e}")
 
     if not matches_data:
         return
@@ -352,12 +355,6 @@ def update_matches():
     cur.close()
     conn.close()
     calculate_all_points()
-
-def run_scheduler():
-    schedule.every().hour.at(":00").do(update_matches)
-    while True:
-        schedule.run_pending()
-        time.sleep(30)
 
 # ---------- МАРШРУТЫ ----------
 @app.route('/')
@@ -435,6 +432,7 @@ def predict():
         conn.close()
         return redirect(url_for('my_predictions'))
 
+    # GET: группировка матчей по дням
     cur.execute(
         """SELECT id, home_team, away_team, kickoff_time, deadline, league
            FROM matches
@@ -442,10 +440,31 @@ def predict():
            ORDER BY kickoff_time""",
         (now.strftime("%Y-%m-%dT%H:%M:%S"),)
     )
-    matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+    raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+    
+    # Группируем матчи по дням
+    matches_by_day = defaultdict(list)
+    for match in raw_matches:
+        clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
+        try:
+            dt_utc = datetime.fromisoformat(clean_str)
+        except:
+            dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
+        dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+        day_key = dt_msk.strftime("%d.%m.%Y")
+        matches_by_day[day_key].append(match)
+    
+    # Преобразуем в список для шаблона
+    grouped_matches = []
+    for day, day_matches in sorted(matches_by_day.items(), key=lambda x: x[0]):
+        grouped_matches.append({
+            'day': day,
+            'matches': day_matches
+        })
+    
     cur.close()
     conn.close()
-    return render_template('predict.html', matches=matches, to_msk=to_msk)
+    return render_template('predict.html', grouped_matches=grouped_matches, to_msk=to_msk)
 
 @app.route('/my-predictions')
 @login_required
@@ -677,7 +696,5 @@ def logout():
 if __name__ == '__main__':
     init_db()
     update_matches()
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
