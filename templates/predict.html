@@ -1,28 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Сделать ставку</h2>
+<h2>Доступные дни для ставок</h2>
 
-{% if grouped_matches %}
-<form method="post">
-    <label>Выберите матч</label>
-    <select name="match_id" required style="max-width: 100%; width: 100%;">
-        <option value="">— Выберите матч —</option>
-        {% for group in grouped_matches %}
-        <optgroup label="📅 {{ group.day }}">
-            {% for m in group.matches %}
-            <option value="{{ m.id }}">
-                {{ m.home_team }} – {{ m.away_team }} ({{ to_msk(m.kickoff_time) }})
-            </option>
-            {% endfor %}
-        </optgroup>
-        {% endfor %}
-    </select>
-    <label>Голы хозяев</label>
-    <input type="number" name="home_goals" min="0" required>
-    <label>Голы гостей</label>
-    <input type="number" name="away_goals" min="0" required>
-    <button type="submit">Отправить</button>
-</form>
+{% if days %}
+<ul style="list-style: none; padding: 0;">
+    {% for d in days %}
+    <li style="margin: 10px 0;">
+        <a href="/predict/{{ d.key }}" style="font-size: 18px; text-decoration: none; color: #2e7d32;">
+            📅 {{ d.label }} — {{ d.count }} матчей
+        </a>
+    </li>
+    {% endfor %}
+</ul>
 {% else %}
 <p>Нет доступных матчей для ставок.</p>
 {% endif %}

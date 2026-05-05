@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Ставки на {{ day_label }}</h2>
+<p><a href="/predict">← Назад к дням</a></p>
+
+{% if matches %}
+<form method="post">
+    <label>Выберите матч</label>
+    <select name="match_id" required style="max-width: 100%; width: 100%;">
+        <option value="">— Выберите матч —</option>
+        {% for m in matches %}
+        <option value="{{ m.id }}">
+            {{ m.home_team }} – {{ m.away_team }} ({{ to_msk(m.kickoff_time) }})
+        </option>
+        {% endfor %}
+    </select>
+    <label>Голы хозяев</label>
+    <input type="number" name="home_goals" min="0" required>
+    <label>Голы гостей</label>
+    <input type="number" name="away_goals" min="0" required>
+    <button type="submit">Отправить</button>
+</form>
+{% else %}
+<p>Нет доступных матчей на этот день.</p>
+{% endif %}
+{% endblock %}
