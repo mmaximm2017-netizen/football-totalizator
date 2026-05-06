@@ -26,6 +26,81 @@ MSK_OFFSET = 3
 # Дата, с которой начинаем показывать матчи
 START_DATE = datetime(2026, 5, 6)
 
+# Словарь перевода названий команд
+TEAM_NAMES = {
+    # РПЛ
+    "Spartak Moscow": "Спартак",
+    "Dinamo Moscow": "Динамо",
+    "CSKA Moscow": "ЦСКА",
+    "Zenit St. Petersburg": "Зенит",
+    "Lokomotiv Moscow": "Локомотив",
+    "FC Krasnodar": "Краснодар",
+    "FK Akhmat": "Ахмат",
+    "FC Rostov": "Ростов",
+    "Rubin Kazan": "Рубин",
+    "Krylya Sovetov Samara": "Крылья Советов",
+    "Nizhny Novgorod": "Пари НН",
+    "FC Orenburg": "Оренбург",
+    "Baltika": "Балтика",
+    "PFC Sochi": "Сочи",
+    "Dynamo Makhachkala": "Динамо Мх",
+    "Akron": "Акрон",
+
+    # Сборные ЧМ-2026
+    "Mexico": "Мексика",
+    "South Africa": "ЮАР",
+    "South Korea": "Южная Корея",
+    "Czechia": "Чехия",
+    "Canada": "Канада",
+    "Bosnia-Herzegovina": "Босния и Герцеговина",
+    "United States": "США",
+    "Paraguay": "Парагвай",
+    "Qatar": "Катар",
+    "Switzerland": "Швейцария",
+    "Brazil": "Бразилия",
+    "Morocco": "Марокко",
+    "Haiti": "Гаити",
+    "Scotland": "Шотландия",
+    "Australia": "Австралия",
+    "Turkey": "Турция",
+    "Germany": "Германия",
+    "Curaçao": "Кюрасао",
+    "Netherlands": "Нидерланды",
+    "Japan": "Япония",
+    "Ivory Coast": "Кот-д'Ивуар",
+    "Ecuador": "Эквадор",
+    "Sweden": "Швеция",
+    "Tunisia": "Тунис",
+    "Spain": "Испания",
+    "Cape Verde Islands": "Кабо-Верде",
+    "Belgium": "Бельгия",
+    "Egypt": "Египет",
+    "Saudi Arabia": "Саудовская Аравия",
+    "Uruguay": "Уругвай",
+    "Iran": "Иран",
+    "New Zealand": "Новая Зеландия",
+    "France": "Франция",
+    "Senegal": "Сенегал",
+    "Iraq": "Ирак",
+    "Norway": "Норвегия",
+    "Argentina": "Аргентина",
+    "Algeria": "Алжир",
+    "Austria": "Австрия",
+    "Jordan": "Иордания",
+    "Portugal": "Португалия",
+    "Congo DR": "ДР Конго",
+    "England": "Англия",
+    "Croatia": "Хорватия",
+    "Ghana": "Гана",
+    "Panama": "Панама",
+    "Uzbekistan": "Узбекистан",
+    "Colombia": "Колумбия",
+}
+
+def translate_name(name):
+    """Переводит название команды на русский, если есть в словаре"""
+    return TEAM_NAMES.get(name, name)
+
 # Подключение к Render PostgreSQL
 DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a/football_ou1f"
 
@@ -322,8 +397,8 @@ def update_matches():
     try:
         for match in matches_data:
             api_id = match['id']
-            home_team = match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown'))
-            away_team = match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown'))
+                        home_team = translate_name(match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown')))
+            away_team = translate_name(match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown')))
             utc_time = match.get('utcDate', match.get('datetime', ''))
             if isinstance(utc_time, str):
                 utc_time = utc_time.replace('Z', '')
