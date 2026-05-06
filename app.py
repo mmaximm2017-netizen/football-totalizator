@@ -448,7 +448,8 @@ def index():
                 'id': m[0], 'home_team': m[1], 'away_team': m[2],
                 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]
             }
-            match['deadline_passed'] = not is_before_deadline((m[0], None, None, m[4], None))
+            # Правильный кортеж: (id, home_team, away_team, deadline, status)
+            match['deadline_passed'] = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
             matches.append(match)
     finally:
         close_db(conn, cur)
