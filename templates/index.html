@@ -49,9 +49,8 @@
                 {% if m.finished %}
                 <div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 8px;">
                     <div style="font-weight: 600; color: #1565c0;">✅ Завершён: {{ m.home_score }} : {{ m.away_score }}</div>
-                    <div style="font-size: 12px; margin-top: 4px;">
-                        Ваш прогноз: {{ m.pred_home }}:{{ m.pred_away }} | Очки: <b>{{ m.my_points }}</b>
-                    </div>
+                    <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; color: #2e7d32; font-weight: 600; display: inline-block; margin-top: 4px;">📋 Ставки и очки всех участников</a>
+                </div>
                     <a href="/match/{{ m.id }}/predictions" style="font-size: 12px; color: #2e7d32; font-weight: 600;">📋 Ставки участников</a>
                 </div>
                 {% elif m.deadline_passed %}
