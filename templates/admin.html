@@ -2,60 +2,38 @@
 {% block content %}
 <h2 style="text-align: center; margin-bottom: 16px;">⚙️ Админ-панель</h2>
 
-<!-- Обновить матчи -->
 <div class="card">
     <div class="card-header">🔄 Обновить матчи из API</div>
-    <form method="post">
-        <input type="hidden" name="action" value="update_matches">
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Обновить сейчас</button>
-    </form>
+    <form method="post"><input type="hidden" name="action" value="update_matches"><button type="submit" class="btn btn-primary" style="width: 100%;">Обновить сейчас</button></form>
 </div>
 
-<!-- Перевести названия -->
 <div class="card">
     <div class="card-header">🌐 Перевести названия команд</div>
-    <form method="post" action="/admin/translate">
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Перевести на русский</button>
-    </form>
+    <form method="post" action="/admin/translate"><button type="submit" class="btn btn-primary" style="width: 100%;">Перевести на русский</button></form>
 </div>
 
-<!-- Добавить матч -->
 <div class="card">
     <div class="card-header">➕ Добавить матч вручную</div>
     <form method="post">
         <input type="hidden" name="action" value="add_match">
-        <label>Команда 1</label>
-        <input type="text" name="home_team" required placeholder="Например: Спартак">
-        <label>Команда 2</label>
-        <input type="text" name="away_team" required placeholder="Например: ЦСКА">
+        <label>Команда 1</label><input type="text" name="home_team" required placeholder="Например: Спартак">
+        <label>Команда 2</label><input type="text" name="away_team" required placeholder="Например: ЦСКА">
         <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;">
-                <label>Дата матча</label>
-                <input type="date" name="match_date" required style="width: 100%;">
-            </div>
-            <div style="flex: 1;">
-                <label>Время МСК</label>
-                <input type="time" name="match_time" value="19:00" required style="width: 100%;">
-            </div>
+            <div style="flex: 1;"><label>Дата матча</label><input type="date" name="match_date" required style="width: 100%;"></div>
+            <div style="flex: 1;"><label>Время МСК</label><input type="time" name="match_time" value="19:00" required style="width: 100%;"></div>
         </div>
         <label>Турнир</label>
         <select name="league">
-            <option value="other">📋 Другое</option>
-            <option value="wc2026">🏆 ЧМ-2026</option>
-            <option value="rpl">🇷🇺 РПЛ</option>
-            <option value="rcup">🏆 Кубок России</option>
+            <option value="other">📋 Другое</option><option value="wc2026">🏆 ЧМ-2026</option><option value="rpl">🇷🇺 РПЛ</option><option value="rcup">🏆 Кубок России</option>
         </select>
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Добавить матч</button>
     </form>
 </div>
 
-<!-- Внести результат -->
-<!-- Внести результат -->
 <div class="card">
     <div class="card-header">✅ Внести результат</div>
-    {% if all_matches %}
-        {% for m in all_matches %}
-        {% if m.status in ('SCHEDULED', 'TIMED') %}
+    {% if free_matches %}
+        {% for m in free_matches %}
         <div class="card" style="margin: 4px 0; padding: 12px;">
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 120px;">
@@ -63,8 +41,7 @@
                     <div style="font-size: 12px; color: #888;">ID: {{ m.id }} | {{ m.kickoff_time[:10] }}</div>
                 </div>
                 <form method="post" style="display: flex; align-items: center; gap: 6px; margin: 0;">
-                    <input type="hidden" name="action" value="set_result">
-                    <input type="hidden" name="match_id" value="{{ m.id }}">
+                    <input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
                     <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
                     <span>:</span>
                     <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
@@ -72,29 +49,12 @@
                 </form>
             </div>
         </div>
-        {% endif %}
         {% endfor %}
     {% else %}
-        <p style="color: #888; text-align: center;">Нет матчей</p>
+        <p style="color: #888; text-align: center;">Нет матчей, ожидающих результата</p>
     {% endif %}
 </div>
 
-<!-- Отменить матч -->
-<div class="card">
-    <div class="card-header">❌ Отменить матч</div>
-    <form method="post">
-        <input type="hidden" name="action" value="cancel_match">
-        <label>Матч</label>
-        <select name="match_id" required>
-            {% for m in all_matches %}
-            <option value="{{ m.id }}">{{ m.home_team }} – {{ m.away_team }} ({{ m.status }})</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary" style="width: 100%; background: #c62828;">Отменить матч</button>
-    </form>
-</div>
-
-<!-- Сброс таблицы -->
 <div class="card">
     <div class="card-header">🔄 Сбросить турнирную таблицу</div>
     <form method="post" onsubmit="return confirm('Точно обнулить все очки и результаты? Это действие необратимо!')">
@@ -103,36 +63,13 @@
     </form>
 </div>
 
-<!-- Список пользователей -->
 <div class="card">
     <div class="card-header">👥 Список пользователей</div>
     <div style="overflow-x: auto;">
         <table>
-            <tr style="background: #263238; color: white;">
-                <th style="padding: 10px;">ID</th>
-                <th style="padding: 10px;">Имя</th>
-            </tr>
-            {% for u in users %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 10px;">{{ u.id }}</td>
-                <td style="padding: 10px;">{{ u.username }}</td>
-            </tr>
-            {% endfor %}
+            <tr style="background: #263238; color: white;"><th style="padding: 10px;">ID</th><th style="padding: 10px;">Имя</th></tr>
+            {% for u in users %}<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">{{ u.id }}</td><td style="padding: 10px;">{{ u.username }}</td></tr>{% endfor %}
         </table>
     </div>
 </div>
-
-<script>
-function toggleDay(id) {
-    var content = document.getElementById(id);
-    var arrow = document.getElementById('arrow-' + id);
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        arrow.style.transform = 'rotate(90deg)';
-    } else {
-        content.style.display = 'none';
-        arrow.style.transform = 'rotate(0deg)';
-    }
-}
-</script>
 {% endblock %}

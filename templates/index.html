@@ -9,25 +9,16 @@
     <a href="/?league=other" class="filter-btn {% if current_filter == 'other' %}active{% endif %}">📋 Другое</a>
 </div>
 
-<!-- Кнопка сворачивания прошедших дней -->
 <div style="text-align: right; margin-bottom: 8px;">
-    <a href="#" onclick="togglePastDays()" style="font-size: 12px; color: #888; text-decoration: none;" id="toggle-past-btn">
-        🔽 Свернуть прошедшие дни
-    </a>
+    <a href="#" onclick="togglePastDays()" style="font-size: 12px; color: #888; text-decoration: none;" id="toggle-past-btn">🔽 Свернуть прошедшие дни</a>
 </div>
 
 {% if days %}
   {% for day in days %}
   <div class="day-group" style="margin-bottom: 8px;" data-day-type="{{ day.type }}">
-    <!-- Заголовок дня -->
     <div class="day-header" onclick="toggleDay('day-{{ day.key }}')" style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
-        background: white;
-        border-radius: 12px;
-        cursor: pointer;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 14px 16px; background: white; border-radius: 12px; cursor: pointer;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         border-left: 4px solid {% if day.type == 'today' %}#2e7d32{% elif day.type == 'past' %}#c62828{% else %}transparent{% endif %};
     ">
@@ -35,47 +26,40 @@
             <span id="arrow-day-{{ day.key }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
             <div>
                 <div style="font-weight: 600; font-size: 15px;">
-                    {% if day.type == 'today' %}
-                        📅 Сегодня, {{ day.label }}
-                    {% else %}
-                        📅 {{ day.label }}
-                    {% endif %}
+                    {% if day.type == 'today' %}📅 Сегодня, {{ day.label }}{% else %}📅 {{ day.label }}{% endif %}
                 </div>
-                <div style="font-size: 12px; color: #888;">
-                    {{ day.count }} матч. 
-                    {% if day.type == 'past' %}
-                        · Приём ставок закрыт
-                    {% elif not day.has_open %}
-                        · Все дедлайны прошли
-                    {% endif %}
-                </div>
+                <div style="font-size: 12px; color: #888;">{{ day.count }} матч.</div>
             </div>
         </div>
         <span style="font-size: 13px; color: #888;">{{ day.count }}</span>
     </div>
-
-    <!-- Матчи дня -->
     <div id="day-{{ day.key }}" class="day-content{% if day.key == open_day %} open{% endif %}">
         {% for m in day.matches %}
-        <div class="card" style="margin: 4px 0 4px 12px; border-left: 3px solid {% if m.deadline_passed %}#c62828{% else %}#2e7d32{% endif %};">
+        <div class="card" style="margin: 4px 0 4px 12px; border-left: 3px solid {% if m.finished %}#1565c0{% elif m.deadline_passed %}#c62828{% else %}#2e7d32{% endif %};">
             <div>
-                <!-- Иконка турнира -->
                 <span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; {% if m.league == 'wc2026' %}background: #e8f5e9; color: #2e7d32;{% elif m.league == 'rpl' %}background: #e3f2fd; color: #1565c0;{% elif m.league == 'rcup' %}background: #ffebee; color: #c62828;{% else %}background: #f5f5f5; color: #666;{% endif %}">
                     {% if m.league == 'wc2026' %}🏆 ЧМ-2026{% elif m.league == 'rpl' %}🇷🇺 РПЛ{% elif m.league == 'rcup' %}🏆 Кубок России{% else %}📋 Другое{% endif %}
                 </span>
-<div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">
-    {% if m.league == 'wc2026' %}{{ get_flag(m.home_team) }}{% endif %} {{ m.home_team }} – 
-    {% if m.league == 'wc2026' %}{{ get_flag(m.away_team) }}{% endif %} {{ m.away_team }}
-</div>
+                <div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">
+                    {% if m.league == 'wc2026' %}{{ get_flag(m.home_team)|safe }}{% endif %}{{ m.home_team }} – 
+                    {% if m.league == 'wc2026' %}{{ get_flag(m.away_team)|safe }}{% endif %}{{ m.away_team }}
+                </div>
                 <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
-                
-                {% if m.deadline_passed %}
+
+                {% if m.finished %}
+                <div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #1565c0;">✅ Завершён: {{ m.home_score }} : {{ m.away_score }}</div>
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        Ваш прогноз: {{ m.pred_home }}:{{ m.pred_away }} | Очки: <b>{{ m.my_points }}</b>
+                    </div>
+                    <a href="/match/{{ m.id }}/predictions" style="font-size: 12px; color: #2e7d32; font-weight: 600;">📋 Ставки участников</a>
+                </div>
+                {% elif m.deadline_passed %}
                 <div style="color: #c62828; font-size: 12px; margin-top: 4px;">🔒 Приём ставок закрыт</div>
                 <div style="margin-top: 8px;">
                     <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; text-decoration: none; color: #2e7d32; font-weight: 600;">📋 Ставки других игроков</a>
                 </div>
                 {% else %}
-                <!-- Форма быстрой ставки -->
                 <form method="post" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
                     <input type="hidden" name="match_id" value="{{ m.id }}">
                     <input type="number" name="home_goals" min="0" value="{{ m.pred_home }}" style="width: 48px; padding: 8px; font-size: 14px;">
@@ -95,62 +79,34 @@
   </div>
   {% endfor %}
 {% else %}
-  <div class="card" style="text-align: center; padding: 30px;">
-    <p>Нет доступных матчей</p>
-  </div>
+  <div class="card" style="text-align: center; padding: 30px;"><p>Нет доступных матчей</p></div>
 {% endif %}
 
 <script>
 function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
-    if (content.classList.contains('open')) {
-        content.classList.remove('open');
-        arrow.style.transform = 'rotate(0deg)';
-    } else {
-        content.classList.add('open');
-        arrow.style.transform = 'rotate(90deg)';
-    }
+    if (content.classList.contains('open')) { content.classList.remove('open'); arrow.style.transform = 'rotate(0deg)'; }
+    else { content.classList.add('open'); arrow.style.transform = 'rotate(90deg)'; }
 }
-
 function togglePastDays() {
     var pastDays = document.querySelectorAll('[data-day-type="past"]');
     var btn = document.getElementById('toggle-past-btn');
     var allOpen = true;
-    
-    pastDays.forEach(function(day) {
-        var content = day.querySelector('.day-content');
-        if (!content.classList.contains('open')) {
-            allOpen = false;
-        }
-    });
-    
+    pastDays.forEach(function(day) { if (!day.querySelector('.day-content').classList.contains('open')) allOpen = false; });
     pastDays.forEach(function(day) {
         var content = day.querySelector('.day-content');
         var arrow = day.querySelector('[id^="arrow-"]');
-        if (allOpen) {
-            content.classList.remove('open');
-            if (arrow) arrow.style.transform = 'rotate(0deg)';
-            btn.textContent = '🔽 Показать прошедшие дни';
-        } else {
-            content.classList.add('open');
-            if (arrow) arrow.style.transform = 'rotate(90deg)';
-            btn.textContent = '🔼 Свернуть прошедшие дни';
-        }
+        if (allOpen) { content.classList.remove('open'); if (arrow) arrow.style.transform = 'rotate(0deg)'; btn.textContent = '🔽 Показать прошедшие дни'; }
+        else { content.classList.add('open'); if (arrow) arrow.style.transform = 'rotate(90deg)'; btn.textContent = '🔼 Свернуть прошедшие дни'; }
     });
 }
-
 document.addEventListener('DOMContentLoaded', function() {
     var openDay = '{{ open_day }}';
     if (openDay) {
         var dayContent = document.getElementById('day-' + openDay);
-        if (dayContent) {
-            setTimeout(function() {
-                dayContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 300);
-        }
+        if (dayContent) setTimeout(function() { dayContent.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
     }
 });
 </script>
-
 {% endblock %}
