@@ -428,6 +428,7 @@ def index():
     
     league_filter = request.args.get('league', 'all')
     start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
+    today_str = (now + timedelta(hours=MSK_OFFSET)).strftime("%Y-%m-%d")
     
     try:
         if league_filter == 'all':
@@ -449,17 +450,67 @@ def index():
                    ORDER BY kickoff_time""",
                 (league_filter, start_date_str)
             )
-        matches = []
-        for m in cur.fetchall():
-            match = {
-                'id': m[0], 'home_team': m[1], 'away_team': m[2],
-                'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]
-            }
-            match['deadline_passed'] = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
-            matches.append(match)
+        raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]} for m in cur.fetchall()]
+        
+        # Группируем по дням
+        matches_by_day = defaultdict(list)
+        for match in raw_matches:
+            clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
+            try:
+                dt_utc = datetime.fromisoformat(clean_str)
+            except:
+                dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
+            dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+            day_key = dt_msk.strftime("%Y-%m-%d")
+            day_label = dt_msk.strftime("%d.%m.%Y")
+            day_weekday = dt_msk.strftime("%A")
+            match['day_key'] = day_key
+            match['deadline_passed'] = not is_before_deadline((match['id'], None, None, match['deadline'], None))
+            matches_by_day[(day_key, day_label, day_weekday)].append(match)
+        
+        # Формируем дни с определением типа (сегодня/прошедший/будущий)
+        days = []
+        for (day_key, day_label, day_weekday), day_matches in sorted(matches_by_day.items(), key=lambda x: x[0][0]):
+            if day_key == today_str:
+                day_type = 'today'
+            elif day_key < today_str:
+                day_type = 'past'
+            else:
+                day_type = 'future'
+            
+            # Определяем, есть ли в дне матчи с непрошедшим дедлайном
+            has_open = any(not m['deadline_passed'] for m in day_matches)
+            
+            days.append({
+                'key': day_key,
+                'label': day_label,
+                'weekday': day_weekday,
+                'type': day_type,
+                'matches': day_matches,
+                'count': len(day_matches),
+                'has_open': has_open
+            })
+        
+        # Определяем, какой день раскрыть (сегодня или ближайший будущий)
+        open_day = None
+        for d in days:
+            if d['type'] == 'today':
+                open_day = d['key']
+                break
+        if not open_day:
+            for d in days:
+                if d['type'] == 'future':
+                    open_day = d['key']
+                    break
+        
     finally:
         close_db(conn, cur)
-    return render_template('index.html', matches=matches, to_msk=to_msk, current_filter=league_filter)
+    
+    return render_template('index.html', 
+                           days=days, 
+                           open_day=open_day,
+                           to_msk=to_msk, 
+                           current_filter=league_filter)
 
 @app.route('/predict')
 @login_required
@@ -829,4 +880,3 @@ if __name__ == '__main__':
     update_matches_safe()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-    
