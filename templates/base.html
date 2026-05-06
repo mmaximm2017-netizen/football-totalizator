@@ -8,10 +8,11 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: #e8ecf1 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="10" fill="none" stroke="%23b0bec5" stroke-width="1.5" opacity="0.5"/><circle cx="40" cy="40" r="3" fill="%23b0bec5" opacity="0.3"/><line x1="40" y1="30" x2="40" y2="50" stroke="%23b0bec5" stroke-width="1" opacity="0.4"/><line x1="30" y1="40" x2="50" y2="40" stroke="%23b0bec5" stroke-width="1" opacity="0.4"/></svg>') repeat;
+            background: linear-gradient(180deg, #f0f2f5 0%, #e8f5e9 50%, #c8e6c9 100%);
             color: #1a1a1a; 
             min-height: 100vh; 
             padding-bottom: 70px; 
+            background-attachment: fixed;
         }
         
         .header { background: #1a1a2e; color: white; padding: 16px 20px; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 100; }
@@ -63,7 +64,6 @@
         .btn-outline { background: white; color: #2e7d32; border: 1px solid #2e7d32; }
         .btn-disabled { background: #ccc; color: #666; cursor: not-allowed; }
         
-        /* Пульсация для кнопки "Поставить" на сегодняшних матчах */
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.4); }
             50% { box-shadow: 0 0 0 6px rgba(46,125,50,0); }
@@ -106,7 +106,6 @@
         .day-list a:active { transform: scale(0.98); }
         .day-list a .badge { background: #2e7d32; color: white; border-radius: 12px; padding: 2px 10px; font-size: 13px; }
         
-        /* Дни — плавное раскрытие */
         .day-content { 
             overflow: hidden; 
             transition: max-height 0.4s ease, opacity 0.3s ease; 
@@ -118,11 +117,9 @@
             opacity: 1; 
         }
         
-        /* Заголовок дня */
         .day-header { transition: background 0.2s; }
         .day-header:active { background: #f5f5f5; }
         
-        /* Адаптивные стили для карточек */
         @media (max-width: 480px) {
             .container { padding: 10px; }
             .card { padding: 12px; border-radius: 10px; }
