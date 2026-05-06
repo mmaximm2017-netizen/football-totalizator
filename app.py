@@ -23,6 +23,8 @@ INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
+# Дата, с которой начинаем показывать матчи
+START_DATE = datetime(2026, 5, 6)
 
 # Подключение к Render PostgreSQL
 DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a/football_ou1f"
@@ -425,6 +427,7 @@ def index():
     now = utc_now()
     
     league_filter = request.args.get('league', 'all')
+    start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
     
     try:
         if league_filter == 'all':
@@ -432,15 +435,19 @@ def index():
                 """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                    FROM matches
                    WHERE status IN ('SCHEDULED', 'TIMED')
-                   ORDER BY kickoff_time"""
+                     AND kickoff_time >= %s
+                   ORDER BY kickoff_time""",
+                (start_date_str,)
             )
         else:
             cur.execute(
                 """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
                    FROM matches
-                   WHERE status IN ('SCHEDULED', 'TIMED') AND league = %s
+                   WHERE status IN ('SCHEDULED', 'TIMED')
+                     AND league = %s
+                     AND kickoff_time >= %s
                    ORDER BY kickoff_time""",
-                (league_filter,)
+                (league_filter, start_date_str)
             )
         matches = []
         for m in cur.fetchall():
@@ -448,7 +455,6 @@ def index():
                 'id': m[0], 'home_team': m[1], 'away_team': m[2],
                 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]
             }
-            # Правильный кортеж: (id, home_team, away_team, deadline, status)
             match['deadline_passed'] = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
             matches.append(match)
     finally:
@@ -461,14 +467,17 @@ def predict():
     conn = get_db()
     cur = conn.cursor()
     now = utc_now()
+    start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
     
     try:
         cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+               WHERE status IN ('SCHEDULED', 'TIMED')
+                 AND deadline > %s
+                 AND kickoff_time >= %s
                ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
+            (now.strftime("%Y-%m-%dT%H:%M:%S"), start_date_str)
         )
         raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
         
@@ -502,6 +511,7 @@ def predict_day(day_key):
     conn = get_db()
     cur = conn.cursor()
     now = utc_now()
+    start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
     
     if request.method == 'POST':
         match_id = request.form.get('match_id')
@@ -545,9 +555,11 @@ def predict_day(day_key):
         cur.execute(
             """SELECT id, home_team, away_team, kickoff_time, deadline, league
                FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+               WHERE status IN ('SCHEDULED', 'TIMED')
+                 AND deadline > %s
+                 AND kickoff_time >= %s
                ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
+            (now.strftime("%Y-%m-%dT%H:%M:%S"), start_date_str)
         )
         raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
         
@@ -648,6 +660,7 @@ def match_predictions(match_id):
             flash("Матч не найден", "error")
             return redirect(url_for('index'))
 
+        # Дедлайн прошёл? Показываем ставки
         if not is_before_deadline(m):
             cur.execute(
                 """SELECT u.username, p.home_goals, p.away_goals, p.points
