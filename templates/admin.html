@@ -44,17 +44,8 @@
 <!-- Внести результат -->
 <div class="card">
     <div class="card-header">✅ Внести результат</div>
-    {% if free_matches %}
-        {% set grouped = {} %}
-        {% for m in free_matches %}
-            {% set day = m.kickoff_time[:10] %}
-            {% if day not in grouped %}
-                {% set _ = grouped.update({day: []}) %}
-            {% endif %}
-            {% set _ = grouped[day].append(m) %}
-        {% endfor %}
-        
-        {% for day, day_matches in grouped.items() %}
+    {% if free_days %}
+        {% for day in free_days %}
         <div class="day-group" style="margin-bottom: 8px;">
             <div class="day-header" onclick="toggleDay('result-day-{{ loop.index }}')" style="
                 display: flex;
@@ -70,12 +61,12 @@
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span id="arrow-result-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.2s;">▶</span>
-                    <div style="font-weight: 600; font-size: 14px;">📅 {{ day }}</div>
+                    <div style="font-weight: 600; font-size: 14px;">📅 {{ day.date }}</div>
                 </div>
-                <span style="font-size: 13px; color: #888;">{{ day_matches|length }} матч.</span>
+                <span style="font-size: 13px; color: #888;">{{ day.matches|length }} матч.</span>
             </div>
             <div id="result-day-{{ loop.index }}" class="day-content" style="display: none;">
-                {% for m in day_matches %}
+                {% for m in day.matches %}
                 <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #1565c0;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 120px;">

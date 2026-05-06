@@ -648,15 +648,40 @@ def admin():
                 cur.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
                 cur.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
                 flash("Все очки обнулены! Турнирная таблица сброшена.", "success")
-        cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches WHERE status IN ('SCHEDULED', 'TIMED')")
-        free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+
+        # Получаем матчи для внесения результата: только начиная с START_DATE
+        start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
+        cur.execute(
+            """SELECT id, home_team, away_team, kickoff_time, status
+               FROM matches
+               WHERE status IN ('SCHEDULED', 'TIMED')
+                 AND kickoff_time >= %s
+               ORDER BY kickoff_time""",
+            (start_date_str,)
+        )
+        raw = cur.fetchall()
+        # Группируем по дням
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for m in raw:
+            day = m[3][:10]  # kickoff_time – дата в формате YYYY-MM-DD...
+            grouped[day].append({
+                'id': m[0], 'home_team': m[1], 'away_team': m[2],
+                'kickoff_time': m[3], 'status': m[4]
+            })
+        # Сортируем дни
+        free_days = [{'date': d, 'matches': grouped[d]} for d in sorted(grouped.keys())]
+
         cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches")
         all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
         cur.execute("SELECT id, username FROM users")
         users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
     finally:
         close_db(conn, cur)
-    return render_template('admin.html', free_matches=free_matches, all_matches=all_matches, users=users)
+    return render_template('admin.html',
+                           free_days=free_days,
+                           all_matches=all_matches,
+                           users=users)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
