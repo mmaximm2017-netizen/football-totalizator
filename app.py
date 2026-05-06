@@ -397,7 +397,7 @@ def update_matches():
     try:
         for match in matches_data:
             api_id = match['id']
-                        home_team = translate_name(match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown')))
+            home_team = translate_name(match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown')))
             away_team = translate_name(match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown')))
             utc_time = match.get('utcDate', match.get('datetime', ''))
             if isinstance(utc_time, str):
