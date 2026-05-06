@@ -2,71 +2,91 @@
 {% block content %}
 <h2 style="text-align: center; margin-bottom: 16px;">📋 Мои ставки</h2>
 
-{% if pending %}
-<h3 style="margin-top: 20px;">🟢 Ожидающие</h3>
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-        <tr style="background: #e8f5e9;">
-            <th style="padding: 10px 8px;">Матч</th>
-            <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-            <th style="padding: 10px 8px;">Дедлайн</th>
-        </tr>
-        {% for p in pending %}
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 10px 8px;">{{ p.home_team }} – {{ p.away_team }}</td>
-            <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ p.home_goals }}:{{ p.away_goals }}</td>
-            <td style="padding: 10px 8px; font-size: 12px;">{{ to_msk(p.deadline) }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+<!-- Фильтр -->
+<div class="filter-bar" style="justify-content: center;">
+    <a href="?filter=active" class="filter-btn {% if current_filter == 'active' or not current_filter %}active{% endif %}">🟢 Активные</a>
+    <a href="?filter=finished" class="filter-btn {% if current_filter == 'finished' %}active{% endif %}">✅ Завершённые</a>
 </div>
+
+{% if (current_filter == 'active' or not current_filter) %}
+    {% if pending %}
+    <h3 style="margin-top: 20px;">🟢 Ожидающие</h3>
+    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
+        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
+            <tr style="background: #e8f5e9;">
+                <th style="padding: 10px 8px;">Матч</th>
+                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
+                <th style="padding: 10px 8px;">Дедлайн</th>
+            </tr>
+            {% for p in pending %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px 8px;">{{ p.home_team }} – {{ p.away_team }}</td>
+                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ p.home_goals }}:{{ p.away_goals }}</td>
+                <td style="padding: 10px 8px; font-size: 12px;">{{ to_msk(p.deadline) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    {% if awaiting %}
+    <h3>⏳ Ожидают результата</h3>
+    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
+        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
+            <tr style="background: #fff3e0;">
+                <th style="padding: 10px 8px;">Матч</th>
+                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
+                <th style="padding: 10px 8px;">Действия</th>
+            </tr>
+            {% for a in awaiting %}
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px 8px;">{{ a.home_team }} – {{ a.away_team }}</td>
+                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ a.home_goals }}:{{ a.away_goals }}</td>
+                <td style="padding: 10px 8px;"><a href="/match/{{ a.id }}/predictions" style="color: #2e7d32; text-decoration: none; font-weight: 600;">📋 Ставки</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
 {% endif %}
 
-{% if awaiting %}
-<h3>⏳ Ожидают результата</h3>
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-        <tr style="background: #fff3e0;">
-            <th style="padding: 10px 8px;">Матч</th>
-            <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-            <th style="padding: 10px 8px;">Действия</th>
-        </tr>
-        {% for a in awaiting %}
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 10px 8px;">{{ a.home_team }} – {{ a.away_team }}</td>
-            <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ a.home_goals }}:{{ a.away_goals }}</td>
-            <td style="padding: 10px 8px;"><a href="/match/{{ a.id }}/predictions" style="color: #2e7d32; text-decoration: none; font-weight: 600;">📋 Ставки</a></td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
+{% if current_filter == 'finished' %}
+    {% if finished %}
+    <h3>✅ Завершённые</h3>
+    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
+        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
+            <tr style="background: #e8f5e9;">
+                <th style="padding: 10px 8px;">Матч</th>
+                <th style="padding: 10px 8px; text-align: center;">Результат</th>
+                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
+                <th style="padding: 10px 8px; text-align: center;">Очки</th>
+            </tr>
+            {% for f in finished %}
+            <tr style="border-bottom: 1px solid #eee; {% if f.points > 0 %}background: #f1f8e9;{% endif %}">
+                <td style="padding: 10px 8px;">{{ f.home_team }} – {{ f.away_team }}</td>
+                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ f.home_score }}:{{ f.away_score }}</td>
+                <td style="padding: 10px 8px; text-align: center;">{{ f.home_goals }}:{{ f.away_goals }}</td>
+                <td style="padding: 10px 8px; text-align: center;">
+                    {% if f.points > 0 %}
+                    <span style="background: #2e7d32; color: white; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 13px;">+{{ f.points }}</span>
+                    {% else %}0{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <div class="card" style="text-align: center; padding: 30px;">
+        <p style="color: #888;">Нет завершённых матчей</p>
+    </div>
+    {% endif %}
 {% endif %}
 
-{% if finished %}
-<h3>✅ Завершённые</h3>
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-        <tr style="background: #e8f5e9;">
-            <th style="padding: 10px 8px;">Матч</th>
-            <th style="padding: 10px 8px; text-align: center;">Результат</th>
-            <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-            <th style="padding: 10px 8px; text-align: center;">Очки</th>
-        </tr>
-        {% for f in finished %}
-        <tr style="border-bottom: 1px solid #eee; {% if f.points > 0 %}background: #f1f8e9;{% endif %}">
-            <td style="padding: 10px 8px;">{{ f.home_team }} – {{ f.away_team }}</td>
-            <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ f.home_score }}:{{ f.away_score }}</td>
-            <td style="padding: 10px 8px; text-align: center;">{{ f.home_goals }}:{{ f.away_goals }}</td>
-            <td style="padding: 10px 8px; text-align: center;">
-                {% if f.points > 0 %}
-                <span style="background: #2e7d32; color: white; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 13px;">+{{ f.points }}</span>
-                {% else %}
-                0
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+{% if not pending and not awaiting and not finished %}
+<div class="card" style="text-align: center; padding: 40px;">
+    <p style="font-size: 48px; margin-bottom: 12px;">🎯</p>
+    <p style="font-size: 18px; font-weight: 600;">У вас пока нет ставок</p>
+    <p style="color: #888;">Перейдите на главную и сделайте прогноз</p>
 </div>
 {% endif %}
 
@@ -87,14 +107,6 @@
         </tr>
         {% endfor %}
     </table>
-</div>
-{% endif %}
-
-{% if not (pending or awaiting or finished or cancelled) %}
-<div class="card" style="text-align: center; padding: 40px;">
-    <p style="font-size: 48px; margin-bottom: 12px;">🎯</p>
-    <p style="font-size: 18px; font-weight: 600;">У вас пока нет ставок</p>
-    <p style="color: #888;">Перейдите в раздел «Ставка» и сделайте прогноз на матч</p>
 </div>
 {% endif %}
 {% endblock %}

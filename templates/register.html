@@ -1,13 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Регистрация</h2>
-<form method="post">
-    <label>Логин</label>
-    <input type="text" name="username" required>
-    <label>Пароль</label>
-    <input type="password" name="password" required>
-    <label>Инвайт-код</label>
-    <input type="text" name="invite_code" required>
-    <button type="submit">Зарегистрироваться</button>
-</form>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
+    <div class="card" style="width: 100%; max-width: 380px; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 48px; margin-bottom: 8px;">📝</div>
+            <h2 style="font-size: 22px; font-weight: 700;">Регистрация</h2>
+            <p style="color: #888; font-size: 13px;">Присоединяйтесь к турниру</p>
+        </div>
+        <form method="post">
+            <label>Логин</label>
+            <input type="text" name="username" required placeholder="Придумайте логин">
+            <label>Пароль</label>
+            <input type="password" name="password" required placeholder="Придумайте пароль">
+            <label>Инвайт-код</label>
+            <input type="text" name="invite_code" required placeholder="Введите инвайт-код">
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Зарегистрироваться</button>
+        </form>
+        <div style="text-align: center; margin-top: 16px;">
+            <a href="/login" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Уже есть аккаунт? Войти</a>
+        </div>
+    </div>
+</div>
 {% endblock %}

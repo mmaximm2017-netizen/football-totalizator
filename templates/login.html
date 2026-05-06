@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Вход</h2>
-<form method="post">
-    <label>Логин</label>
-    <input type="text" name="username" required>
-    <label>Пароль</label>
-    <input type="password" name="password" required>
-    <button type="submit">Войти</button>
-</form>
-<p><a href="/register">Зарегистрироваться</a></p>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
+    <div class="card" style="width: 100%; max-width: 380px; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 48px; margin-bottom: 8px;">⚽</div>
+            <h2 style="font-size: 22px; font-weight: 700;">Вход</h2>
+            <p style="color: #888; font-size: 13px;">Войдите, чтобы делать ставки</p>
+        </div>
+        <form method="post">
+            <label>Логин</label>
+            <input type="text" name="username" required placeholder="Ваш логин">
+            <label>Пароль</label>
+            <input type="password" name="password" required placeholder="Ваш пароль">
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Войти</button>
+        </form>
+        <div style="text-align: center; margin-top: 16px;">
+            <a href="/register" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Зарегистрироваться</a>
+        </div>
+    </div>
+</div>
 {% endblock %}

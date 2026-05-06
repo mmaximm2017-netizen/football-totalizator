@@ -508,6 +508,7 @@ def my_predictions():
     cur = conn.cursor()
     now = utc_now()
     uid = session['user_id']
+    current_filter = request.args.get('filter', 'active')
     try:
         cur.execute(
             """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals, m.kickoff_time, m.deadline
@@ -539,8 +540,10 @@ def my_predictions():
         cancelled = [{'id': c[0], 'home_team': c[1], 'away_team': c[2], 'status': c[3], 'points': c[4]} for c in cur.fetchall()]
     finally:
         close_db(conn, cur)
-    return render_template('my_predictions.html', pending=pending, awaiting=awaiting, finished=finished, cancelled=cancelled, to_msk=to_msk)
-
+    return render_template('my_predictions.html',
+                           pending=pending, awaiting=awaiting,
+                           finished=finished, cancelled=cancelled, 
+                           to_msk=to_msk, current_filter=current_filter)
 @app.route('/match/<int:match_id>/predictions')
 @login_required
 def match_predictions(match_id):
