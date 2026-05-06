@@ -397,8 +397,11 @@ def update_matches():
     try:
         for match in matches_data:
             api_id = match['id']
-            home_team = translate_name(match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown')))
-            away_team = translate_name(match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown')))
+            # Получаем название, затем переводим
+            raw_home = match.get('homeTeam', {}).get('name') or match.get('home_team', 'Unknown')
+            raw_away = match.get('awayTeam', {}).get('name') or match.get('away_team', 'Unknown')
+            home_team = translate_name(raw_home)
+            away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', ''))
             if isinstance(utc_time, str):
                 utc_time = utc_time.replace('Z', '')
