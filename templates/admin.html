@@ -16,13 +16,10 @@
     <div class="card-header">➕ Добавить матч вручную</div>
     <form method="post">
         <input type="hidden" name="action" value="add_match">
-        
         <label>Команда 1</label>
         <input type="text" name="home_team" required placeholder="Например: Спартак">
-        
         <label>Команда 2</label>
         <input type="text" name="away_team" required placeholder="Например: ЦСКА">
-        
         <div style="display: flex; gap: 10px;">
             <div style="flex: 1;">
                 <label>Дата матча</label>
@@ -33,7 +30,6 @@
                 <input type="time" name="match_time" value="19:00" required style="width: 100%;">
             </div>
         </div>
-        
         <label>Турнир</label>
         <select name="league">
             <option value="other">📋 Другое</option>
@@ -41,7 +37,6 @@
             <option value="rpl">🇷🇺 РПЛ</option>
             <option value="rcup">🏆 Кубок России</option>
         </select>
-        
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Добавить матч</button>
     </form>
 </div>
@@ -49,30 +44,37 @@
 <!-- Внести результат -->
 <div class="card">
     <div class="card-header">✅ Внести результат</div>
-    <form method="post">
-        <input type="hidden" name="action" value="set_result">
-        
-        <label>Матч</label>
-        <select name="match_id" required>
-            {% for m in free_matches %}
-            <option value="{{ m.id }}">{{ m.home_team }} – {{ m.away_team }}</option>
-            {% endfor %}
-        </select>
-        
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <div style="flex: 1;">
-                <label>Хозяева</label>
-                <input type="number" name="home_score" min="0" required style="width: 100%;">
+    {% if free_matches %}
+        {% set current_day = '' %}
+        {% for m in free_matches %}
+            {% set match_day = m.kickoff_time[:10] %}
+            {% if match_day != current_day %}
+                {% if current_day != '' %}</div>{% endif %}
+                {% set current_day = match_day %}
+                <div style="font-weight: 600; font-size: 14px; margin: 12px 0 6px; color: #263238;">📅 {{ match_day }}</div>
+                <div>
+            {% endif %}
+            <div class="card" style="margin: 4px 0; padding: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
+                        <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+                    </div>
+                    <form method="post" style="display: flex; align-items: center; gap: 6px; margin: 0;">
+                        <input type="hidden" name="action" value="set_result">
+                        <input type="hidden" name="match_id" value="{{ m.id }}">
+                        <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
+                        <span>:</span>
+                        <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 12px; font-size: 13px;">Завершить</button>
+                    </form>
+                </div>
             </div>
-            <span style="font-size: 20px; font-weight: bold; margin-top: 20px;">:</span>
-            <div style="flex: 1;">
-                <label>Гости</label>
-                <input type="number" name="away_score" min="0" required style="width: 100%;">
-            </div>
+        {% endfor %}
         </div>
-        
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Внести результат</button>
-    </form>
+    {% else %}
+        <p style="color: #888; text-align: center;">Нет матчей, ожидающих результата</p>
+    {% endif %}
 </div>
 
 <!-- Отменить матч -->
@@ -80,14 +82,12 @@
     <div class="card-header">❌ Отменить матч</div>
     <form method="post">
         <input type="hidden" name="action" value="cancel_match">
-        
         <label>Матч</label>
         <select name="match_id" required>
             {% for m in all_matches %}
             <option value="{{ m.id }}">{{ m.home_team }} – {{ m.away_team }} ({{ m.status }})</option>
             {% endfor %}
         </select>
-        
         <button type="submit" class="btn btn-primary" style="width: 100%; background: #c62828;">Отменить матч</button>
     </form>
 </div>
