@@ -656,7 +656,7 @@ def table():
     for idx, row in enumerate(rows, 1):
         table_data.append({'place': idx, 'username': row[0], 'points': int(row[1])})
     return render_template('table.html', table=table_data)
-@app.route('/admin/translate')
+@app.route('/admin/translate', methods=['POST'])
 @admin_required
 def admin_translate():
     """Принудительно переводит названия всех матчей"""
