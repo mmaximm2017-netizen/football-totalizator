@@ -64,6 +64,11 @@
 <body>
     <div class="header">
         ⚽ Футбольный тотализатор
+        {% if g.is_admin %}
+        <div style="font-size: 12px; margin-top: 4px;">
+            <a href="/admin" style="color: #ffeb3b; text-decoration: none;">⚙️ Админ-панель</a>
+        </div>
+        {% endif %}
     </div>
 
     <div class="container">
@@ -95,12 +100,10 @@
             <span class="icon">🏆</span>
             Таблица
         </a>
-        {% if g.is_admin %}
-        <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">
-            <span class="icon">⚙️</span>
-            Админ
+        <a href="/logout">
+            <span class="icon">🚪</span>
+            Выход
         </a>
-        {% endif %}
     </nav>
     {% endif %}
 </body>
