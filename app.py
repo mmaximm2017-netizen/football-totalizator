@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = "fifa2026-totalizator-secret-key-dont-change"
 
 # ---------- РАБОТА С БД ----------
 def get_db():
@@ -40,43 +40,57 @@ def get_db():
     conn.autocommit = True
     return conn
 
+def close_db(conn, cur=None):
+    """Закрывает курсор и соединение"""
+    try:
+        if cur and not cur.closed:
+            cur.close()
+    except:
+        pass
+    try:
+        if conn and not conn.closed:
+            conn.close()
+    except:
+        pass
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            is_admin INTEGER DEFAULT 0
-        );
-        CREATE TABLE IF NOT EXISTS matches (
-            id SERIAL PRIMARY KEY,
-            api_match_id TEXT UNIQUE,
-            home_team TEXT,
-            away_team TEXT,
-            kickoff_time TEXT,
-            deadline TEXT,
-            status TEXT DEFAULT 'SCHEDULED',
-            home_score INTEGER,
-            away_score INTEGER,
-            league TEXT DEFAULT 'other'
-        );
-        CREATE TABLE IF NOT EXISTS predictions (
-            user_id INTEGER REFERENCES users(id),
-            match_id INTEGER REFERENCES matches(id),
-            home_goals INTEGER,
-            away_goals INTEGER,
-            points INTEGER DEFAULT 0,
-            UNIQUE(user_id, match_id)
-        );
-    ''')
-    cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
-    if not cur.fetchone():
-        cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
-                    (ADMIN_USERNAME, ADMIN_PASSWORD))
-    cur.close()
-    conn.close()
+    try:
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS matches (
+                id SERIAL PRIMARY KEY,
+                api_match_id TEXT UNIQUE,
+                home_team TEXT,
+                away_team TEXT,
+                kickoff_time TEXT,
+                deadline TEXT,
+                status TEXT DEFAULT 'SCHEDULED',
+                home_score INTEGER,
+                away_score INTEGER,
+                league TEXT DEFAULT 'other'
+            );
+            CREATE TABLE IF NOT EXISTS predictions (
+                user_id INTEGER REFERENCES users(id),
+                match_id INTEGER REFERENCES matches(id),
+                home_goals INTEGER,
+                away_goals INTEGER,
+                points INTEGER DEFAULT 0,
+                UNIQUE(user_id, match_id)
+            );
+        ''')
+        cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
+        if not cur.fetchone():
+            cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
+                        (ADMIN_USERNAME, ADMIN_PASSWORD))
+    finally:
+        close_db(conn, cur)
 
 # ---------- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ----------
 @app.before_request
@@ -85,12 +99,13 @@ def load_user():
     if 'user_id' in session:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        if user and user[0] == 1:
-            g.is_admin = True
+        try:
+            cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
+            user = cur.fetchone()
+            if user and user[0] == 1:
+                g.is_admin = True
+        finally:
+            close_db(conn, cur)
 
 # ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
 def login_required(f):
@@ -110,13 +125,14 @@ def admin_required(f):
             return redirect(url_for('login'))
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        if not user or user[0] != 1:
-            flash("Доступ запрещён", "error")
-            return redirect(url_for('index'))
+        try:
+            cur.execute("SELECT is_admin FROM users WHERE id = %s", (session['user_id'],))
+            user = cur.fetchone()
+            if not user or user[0] != 1:
+                flash("Доступ запрещён", "error")
+                return redirect(url_for('index'))
+        finally:
+            close_db(conn, cur)
         return f(*args, **kwargs)
     return decorated
 
@@ -200,25 +216,40 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
 
     return 0
 
-def calculate_all_points():
+def calculate_points_for_match(match_id):
+    """Пересчитывает очки только для одного матча"""
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'")
-    finished = cur.fetchall()
-    for match in finished:
+    try:
+        cur.execute("SELECT id, home_score, away_score FROM matches WHERE id = %s", (match_id,))
+        match = cur.fetchone()
+        if not match:
+            return
         cur.execute(
             "SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s",
-            (match[0],)
+            (match_id,)
         )
         preds = cur.fetchall()
         for p in preds:
             pts = calculate_points(match[1], match[2], p[1], p[2])
             cur.execute(
                 "UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
-                (pts, p[0], match[0])
+                (pts, p[0], match_id)
             )
-    cur.close()
-    conn.close()
+    finally:
+        close_db(conn, cur)
+
+def calculate_all_points():
+    """Пересчёт очков для всех завершённых матчей (только при ручном запуске)"""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM matches WHERE status = 'FINISHED'")
+        finished = cur.fetchall()
+        for match in finished:
+            calculate_points_for_match(match[0])
+    finally:
+        close_db(conn, cur)
 
 # ---------- РАБОТА С API ----------
 def fetch_matches():
@@ -277,6 +308,23 @@ def fetch_rpl_matches():
         logger.error(f">>> РПЛ Understat API request failed: {e}")
     return all_matches
 
+def should_update():
+    """Проверяет, нужно ли обновлять матчи (прошло больше 55 минут)"""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT MAX(kickoff_time) FROM matches")
+        last = cur.fetchone()[0]
+        if last:
+            last_update = parse_utc_time(last)
+            if last_update:
+                return utc_now() - last_update > timedelta(minutes=55)
+    except:
+        pass
+    finally:
+        close_db(conn, cur)
+    return True
+
 def update_matches():
     matches_data = fetch_matches()
     
@@ -292,69 +340,81 @@ def update_matches():
 
     conn = get_db()
     cur = conn.cursor()
-    for match in matches_data:
-        api_id = match['id']
-        home_team = match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown'))
-        away_team = match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown'))
-        utc_time = match.get('utcDate', match.get('datetime', ''))
-        if isinstance(utc_time, str):
-            utc_time = utc_time.replace('Z', '')
-        status = match.get('status', 'SCHEDULED')
-        league = match.get('league', 'other')
+    try:
+        for match in matches_data:
+            api_id = match['id']
+            home_team = match.get('home_team', match.get('homeTeam', {}).get('name', 'Unknown'))
+            away_team = match.get('away_team', match.get('awayTeam', {}).get('name', 'Unknown'))
+            utc_time = match.get('utcDate', match.get('datetime', ''))
+            if isinstance(utc_time, str):
+                utc_time = utc_time.replace('Z', '')
+            status = match.get('status', 'SCHEDULED')
+            league = match.get('league', 'other')
 
-        score = None
-        if status == 'FINISHED':
-            score_data = match.get('score', {})
-            extra = score_data.get('extraTime')
-            full = score_data.get('fullTime')
-            score = extra if extra and extra.get('home') is not None else full
+            score = None
+            if status == 'FINISHED':
+                score_data = match.get('score', {})
+                extra = score_data.get('extraTime')
+                full = score_data.get('fullTime')
+                score = extra if extra and extra.get('home') is not None else full
 
-        home_score = None
-        away_score = None
-        if score and score.get('home') is not None and score.get('away') is not None:
-            home_score = int(score['home'])
-            away_score = int(score['away'])
+            home_score = None
+            away_score = None
+            if score and score.get('home') is not None and score.get('away') is not None:
+                home_score = int(score['home'])
+                away_score = int(score['away'])
 
-        if ' ' in utc_time:
-            kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
-        else:
-            kickoff_utc = datetime.fromisoformat(utc_time)
+            if ' ' in utc_time:
+                kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
+            else:
+                kickoff_utc = datetime.fromisoformat(utc_time)
 
-        kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
-        deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-        if deadline_msk >= kickoff_msk:
-            deadline_msk = kickoff_msk - timedelta(hours=1)
-        deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+            kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
+            deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+            if deadline_msk >= kickoff_msk:
+                deadline_msk = kickoff_msk - timedelta(hours=1)
+            deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
 
-        cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
-        existing = cur.fetchone()
+            cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
+            existing = cur.fetchone()
 
-        if not existing:
-            cur.execute(
-                """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
-                   home_score, away_score, league)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (str(api_id), home_team, away_team,
-                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
-                 status, home_score, away_score, league)
-            )
-        else:
-            cur.execute(
-                """UPDATE matches SET status = %s, home_score = %s, away_score = %s,
-                   kickoff_time = %s, deadline = %s, league = %s
-                   WHERE api_match_id = %s""",
-                (status, home_score, away_score,
-                 kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
-                 league, str(api_id))
-            )
-            if status in ('POSTPONED', 'CANCELLED'):
+            if not existing:
                 cur.execute(
-                    "UPDATE predictions SET points = 0 WHERE match_id = (SELECT id FROM matches WHERE api_match_id = %s)",
-                    (str(api_id),)
+                    """INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status,
+                       home_score, away_score, league)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (str(api_id), home_team, away_team,
+                     kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
+                     status, home_score, away_score, league)
                 )
-    cur.close()
-    conn.close()
-    calculate_all_points()
+            else:
+                cur.execute(
+                    """UPDATE matches SET status = %s, home_score = %s, away_score = %s,
+                       kickoff_time = %s, deadline = %s, league = %s
+                       WHERE api_match_id = %s""",
+                    (status, home_score, away_score,
+                     kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"),
+                     league, str(api_id))
+                )
+                if status in ('POSTPONED', 'CANCELLED'):
+                    cur.execute(
+                        "UPDATE predictions SET points = 0 WHERE match_id = (SELECT id FROM matches WHERE api_match_id = %s)",
+                        (str(api_id),)
+                    )
+    finally:
+        close_db(conn, cur)
+
+def update_matches_safe():
+    """Безопасное обновление с проверкой времени"""
+    try:
+        if should_update():
+            logger.info("Обновление матчей...")
+            update_matches()
+            calculate_all_points()
+        else:
+            logger.info("Обновление не требуется (прошло <55 минут)")
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении матчей: {e}")
 
 # ---------- МАРШРУТЫ ----------
 @app.route('/')
@@ -366,25 +426,32 @@ def index():
     
     league_filter = request.args.get('league', 'all')
     
-    if league_filter == 'all':
-        cur.execute(
-            """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
-               FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
-               ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-        )
-    else:
-        cur.execute(
-            """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
-               FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s AND league = %s
-               ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"), league_filter)
-        )
-    matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]} for m in cur.fetchall()]
-    cur.close()
-    conn.close()
+    try:
+        if league_filter == 'all':
+            cur.execute(
+                """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
+                   FROM matches
+                   WHERE status IN ('SCHEDULED', 'TIMED')
+                   ORDER BY kickoff_time"""
+            )
+        else:
+            cur.execute(
+                """SELECT id, home_team, away_team, kickoff_time, deadline, status, league
+                   FROM matches
+                   WHERE status IN ('SCHEDULED', 'TIMED') AND league = %s
+                   ORDER BY kickoff_time""",
+                (league_filter,)
+            )
+        matches = []
+        for m in cur.fetchall():
+            match = {
+                'id': m[0], 'home_team': m[1], 'away_team': m[2],
+                'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]
+            }
+            match['deadline_passed'] = not is_before_deadline((m[0], None, None, m[4], None))
+            matches.append(match)
+    finally:
+        close_db(conn, cur)
     return render_template('index.html', matches=matches, to_msk=to_msk, current_filter=league_filter)
 
 @app.route('/predict')
@@ -394,41 +461,38 @@ def predict():
     cur = conn.cursor()
     now = utc_now()
     
-    # GET: показываем список дней
-    cur.execute(
-        """SELECT id, home_team, away_team, kickoff_time, deadline, league
-           FROM matches
-           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
-           ORDER BY kickoff_time""",
-        (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-    )
-    raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
-    
-    # Группируем матчи по дням
-    matches_by_day = defaultdict(list)
-    for match in raw_matches:
-        clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-        try:
-            dt_utc = datetime.fromisoformat(clean_str)
-        except:
-            dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
-        dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
-        day_key = dt_msk.strftime("%Y-%m-%d")  # для URL
-        day_label = dt_msk.strftime("%d.%m.%Y")  # для отображения
-        match['day_key'] = day_key
-        matches_by_day[day_label].append(match)
-    
-    # Формируем список дней, отсортированный по дате
-    days = []
-    for day_label, day_matches in sorted(matches_by_day.items(), key=lambda x: datetime.strptime(x[0], "%d.%m.%Y")):
-        days.append({
-            'label': day_label,
-            'key': day_matches[0]['day_key'],
-            'count': len(day_matches)
-        })
-    
-    cur.close()
-    conn.close()
+    try:
+        cur.execute(
+            """SELECT id, home_team, away_team, kickoff_time, deadline, league
+               FROM matches
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+               ORDER BY kickoff_time""",
+            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
+        )
+        raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+        
+        matches_by_day = defaultdict(list)
+        for match in raw_matches:
+            clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
+            try:
+                dt_utc = datetime.fromisoformat(clean_str)
+            except:
+                dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
+            dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+            day_key = dt_msk.strftime("%Y-%m-%d")
+            day_label = dt_msk.strftime("%d.%m.%Y")
+            match['day_key'] = day_key
+            matches_by_day[day_label].append(match)
+        
+        days = []
+        for day_label, day_matches in sorted(matches_by_day.items(), key=lambda x: datetime.strptime(x[0], "%d.%m.%Y")):
+            days.append({
+                'label': day_label,
+                'key': day_matches[0]['day_key'],
+                'count': len(day_matches)
+            })
+    finally:
+        close_db(conn, cur)
     return render_template('predict.html', days=days, to_msk=to_msk)
 
 @app.route('/predict/<string:day_key>', methods=['GET', 'POST'])
@@ -452,73 +516,70 @@ def predict_day(day_key):
             flash("Некорректный ввод: голы должны быть целыми неотрицательными числами", "error")
             return redirect(url_for('predict_day', day_key=day_key))
 
-        cur.execute(
-            "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s",
-            (match_id,)
-        )
-        m = cur.fetchone()
-        
-        if not m or m[4] not in ('SCHEDULED', 'TIMED') or not is_before_deadline(m):
-            flash("Ставки на этот матч закрыты", "error")
-            cur.close()
-            conn.close()
-            return redirect(url_for('predict_day', day_key=day_key))
+        try:
+            cur.execute(
+                "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s",
+                (match_id,)
+            )
+            m = cur.fetchone()
+            
+            if not m or m[4] not in ('SCHEDULED', 'TIMED') or not is_before_deadline(m):
+                flash("Ставки на этот матч закрыты", "error")
+                return redirect(url_for('predict_day', day_key=day_key))
 
-        cur.execute(
-            """INSERT INTO predictions (user_id, match_id, home_goals, away_goals)
-               VALUES (%s, %s, %s, %s)
-               ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
-            (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
-        )
-        
-        flash(f"✅ Ставка на матч {m[1]} – {m[2]}: {home_goals}:{away_goals} принята", "success")
-        cur.close()
-        conn.close()
+            cur.execute(
+                """INSERT INTO predictions (user_id, match_id, home_goals, away_goals)
+                   VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
+                (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
+            )
+            
+            flash(f"✅ Ставка на матч {m[1]} – {m[2]}: {home_goals}:{away_goals} принята", "success")
+        finally:
+            close_db(conn, cur)
         return redirect(url_for('predict_day', day_key=day_key))
 
-    # GET: показываем матчи дня
-    cur.execute(
-        """SELECT id, home_team, away_team, kickoff_time, deadline, league
-           FROM matches
-           WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
-           ORDER BY kickoff_time""",
-        (now.strftime("%Y-%m-%dT%H:%M:%S"),)
-    )
-    raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+    # GET
+    try:
+        cur.execute(
+            """SELECT id, home_team, away_team, kickoff_time, deadline, league
+               FROM matches
+               WHERE status IN ('SCHEDULED', 'TIMED') AND deadline > %s
+               ORDER BY kickoff_time""",
+            (now.strftime("%Y-%m-%dT%H:%M:%S"),)
+        )
+        raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
+        
+        cur.execute(
+            """SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s""",
+            (session['user_id'],)
+        )
+        user_preds = {p[0]: (p[1], p[2]) for p in cur.fetchall()}
+        
+        day_matches = []
+        day_label = ""
+        for match in raw_matches:
+            clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
+            try:
+                dt_utc = datetime.fromisoformat(clean_str)
+            except:
+                dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
+            dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+            if dt_msk.strftime("%Y-%m-%d") == day_key:
+                match['deadline_passed'] = not is_before_deadline((match['id'], None, None, match['deadline'], None))
+                match['has_prediction'] = match['id'] in user_preds
+                if match['has_prediction']:
+                    match['pred_home'] = user_preds[match['id']][0]
+                    match['pred_away'] = user_preds[match['id']][1]
+                day_matches.append(match)
+                day_label = dt_msk.strftime("%d.%m.%Y")
+        
+        if not day_matches:
+            flash("На этот день нет доступных матчей", "error")
+            return redirect(url_for('predict'))
+    finally:
+        close_db(conn, cur)
     
-    # Получаем уже сделанные ставки пользователя
-    cur.execute(
-        """SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s""",
-        (session['user_id'],)
-    )
-    user_preds = {p[0]: (p[1], p[2]) for p in cur.fetchall()}
-    
-    # Фильтруем матчи только для выбранного дня
-    day_matches = []
-    day_label = ""
-    for match in raw_matches:
-        clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-        try:
-            dt_utc = datetime.fromisoformat(clean_str)
-        except:
-            dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
-        dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
-        if dt_msk.strftime("%Y-%m-%d") == day_key:
-            # Проверяем дедлайн и добавляем статус кнопки
-            match['deadline_passed'] = not is_before_deadline((match['id'], None, None, match['deadline'], None))
-            match['has_prediction'] = match['id'] in user_preds
-            if match['has_prediction']:
-                match['pred_home'] = user_preds[match['id']][0]
-                match['pred_away'] = user_preds[match['id']][1]
-            day_matches.append(match)
-            day_label = dt_msk.strftime("%d.%m.%Y")
-    
-    if not day_matches:
-        flash("На этот день нет доступных матчей", "error")
-        return redirect(url_for('predict'))
-    
-    cur.close()
-    conn.close()
     return render_template('predict_day.html', day_label=day_label, day_key=day_key, matches=day_matches, to_msk=to_msk)
 
 @app.route('/my-predictions')
@@ -529,42 +590,42 @@ def my_predictions():
     now = utc_now()
     uid = session['user_id']
 
-    cur.execute(
-        """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals,
-                  m.kickoff_time, m.deadline
-           FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = %s AND m.deadline > %s""",
-        (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
-    )
-    pending = [{'id': p[0], 'home_team': p[1], 'away_team': p[2], 'home_goals': p[3], 'away_goals': p[4], 'kickoff_time': p[5], 'deadline': p[6]} for p in cur.fetchall()]
+    try:
+        cur.execute(
+            """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals,
+                      m.kickoff_time, m.deadline
+               FROM predictions p JOIN matches m ON p.match_id = m.id
+               WHERE p.user_id = %s AND m.deadline > %s""",
+            (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
+        )
+        pending = [{'id': p[0], 'home_team': p[1], 'away_team': p[2], 'home_goals': p[3], 'away_goals': p[4], 'kickoff_time': p[5], 'deadline': p[6]} for p in cur.fetchall()]
 
-    cur.execute(
-        """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
-           FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = %s AND m.deadline <= %s AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
-        (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
-    )
-    awaiting = [{'id': a[0], 'home_team': a[1], 'away_team': a[2], 'home_goals': a[3], 'away_goals': a[4]} for a in cur.fetchall()]
+        cur.execute(
+            """SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
+               FROM predictions p JOIN matches m ON p.match_id = m.id
+               WHERE p.user_id = %s AND m.deadline <= %s AND m.status NOT IN ('FINISHED', 'POSTPONED', 'CANCELLED')""",
+            (uid, now.strftime("%Y-%m-%dT%H:%M:%S"))
+        )
+        awaiting = [{'id': a[0], 'home_team': a[1], 'away_team': a[2], 'home_goals': a[3], 'away_goals': a[4]} for a in cur.fetchall()]
 
-    cur.execute(
-        """SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score,
-                  p.home_goals, p.away_goals, p.points
-           FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = %s AND m.status = 'FINISHED'""",
-        (uid,)
-    )
-    finished = [{'id': f[0], 'home_team': f[1], 'away_team': f[2], 'home_score': f[3], 'away_score': f[4], 'home_goals': f[5], 'away_goals': f[6], 'points': f[7]} for f in cur.fetchall()]
+        cur.execute(
+            """SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score,
+                      p.home_goals, p.away_goals, p.points
+               FROM predictions p JOIN matches m ON p.match_id = m.id
+               WHERE p.user_id = %s AND m.status = 'FINISHED'""",
+            (uid,)
+        )
+        finished = [{'id': f[0], 'home_team': f[1], 'away_team': f[2], 'home_score': f[3], 'away_score': f[4], 'home_goals': f[5], 'away_goals': f[6], 'points': f[7]} for f in cur.fetchall()]
 
-    cur.execute(
-        """SELECT m.id, m.home_team, m.away_team, m.status, p.points
-           FROM predictions p JOIN matches m ON p.match_id = m.id
-           WHERE p.user_id = %s AND m.status IN ('POSTPONED', 'CANCELLED')""",
-        (uid,)
-    )
-    cancelled = [{'id': c[0], 'home_team': c[1], 'away_team': c[2], 'status': c[3], 'points': c[4]} for c in cur.fetchall()]
-
-    cur.close()
-    conn.close()
+        cur.execute(
+            """SELECT m.id, m.home_team, m.away_team, m.status, p.points
+               FROM predictions p JOIN matches m ON p.match_id = m.id
+               WHERE p.user_id = %s AND m.status IN ('POSTPONED', 'CANCELLED')""",
+            (uid,)
+        )
+        cancelled = [{'id': c[0], 'home_team': c[1], 'away_team': c[2], 'status': c[3], 'points': c[4]} for c in cur.fetchall()]
+    finally:
+        close_db(conn, cur)
     return render_template('my_predictions.html',
                            pending=pending, awaiting=awaiting,
                            finished=finished, cancelled=cancelled, to_msk=to_msk)
@@ -574,53 +635,51 @@ def my_predictions():
 def match_predictions(match_id):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = %s",
-        (match_id,)
-    )
-    m = cur.fetchone()
-    match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5]} if m else None
-
-    if not match:
-        cur.close()
-        conn.close()
-        flash("Матч не найден", "error")
-        return redirect(url_for('index'))
-
-    if not is_before_deadline(m):
+    try:
         cur.execute(
-            """SELECT u.username, p.home_goals, p.away_goals, p.points
-               FROM predictions p JOIN users u ON p.user_id = u.id
-               WHERE p.match_id = %s
-               ORDER BY u.username""",
+            "SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id = %s",
             (match_id,)
         )
-        predictions = [{'username': p[0], 'home_goals': p[1], 'away_goals': p[2], 'points': p[3]} for p in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return render_template('match_predictions.html',
-                               match=match,
-                               predictions=predictions,
-                               to_msk=to_msk)
-    else:
-        cur.close()
-        conn.close()
-        flash("Ставки других игроков будут доступны после закрытия приёма прогнозов", "error")
-        return redirect(url_for('index'))
+        m = cur.fetchone()
+        match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5]} if m else None
+
+        if not match:
+            flash("Матч не найден", "error")
+            return redirect(url_for('index'))
+
+        if not is_before_deadline(m):
+            cur.execute(
+                """SELECT u.username, p.home_goals, p.away_goals, p.points
+                   FROM predictions p JOIN users u ON p.user_id = u.id
+                   WHERE p.match_id = %s
+                   ORDER BY u.username""",
+                (match_id,)
+            )
+            predictions = [{'username': p[0], 'home_goals': p[1], 'away_goals': p[2], 'points': p[3]} for p in cur.fetchall()]
+            return render_template('match_predictions.html',
+                                   match=match,
+                                   predictions=predictions,
+                                   to_msk=to_msk)
+        else:
+            flash("Ставки других игроков будут доступны после закрытия приёма прогнозов", "error")
+            return redirect(url_for('index'))
+    finally:
+        close_db(conn, cur)
 
 @app.route('/table')
 @login_required
 def table():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute(
-        """SELECT u.username, COALESCE(SUM(p.points), 0) as total
-           FROM users u LEFT JOIN predictions p ON u.id = p.user_id
-           GROUP BY u.id ORDER BY total DESC"""
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    try:
+        cur.execute(
+            """SELECT u.username, COALESCE(SUM(p.points), 0) as total
+               FROM users u LEFT JOIN predictions p ON u.id = p.user_id
+               GROUP BY u.id ORDER BY total DESC"""
+        )
+        rows = cur.fetchall()
+    finally:
+        close_db(conn, cur)
     table_data = []
     for idx, row in enumerate(rows, 1):
         table_data.append({'place': idx, 'username': row[0], 'points': int(row[1])})
@@ -631,69 +690,68 @@ def table():
 def admin():
     conn = get_db()
     cur = conn.cursor()
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'update_matches':
-            update_matches()
-            flash("Данные матчей обновлены из API", "success")
-        elif action == 'add_match':
-            home = request.form['home_team']
-            away = request.form['away_team']
-            league = request.form.get('league', 'other')
-            try:
-                kickoff_msk_str = request.form['kickoff_msk']
-                dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
-                utc = dt_msk - timedelta(hours=MSK_OFFSET)
-                deadline_msk = dt_msk.replace(hour=11, minute=0)
-                if deadline_msk >= dt_msk:
-                    deadline_msk = dt_msk - timedelta(hours=1)
-                deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+    try:
+        if request.method == 'POST':
+            action = request.form.get('action')
+            if action == 'update_matches':
+                update_matches_safe()
+                flash("Данные матчей обновлены из API", "success")
+            elif action == 'add_match':
+                home = request.form['home_team']
+                away = request.form['away_team']
+                league = request.form.get('league', 'other')
+                try:
+                    kickoff_msk_str = request.form['kickoff_msk']
+                    dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
+                    utc = dt_msk - timedelta(hours=MSK_OFFSET)
+                    deadline_msk = dt_msk.replace(hour=11, minute=0)
+                    if deadline_msk >= dt_msk:
+                        deadline_msk = dt_msk - timedelta(hours=1)
+                    deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
+                    cur.execute(
+                        """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status, league)
+                           VALUES (%s, %s, %s, %s, 'SCHEDULED', %s)""",
+                        (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"),
+                         deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league)
+                    )
+                    flash(f"Матч {home} – {away} добавлен", "success")
+                except Exception as e:
+                    flash(f"Неверный формат даты: {e}", "error")
+            elif action == 'set_result':
+                match_id = request.form['match_id']
+                home_score = request.form['home_score']
+                away_score = request.form['away_score']
+                try:
+                    home_score = int(home_score)
+                    away_score = int(away_score)
+                except:
+                    flash("Результат должен быть числами", "error")
+                    return redirect(url_for('admin'))
                 cur.execute(
-                    """INSERT INTO matches (home_team, away_team, kickoff_time, deadline, status, league)
-                       VALUES (%s, %s, %s, %s, 'SCHEDULED', %s)""",
-                    (home, away, utc.strftime("%Y-%m-%dT%H:%M:%S"),
-                     deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league)
+                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
+                    (home_score, away_score, match_id)
                 )
-                flash(f"Матч {home} – {away} добавлен", "success")
-            except Exception as e:
-                flash(f"Неверный формат даты: {e}", "error")
-        elif action == 'set_result':
-            match_id = request.form['match_id']
-            home_score = request.form['home_score']
-            away_score = request.form['away_score']
-            try:
-                home_score = int(home_score)
-                away_score = int(away_score)
-            except:
-                flash("Результат должен быть числами", "error")
-                cur.close()
-                conn.close()
-                return redirect(url_for('admin'))
-            cur.execute(
-                "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
-                (home_score, away_score, match_id)
-            )
-            calculate_all_points()
-            flash("Результат внесён, очки пересчитаны", "success")
-        elif action == 'cancel_match':
-            match_id = request.form['match_id']
-            cur.execute("UPDATE matches SET status='CANCELLED' WHERE id=%s", (match_id,))
-            cur.execute("UPDATE predictions SET points=0 WHERE match_id=%s", (match_id,))
-            flash("Матч отменён, очки сброшены", "success")
-        elif action == 'reset_all_points':
-            cur.execute("UPDATE predictions SET points = 0")
-            cur.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
-            cur.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
-            flash("Все очки обнулены! Турнирная таблица сброшена.", "success")
+                calculate_points_for_match(match_id)
+                flash("Результат внесён, очки пересчитаны", "success")
+            elif action == 'cancel_match':
+                match_id = request.form['match_id']
+                cur.execute("UPDATE matches SET status='CANCELLED' WHERE id=%s", (match_id,))
+                cur.execute("UPDATE predictions SET points=0 WHERE match_id=%s", (match_id,))
+                flash("Матч отменён, очки сброшены", "success")
+            elif action == 'reset_all_points':
+                cur.execute("UPDATE predictions SET points = 0")
+                cur.execute("UPDATE matches SET status = 'CANCELLED' WHERE status = 'FINISHED'")
+                cur.execute("UPDATE matches SET home_score = NULL, away_score = NULL WHERE status = 'CANCELLED'")
+                flash("Все очки обнулены! Турнирная таблица сброшена.", "success")
 
-    cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches WHERE status IN ('SCHEDULED', 'TIMED')")
-    free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
-    cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches")
-    all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
-    cur.execute("SELECT id, username FROM users")
-    users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
-    cur.close()
-    conn.close()
+        cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches WHERE status IN ('SCHEDULED', 'TIMED')")
+        free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+        cur.execute("SELECT id, home_team, away_team, kickoff_time, status FROM matches")
+        all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+        cur.execute("SELECT id, username FROM users")
+        users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
+    finally:
+        close_db(conn, cur)
     return render_template('admin.html',
                            free_matches=free_matches,
                            all_matches=all_matches,
@@ -706,10 +764,11 @@ def login():
         password = request.form['password']
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE username = %s AND password = %s", (username, password))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
+        try:
+            cur.execute("SELECT id FROM users WHERE username = %s AND password = %s", (username, password))
+            user = cur.fetchone()
+        finally:
+            close_db(conn, cur)
         if user:
             session['user_id'] = user[0]
             session.permanent = True
@@ -738,8 +797,8 @@ def register():
             return redirect(url_for('login'))
         except psycopg2.IntegrityError:
             flash("Такой пользователь уже существует", "error")
-        cur.close()
-        conn.close()
+        finally:
+            close_db(conn, cur)
     return render_template('register.html')
 
 @app.route('/logout')
@@ -750,6 +809,6 @@ def logout():
 # ---------- ЗАПУСК ----------
 if __name__ == '__main__':
     init_db()
-    update_matches()
+    update_matches_safe()
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

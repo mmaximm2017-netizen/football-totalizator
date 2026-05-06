@@ -12,16 +12,19 @@
 {% if matches %}
   {% for m in matches %}
   <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+        <div style="flex: 1; min-width: 180px;">
             <span class="badge-league {% if m.league == 'wc2026' %}badge-wc{% elif m.league == 'rpl' %}badge-rpl{% elif m.league == 'rcup' %}badge-rcup{% endif %}">
                 {% if m.league == 'wc2026' %}ЧМ-2026{% elif m.league == 'rpl' %}РПЛ{% elif m.league == 'rcup' %}Кубок России{% else %}Другое{% endif %}
             </span>
             <div class="match-teams" style="margin-top: 6px; font-size: 16px;">{{ m.home_team }} – {{ m.away_team }}</div>
             <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
+            {% if m.deadline_passed %}
+            <div style="color: #c62828; font-size: 13px; margin-top: 4px;">🔒 Приём ставок закрыт</div>
+            {% endif %}
         </div>
-        <div>
-            <a href="/match/{{ m.id }}/predictions" style="font-size: 20px; text-decoration: none;">📋</a>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <a href="/match/{{ m.id }}/predictions" style="font-size: 14px; text-decoration: none; color: #2e7d32; font-weight: 600;">📋 Ставки</a>
         </div>
     </div>
   </div>
