@@ -419,7 +419,7 @@ def update_matches_safe():
         logger.error(f"Ошибка при обновлении матчей: {e}")
 
 # ---------- МАРШРУТЫ ----------
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
     conn = get_db()
@@ -429,6 +429,40 @@ def index():
     league_filter = request.args.get('league', 'all')
     start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
     today_str = (now + timedelta(hours=MSK_OFFSET)).strftime("%Y-%m-%d")
+    
+    # Обработка быстрой ставки
+    if request.method == 'POST':
+        match_id = request.form.get('match_id')
+        home_goals = request.form.get('home_goals')
+        away_goals = request.form.get('away_goals')
+        
+        if match_id and home_goals is not None and away_goals is not None:
+            try:
+                home_goals = int(home_goals)
+                away_goals = int(away_goals)
+                if home_goals >= 0 and away_goals >= 0:
+                    cur.execute(
+                        "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s",
+                        (match_id,)
+                    )
+                    m = cur.fetchone()
+                    if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
+                        cur.execute(
+                            """INSERT INTO predictions (user_id, match_id, home_goals, away_goals)
+                               VALUES (%s, %s, %s, %s)
+                               ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
+                            (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
+                        )
+                        flash(f"✅ Ставка на матч {m[1]} – {m[2]}: {home_goals}:{away_goals} принята", "success")
+                    else:
+                        flash("Ставки на этот матч закрыты", "error")
+                else:
+                    flash("Некорректный ввод", "error")
+            except (ValueError, TypeError):
+                flash("Некорректный ввод", "error")
+        
+        close_db(conn, cur)
+        return redirect(url_for('index', league=league_filter))
     
     try:
         if league_filter == 'all':
@@ -452,6 +486,10 @@ def index():
             )
         raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6]} for m in cur.fetchall()]
         
+        # Получаем уже сделанные ставки пользователя
+        cur.execute("SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s", (session['user_id'],))
+        user_preds = {p[0]: (p[1], p[2]) for p in cur.fetchall()}
+        
         # Группируем по дням
         matches_by_day = defaultdict(list)
         for match in raw_matches:
@@ -466,9 +504,16 @@ def index():
             day_weekday = dt_msk.strftime("%A")
             match['day_key'] = day_key
             match['deadline_passed'] = not is_before_deadline((match['id'], None, None, match['deadline'], None))
+            # Подставляем существующий прогноз
+            if match['id'] in user_preds:
+                match['pred_home'] = user_preds[match['id']][0]
+                match['pred_away'] = user_preds[match['id']][1]
+            else:
+                match['pred_home'] = ''
+                match['pred_away'] = ''
             matches_by_day[(day_key, day_label, day_weekday)].append(match)
         
-        # Формируем дни с определением типа (сегодня/прошедший/будущий)
+        # Формируем дни
         days = []
         for (day_key, day_label, day_weekday), day_matches in sorted(matches_by_day.items(), key=lambda x: x[0][0]):
             if day_key == today_str:
@@ -478,7 +523,6 @@ def index():
             else:
                 day_type = 'future'
             
-            # Определяем, есть ли в дне матчи с непрошедшим дедлайном
             has_open = any(not m['deadline_passed'] for m in day_matches)
             
             days.append({
@@ -491,7 +535,7 @@ def index():
                 'has_open': has_open
             })
         
-        # Определяем, какой день раскрыть (сегодня или ближайший будущий)
+        # Какой день раскрыт
         open_day = None
         for d in days:
             if d['type'] == 'today':
@@ -511,140 +555,6 @@ def index():
                            open_day=open_day,
                            to_msk=to_msk, 
                            current_filter=league_filter)
-
-@app.route('/predict')
-@login_required
-def predict():
-    conn = get_db()
-    cur = conn.cursor()
-    now = utc_now()
-    start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
-    
-    try:
-        cur.execute(
-            """SELECT id, home_team, away_team, kickoff_time, deadline, league
-               FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED')
-                 AND deadline > %s
-                 AND kickoff_time >= %s
-               ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"), start_date_str)
-        )
-        raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
-        
-        matches_by_day = defaultdict(list)
-        for match in raw_matches:
-            clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-            try:
-                dt_utc = datetime.fromisoformat(clean_str)
-            except:
-                dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
-            dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
-            day_key = dt_msk.strftime("%Y-%m-%d")
-            day_label = dt_msk.strftime("%d.%m.%Y")
-            match['day_key'] = day_key
-            matches_by_day[day_label].append(match)
-        
-        days = []
-        for day_label, day_matches in sorted(matches_by_day.items(), key=lambda x: datetime.strptime(x[0], "%d.%m.%Y")):
-            days.append({
-                'label': day_label,
-                'key': day_matches[0]['day_key'],
-                'count': len(day_matches)
-            })
-    finally:
-        close_db(conn, cur)
-    return render_template('predict.html', days=days, to_msk=to_msk)
-
-@app.route('/predict/<string:day_key>', methods=['GET', 'POST'])
-@login_required
-def predict_day(day_key):
-    conn = get_db()
-    cur = conn.cursor()
-    now = utc_now()
-    start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
-    
-    if request.method == 'POST':
-        match_id = request.form.get('match_id')
-        home_goals = request.form.get('home_goals')
-        away_goals = request.form.get('away_goals')
-
-        try:
-            home_goals = int(home_goals)
-            away_goals = int(away_goals)
-            if home_goals < 0 or away_goals < 0:
-                raise ValueError
-        except (ValueError, TypeError):
-            flash("Некорректный ввод: голы должны быть целыми неотрицательными числами", "error")
-            return redirect(url_for('predict_day', day_key=day_key))
-
-        try:
-            cur.execute(
-                "SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s",
-                (match_id,)
-            )
-            m = cur.fetchone()
-            
-            if not m or m[4] not in ('SCHEDULED', 'TIMED') or not is_before_deadline(m):
-                flash("Ставки на этот матч закрыты", "error")
-                return redirect(url_for('predict_day', day_key=day_key))
-
-            cur.execute(
-                """INSERT INTO predictions (user_id, match_id, home_goals, away_goals)
-                   VALUES (%s, %s, %s, %s)
-                   ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals = %s, away_goals = %s""",
-                (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals)
-            )
-            
-            flash(f"✅ Ставка на матч {m[1]} – {m[2]}: {home_goals}:{away_goals} принята", "success")
-        finally:
-            close_db(conn, cur)
-        return redirect(url_for('predict_day', day_key=day_key))
-
-    # GET
-    try:
-        cur.execute(
-            """SELECT id, home_team, away_team, kickoff_time, deadline, league
-               FROM matches
-               WHERE status IN ('SCHEDULED', 'TIMED')
-                 AND deadline > %s
-                 AND kickoff_time >= %s
-               ORDER BY kickoff_time""",
-            (now.strftime("%Y-%m-%dT%H:%M:%S"), start_date_str)
-        )
-        raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'league': m[5]} for m in cur.fetchall()]
-        
-        cur.execute(
-            """SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s""",
-            (session['user_id'],)
-        )
-        user_preds = {p[0]: (p[1], p[2]) for p in cur.fetchall()}
-        
-        day_matches = []
-        day_label = ""
-        for match in raw_matches:
-            clean_str = match['kickoff_time'].replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-            try:
-                dt_utc = datetime.fromisoformat(clean_str)
-            except:
-                dt_utc = datetime.strptime(match['kickoff_time'], "%Y-%m-%d %H:%M:%S")
-            dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
-            if dt_msk.strftime("%Y-%m-%d") == day_key:
-                match['deadline_passed'] = not is_before_deadline((match['id'], None, None, match['deadline'], None))
-                match['has_prediction'] = match['id'] in user_preds
-                if match['has_prediction']:
-                    match['pred_home'] = user_preds[match['id']][0]
-                    match['pred_away'] = user_preds[match['id']][1]
-                day_matches.append(match)
-                day_label = dt_msk.strftime("%d.%m.%Y")
-        
-        if not day_matches:
-            flash("На этот день нет доступных матчей", "error")
-            return redirect(url_for('predict'))
-    finally:
-        close_db(conn, cur)
-    
-    return render_template('predict_day.html', day_label=day_label, day_key=day_key, matches=day_matches, to_msk=to_msk)
 
 @app.route('/my-predictions')
 @login_required
@@ -711,11 +621,9 @@ def match_predictions(match_id):
             flash("Матч не найден", "error")
             return redirect(url_for('index'))
 
-        # Проверяем дедлайн ПРАВИЛЬНО: кортеж = (id, home, away, deadline, status)
         deadline_passed = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
         
         if deadline_passed:
-            # Дедлайн прошёл — показываем ставки
             cur.execute(
                 """SELECT u.username, p.home_goals, p.away_goals, p.points
                    FROM predictions p JOIN users u ON p.user_id = u.id
