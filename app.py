@@ -660,8 +660,11 @@ def match_predictions(match_id):
             flash("Матч не найден", "error")
             return redirect(url_for('index'))
 
-        # Дедлайн прошёл? Показываем ставки
-        if not is_before_deadline(m):
+        # Проверяем дедлайн ПРАВИЛЬНО: кортеж = (id, home, away, deadline, status)
+        deadline_passed = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
+        
+        if deadline_passed:
+            # Дедлайн прошёл — показываем ставки
             cur.execute(
                 """SELECT u.username, p.home_goals, p.away_goals, p.points
                    FROM predictions p JOIN users u ON p.user_id = u.id
