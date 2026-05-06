@@ -97,6 +97,64 @@ TEAM_NAMES = {
     "Colombia": "Колумбия",
 }
 
+# Флаги для сборных
+TEAM_FLAGS = {
+    "Россия": "🇷🇺",
+    "Бразилия": "🇧🇷",
+    "Аргентина": "🇦🇷",
+    "Германия": "🇩🇪",
+    "Франция": "🇫🇷",
+    "Испания": "🇪🇸",
+    "Англия": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "Италия": "🇮🇹",
+    "Нидерланды": "🇳🇱",
+    "Португалия": "🇵🇹",
+    "Бельгия": "🇧🇪",
+    "Хорватия": "🇭🇷",
+    "Уругвай": "🇺🇾",
+    "Колумбия": "🇨🇴",
+    "Мексика": "🇲🇽",
+    "США": "🇺🇸",
+    "Япония": "🇯🇵",
+    "Южная Корея": "🇰🇷",
+    "Сенегал": "🇸🇳",
+    "Марокко": "🇲🇦",
+    "Египет": "🇪🇬",
+    "Саудовская Аравия": "🇸🇦",
+    "Катар": "🇶🇦",
+    "Австралия": "🇦🇺",
+    "Канада": "🇨🇦",
+    "Швейцария": "🇨🇭",
+    "Швеция": "🇸🇪",
+    "Норвегия": "🇳🇴",
+    "Турция": "🇹🇷",
+    "Австрия": "🇦🇹",
+    "Чехия": "🇨🇿",
+    "Иран": "🇮🇷",
+    "Ирак": "🇮🇶",
+    "Алжир": "🇩🇿",
+    "Гана": "🇬🇭",
+    "Панама": "🇵🇦",
+    "Парагвай": "🇵🇾",
+    "Эквадор": "🇪🇨",
+    "Тунис": "🇹🇳",
+    "ЮАР": "🇿🇦",
+    "Шотландия": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "Гаити": "🇭🇹",
+    "Босния и Герцеговина": "🇧🇦",
+    "Кюрасао": "🇨🇼",
+    "Кот-д'Ивуар": "🇨🇮",
+    "Новая Зеландия": "🇳🇿",
+    "Кабо-Верде": "🇨🇻",
+    "Узбекистан": "🇺🇿",
+    "ДР Конго": "🇨🇩",
+    "Иордания": "🇯🇴",
+}
+def get_flag(name):
+    """Возвращает флаг для команды, если она есть в словаре"""
+    # Ищем сначала перевод, потом флаг
+    translated = TEAM_NAMES.get(name, name)
+    return TEAM_FLAGS.get(translated, "")
 def translate_name(name):
     """Переводит название команды на русский, если есть в словаре"""
     return TEAM_NAMES.get(name, name)
@@ -367,7 +425,20 @@ def fetch_rpl_matches():
     return all_matches
 
 def should_update():
-    """Временно всегда обновляет"""
+    """Проверяет, нужно ли обновлять матчи (прошло больше 55 минут)"""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT MAX(kickoff_time) FROM matches")
+        last = cur.fetchone()[0]
+        if last:
+            last_update = parse_utc_time(last)
+            if last_update:
+                return utc_now() - last_update > timedelta(minutes=55)
+    except:
+        pass
+    finally:
+        close_db(conn, cur)
     return True
 
 def update_matches():
@@ -565,7 +636,7 @@ def index():
     finally:
         close_db(conn, cur)
     
-    return render_template('index.html', days=days, open_day=open_day, to_msk=to_msk, current_filter=league_filter)
+    return render_template('index.html', days=days, open_day=open_day, to_msk=to_msk, current_filter=league_filter, get_flag=get_flag)
 
 @app.route('/my-predictions')
 @login_required

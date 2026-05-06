@@ -63,7 +63,10 @@
                 <span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; {% if m.league == 'wc2026' %}background: #e8f5e9; color: #2e7d32;{% elif m.league == 'rpl' %}background: #e3f2fd; color: #1565c0;{% elif m.league == 'rcup' %}background: #ffebee; color: #c62828;{% else %}background: #f5f5f5; color: #666;{% endif %}">
                     {% if m.league == 'wc2026' %}🏆 ЧМ-2026{% elif m.league == 'rpl' %}🇷🇺 РПЛ{% elif m.league == 'rcup' %}🏆 Кубок России{% else %}📋 Другое{% endif %}
                 </span>
-                <div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
+<div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">
+    {% if m.league == 'wc2026' %}{{ get_flag(m.home_team) }}{% endif %} {{ m.home_team }} – 
+    {% if m.league == 'wc2026' %}{{ get_flag(m.away_team) }}{% endif %} {{ m.away_team }}
+</div>
                 <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
                 
                 {% if m.deadline_passed %}
