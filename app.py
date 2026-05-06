@@ -656,7 +656,27 @@ def table():
     for idx, row in enumerate(rows, 1):
         table_data.append({'place': idx, 'username': row[0], 'points': int(row[1])})
     return render_template('table.html', table=table_data)
-
+@app.route('/admin/translate')
+@admin_required
+def admin_translate():
+    """Принудительно переводит названия всех матчей"""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, home_team, away_team FROM matches")
+        matches = cur.fetchall()
+        updated = 0
+        for m in matches:
+            new_home = translate_name(m[1])
+            new_away = translate_name(m[2])
+            if new_home != m[1] or new_away != m[2]:
+                cur.execute("UPDATE matches SET home_team = %s, away_team = %s WHERE id = %s",
+                            (new_home, new_away, m[0]))
+                updated += 1
+        flash(f"Переведено {updated} матчей из {len(matches)}", "success")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for('admin'))
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
 def admin():
