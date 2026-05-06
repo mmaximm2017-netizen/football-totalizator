@@ -51,8 +51,6 @@
                     <div style="font-weight: 600; color: #1565c0;">✅ Завершён: {{ m.home_score }} : {{ m.away_score }}</div>
                     <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; color: #2e7d32; font-weight: 600; display: inline-block; margin-top: 4px;">📋 Ставки и очки всех участников</a>
                 </div>
-                    <a href="/match/{{ m.id }}/predictions" style="font-size: 12px; color: #2e7d32; font-weight: 600;">📋 Ставки участников</a>
-                </div>
                 {% elif m.deadline_passed %}
                 <div style="color: #c62828; font-size: 12px; margin-top: 4px;">🔒 Приём ставок закрыт</div>
                 <div style="margin-top: 8px;">
