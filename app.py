@@ -672,12 +672,14 @@ def admin():
             if action == 'update_matches':
                 update_matches_safe()
                 flash("Данные матчей обновлены из API", "success")
-            elif action == 'add_match':
+                        elif action == 'add_match':
                 home = request.form['home_team']
                 away = request.form['away_team']
                 league = request.form.get('league', 'other')
                 try:
-                    kickoff_msk_str = request.form['kickoff_msk']
+                    match_date = request.form['match_date']
+                    match_time = request.form['match_time']
+                    kickoff_msk_str = f"{match_date} {match_time}"
                     dt_msk = datetime.strptime(kickoff_msk_str, "%Y-%m-%d %H:%M")
                     utc = dt_msk - timedelta(hours=MSK_OFFSET)
                     deadline_msk = dt_msk.replace(hour=11, minute=0)
