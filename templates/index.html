@@ -6,7 +6,7 @@
     <a href="/?league=wc2026" class="filter-btn {% if current_filter == 'wc2026' %}active{% endif %}">🏆 ЧМ-2026</a>
     <a href="/?league=rpl" class="filter-btn {% if current_filter == 'rpl' %}active{% endif %}">🇷🇺 РПЛ</a>
     <a href="/?league=rcup" class="filter-btn {% if current_filter == 'rcup' %}active{% endif %}">🏆 Кубок</a>
-    <a href="/?league=other" class="filter-btn {% if current_filter == 'other' %}active{% endif %}">Другое</a>
+    <a href="/?league=other" class="filter-btn {% if current_filter == 'other' %}active{% endif %}">📋 Другое</a>
 </div>
 
 <!-- Кнопка сворачивания прошедших дней -->
@@ -32,7 +32,7 @@
         border-left: 4px solid {% if day.type == 'today' %}#2e7d32{% elif day.type == 'past' %}#c62828{% else %}transparent{% endif %};
     ">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="arrow-day-{{ day.key }}" style="font-size: 14px; transition: transform 0.2s;">▶</span>
+            <span id="arrow-day-{{ day.key }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
             <div>
                 <div style="font-weight: 600; font-size: 15px;">
                     {% if day.type == 'today' %}
@@ -55,12 +55,13 @@
     </div>
 
     <!-- Матчи дня -->
-    <div id="day-{{ day.key }}" class="day-content" style="display: {% if day.key == open_day %}block{% else %}none{% endif %};">
+    <div id="day-{{ day.key }}" class="day-content{% if day.key == open_day %} open{% endif %}">
         {% for m in day.matches %}
         <div class="card" style="margin: 4px 0 4px 12px; border-left: 3px solid {% if m.deadline_passed %}#c62828{% else %}#2e7d32{% endif %};">
             <div>
-                <span class="badge-league {% if m.league == 'wc2026' %}badge-wc{% elif m.league == 'rpl' %}badge-rpl{% elif m.league == 'rcup' %}badge-rcup{% endif %}">
-                    {% if m.league == 'wc2026' %}ЧМ-2026{% elif m.league == 'rpl' %}РПЛ{% elif m.league == 'rcup' %}Кубок России{% else %}Другое{% endif %}
+                <!-- Иконка турнира -->
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; {% if m.league == 'wc2026' %}background: #e8f5e9; color: #2e7d32;{% elif m.league == 'rpl' %}background: #e3f2fd; color: #1565c0;{% elif m.league == 'rcup' %}background: #ffebee; color: #c62828;{% else %}background: #f5f5f5; color: #666;{% endif %}">
+                    {% if m.league == 'wc2026' %}🏆 ЧМ-2026{% elif m.league == 'rpl' %}🇷🇺 РПЛ{% elif m.league == 'rcup' %}🏆 Кубок России{% else %}📋 Другое{% endif %}
                 </span>
                 <div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
                 <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
@@ -80,7 +81,7 @@
                     {% if m.pred_home != '' and m.pred_away != '' %}
                     <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">✏️ Изменить</button>
                     {% else %}
-                    <button type="submit" class="btn btn-primary" style="padding: 8px 12px; font-size: 13px;">✅ Поставить</button>
+                    <button type="submit" class="btn btn-primary btn-pulse" style="padding: 8px 12px; font-size: 13px;">✅ Поставить</button>
                     {% endif %}
                 </form>
                 {% endif %}
@@ -100,68 +101,45 @@
 function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        arrow.style.transform = 'rotate(90deg)';
-    } else {
-        content.style.display = 'none';
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
         arrow.style.transform = 'rotate(0deg)';
+    } else {
+        content.classList.add('open');
+        arrow.style.transform = 'rotate(90deg)';
     }
 }
 
 function togglePastDays() {
     var pastDays = document.querySelectorAll('[data-day-type="past"]');
     var btn = document.getElementById('toggle-past-btn');
-    var allCollapsed = true;
+    var allOpen = true;
     
-    // Проверяем, все ли прошедшие дни уже свёрнуты
     pastDays.forEach(function(day) {
         var content = day.querySelector('.day-content');
-        if (content && content.style.display !== 'none') {
-            allCollapsed = false;
+        if (!content.classList.contains('open')) {
+            allOpen = false;
         }
     });
     
-    // Сворачиваем или разворачиваем
     pastDays.forEach(function(day) {
         var content = day.querySelector('.day-content');
-        var header = day.querySelector('.day-header');
-        if (content) {
-            if (allCollapsed) {
-                content.style.display = 'block';
-                btn.textContent = '🔼 Свернуть прошедшие дни';
-            } else {
-                content.style.display = 'none';
-                btn.textContent = '🔽 Показать прошедшие дни';
-            }
-        }
-        // Обновляем стрелку
-        var headerId = header ? header.getAttribute('onclick') : '';
-        if (headerId) {
-            var idMatch = headerId.match(/'([^']+)'/);
-            if (idMatch) {
-                var arrow = document.getElementById('arrow-' + idMatch[1]);
-                if (arrow) {
-                    if (allCollapsed) {
-                        arrow.style.transform = 'rotate(90deg)';
-                    } else {
-                        arrow.style.transform = 'rotate(0deg)';
-                    }
-                }
-            }
+        var arrow = day.querySelector('[id^="arrow-"]');
+        if (allOpen) {
+            content.classList.remove('open');
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
+            btn.textContent = '🔽 Показать прошедшие дни';
+        } else {
+            content.classList.add('open');
+            if (arrow) arrow.style.transform = 'rotate(90deg)';
+            btn.textContent = '🔼 Свернуть прошедшие дни';
         }
     });
 }
 
-// Автопрокрутка до раскрытого дня
 document.addEventListener('DOMContentLoaded', function() {
     var openDay = '{{ open_day }}';
     if (openDay) {
-        var arrow = document.getElementById('arrow-day-' + openDay);
-        if (arrow) {
-            arrow.style.transform = 'rotate(90deg)';
-        }
-        // Прокрутка до раскрытого дня
         var dayContent = document.getElementById('day-' + openDay);
         if (dayContent) {
             setTimeout(function() {
