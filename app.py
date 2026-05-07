@@ -86,7 +86,7 @@ CLUB_LOGOS = {
     "Ахмат": "/static/clubs/akhmat-grozny-footballlogos-org.png",
     "Ростов": "/static/clubs/rostov-footballlogos-org.png",
     "Рубин": "/static/clubs/rubin-kazan-footballlogos-org.png",
-    "Крылья Советов": "/static/clubs/krylya-sovetov-samara-footballlogos-org.png",
+   "Крылья Советов": "/static/clubs/krylia-sovetov-footballlogos-org.png",
     "Пари НН": "/static/clubs/pari-nn-footballlogos-org.png",
     "Оренбург": "/static/clubs/orenburg-footballlogos-org.png",
     "Балтика": "/static/clubs/baltika-kaliningrad-footballlogos-org.png",
