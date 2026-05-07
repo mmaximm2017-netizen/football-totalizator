@@ -536,20 +536,38 @@ def my_predictions():
 @app.route('/match/<int:match_id>/predictions')
 @login_required
 def match_predictions(match_id):
-    conn = get_db(); cur = conn.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     try:
-        cur.execute("SELECT id, home_team, away_team, kickoff_time, deadline, status FROM matches WHERE id=%s", (match_id,))
+        cur.execute(
+            "SELECT id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score FROM matches WHERE id = %s",
+            (match_id,)
+        )
         m = cur.fetchone()
-        if not m: flash("Матч не найден", "error"); return redirect(url_for('index'))
-        match = {'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5]}
+        if not m:
+            flash("Матч не найден", "error")
+            return redirect(url_for('index'))
+        
+        match = {
+            'id': m[0], 'home_team': m[1], 'away_team': m[2],
+            'kickoff_time': m[3], 'deadline': m[4], 'status': m[5],
+            'home_score': m[6], 'away_score': m[7]
+        }
+        
         deadline_passed = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
+        
         if deadline_passed:
-            cur.execute("""SELECT u.username, p.home_goals, p.away_goals, p.points
-                FROM predictions p JOIN users u ON p.user_id=u.id WHERE p.match_id=%s ORDER BY u.username""", (match_id,))
+            cur.execute(
+                """SELECT u.username, p.home_goals, p.away_goals, p.points
+                   FROM predictions p JOIN users u ON p.user_id = u.id
+                   WHERE p.match_id = %s ORDER BY u.username""",
+                (match_id,)
+            )
             predictions = [{'username': p[0], 'home_goals': p[1], 'away_goals': p[2], 'points': p[3]} for p in cur.fetchall()]
             return render_template('match_predictions.html', match=match, predictions=predictions, to_msk=to_msk)
         else:
-            flash("Ставки будут доступны после дедлайна", "error"); return redirect(url_for('index'))
+            flash("Ставки других игроков будут доступны после закрытия приёма прогнозов", "error")
+            return redirect(url_for('index'))
     finally:
         close_db(conn, cur)
 
@@ -597,17 +615,23 @@ def admin():
                 calculate_points_for_match(match_id); flash("Результат внесён", "success")
 
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
+        # Матчи для внесения результата
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status IN ('SCHEDULED','TIMED') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+        # Все матчи с 6 мая (для исправления результатов)
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+        # Только матчи, добавленные вручную (без api_match_id)
+        cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
+            WHERE (api_match_id IS NULL OR api_match_id = '') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
+        manual_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
         cur.execute("SELECT id, username FROM users")
         users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
     finally:
         close_db(conn, cur)
-    return render_template('admin.html', free_matches=free_matches, all_matches=all_matches, users=users)
+    return render_template('admin.html', free_matches=free_matches, all_matches=all_matches, manual_matches=manual_matches, users=users)
 
 @app.route('/admin/translate', methods=['POST'])
 @admin_required
@@ -624,6 +648,64 @@ def admin_translate():
         flash(f"Переведено {updated} матчей из {len(matches)}", "success")
     finally:
         close_db(conn, cur)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/fix_result', methods=['POST'])
+@admin_required
+def admin_fix_result():
+    """Обновляет результат уже завершённого матча"""
+    match_id = request.form.get('match_id')
+    home_score = request.form.get('home_score')
+    away_score = request.form.get('away_score')
+    try:
+        home_score = int(home_score)
+        away_score = int(away_score)
+    except:
+        flash("Результат должен быть числами", "error")
+        return redirect(url_for('admin'))
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE matches SET home_score = %s, away_score = %s WHERE id = %s",
+                    (home_score, away_score, match_id))
+        calculate_points_for_match(match_id)
+        flash(f"Результат матча #{match_id} обновлён: {home_score}:{away_score}", "success")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/edit_match', methods=['POST'])
+@admin_required
+def admin_edit_match():
+    """Редактирует названия команд матча (только для добавленных вручную)"""
+    match_id = request.form.get('match_id')
+    home_team = request.form.get('home_team')
+    away_team = request.form.get('away_team')
+    if match_id and home_team and away_team:
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("UPDATE matches SET home_team = %s, away_team = %s WHERE id = %s",
+                        (home_team, away_team, match_id))
+            flash(f"Матч #{match_id} обновлён: {home_team} – {away_team}", "success")
+        finally:
+            close_db(conn, cur)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/delete_match', methods=['POST'])
+@admin_required
+def admin_delete_match():
+    """Удаляет матч и все связанные ставки"""
+    match_id = request.form.get('match_id')
+    if match_id:
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("DELETE FROM predictions WHERE match_id = %s", (match_id,))
+            cur.execute("DELETE FROM matches WHERE id = %s", (match_id,))
+            flash(f"Матч #{match_id} и все ставки на него удалены", "success")
+        finally:
+            close_db(conn, cur)
     return redirect(url_for('admin'))
 
 @app.route('/login', methods=['GET', 'POST'])

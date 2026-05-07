@@ -56,6 +56,59 @@
 </div>
 
 <div class="card">
+    <div class="card-header">🔧 Исправить результат завершённого матча</div>
+    {% if all_matches %}
+        {% for m in all_matches %}
+        {% if m.status == 'FINISHED' %}
+        <div class="card" style="margin: 4px 0; padding: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px;">
+                    <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
+                    <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+                </div>
+                <form method="post" action="/admin/fix_result" style="display: flex; align-items: center; gap: 6px; margin: 0;">
+                    <input type="hidden" name="match_id" value="{{ m.id }}">
+                    <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
+                    <span>:</span>
+                    <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
+                    <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Обновить</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    {% else %}
+        <p style="color: #888; text-align: center;">Нет завершённых матчей</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">✏️ Редактировать матчи (только добавленные вручную)</div>
+    {% if manual_matches %}
+        {% for m in manual_matches %}
+        <div class="card" style="margin: 4px 0; padding: 12px;">
+            <form method="post" action="/admin/edit_match" style="margin: 0;">
+                <input type="hidden" name="match_id" value="{{ m.id }}">
+                <div style="font-weight: 600; margin-bottom: 8px;">[{{ m.id }}] {{ m.home_team }} – {{ m.away_team }}</div>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" name="home_team" value="{{ m.home_team }}" required style="flex: 1; min-width: 100px;">
+                    <span>–</span>
+                    <input type="text" name="away_team" value="{{ m.away_team }}" required style="flex: 1; min-width: 100px;">
+                    <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">💾 Сохранить</button>
+                </div>
+            </form>
+            <form method="post" action="/admin/delete_match" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')" style="margin-top: 8px;">
+                <input type="hidden" name="match_id" value="{{ m.id }}">
+                <button type="submit" class="btn btn-primary" style="background: #c62828; padding: 6px 12px; font-size: 12px;">🗑️ Удалить</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: #888; text-align: center;">Нет матчей, добавленных вручную</p>
+    {% endif %}
+</div>
+
+<div class="card">
     <div class="card-header">🔄 Сбросить турнирную таблицу</div>
     <form method="post" onsubmit="return confirm('Точно обнулить все очки и результаты? Это действие необратимо!')">
         <input type="hidden" name="action" value="reset_all_points">
