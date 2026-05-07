@@ -75,24 +75,24 @@ TEAM_FLAGS = {
     "Кабо-Верде": "cv", "Узбекистан": "uz", "ДР Конго": "cd", "Иордания": "jo",
 }
 
-# Эмблемы клубов РПЛ (прямые ссылки)
+# Эмблемы клубов РПЛ (локальные файлы)
 CLUB_LOGOS = {
-    "Спартак": "https://footylogos.com/wp-content/uploads/2025/03/spartak-moscow-footballlogos-org.png",
-    "Динамо": "https://footylogos.com/wp-content/uploads/2025/03/dynamo-moscow-footballlogos-org.png",
-    "ЦСКА": "https://footylogos.com/wp-content/uploads/2025/03/cska-moscow-footballlogos-org.png",
-    "Зенит": "https://footylogos.com/wp-content/uploads/2025/03/zenit-saint-petersburg-footballlogos-org.png",
-    "Локомотив": "https://footylogos.com/wp-content/uploads/2025/03/lokomotiv-moscow-footballlogos-org.png",
-    "Краснодар": "https://footylogos.com/wp-content/uploads/2025/03/krasnodar-footballlogos-org.png",
-    "Ахмат": "https://footylogos.com/wp-content/uploads/2025/03/akhmat-grozny-footballlogos-org.png",
-    "Ростов": "https://footylogos.com/wp-content/uploads/2025/03/rostov-footballlogos-org.png",
-    "Рубин": "https://footylogos.com/wp-content/uploads/2025/03/rubin-kazan-footballlogos-org.png",
-    "Крылья Советов": "https://footylogos.com/wp-content/uploads/2025/03/krylya-sovetov-samara-footballlogos-org.png",
-    "Пари НН": "https://footylogos.com/wp-content/uploads/2025/03/pari-nizhny-novgorod-footballlogos-org.png",
-    "Оренбург": "https://footylogos.com/wp-content/uploads/2025/03/orenburg-footballlogos-org.png",
-    "Балтика": "https://footylogos.com/wp-content/uploads/2025/03/baltika-kaliningrad-footballlogos-org.png",
-    "Сочи": "https://footylogos.com/wp-content/uploads/2025/03/sochi-footballlogos-org.png",
-    "Динамо Мх": "https://footylogos.com/wp-content/uploads/2025/03/dynamo-makhachkala-footballlogos-org.png",
-    "Акрон": "https://footylogos.com/wp-content/uploads/2025/03/akron-togliatti-footballlogos-org.png",
+    "Спартак": "/static/clubs/spartak-moscow-footballlogos-org.png",
+    "Динамо": "/static/clubs/dynamo-moscow-footballlogos-org.png",
+    "ЦСКА": "/static/clubs/cska-moscow-footballlogos-org.png",
+    "Зенит": "/static/clubs/zenit-saint-petersburg-footballlogos-org.png",
+    "Локомотив": "/static/clubs/lokomotiv-moscow-footballlogos-org.png",
+    "Краснодар": "/static/clubs/krasnodar-footballlogos-org.png",
+    "Ахмат": "/static/clubs/akhmat-grozny-footballlogos-org.png",
+    "Ростов": "/static/clubs/rostov-footballlogos-org.png",
+    "Рубин": "/static/clubs/rubin-kazan-footballlogos-org.png",
+    "Крылья Советов": "/static/clubs/krylya-sovetov-samara-footballlogos-org.png",
+    "Пари НН": "/static/clubs/pari-nn-footballlogos-org.png",
+    "Оренбург": "/static/clubs/orenburg-footballlogos-org.png",
+    "Балтика": "/static/clubs/baltika-kaliningrad-footballlogos-org.png",
+    "Сочи": "/static/clubs/sochi-footballlogos-org.png",
+    "Динамо Мх": "/static/clubs/dynamo-makhachkala-footballlogos-org.png",
+    "Акрон": "/static/clubs/akron-togliatti-footballlogos-org.png",
 }
 
 def translate_name(name):
