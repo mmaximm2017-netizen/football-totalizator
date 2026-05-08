@@ -75,7 +75,6 @@ TEAM_FLAGS = {
     "Кабо-Верде": "cv", "Узбекистан": "uz", "ДР Конго": "cd", "Иордания": "jo",
 }
 
-# Эмблемы клубов РПЛ (локальные файлы)
 CLUB_LOGOS = {
     "Спартак": "/static/clubs/spartak-moscow-footballlogos-org.png",
     "Динамо": "/static/clubs/dynamo-moscow-footballlogos-org.png",
@@ -86,7 +85,7 @@ CLUB_LOGOS = {
     "Ахмат": "/static/clubs/akhmat-grozny-footballlogos-org.png",
     "Ростов": "/static/clubs/rostov-footballlogos-org.png",
     "Рубин": "/static/clubs/rubin-kazan-footballlogos-org.png",
-   "Крылья Советов": "/static/clubs/krylia-sovetov-footballlogos-org.png",
+    "Крылья Советов": "/static/clubs/krylia-sovetov-footballlogos-org.png",
     "Пари НН": "/static/clubs/pari-nn-footballlogos-org.png",
     "Оренбург": "/static/clubs/orenburg-footballlogos-org.png",
     "Балтика": "/static/clubs/baltika-kaliningrad-footballlogos-org.png",
@@ -106,7 +105,6 @@ def get_flag(name):
     return ""
 
 def get_club_logo(name):
-    """Возвращает тег img с эмблемой клуба РПЛ"""
     logo_url = CLUB_LOGOS.get(name)
     if logo_url:
         return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
@@ -141,17 +139,38 @@ def init_db():
                 deadline TEXT, status TEXT DEFAULT 'SCHEDULED',
                 home_score INTEGER, away_score INTEGER, league TEXT DEFAULT 'other'
             );
+            CREATE TABLE IF NOT EXISTS tournaments (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                is_active INTEGER DEFAULT 0,
+                start_date TEXT,
+                end_date TEXT
+            );
             CREATE TABLE IF NOT EXISTS predictions (
                 user_id INTEGER REFERENCES users(id),
                 match_id INTEGER REFERENCES matches(id),
+                tournament_id INTEGER REFERENCES tournaments(id) DEFAULT 1,
                 home_goals INTEGER, away_goals INTEGER, points INTEGER DEFAULT 0,
-                UNIQUE(user_id, match_id)
+                UNIQUE(user_id, match_id, tournament_id)
             );
         ''')
+        cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
+        if not cur.fetchone():
+            cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES ('Кубок Матч-премьер', 1, '2026-05-06')")
         cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
         if not cur.fetchone():
             cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
                         (ADMIN_USERNAME, ADMIN_PASSWORD))
+    finally:
+        close_db(conn, cur)
+
+def get_active_tournament_id():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM tournaments WHERE is_active = 1")
+        row = cur.fetchone()
+        return row[0] if row else 1
     finally:
         close_db(conn, cur)
 
@@ -243,21 +262,24 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
 
 def calculate_points_for_match(match_id):
     conn = get_db(); cur = conn.cursor()
+    t_id = get_active_tournament_id()
     try:
         cur.execute("SELECT id, home_score, away_score FROM matches WHERE id = %s", (match_id,))
         match = cur.fetchone()
         if not match: return
-        cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s", (match_id,))
+        cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s AND tournament_id = %s", (match_id, t_id))
         for p in cur.fetchall():
             pts = calculate_points(match[1], match[2], p[1], p[2])
-            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s", (pts, p[0], match_id))
+            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s", (pts, p[0], match_id, t_id))
     finally: close_db(conn, cur)
 
 def calculate_all_points():
     conn = get_db(); cur = conn.cursor()
+    t_id = get_active_tournament_id()
     try:
         cur.execute("SELECT id FROM matches WHERE status = 'FINISHED'")
-        for match in cur.fetchall(): calculate_points_for_match(match[0])
+        for match in cur.fetchall():
+            calculate_points_for_match(match[0])
     finally: close_db(conn, cur)
 
 # ---------- API ----------
@@ -350,6 +372,7 @@ def index():
     today_str = (now + timedelta(hours=MSK_OFFSET)).strftime("%Y-%m-%d")
     if request.method == 'POST':
         match_id = request.form.get('match_id'); home_goals = request.form.get('home_goals'); away_goals = request.form.get('away_goals')
+        t_id = get_active_tournament_id()
         if match_id and home_goals is not None and away_goals is not None:
             try:
                 home_goals = int(home_goals); away_goals = int(away_goals)
@@ -357,9 +380,9 @@ def index():
                     cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
                     m = cur.fetchone()
                     if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
-                        cur.execute("""INSERT INTO predictions (user_id, match_id, home_goals, away_goals) VALUES (%s,%s,%s,%s)
-                            ON CONFLICT (user_id, match_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
-                            (session['user_id'], match_id, home_goals, away_goals, home_goals, away_goals))
+                        cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
+                            ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
+                            (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
                         flash("✅ Ставка принята", "success")
                     else: flash("Ставки закрыты", "error")
             except: flash("Некорректный ввод", "error")
@@ -372,7 +395,8 @@ def index():
             cur.execute("""SELECT id, home_team, away_team, kickoff_time, deadline, status, league, home_score, away_score
                 FROM matches WHERE status IN ('SCHEDULED','TIMED','FINISHED') AND league=%s AND kickoff_time >= %s ORDER BY kickoff_time""", (league_filter, start_date_str))
         raw_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'deadline': m[4], 'status': m[5], 'league': m[6], 'home_score': m[7], 'away_score': m[8]} for m in cur.fetchall()]
-        cur.execute("SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s", (session['user_id'],))
+        t_id = get_active_tournament_id()
+        cur.execute("SELECT match_id, home_goals, away_goals FROM predictions WHERE user_id = %s AND tournament_id = %s", (session['user_id'], t_id))
         user_preds = {p[0]: (p[1], p[2]) for p in cur.fetchall()}
         matches_by_day = defaultdict(list)
         for match in raw_matches:
@@ -387,7 +411,7 @@ def index():
                 match['pred_home'] = user_preds[match['id']][0]; match['pred_away'] = user_preds[match['id']][1]
             else: match['pred_home'] = ''; match['pred_away'] = ''
             if match['finished']:
-                cur.execute("SELECT points FROM predictions WHERE user_id=%s AND match_id=%s", (session['user_id'], match['id']))
+                cur.execute("SELECT points FROM predictions WHERE user_id=%s AND match_id=%s AND tournament_id=%s", (session['user_id'], match['id'], t_id))
                 pts = cur.fetchone(); match['my_points'] = pts[0] if pts else 0
             day_label = dt_msk.strftime("%d.%m.%Y"); matches_by_day[(day_key, day_label)].append(match)
         days = []
@@ -411,18 +435,19 @@ def index():
 def my_predictions():
     conn = get_db(); cur = conn.cursor(); now = utc_now(); uid = session['user_id']
     current_filter = request.args.get('filter', 'active')
+    t_id = get_active_tournament_id()
     try:
         cur.execute("""SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals, m.kickoff_time, m.deadline
-            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND m.deadline>%s""", (uid, now.strftime("%Y-%m-%dT%H:%M:%S")))
+            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND p.tournament_id=%s AND m.deadline>%s""", (uid, t_id, now.strftime("%Y-%m-%dT%H:%M:%S")))
         pending = [{'id': p[0], 'home_team': p[1], 'away_team': p[2], 'home_goals': p[3], 'away_goals': p[4], 'kickoff_time': p[5], 'deadline': p[6]} for p in cur.fetchall()]
         cur.execute("""SELECT m.id, m.home_team, m.away_team, p.home_goals, p.away_goals
-            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND m.deadline<=%s AND m.status NOT IN ('FINISHED','POSTPONED','CANCELLED')""", (uid, now.strftime("%Y-%m-%dT%H:%M:%S")))
+            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND p.tournament_id=%s AND m.deadline<=%s AND m.status NOT IN ('FINISHED','POSTPONED','CANCELLED')""", (uid, t_id, now.strftime("%Y-%m-%dT%H:%M:%S")))
         awaiting = [{'id': a[0], 'home_team': a[1], 'away_team': a[2], 'home_goals': a[3], 'away_goals': a[4]} for a in cur.fetchall()]
         cur.execute("""SELECT m.id, m.home_team, m.away_team, m.home_score, m.away_score, p.home_goals, p.away_goals, p.points
-            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND m.status='FINISHED'""", (uid,))
+            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND p.tournament_id=%s AND m.status='FINISHED'""", (uid, t_id))
         finished = [{'id': f[0], 'home_team': f[1], 'away_team': f[2], 'home_score': f[3], 'away_score': f[4], 'home_goals': f[5], 'away_goals': f[6], 'points': f[7]} for f in cur.fetchall()]
         cur.execute("""SELECT m.id, m.home_team, m.away_team, m.status, p.points
-            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND m.status IN ('POSTPONED','CANCELLED')""", (uid,))
+            FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=%s AND p.tournament_id=%s AND m.status IN ('POSTPONED','CANCELLED')""", (uid, t_id))
         cancelled = [{'id': c[0], 'home_team': c[1], 'away_team': c[2], 'status': c[3], 'points': c[4]} for c in cur.fetchall()]
     finally: close_db(conn, cur)
     return render_template('my_predictions.html', pending=pending, awaiting=awaiting, finished=finished, cancelled=cancelled, to_msk=to_msk, current_filter=current_filter)
@@ -431,6 +456,7 @@ def my_predictions():
 @login_required
 def match_predictions(match_id):
     conn = get_db(); cur = conn.cursor()
+    t_id = get_active_tournament_id()
     try:
         cur.execute("SELECT id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score FROM matches WHERE id = %s", (match_id,))
         m = cur.fetchone()
@@ -439,7 +465,7 @@ def match_predictions(match_id):
         deadline_passed = not is_before_deadline((m[0], m[1], m[2], m[4], m[5]))
         if deadline_passed:
             cur.execute("""SELECT u.username, p.home_goals, p.away_goals, p.points
-                FROM predictions p JOIN users u ON p.user_id=u.id WHERE p.match_id=%s ORDER BY u.username""", (match_id,))
+                FROM predictions p JOIN users u ON p.user_id=u.id WHERE p.match_id=%s AND p.tournament_id=%s ORDER BY u.username""", (match_id, t_id))
             predictions = [{'username': p[0], 'home_goals': p[1], 'away_goals': p[2], 'points': p[3]} for p in cur.fetchall()]
             return render_template('match_predictions.html', match=match, predictions=predictions, to_msk=to_msk)
         else: flash("Ставки будут доступны после дедлайна", "error"); return redirect(url_for('index'))
@@ -450,11 +476,25 @@ def match_predictions(match_id):
 def table():
     conn = get_db(); cur = conn.cursor()
     try:
+        # Все турниры
+        cur.execute("SELECT id, name, is_active FROM tournaments ORDER BY is_active DESC, id DESC")
+        tournaments = [{'id': r[0], 'name': r[1], 'is_active': r[2]} for r in cur.fetchall()]
+        # Выбранный турнир
+        tid = request.args.get('tid', type=int)
+        if not tid:
+            active = next((t for t in tournaments if t['is_active']), None)
+            tid = active['id'] if active else tournaments[0]['id'] if tournaments else 1
+        cur.execute("SELECT name FROM tournaments WHERE id = %s", (tid,))
+        selected = cur.fetchone()
+        selected_name = selected[0] if selected else 'Турнир'
+        # Таблица для выбранного турнира
         cur.execute("""SELECT u.username, COALESCE(SUM(p.points),0) as total
-            FROM users u LEFT JOIN predictions p ON u.id=p.user_id GROUP BY u.id ORDER BY total DESC""")
+            FROM users u LEFT JOIN predictions p ON u.id=p.user_id AND p.tournament_id=%s
+            GROUP BY u.id ORDER BY total DESC""", (tid,))
         rows = cur.fetchall()
     finally: close_db(conn, cur)
-    return render_template('table.html', table=[{'place': i, 'username': r[0], 'points': int(r[1])} for i, r in enumerate(rows, 1)])
+    table_data = [{'place': i, 'username': r[0], 'points': int(r[1])} for i, r in enumerate(rows, 1)]
+    return render_template('table.html', table=table_data, tournaments=tournaments, selected_tid=tid, selected_name=selected_name)
 
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
@@ -544,6 +584,19 @@ def admin_delete_match():
         conn = get_db(); cur = conn.cursor()
         try: cur.execute("DELETE FROM predictions WHERE match_id=%s", (match_id,)); cur.execute("DELETE FROM matches WHERE id=%s", (match_id,)); flash(f"Матч #{match_id} удалён", "success")
         finally: close_db(conn, cur)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/new_tournament', methods=['POST'])
+@admin_required
+def admin_new_tournament():
+    name = request.form.get('name', 'Новый турнир')
+    start_date = request.form.get('start_date', datetime.now().strftime('%Y-%m-%d'))
+    conn = get_db(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE tournaments SET is_active = 0 WHERE is_active = 1")
+        cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES (%s, 1, %s)", (name, start_date))
+        flash(f"Новый турнир «{name}» создан! Таблица обнулена.", "success")
+    finally: close_db(conn, cur)
     return redirect(url_for('admin'))
 
 @app.route('/login', methods=['GET', 'POST'])

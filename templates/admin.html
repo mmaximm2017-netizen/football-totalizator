@@ -109,6 +109,17 @@
 </div>
 
 <div class="card">
+    <div class="card-header">🆕 Начать новый турнир</div>
+    <form method="post" action="/admin/new_tournament" onsubmit="return confirm('Создать новый турнир? Текущая таблица уйдёт в архив, очки обнулятся.')">
+        <label>Название турнира</label>
+        <input type="text" name="name" value="ЧМ-2026" required>
+        <label>Дата старта</label>
+        <input type="date" name="start_date" value="2026-06-11" required>
+        <button type="submit" class="btn btn-primary" style="width: 100%; background: #1565c0;">Создать новый турнир</button>
+    </form>
+</div>
+
+<div class="card">
     <div class="card-header">🔄 Сбросить турнирную таблицу</div>
     <form method="post" onsubmit="return confirm('Точно обнулить все очки и результаты? Это действие необратимо!')">
         <input type="hidden" name="action" value="reset_all_points">

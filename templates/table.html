@@ -4,6 +4,21 @@
     <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
 </div>
 
+<!-- Выбор турнира -->
+<div class="filter-bar" style="justify-content: center;">
+    {% for t in tournaments %}
+    <a href="/table?tid={{ t.id }}" class="filter-btn {% if selected_tid == t.id %}active{% endif %}">
+        {% if t.name == 'ЧМ-2026' %}
+        <img src="/static/clubs/wc2026-logo.png" width="16" height="16" style="vertical-align: middle; margin-right: 4px;">ЧМ-2026
+        {% elif t.name == 'Кубок Матч-премьер' %}
+        <img src="https://flagcdn.com/w40/ru.png" width="20" height="14" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;">Кубок Матч-премьер
+        {% else %}
+        {{ t.name }}
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+
 {% if table %}
 <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
     <table style="width: 100%; border-collapse: collapse; background: white; font-size: 14px;">
@@ -18,19 +33,10 @@
             {% for row in table %}
             <tr style="{% if row.place == 1 %}background: linear-gradient(135deg, #fff9c4, #fff176);{% elif row.place == 2 %}background: #f5f5f5;{% elif row.place == 3 %}background: #fff3e0;{% endif %} border-bottom: 1px solid #eee;">
                 <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 16px;">
-                    {% if row.place == 1 %}
-                        🥇
-                    {% elif row.place == 2 %}
-                        🥈
-                    {% elif row.place == 3 %}
-                        🥉
-                    {% else %}
-                        {{ row.place }}
-                    {% endif %}
+                    {% if row.place == 1 %}🥇{% elif row.place == 2 %}🥈{% elif row.place == 3 %}🥉{% else %}{{ row.place }}{% endif %}
                 </td>
                 <td style="padding: 14px 8px; font-weight: {% if row.place <= 3 %}600{% else %}400{% endif %};">
-                    {{ row.username }}
-                    {% if row.place == 1 %}<span style="font-size: 11px; color: #f57f17; margin-left: 6px;">ЛИДЕР</span>{% endif %}
+                    {{ row.username }}{% if row.place == 1 %} <span style="font-size: 11px; color: #f57f17;">ЛИДЕР</span>{% endif %}
                 </td>
                 <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 18px; color: {% if row.points > 0 %}#2e7d32{% else %}#888{% endif %};">
                     {{ row.points }}
@@ -40,7 +46,6 @@
         </tbody>
     </table>
 </div>
-
 {% else %}
 <div class="card" style="text-align: center; padding: 40px;">
     <p style="font-size: 48px; margin-bottom: 12px;">🏟️</p>
