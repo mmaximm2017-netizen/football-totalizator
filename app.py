@@ -157,6 +157,16 @@ def init_db():
         cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
         if not cur.fetchone():
             cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES ('Кубок Матч-премьер', 1, '2026-05-06')")
+                    # Добавляем колонку tournament_id, если её нет
+        try:
+            cur.execute("ALTER TABLE predictions ADD COLUMN tournament_id INTEGER DEFAULT 1 REFERENCES tournaments(id)")
+        except:
+            pass
+        # Обновляем существующие ставки — привязываем к активному турниру
+        cur.execute("SELECT id FROM tournaments WHERE is_active = 1")
+        active = cur.fetchone()
+        if active:
+            cur.execute("UPDATE predictions SET tournament_id = %s WHERE tournament_id IS NULL OR tournament_id = 0", (active[0],))
         cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
         if not cur.fetchone():
             cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
