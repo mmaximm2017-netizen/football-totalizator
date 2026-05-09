@@ -8,7 +8,6 @@ import psycopg2
 import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 
-# Пробуем импортировать Understat
 try:
     from understatapi import UnderstatClient
     UNDERSTAT_AVAILABLE = True
@@ -16,26 +15,22 @@ except ImportError:
     UNDERSTAT_AVAILABLE = False
     print("Understat не установлен. РПЛ будет недоступна.")
 
-# ---------- НАСТРОЙКИ ----------
 API_KEY = "3c1f32333b1c4b5eacb45b01dd83170c"
-LEAGUE_IDS = [2000]                        # ЧМ-2026
+LEAGUE_IDS = [2000]
 INVITE_CODE = "FIFA2026"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
 START_DATE = datetime(2026, 5, 6)
 
-# Подключение к Render PostgreSQL
 DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a/football_ou1f"
 
-# Логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = "fifa2026-totalizator-secret-key-dont-change"
 
-# ---------- СЛОВАРИ ПЕРЕВОДА, ФЛАГОВ И ЭМБЛЕМ ----------
 TEAM_NAMES = {
     "Spartak Moscow": "Спартак", "Dinamo Moscow": "Динамо", "CSKA Moscow": "ЦСКА",
     "Zenit St. Petersburg": "Зенит", "Lokomotiv Moscow": "Локомотив", "FC Krasnodar": "Краснодар",
@@ -110,7 +105,6 @@ def get_club_logo(name):
         return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
     return ""
 
-# ---------- РАБОТА С БД ----------
 def get_db():
     conn = psycopg2.connect(DATABASE_URL)
     conn.autocommit = True
@@ -150,9 +144,17 @@ def init_db():
                 user_id INTEGER REFERENCES users(id),
                 match_id INTEGER REFERENCES matches(id),
                 tournament_id INTEGER REFERENCES tournaments(id) DEFAULT 1,
-                home_goals INTEGER, away_goals INTEGER, points INTEGER DEFAULT 0,
-                UNIQUE(user_id, match_id, tournament_id)
+                home_goals INTEGER, away_goals INTEGER, points INTEGER DEFAULT 0
             );
+        ''')
+        # Добавляем уникальное ограничение, если его нет
+        cur.execute('''
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'predictions_unique') THEN
+                    ALTER TABLE predictions ADD CONSTRAINT predictions_unique UNIQUE (user_id, match_id, tournament_id);
+                END IF;
+            END $$;
         ''')
         cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
         if not cur.fetchone():
@@ -187,7 +189,6 @@ def load_user():
         finally:
             close_db(conn, cur)
 
-# ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -282,7 +283,6 @@ def calculate_all_points():
             calculate_points_for_match(match[0])
     finally: close_db(conn, cur)
 
-# ---------- API ----------
 def fetch_matches():
     headers = {'X-Auth-Token': API_KEY}
     all_matches = []
@@ -378,19 +378,20 @@ def index():
             a = str(request.form.get('away_goals', '0')).strip()
             if h == '' or h == 'None': h = '0'
             if a == '' or a == 'None': a = '0'
-            try:
-                home_goals = int(h)
-                away_goals = int(a)
-            except:
-                home_goals = 0
-                away_goals = 0
+            try: home_goals = int(h); away_goals = int(a)
+            except: home_goals = 0; away_goals = 0
             
             cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
             m = cur.fetchone()
             if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
-                cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
-                    ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
-                    (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
+                cur.execute("SELECT id FROM predictions WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                            (session['user_id'], match_id, t_id))
+                if cur.fetchone():
+                    cur.execute("UPDATE predictions SET home_goals = %s, away_goals = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                                (home_goals, away_goals, session['user_id'], match_id, t_id))
+                else:
+                    cur.execute("INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)",
+                                (session['user_id'], match_id, t_id, home_goals, away_goals))
                 flash("✅ Ставка принята", "success")
             else:
                 flash("Ставки закрыты", "error")
