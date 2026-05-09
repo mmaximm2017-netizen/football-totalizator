@@ -577,25 +577,85 @@ def match_predictions(match_id):
 @app.route('/table')
 @login_required
 def table():
-    conn = get_db(); cur = conn.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     try:
+        # Получаем список турниров для вкладок
         cur.execute("SELECT id, name, is_active FROM tournaments ORDER BY is_active DESC, id DESC")
         tournaments = [{'id': r[0], 'name': r[1], 'is_active': r[2]} for r in cur.fetchall()]
+
+        # Определяем выбранный турнир
         tid = request.args.get('tid', type=int)
         if not tid:
             active = next((t for t in tournaments if t['is_active']), None)
-            tid = active['id'] if active else tournaments[0]['id'] if tournaments else 1
+            tid = active['id'] if active else (tournaments[0]['id'] if tournaments else 1)
+
         cur.execute("SELECT name FROM tournaments WHERE id = %s", (tid,))
         selected = cur.fetchone()
         selected_name = selected[0] if selected else 'Турнир'
-        cur.execute("""SELECT u.username, COALESCE(SUM(p.points),0) as total
-            FROM users u LEFT JOIN predictions p ON u.id=p.user_id AND p.tournament_id=%s
+
+        # Запрос с дополнительными критериями
+        cur.execute("""
+            SELECT u.username,
+                   COALESCE(SUM(p.points), 0) as total_points,
+                   COUNT(CASE WHEN p.points >= 10 THEN 1 END) as exact_scores,
+                   COUNT(CASE WHEN p.points IN (7,8) THEN 1 END) as exact_diffs,
+                   COUNT(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 END) as outcomes
+            FROM users u
+            LEFT JOIN predictions p ON u.id = p.user_id AND p.tournament_id = %s
             WHERE u.is_admin = 0
-            GROUP BY u.id ORDER BY total DESC""", (tid,))
+            GROUP BY u.id
+            ORDER BY total_points DESC, exact_scores DESC, exact_diffs DESC, outcomes DESC
+        """, (tid,))
         rows = cur.fetchall()
-    finally: close_db(conn, cur)
-    table_data = [{'place': i, 'username': r[0], 'points': int(r[1])} for i, r in enumerate(rows, 1)]
-    return render_template('table.html', table=table_data, tournaments=tournaments, selected_tid=tid, selected_name=selected_name)
+    finally:
+        close_db(conn, cur)
+
+    # Формируем список с учётом одинаковых мест и флагом shared
+    table_data = []
+    prev_pts = None
+    prev_exact = None
+    prev_diff = None
+    prev_outcome = None
+    counter = 0  # для нумерации строк с одинаковыми показателями
+
+    for i, row in enumerate(rows):
+        username, pts, exact, diff, outcome = row
+        pts = int(pts) if pts else 0
+        exact = int(exact) if exact else 0
+        diff = int(diff) if diff else 0
+        outcome = int(outcome) if outcome else 0
+
+        # Определяем место и флаг shared
+        if i == 0:
+            current_place = 1
+            shared = False
+        else:
+            # Если все критерии совпадают с предыдущей строкой
+            if pts == prev_pts and exact == prev_exact and diff == prev_diff and outcome == prev_outcome:
+                shared = True
+            else:
+                current_place = i + 1
+                shared = False
+
+        table_data.append({
+            'place': current_place if not shared else current_place,  # место остаётся предыдущим при дележе
+            'username': username,
+            'points': pts,
+            'shared': shared
+        })
+
+        # Обновляем предыдущие значения для следующей итерации
+        prev_pts, prev_exact, prev_diff, prev_outcome = pts, exact, diff, outcome
+
+    # Исправляем места при дележе: у первой строки с дележом место берётся от предыдущей итерации
+    # (уже сделано)
+
+    return render_template('table.html',
+                           table=table_data,
+                           tournaments=tournaments,
+                           selected_tid=tid,
+                           selected_name=selected_name)
 
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
