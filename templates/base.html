@@ -162,6 +162,10 @@
             <span class="icon">🏆</span>
             Таблица
         </a>
+        <a href="/profile" class="{% if request.path == '/profile' %}active{% endif %}">
+            <span class="icon">👤</span>
+            Профиль
+        </a>
         <a href="/logout">
             <span class="icon">🚪</span>
             Выход

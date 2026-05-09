@@ -41,12 +41,12 @@
                 box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #1565c0; margin-bottom: 4px;
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-free-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.2s;">▶</span>
+                    <span id="arrow-free-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
                     <div style="font-weight: 600; font-size: 14px;">📅 {{ day.date }}</div>
                 </div>
                 <span style="font-size: 13px; color: #888;">{{ day.matches|length }} матч.</span>
             </div>
-            <div id="free-day-{{ loop.index }}" class="day-content" style="display: none;">
+            <div id="free-day-{{ loop.index }}" class="day-content">
                 {% for m in day.matches %}
                 <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #1565c0;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -84,12 +84,12 @@
                 box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #c62828; margin-bottom: 4px;
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-fix-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.2s;">▶</span>
+                    <span id="arrow-fix-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
                     <div style="font-weight: 600; font-size: 14px;">📅 {{ day.date }}</div>
                 </div>
                 <span style="font-size: 13px; color: #888;">{{ day.matches|length }} матч.</span>
             </div>
-            <div id="fix-day-{{ loop.index }}" class="day-content" style="display: none;">
+            <div id="fix-day-{{ loop.index }}" class="day-content">
                 {% for m in day.matches %}
                 <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #c62828;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -175,12 +175,12 @@ function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
     if (!content || !arrow) return;
-    if (content.style.display === 'none' || content.style.display === '') {
-        content.style.display = 'block';
-        arrow.style.transform = 'rotate(90deg)';
-    } else {
-        content.style.display = 'none';
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
         arrow.style.transform = 'rotate(0deg)';
+    } else {
+        content.classList.add('open');
+        arrow.style.transform = 'rotate(90deg)';
     }
 }
 </script>
