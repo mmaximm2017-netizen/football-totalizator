@@ -372,29 +372,28 @@ def index():
     today_str = (now + timedelta(hours=MSK_OFFSET)).strftime("%Y-%m-%d")
     if request.method == 'POST':
         match_id = request.form.get('match_id')
-        home_goals = request.form.get('home_goals', '0')
-        away_goals = request.form.get('away_goals', '0')
         t_id = get_active_tournament_id()
         if match_id:
+            h = str(request.form.get('home_goals', '0')).strip()
+            a = str(request.form.get('away_goals', '0')).strip()
+            if h == '' or h == 'None': h = '0'
+            if a == '' or a == 'None': a = '0'
             try:
-                h = str(home_goals).strip()
-                a = str(away_goals).strip()
-                if h == '' or h is None: h = '0'
-                if a == '' or a is None: a = '0'
                 home_goals = int(h)
                 away_goals = int(a)
-                
-                cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
-                m = cur.fetchone()
-                if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
-                    cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
-                        ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
-                        (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
-                    flash("✅ Ставка принята", "success")
-                else:
-                    flash("Ставки закрыты", "error")
             except:
-                flash("Некорректный ввод", "error")
+                home_goals = 0
+                away_goals = 0
+            
+            cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
+            m = cur.fetchone()
+            if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
+                cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
+                    ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
+                    (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
+                flash("✅ Ставка принята", "success")
+            else:
+                flash("Ставки закрыты", "error")
         close_db(conn, cur)
         return redirect(url_for('index', league=league_filter))
     try:
