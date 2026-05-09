@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="text-align: center; margin-bottom: 16px;">
+    <h2 style="margin: 0; font-size: 22px;">👤 {{ username }}</h2>
+    <p style="color: #888; font-size: 13px;">Статистика в текущем турнире</p>
+</div>
+
+<!-- Общая статистика -->
+<div class="card">
+    <div class="card-header">📊 Общие показатели</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-around; text-align: center;">
+        <div>
+            <div style="font-size: 28px; font-weight: 700; color: #2e7d32;">{{ stats.total_points }}</div>
+            <div style="font-size: 12px; color: #888;">Всего очков</div>
+        </div>
+        <div>
+            <div style="font-size: 28px; font-weight: 700; color: #1565c0;">{{ stats.avg_points }}</div>
+            <div style="font-size: 12px; color: #888;">Средний балл</div>
+        </div>
+        <div>
+            <div style="font-size: 28px; font-weight: 700; color: #333;">{{ stats.total_bets }}</div>
+            <div style="font-size: 12px; color: #888;">Всего ставок</div>
+        </div>
+    </div>
+</div>
+
+<!-- Детализация -->
+<div class="card">
+    <div class="card-header">🎯 Точность прогнозов</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-around; text-align: center;">
+        <div>
+            <div style="font-size: 22px; font-weight: 700; color: #2e7d32;">{{ stats.exact_scores }}</div>
+            <div style="font-size: 11px; color: #888;">Точных счетов</div>
+        </div>
+        <div>
+            <div style="font-size: 22px; font-weight: 700; color: #1565c0;">{{ stats.exact_diffs }}</div>
+            <div style="font-size: 11px; color: #888;">Точных разниц</div>
+        </div>
+        <div>
+            <div style="font-size: 22px; font-weight: 700; color: #ff8f00;">{{ stats.outcomes }}</div>
+            <div style="font-size: 11px; color: #888;">Угадано исходов</div>
+        </div>
+        <div>
+            <div style="font-size: 22px; font-weight: 700; color: #c62828;">{{ stats.close_misses }}</div>
+            <div style="font-size: 11px; color: #888;">Ошибка в 1 гол</div>
+        </div>
+        <div>
+            <div style="font-size: 22px; font-weight: 700; color: #999;">{{ stats.misses }}</div>
+            <div style="font-size: 11px; color: #888;">Мимо</div>
+        </div>
+    </div>
+</div>
+
+<!-- Любимый счёт -->
+<div class="card">
+    <div class="card-header">💖 Любимые счета</div>
+    {% if favorites %}
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+        {% for f in favorites %}
+        <div style="background: #f5f5f5; border-radius: 10px; padding: 8px 14px; text-align: center;">
+            <div style="font-weight: 700; font-size: 16px;">{{ f.home }} : {{ f.away }}</div>
+            <div style="font-size: 11px; color: #888;">{{ f.count }} раз.</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: #888; text-align: center;">Недостаточно данных</p>
+    {% endif %}
+</div>
+
+<!-- История последних матчей -->
+<div class="card">
+    <div class="card-header">📋 Последние матчи</div>
+    {% if recent %}
+    <div style="overflow-x: auto;">
+        <table>
+            <tr style="background: #263238; color: white;">
+                <th style="padding: 8px;">Матч</th>
+                <th style="padding: 8px; text-align: center;">Прогноз</th>
+                <th style="padding: 8px; text-align: center;">Результат</th>
+                <th style="padding: 8px; text-align: center;">Очки</th>
+            </tr>
+            {% for r in recent %}
+            <tr style="border-bottom: 1px solid #eee; {% if r.points > 0 %}background: #f1f8e9;{% endif %}">
+                <td style="padding: 8px;">{{ r.home_team }} – {{ r.away_team }}</td>
+                <td style="padding: 8px; text-align: center;">{{ r.home_goals }}:{{ r.away_goals }}</td>
+                <td style="padding: 8px; text-align: center;">{{ r.home_score }}:{{ r.away_score }}</td>
+                <td style="padding: 8px; text-align: center; font-weight: 700;">{% if r.points > 0 %}+{{ r.points }}{% else %}0{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #888; text-align: center;">Пока нет завершённых матчей</p>
+    {% endif %}
+</div>
+
+<p style="text-align: center;"><a href="/" style="color: #2e7d32; text-decoration: none; font-weight: 600;">← На главную</a></p>
+{% endblock %}

@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = "fifa2026-totalizator-secret-key-dont-change"
 
-# Дни недели на русском
 WEEKDAYS = {
     "Monday": "Понедельник", "Tuesday": "Вторник", "Wednesday": "Среда",
     "Thursday": "Четверг", "Friday": "Пятница", "Saturday": "Суббота", "Sunday": "Воскресенье"
@@ -354,7 +353,6 @@ def update_matches():
             if ' ' in utc_time: kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
             else: kickoff_utc = datetime.fromisoformat(utc_time)
             kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
-            # Дедлайн: для ЧМ-2026 — за 2 часа до начала, для остальных — 11:00 МСК или за 1 час
             if league == 'wc2026':
                 deadline_msk = kickoff_msk - timedelta(hours=2)
             else:
@@ -474,6 +472,69 @@ def my_predictions():
     finally: close_db(conn, cur)
     return render_template('my_predictions.html', pending=pending, awaiting=awaiting, finished=finished, cancelled=cancelled, to_msk=to_msk, current_filter=current_filter)
 
+@app.route('/profile')
+@login_required
+def profile():
+    """Страница профиля текущего пользователя с детальной статистикой"""
+    uid = session['user_id']
+    t_id = get_active_tournament_id()
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        # Основная статистика
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total_bets,
+                SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END) as exact_scores,
+                SUM(CASE WHEN p.points >= 7 AND p.points < 10 THEN 1 ELSE 0 END) as exact_diffs,
+                SUM(CASE WHEN p.points >= 3 AND p.points < 7 THEN 1 ELSE 0 END) as outcomes,
+                SUM(CASE WHEN p.points = 2 THEN 1 ELSE 0 END) as close_misses,
+                SUM(CASE WHEN p.points = 0 THEN 1 ELSE 0 END) as misses,
+                ROUND(AVG(p.points), 1) as avg_points,
+                SUM(p.points) as total_points
+            FROM predictions p
+            JOIN matches m ON p.match_id = m.id
+            WHERE p.user_id = %s AND p.tournament_id = %s AND m.status = 'FINISHED'
+        """, (uid, t_id))
+        row = cur.fetchone()
+        stats = {
+            'total_bets': row[0] or 0,
+            'exact_scores': row[1] or 0,
+            'exact_diffs': row[2] or 0,
+            'outcomes': row[3] or 0,
+            'close_misses': row[4] or 0,
+            'misses': row[5] or 0,
+            'avg_points': float(row[6]) if row[6] else 0,
+            'total_points': row[7] or 0,
+        }
+        # Любимый счёт
+        cur.execute("""
+            SELECT home_goals, away_goals, COUNT(*) as cnt
+            FROM predictions
+            WHERE user_id = %s AND tournament_id = %s
+            GROUP BY home_goals, away_goals
+            ORDER BY cnt DESC
+            LIMIT 3
+        """, (uid, t_id))
+        favorites = [{'home': r[0], 'away': r[1], 'count': r[2]} for r in cur.fetchall()]
+        # Последние 10 матчей
+        cur.execute("""
+            SELECT m.home_team, m.away_team, p.home_goals, p.away_goals, m.home_score, m.away_score, p.points
+            FROM predictions p
+            JOIN matches m ON p.match_id = m.id
+            WHERE p.user_id = %s AND p.tournament_id = %s AND m.status = 'FINISHED'
+            ORDER BY m.kickoff_time DESC
+            LIMIT 10
+        """, (uid, t_id))
+        recent = [{'home_team': r[0], 'away_team': r[1], 'home_goals': r[2], 'away_goals': r[3],
+                    'home_score': r[4], 'away_score': r[5], 'points': r[6]} for r in cur.fetchall()]
+        # Имя пользователя
+        cur.execute("SELECT username FROM users WHERE id = %s", (uid,))
+        username = cur.fetchone()[0]
+    finally:
+        close_db(conn, cur)
+    return render_template('profile.html', username=username, stats=stats, favorites=favorites, recent=recent, get_flag=get_flag, get_club_logo=get_club_logo)
+
 @app.route('/match/<int:match_id>/predictions')
 @login_required
 def match_predictions(match_id):
@@ -544,9 +605,25 @@ def admin():
                 cur.execute("UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s", (home_score, away_score, match_id))
                 calculate_points_for_match(match_id); flash("Результат внесён", "success")
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
+        # Сгруппированные матчи для внесения результата
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status IN ('SCHEDULED','TIMED') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
-        free_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
+        raw_free = cur.fetchall()
+        free_by_day = defaultdict(list)
+        for m in raw_free:
+            day = m[3][:10] if m[3] else '???'
+            free_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
+        free_days = [{'date': d, 'matches': free_by_day[d]} for d in sorted(free_by_day.keys())]
+        # Сгруппированные завершённые матчи для исправления результата
+        cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
+            WHERE status = 'FINISHED' AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
+        raw_finished = cur.fetchall()
+        fin_by_day = defaultdict(list)
+        for m in raw_finished:
+            day = m[3][:10] if m[3] else '???'
+            fin_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
+        finished_days = [{'date': d, 'matches': fin_by_day[d]} for d in sorted(fin_by_day.keys())]
+        # Все матчи для удаления/редактирования
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
@@ -556,7 +633,7 @@ def admin():
         cur.execute("SELECT id, username FROM users")
         users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
     finally: close_db(conn, cur)
-    return render_template('admin.html', free_matches=free_matches, all_matches=all_matches, manual_matches=manual_matches, users=users)
+    return render_template('admin.html', free_days=free_days, finished_days=finished_days, all_matches=all_matches, manual_matches=manual_matches, users=users)
 
 @app.route('/admin/translate', methods=['POST'])
 @admin_required
