@@ -475,8 +475,31 @@ def my_predictions():
 @app.route('/profile')
 @login_required
 def profile():
-    """Страница профиля текущего пользователя с детальной статистикой"""
-    uid = session['user_id']
+    """Страница профиля игрока (по умолчанию — свой)"""
+    username = request.args.get('username')
+    if username:
+        # Смотрим чужой профиль
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT id FROM users WHERE username = %s", (username,))
+            user_row = cur.fetchone()
+            if not user_row:
+                flash("Игрок не найден", "error")
+                return redirect(url_for('table'))
+            uid = user_row[0]
+        finally:
+            close_db(conn, cur)
+    else:
+        uid = session['user_id']
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT username FROM users WHERE id = %s", (uid,))
+            username = cur.fetchone()[0]
+        finally:
+            close_db(conn, cur)
+    
     t_id = get_active_tournament_id()
     conn = get_db()
     cur = conn.cursor()
@@ -528,9 +551,6 @@ def profile():
         """, (uid, t_id))
         recent = [{'home_team': r[0], 'away_team': r[1], 'home_goals': r[2], 'away_goals': r[3],
                     'home_score': r[4], 'away_score': r[5], 'points': r[6]} for r in cur.fetchall()]
-        # Имя пользователя
-        cur.execute("SELECT username FROM users WHERE id = %s", (uid,))
-        username = cur.fetchone()[0]
     finally:
         close_db(conn, cur)
     return render_template('profile.html', username=username, stats=stats, favorites=favorites, recent=recent, get_flag=get_flag, get_club_logo=get_club_logo)

@@ -36,7 +36,7 @@
                     {% if row.place == 1 %}🥇{% elif row.place == 2 %}🥈{% elif row.place == 3 %}🥉{% else %}{{ row.place }}{% endif %}
                 </td>
                 <td style="padding: 14px 8px; font-weight: {% if row.place <= 3 %}600{% else %}400{% endif %};">
-                    {{ row.username }}{% if row.place == 1 %} <span style="font-size: 11px; color: #f57f17;">ЛИДЕР</span>{% endif %}
+<a href="/profile?username={{ row.username }}" style="color: #333; text-decoration: none;">{{ row.username }}</a>
                 </td>
                 <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 18px; color: {% if row.points > 0 %}#2e7d32{% else %}#888{% endif %};">
                     {{ row.points }}
