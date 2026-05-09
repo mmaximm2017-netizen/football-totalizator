@@ -147,7 +147,6 @@ def init_db():
                 home_goals INTEGER, away_goals INTEGER, points INTEGER DEFAULT 0
             );
         ''')
-        # Добавляем уникальное ограничение, если его нет
         cur.execute('''
             DO $$
             BEGIN
@@ -159,6 +158,8 @@ def init_db():
         cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
         if not cur.fetchone():
             cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES ('Кубок Матч-премьер', 1, '2026-05-06')")
+        # Исправляем старые ставки без tournament_id
+        cur.execute("UPDATE predictions SET tournament_id = 1 WHERE tournament_id IS NULL")
         cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
         if not cur.fetchone():
             cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
