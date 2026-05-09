@@ -157,16 +157,6 @@ def init_db():
         cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
         if not cur.fetchone():
             cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES ('Кубок Матч-премьер', 1, '2026-05-06')")
-                    # Добавляем колонку tournament_id, если её нет
-        try:
-            cur.execute("ALTER TABLE predictions ADD COLUMN tournament_id INTEGER DEFAULT 1 REFERENCES tournaments(id)")
-        except:
-            pass
-        # Обновляем существующие ставки — привязываем к активному турниру
-        cur.execute("SELECT id FROM tournaments WHERE is_active = 1")
-        active = cur.fetchone()
-        if active:
-            cur.execute("UPDATE predictions SET tournament_id = %s WHERE tournament_id IS NULL OR tournament_id = 0", (active[0],))
         cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
         if not cur.fetchone():
             cur.execute("INSERT INTO users (username, password, is_admin) VALUES (%s, %s, 1)",
@@ -381,30 +371,32 @@ def index():
     start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
     today_str = (now + timedelta(hours=MSK_OFFSET)).strftime("%Y-%m-%d")
     if request.method == 'POST':
-        match_id = request.form.get('match_id'); home_goals = request.form.get('home_goals'); away_goals = request.form.get('away_goals')
+        match_id = request.form.get('match_id')
+        home_goals = request.form.get('home_goals', '0')
+        away_goals = request.form.get('away_goals', '0')
         t_id = get_active_tournament_id()
-        if match_id and home_goals is not None and away_goals is not None:
+        if match_id:
             try:
-                # Обработка пустых полей
-                if home_goals is None or str(home_goals).strip() == '':
-                    home_goals = '0'
-                if away_goals is None or str(away_goals).strip() == '':
-                    away_goals = '0'
-                home_goals = int(str(home_goals).strip())
-                away_goals = int(str(away_goals).strip())
-                if home_goals >= 0 and away_goals >= 0:
-                    cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
-                    m = cur.fetchone()
-                    if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
-                        cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
-                            ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
-                            (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
-                        flash("✅ Ставка принята", "success")
-                    else: flash("Ставки закрыты", "error")
+                h = str(home_goals).strip()
+                a = str(away_goals).strip()
+                if h == '' or h is None: h = '0'
+                if a == '' or a is None: a = '0'
+                home_goals = int(h)
+                away_goals = int(a)
+                
+                cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
+                m = cur.fetchone()
+                if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
+                    cur.execute("""INSERT INTO predictions (user_id, match_id, tournament_id, home_goals, away_goals) VALUES (%s,%s,%s,%s,%s)
+                        ON CONFLICT (user_id, match_id, tournament_id) DO UPDATE SET home_goals=%s, away_goals=%s""",
+                        (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
+                    flash("✅ Ставка принята", "success")
                 else:
-                    flash("Некорректный ввод", "error")
-            except: flash("Некорректный ввод", "error")
-        close_db(conn, cur); return redirect(url_for('index', league=league_filter))
+                    flash("Ставки закрыты", "error")
+            except:
+                flash("Некорректный ввод", "error")
+        close_db(conn, cur)
+        return redirect(url_for('index', league=league_filter))
     try:
         if league_filter == 'all':
             cur.execute("""SELECT id, home_team, away_team, kickoff_time, deadline, status, league, home_score, away_score
@@ -494,10 +486,8 @@ def match_predictions(match_id):
 def table():
     conn = get_db(); cur = conn.cursor()
     try:
-        # Все турниры
         cur.execute("SELECT id, name, is_active FROM tournaments ORDER BY is_active DESC, id DESC")
         tournaments = [{'id': r[0], 'name': r[1], 'is_active': r[2]} for r in cur.fetchall()]
-        # Выбранный турнир
         tid = request.args.get('tid', type=int)
         if not tid:
             active = next((t for t in tournaments if t['is_active']), None)
@@ -505,7 +495,6 @@ def table():
         cur.execute("SELECT name FROM tournaments WHERE id = %s", (tid,))
         selected = cur.fetchone()
         selected_name = selected[0] if selected else 'Турнир'
-        # Таблица для выбранного турнира
         cur.execute("""SELECT u.username, COALESCE(SUM(p.points),0) as total
             FROM users u LEFT JOIN predictions p ON u.id=p.user_id AND p.tournament_id=%s
             GROUP BY u.id ORDER BY total DESC""", (tid,))
