@@ -385,7 +385,13 @@ def index():
         t_id = get_active_tournament_id()
         if match_id and home_goals is not None and away_goals is not None:
             try:
-                home_goals = int(home_goals); away_goals = int(away_goals)
+                # Обработка пустых полей
+                if home_goals is None or str(home_goals).strip() == '':
+                    home_goals = '0'
+                if away_goals is None or str(away_goals).strip() == '':
+                    away_goals = '0'
+                home_goals = int(str(home_goals).strip())
+                away_goals = int(str(away_goals).strip())
                 if home_goals >= 0 and away_goals >= 0:
                     cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
                     m = cur.fetchone()
@@ -395,6 +401,8 @@ def index():
                             (session['user_id'], match_id, t_id, home_goals, away_goals, home_goals, away_goals))
                         flash("✅ Ставка принята", "success")
                     else: flash("Ставки закрыты", "error")
+                else:
+                    flash("Некорректный ввод", "error")
             except: flash("Некорректный ввод", "error")
         close_db(conn, cur); return redirect(url_for('index', league=league_filter))
     try:
