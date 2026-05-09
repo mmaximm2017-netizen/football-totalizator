@@ -384,7 +384,7 @@ def index():
             cur.execute("SELECT id, home_team, away_team, deadline, status FROM matches WHERE id = %s", (match_id,))
             m = cur.fetchone()
             if m and m[4] in ('SCHEDULED', 'TIMED') and is_before_deadline(m):
-                cur.execute("SELECT id FROM predictions WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                cur.execute("SELECT 1 FROM predictions WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
                             (session['user_id'], match_id, t_id))
                 if cur.fetchone():
                     cur.execute("UPDATE predictions SET home_goals = %s, away_goals = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
