@@ -31,6 +31,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = "fifa2026-totalizator-secret-key-dont-change"
 
+# Дни недели на русском
+WEEKDAYS = {
+    "Monday": "Понедельник", "Tuesday": "Вторник", "Wednesday": "Среда",
+    "Thursday": "Четверг", "Friday": "Пятница", "Saturday": "Суббота", "Sunday": "Воскресенье"
+}
+
 TEAM_NAMES = {
     "Spartak Moscow": "Спартак", "Dinamo Moscow": "Динамо", "CSKA Moscow": "ЦСКА",
     "Zenit St. Petersburg": "Зенит", "Lokomotiv Moscow": "Локомотив", "FC Krasnodar": "Краснодар",
@@ -158,7 +164,6 @@ def init_db():
         cur.execute("SELECT id FROM tournaments WHERE name = 'Кубок Матч-премьер'")
         if not cur.fetchone():
             cur.execute("INSERT INTO tournaments (name, is_active, start_date) VALUES ('Кубок Матч-премьер', 1, '2026-05-06')")
-        # Исправляем старые ставки без tournament_id
         cur.execute("UPDATE predictions SET tournament_id = 1 WHERE tournament_id IS NULL")
         cur.execute("SELECT id FROM users WHERE username = %s", (ADMIN_USERNAME,))
         if not cur.fetchone():
@@ -224,7 +229,9 @@ def to_msk(utc_time_str):
     except:
         try: dt_utc = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
         except: dt_utc = datetime.fromisoformat(utc_time_str)
-    return (dt_utc + timedelta(hours=MSK_OFFSET)).strftime("%d.%m %H:%M МСК")
+    dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
+    weekday = WEEKDAYS.get(dt_msk.strftime("%A"), dt_msk.strftime("%A"))
+    return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
 
 def parse_utc_time(utc_str):
     if not utc_str: return None
@@ -347,8 +354,12 @@ def update_matches():
             if ' ' in utc_time: kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
             else: kickoff_utc = datetime.fromisoformat(utc_time)
             kickoff_msk = kickoff_utc + timedelta(hours=MSK_OFFSET)
-            deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-            if deadline_msk >= kickoff_msk: deadline_msk = kickoff_msk - timedelta(hours=1)
+            # Дедлайн: для ЧМ-2026 — за 2 часа до начала, для остальных — 11:00 МСК или за 1 час
+            if league == 'wc2026':
+                deadline_msk = kickoff_msk - timedelta(hours=2)
+            else:
+                deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+                if deadline_msk >= kickoff_msk: deadline_msk = kickoff_msk - timedelta(hours=1)
             deadline_utc = deadline_msk - timedelta(hours=MSK_OFFSET)
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
             if not cur.fetchone():
@@ -498,6 +509,7 @@ def table():
         selected_name = selected[0] if selected else 'Турнир'
         cur.execute("""SELECT u.username, COALESCE(SUM(p.points),0) as total
             FROM users u LEFT JOIN predictions p ON u.id=p.user_id AND p.tournament_id=%s
+            WHERE u.is_admin = 0
             GROUP BY u.id ORDER BY total DESC""", (tid,))
         rows = cur.fetchall()
     finally: close_db(conn, cur)
