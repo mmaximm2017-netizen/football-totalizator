@@ -68,6 +68,7 @@
                     <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; text-decoration: none; color: #2e7d32; font-weight: 600;">📋 Ставки других игроков</a>
                 </div>
                 {% else %}
+                {% if not g.is_admin %}
                 <form method="post" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
                     <input type="hidden" name="match_id" value="{{ m.id }}">
                     <input type="number" name="home_goals" min="0" value="{{ m.pred_home }}" style="width: 48px; padding: 8px; font-size: 14px;">
@@ -79,6 +80,9 @@
                     <button type="submit" class="btn btn-primary btn-pulse" style="padding: 8px 12px; font-size: 13px;">✅ Поставить</button>
                     {% endif %}
                 </form>
+                {% else %}
+                <div style="color: #888; font-size: 12px; margin-top: 4px;">🔒 Администратор не участвует в ставках</div>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
