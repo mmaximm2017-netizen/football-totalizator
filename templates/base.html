@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Футбольный тотализатор</title>
+    <title>ТОТИШ БРАТИШЕК</title>
+    
+    <!-- PWA-файлы и настройки -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -116,7 +122,7 @@
             transition: max-height 0.4s ease, opacity 0.3s ease; 
             max-height: 0; 
             opacity: 0; 
-            scroll-margin-top: 70px; /* отступ, чтобы шапка не перекрывала при автоскролле */
+            scroll-margin-top: 70px;
         }
         .day-content.open { 
             max-height: 3000px; 
@@ -178,5 +184,16 @@
         </a>
     </nav>
     {% endif %}
+    
+    <!-- Регистрация сервис-воркера -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/service-worker.js')
+            .then(reg => console.log('Service Worker registered!', reg))
+            .catch(err => console.log('Service Worker failed!', err));
+        });
+      }
+    </script>
 </body>
 </html>
