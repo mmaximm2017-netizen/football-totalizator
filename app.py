@@ -319,15 +319,7 @@ def fetch_rpl_matches():
     return all_matches
 
 def should_update():
-    conn = get_db(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT MAX(kickoff_time) FROM matches")
-        last = cur.fetchone()[0]
-        if last:
-            last_update = parse_utc_time(last)
-            if last_update and utc_now() - last_update <= timedelta(minutes=55): return False
-    except: pass
-    finally: close_db(conn, cur)
+    """Временно всегда обновляет"""
     return True
 
 def update_matches():
