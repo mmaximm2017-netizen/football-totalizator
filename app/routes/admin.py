@@ -182,11 +182,17 @@ def force_finish(match_id, h, a):
     conn = get_db()
     cur = conn.cursor()
     try:
-        from app.models.scoring import calculate_points
+        conn.autocommit = False
         
         cur.execute("UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
                     (h, a, match_id))
         
+        cur.execute("SELECT status, home_score, away_score FROM matches WHERE id = %s", (match_id,))
+        result = cur.fetchone()
+        
+        conn.commit()
+        
+        from app.models.scoring import calculate_points
         cur.execute("UPDATE predictions SET points = 0 WHERE match_id = %s", (match_id,))
         cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s", (match_id,))
         for p in cur.fetchall():
@@ -194,8 +200,14 @@ def force_finish(match_id, h, a):
             cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
                         (pts, p[0], match_id))
         
-        flash(f"Матч #{match_id} завершён со счётом {h}:{a}!", "success")
+        conn.commit()
+        
+        flash(f"Матч #{match_id}: статус={result[0]}, счёт={result[1]}:{result[2]}", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка: {e}", "error")
     finally:
+        conn.autocommit = True
         close_db(conn, cur)
     return redirect(url_for('admin.admin'))
 
