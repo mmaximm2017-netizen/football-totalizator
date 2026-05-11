@@ -68,6 +68,7 @@ def admin():
                     "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
                     (home_score, away_score, match_id)
                 )
+                                conn.commit()
                 
                 from app.models.scoring import calculate_points
                 cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s AND tournament_id = 1", (match_id,))
