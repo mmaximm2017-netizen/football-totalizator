@@ -32,12 +32,11 @@ def admin():
     try:
         if request.method == 'POST':
             action = request.form.get('action')
-            if action == 'update_matches':
-                from app.services import match_service
-                match_service.update_matches()
-                from app.services import point_service
-                point_service.calculate_all_points()
-                flash("Обновлено", "success")
+if action == 'update_matches':
+    from app.services import match_service, point_service
+    match_service.update_matches()  # принудительно, без проверки should_update
+    point_service.calculate_all_points()
+    flash("Обновлено", "success")
             elif action == 'add_match':
                 home = request.form['home_team']; away = request.form['away_team']; league = request.form.get('league', 'other')
                 try:
