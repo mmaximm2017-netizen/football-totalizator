@@ -3,14 +3,11 @@ from collections import defaultdict
 from functools import wraps
 from zoneinfo import ZoneInfo
 
-from flask import (
-    Blueprint, render_template, request,
-    redirect, url_for, flash, session
-)
-
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from markupsafe import escape
 
-from app.db import get_db, close_db, get_active_tournament_id
+from app.db import get_db, close_db
+from app.utils import translate_name, ensure_datetime
 from app.models.scoring import calculate_points
 from app.config import START_DATE
 
@@ -23,25 +20,20 @@ MSK = ZoneInfo("Europe/Moscow")
 # HELPERS
 # =========================================================
 
-def validate_score(h, a):
-    try:
-        h = int(h)
-        a = int(a)
-        if h < 0 or a < 0:
-            return None, None
-        return h, a
-    except:
-        return None, None
+def get_active_tournament_id(cur):
+    cur.execute("""
+        SELECT id
+        FROM tournaments
+        WHERE is_active = 1
+        LIMIT 1
+    """)
+    row = cur.fetchone()
+    return row[0] if row else None
 
-
-# =========================================================
-# AUTH
-# =========================================================
 
 def admin_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-
         if 'user_id' not in session:
             return redirect(url_for('auth.login'))
 
@@ -67,6 +59,17 @@ def admin_required(f):
     return wrapper
 
 
+def validate_score(h, a):
+    try:
+        h = int(h)
+        a = int(a)
+        if h < 0 or a < 0:
+            return None, None
+        return h, a
+    except:
+        return None, None
+
+
 # =========================================================
 # ADMIN PAGE
 # =========================================================
@@ -80,26 +83,14 @@ def admin():
 
     try:
 
-        # ================= POST =================
         if request.method == 'POST':
+
             action = request.form.get('action')
 
-            # -------- update matches --------
-            if action == 'update_matches':
-                from app.services.match_service import update_matches
-                from app.services.point_service import calculate_all_points
-
-                update_matches()
-                calculate_all_points()
-
-                flash("Матчи обновлены", "success")
-                return redirect(url_for('admin.admin'))
-
-            # -------- add match --------
             if action == 'add_match':
 
-                home = request.form['home_team'].strip()
-                away = request.form['away_team'].strip()
+                home = request.form['home_team']
+                away = request.form['away_team']
                 league = request.form.get('league', 'other')
 
                 dt = datetime.strptime(
@@ -123,11 +114,9 @@ def admin():
                 flash("Матч добавлен", "success")
                 return redirect(url_for('admin.admin'))
 
-            # -------- set result --------
             if action == 'set_result':
 
                 match_id = request.form.get('match_id')
-
                 h, a = validate_score(
                     request.form.get('home_score'),
                     request.form.get('away_score')
@@ -137,11 +126,7 @@ def admin():
                     flash("Ошибка счёта", "error")
                     return redirect(url_for('admin.admin'))
 
-                tid = get_active_tournament_id()
-
-                if not tid:
-                    flash("Нет активного турнира", "error")
-                    return redirect(url_for('admin.admin'))
+                tid = get_active_tournament_id(cur)
 
                 cur.execute("""
                     UPDATE matches
@@ -172,47 +157,51 @@ def admin():
                 flash("Результат обновлён", "success")
                 return redirect(url_for('admin.admin'))
 
-        # ================= LOAD =================
-
-        start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
+        # =================================================
+        # LOAD MATCHES
+        # =================================================
 
         cur.execute("""
             SELECT id, home_team, away_team, kickoff_time, status
             FROM matches
             WHERE kickoff_time >= %s
             ORDER BY kickoff_time
-        """, (start,))
+        """, (START_DATE.strftime("%Y-%m-%dT%H:%M:%S"),))
 
-        matches = [
-            {
+        matches = []
+
+        for m in cur.fetchall():
+
+            kickoff = ensure_datetime(m[3])
+
+            if not kickoff:
+                continue
+
+            matches.append({
                 'id': m[0],
                 'home_team': m[1],
                 'away_team': m[2],
-                'kickoff_time': m[3],
+                'kickoff_time': kickoff,
                 'status': m[4]
-            }
-            for m in cur.fetchall()
-        ]
+            })
 
         free_days = defaultdict(list)
         finished_days = defaultdict(list)
 
         for m in matches:
 
-            kt = m['kickoff_time']
-
-            if isinstance(kt, str):
-                kt = datetime.fromisoformat(kt.replace("Z", "+00:00"))
-
-            day = kt.strftime("%Y-%m-%d")
+            day = m['kickoff_time'].strftime("%Y-%m-%d")
 
             if m['status'] == 'FINISHED':
                 finished_days[day].append(m)
             else:
                 free_days[day].append(m)
 
+        users = []
         cur.execute("SELECT id, username FROM users ORDER BY username")
-        users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
+
+        for u in cur.fetchall():
+            users.append({'id': u[0], 'username': u[1]})
 
     finally:
         close_db(conn, cur)
