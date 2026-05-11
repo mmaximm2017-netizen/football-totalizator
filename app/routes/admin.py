@@ -62,7 +62,6 @@ def admin():
                     away_score = int(away_score)
                 except:
                     flash("Результат должен быть числами", "error")
-                    close_db(conn, cur)
                     return redirect(url_for('admin.admin'))
                 
                 cur.execute(
@@ -78,7 +77,6 @@ def admin():
                                 (pts, p[0], match_id))
                 
                 flash("Результат внесён, очки пересчитаны", "success")
-                close_db(conn, cur)
                 return redirect(url_for('admin.admin'))
         
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
