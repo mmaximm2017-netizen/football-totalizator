@@ -126,8 +126,7 @@ def debug_match(match_id):
         from app.models.scoring import calculate_points
         
         # Принудительно сбрасываем кеш
-        cur.execute("DISCARD ALL")
-        
+                
         cur.execute("SELECT id, home_score, away_score FROM matches WHERE id = %s", (match_id,))
         match = cur.fetchone()
         
