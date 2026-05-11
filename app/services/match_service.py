@@ -91,7 +91,18 @@ def update_matches():
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
                     kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), status, home_score, away_score, league))
             else:
-                if status == 'FINISHED' and (home_score is not None and away_score is not None):
+                # Получаем текущий счёт из базы, чтобы не перезаписывать ручные результаты
+                cur.execute("SELECT home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
+                existing_scores = cur.fetchone()
+                existing_home = existing_scores[0] if existing_scores else None
+                existing_away = existing_scores[1] if existing_scores else None
+                
+                # Если в базе уже есть счёт (внесён вручную) — сохраняем его
+                if existing_home is not None and existing_away is not None:
+                    home_score = existing_home
+                    away_score = existing_away
+                
+                if status == 'FINISHED' and home_score is not None and away_score is not None:
                     cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
                         (status, home_score, away_score, kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league, str(api_id)))
                 else:
