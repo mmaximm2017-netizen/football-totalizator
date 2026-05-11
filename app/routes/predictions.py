@@ -1,5 +1,5 @@
 # app/routes/predictions.py
-from flask import Blueprint, render_template, redirect, url_for, flash, session
+from flask import Blueprint, render_template, redirect, url_for, flash, session, request
 from app.db import get_db, close_db, get_active_tournament_id
 from app.utils import cached_to_msk, is_before_deadline
 
