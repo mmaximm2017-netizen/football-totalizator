@@ -17,10 +17,9 @@ def calculate_points_for_match(match_id):
             pts = calculate_points(match[1], match[2], p[1], p[2])
             updates.append((pts, p[0], match_id, t_id))
         if updates:
-            psycopg2.extras.execute_batch(cur,
-                "UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
-                updates
-            )
+        for pts, uid, mid, tid in updates:
+            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                        (pts, uid, mid, tid))
     finally: close_db(conn, cur)
 
 def calculate_all_points():
@@ -42,10 +41,7 @@ def calculate_all_points():
             pts = calculate_points(real_h, real_a, pred_h, pred_a)
             updates.append((pts, user_id, match_id, t_id))
         
-        if updates:
-            psycopg2.extras.execute_batch(
-                cur,
-                "UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
-                updates
-            )
+        for pts, uid, mid, tid in updates:
+            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                        (pts, uid, mid, tid))
     finally: close_db(conn, cur)
