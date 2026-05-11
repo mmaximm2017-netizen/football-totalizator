@@ -185,13 +185,24 @@
     </nav>
     {% endif %}
     
-    <!-- Регистрация сервис-воркера -->
+    <!-- Регистрация сервис-воркера и push-уведомлений -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/static/service-worker.js')
-            .then(reg => console.log('Service Worker registered!', reg))
-            .catch(err => console.log('Service Worker failed!', err));
+        window.addEventListener('load', async () => {
+          try {
+            const reg = await navigator.serviceWorker.register('/static/service-worker.js');
+            console.log('Service Worker registered!', reg);
+            
+            // Запрашиваем разрешение на уведомления
+            if ('Notification' in window && Notification.permission === 'default') {
+              const perm = await Notification.requestPermission();
+              if (perm === 'granted') {
+                console.log('Push-уведомления разрешены');
+              }
+            }
+          } catch (err) {
+            console.log('Service Worker failed!', err);
+          }
         });
       }
     </script>

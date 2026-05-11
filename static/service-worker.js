@@ -1,26 +1,61 @@
-const CACHE_NAME = 'totish-cache-v1';
+const CACHE_NAME = 'totish-cache-v2';
 const urlsToCache = [
-  '/',
-  '/static/manifest.json',
-  '/static/icon-192.png',
-  '/static/icon-512.png'
+    '/',
+    '/static/manifest.json',
+    '/static/icon-192.png',
+    '/static/icon-512.png',
+    '/static/push-worker.js'
 ];
 
-// Установка воркера и кеширование ресурсов
+// Установка и кеширование
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-  );
+    self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    );
 });
 
-// Перехват запросов и отдача из кеша
+// Активация — очистка старого кеша
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        )
+    );
+});
+
+// Перехват запросов
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-  );
+    event.respondWith(
+        caches.match(event.request).then(resp => resp || fetch(event.request))
+    );
+});
+
+// Push-уведомления
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'ТОТИШ БРАТИШЕК';
+    const options = {
+        body: data.body || '',
+        icon: '/static/icon-192.png',
+        badge: '/static/icon-192.png',
+        tag: data.tag || 'default',
+        vibrate: [200, 100, 200],
+        data: data.url || '/'
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Клик по уведомлению
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const url = event.notification.data || '/';
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(windowClients => {
+            for (let client of windowClients) {
+                if (client.url === url && 'focus' in client) return client.focus();
+            }
+            if (clients.openWindow) return clients.openWindow(url);
+        })
+    );
 });
