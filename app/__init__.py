@@ -15,6 +15,14 @@ def create_app():
     # Инициализация БД
     with app.app_context():
         init_db()
+        # Первичная загрузка матчей при старте
+        try:
+            from app.services.match_service import update_matches
+            from app.services.point_service import calculate_all_points
+            update_matches()
+            calculate_all_points()
+        except Exception as e:
+            logging.warning(f"Не удалось загрузить матчи при старте: {e}")
     
     # Регистрируем blueprints
     from app.routes.main import main_bp
