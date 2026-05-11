@@ -25,6 +25,30 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+@admin_bp.route('/debug_match/<int:match_id>')
+@admin_required
+def debug_match(match_id):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, home_team, away_team, status, home_score, away_score FROM matches WHERE id = %s", (match_id,))
+        match = cur.fetchone()
+        
+        cur.execute("""SELECT u.username, p.home_goals, p.away_goals, p.points, p.tournament_id
+            FROM predictions p JOIN users u ON p.user_id = u.id
+            WHERE p.match_id = %s""", (match_id,))
+        preds = cur.fetchall()
+        
+        result = f"<h3>Матч #{match[0]}: {match[1]} – {match[2]}</h3>"
+        result += f"<p>Статус: {match[3]}, Счёт: {match[4]}:{match[5]}</p>"
+        result += "<table border='1'><tr><th>Игрок</th><th>Прогноз</th><th>Очки</th><th>tournament_id</th></tr>"
+        for p in preds:
+            result += f"<tr><td>{p[0]}</td><td>{p[1]}:{p[2]}</td><td>{p[3]}</td><td>{p[4]}</td></tr>"
+        result += "</table>"
+        return result
+    finally:
+        close_db(conn, cur)
+        
 @admin_bp.route('/', methods=['GET', 'POST'])
 @admin_required
 def admin():
