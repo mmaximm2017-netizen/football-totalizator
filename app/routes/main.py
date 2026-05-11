@@ -14,7 +14,12 @@ from flask import (
     session
 )
 
-from app.db import get_db, close_db
+from app.db import (
+    get_db,
+    close_db,
+    get_active_tournament_id
+)
+
 from app.utils import (
     get_flag,
     get_club_logo,
@@ -61,20 +66,6 @@ def to_msk(value):
         return str(value)
 
 
-def get_active_tournament_id():
-
-    cur.execute("""
-        SELECT id
-        FROM tournaments
-        WHERE is_active = 1
-        LIMIT 1
-    """)
-
-    row = cur.fetchone()
-
-    return row[0] if row else None
-
-
 # =========================================================
 # INDEX
 # =========================================================
@@ -115,10 +106,6 @@ def index():
 
                 return redirect(url_for('main.index'))
 
-            # =============================================
-            # VALIDATE SCORE
-            # =============================================
-
             try:
 
                 home_goals = int(
@@ -143,10 +130,6 @@ def index():
                         league=league_filter
                     )
                 )
-
-            # =============================================
-            # LOAD MATCH
-            # =============================================
 
             cur.execute("""
                 SELECT id,
@@ -177,10 +160,6 @@ def index():
                 flash("Дедлайн прошёл", "error")
 
                 return redirect(url_for('main.index'))
-
-            # =============================================
-            # UPSERT PREDICTION
-            # =============================================
 
             try:
 
@@ -252,7 +231,7 @@ def index():
             )
 
         # =================================================
-        # GET MATCHES
+        # LOAD MATCHES
         # =================================================
 
         if league_filter == 'all':
@@ -465,7 +444,7 @@ def index():
             })
 
         # =================================================
-        # DEFAULT OPEN DAY
+        # OPEN DAY
         # =================================================
 
         open_day = None
