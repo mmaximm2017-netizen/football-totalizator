@@ -164,36 +164,47 @@ def index():
         # GET: SHOW MATCHES
         # =================================================
 
-        base_query = """
-            SELECT id,
-                   home_team,
-                   away_team,
-                   kickoff_time,
-                   deadline,
-                   status,
-                   league,
-                   home_score,
-                   away_score
-            FROM matches
-            WHERE status IN ('SCHEDULED', 'TIMED', 'FINISHED')
-            AND kickoff_time >= %s::timestamp
-        """
+        if league_filter == 'all':
 
-        params = [start_date_str]
+            cur.execute("""
+                SELECT id,
+                       home_team,
+                       away_team,
+                       kickoff_time,
+                       deadline,
+                       status,
+                       league,
+                       home_score,
+                       away_score
+                FROM matches
+                WHERE status IN ('SCHEDULED', 'TIMED', 'FINISHED')
+                AND kickoff_time >= %s
+                ORDER BY kickoff_time
+            """, (start_date_str,))
 
-        if league_filter != 'all':
-            base_query += " AND league = %s"
-            params.append(league_filter)
+        else:
 
-        base_query += " ORDER BY kickoff_time"
-
-        cur.execute(base_query, tuple(params))
+            cur.execute("""
+                SELECT id,
+                       home_team,
+                       away_team,
+                       kickoff_time,
+                       deadline,
+                       status,
+                       league,
+                       home_score,
+                       away_score
+                FROM matches
+                WHERE status IN ('SCHEDULED', 'TIMED', 'FINISHED')
+                AND league = %s
+                AND kickoff_time >= %s
+                ORDER BY kickoff_time
+            """, (league_filter, start_date_str))
 
         raw_matches = []
 
         for m in cur.fetchall():
 
-            # m[3] — kickoff_time, может быть строкой или datetime
             kickoff = m[3]
             if isinstance(kickoff, str):
                 kickoff = datetime.fromisoformat(kickoff.replace('Z', '+00:00'))
