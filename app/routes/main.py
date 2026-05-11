@@ -207,15 +207,13 @@ def index():
 
         for m in cur.fetchall():
 
-            kickoff = m[3]
-            if isinstance(kickoff, str):
-                kickoff = datetime.fromisoformat(kickoff.replace('Z', '+00:00'))
+        for m in cur.fetchall():
 
             raw_matches.append({
                 'id': m[0],
                 'home_team': m[1],
                 'away_team': m[2],
-                'kickoff_time': kickoff,
+                'kickoff_time': m[3],
                 'deadline': m[4],
                 'status': m[5],
                 'league': m[6],
