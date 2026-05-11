@@ -62,6 +62,15 @@
 <!-- История последних матчей -->
 <div class="card">
     <div class="card-header">📋 Последние матчи</div>
+    {% if recent %}
+    <div style="overflow-x: auto;">
+        <table>
+            <tr style="background: #263238; color: white;">
+                <th style="padding: 8px;">Матч</th>
+                <th style="padding: 8px; text-align: center;">Прогноз</th>
+                <th style="padding: 8px; text-align: center;">Результат</th>
+                <th style="padding: 8px; text-align: center;">Очки</th>
+            </tr>
             {% for r in recent %}
             <tr style="border-bottom: 1px solid #eee; 
                 {% if r.points >= 10 %}background: #e8f5e9;
