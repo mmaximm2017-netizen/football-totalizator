@@ -73,6 +73,8 @@ def admin():
                 point_service.calculate_points_for_match(match_id)
                 
                 flash("Результат внесён, очки пересчитаны", "success")
+                close_db(conn, cur)
+                return redirect(url_for('admin.admin'))
         
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
         
