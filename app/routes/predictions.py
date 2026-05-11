@@ -128,7 +128,7 @@ def my_predictions():
             JOIN matches m ON p.match_id = m.id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
-              AND m.deadline > %s
+              AND m.deadline::timestamptz > %s
         """, (uid, tournament_id, now))
 
         pending = [

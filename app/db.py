@@ -3,26 +3,46 @@ from psycopg2.pool import SimpleConnectionPool
 
 from app.config import DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD
 
-
 # =========================================================
-# CONNECTION POOL
+# CONNECTION POOL (ленивая инициализация)
 # =========================================================
 
-db_pool = SimpleConnectionPool(
-    1,
-    5,
-    DATABASE_URL
-)
+db_pool = None
+
+
+def init_pool():
+    """
+    Создаём пул только при первом обращении.
+    Это защищает от падений при импорте и запуске.
+    """
+    global db_pool
+
+    if db_pool is None:
+        db_pool = SimpleConnectionPool(
+            1,
+            5,
+            DATABASE_URL
+        )
 
 
 def get_db():
+    """
+    Берём соединение из пула.
+    """
+    if db_pool is None:
+        init_pool()
+
     return db_pool.getconn()
 
 
 def close_db(conn, cur=None):
+    """
+    Возвращаем соединение в пул.
+    """
     if cur and not cur.closed:
         cur.close()
-    if conn and not conn.closed:
+
+    if conn and not conn.closed and db_pool:
         db_pool.putconn(conn)
 
 
@@ -35,6 +55,7 @@ def init_db():
     cur = conn.cursor()
 
     try:
+        # USERS
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -42,7 +63,10 @@ def init_db():
             password TEXT NOT NULL,
             is_admin INTEGER DEFAULT 0
         );
+        """)
 
+        # TOURNAMENTS
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS tournaments (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -50,7 +74,10 @@ def init_db():
             start_date TEXT,
             end_date TEXT
         );
+        """)
 
+        # MATCHES
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS matches (
             id SERIAL PRIMARY KEY,
             api_match_id TEXT UNIQUE,
@@ -63,7 +90,10 @@ def init_db():
             away_score INTEGER,
             league TEXT DEFAULT 'other'
         );
+        """)
 
+        # PREDICTIONS
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             user_id INTEGER,
             match_id INTEGER,
@@ -74,14 +104,20 @@ def init_db():
         );
         """)
 
-        # Индексы
+        # =====================================================
+        # INDEXES
+        # =====================================================
+
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_kickoff ON matches(kickoff_time);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
 
-        # уникальность ставок
+        # =====================================================
+        # UNIQUE CONSTRAINT
+        # =====================================================
+
         cur.execute("""
         DO $$
         BEGIN
@@ -94,7 +130,10 @@ def init_db():
         END $$;
         """)
 
-        # активный турнир
+        # =====================================================
+        # DEFAULT TOURNAMENT
+        # =====================================================
+
         cur.execute("""
         SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1
         """)
@@ -105,7 +144,10 @@ def init_db():
             VALUES ('Main Tournament', 1, NOW())
             """)
 
-        # админ
+        # =====================================================
+        # ADMIN USER
+        # =====================================================
+
         cur.execute("""
         SELECT id FROM users WHERE username = %s
         """, (ADMIN_USERNAME,))

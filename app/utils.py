@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from functools import lru_cache
+import os
+
+# =========================================================
+# TIME HELPERS
+# =========================================================
 
 MSK = ZoneInfo("Europe/Moscow")
 
-
-# =========================================================
-# DATETIME
-# =========================================================
 
 def parse_datetime(value):
     if not value:
@@ -29,17 +30,8 @@ def parse_datetime(value):
         return None
 
 
-def ensure_datetime(value):
-    if not value:
-        return None
-
-    if isinstance(value, datetime):
-        return value
-
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except Exception:
-        return None
+def parse_utc_time(value):
+    return parse_datetime(value)
 
 
 @lru_cache(maxsize=2048)
@@ -92,19 +84,67 @@ def get_flag(country):
 
 
 # =========================================================
-# CLUB LOGOS
+# CLUB LOGOS (FLEXIBLE MATCHING SYSTEM)
 # =========================================================
+
+# Загружаем список файлов логотипов один раз при старте
+CLUB_LOGO_FILES = set()
+
+LOGO_DIR = "static/clubs"
+
+if os.path.exists(LOGO_DIR):
+    CLUB_LOGO_FILES = set(os.listdir(LOGO_DIR))
+
+
+def normalize_team(name: str):
+    if not name:
+        return ""
+
+    return (
+        name.lower()
+        .replace("fc ", "")
+        .replace("fk ", "")
+        .replace(" ", "-")
+        .replace(".", "")
+        .replace("'", "")
+        .strip()
+    )
+
+
+def find_logo_by_fuzzy(name: str):
+    """
+    Умный поиск логотипа:
+    1. пробует полное совпадение по нормализованному имени
+    2. пробует частичное совпадение
+    3. fallback по ключевым словам
+    """
+
+    if not name:
+        return "/static/clubs/default.png"
+
+    norm = normalize_team(name)
+
+    # 1. точное вхождение
+    for file in CLUB_LOGO_FILES:
+        if norm in file:
+            return f"/static/clubs/{file}"
+
+    # 2. fallback по ключевым словам
+    keywords = norm.split("-")
+    for file in CLUB_LOGO_FILES:
+        if any(k in file for k in keywords if len(k) > 3):
+            return f"/static/clubs/{file}"
+
+    # 3. дефолт
+    return "/static/clubs/default.png"
+
 
 def get_club_logo(team_name):
-    if not team_name:
-        return "default.png"
-
-    slug = team_name.lower().replace(" ", "-").replace(".", "").replace("'", "")
-    return f"{slug}-footballlogos-org.png"
+    return find_logo_by_fuzzy(team_name)
 
 
 # =========================================================
-# TRANSLATE
+# TRANSLATE (заглушка)
 # =========================================================
 
 def translate_name(name):
