@@ -196,8 +196,8 @@ def admin_fix_result():
         for p in preds:
             user_id, pred_h, pred_a, pred_tid = p
             pts = calculate_points(home_score, away_score, pred_h, pred_a)
-            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
-                        (pts, user_id, match_id, t_id))
+            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
+                        (pts, user_id, match_id))
             updated += 1
         
         flash(f"Результат обновлён ({updated} записей)", "success")
