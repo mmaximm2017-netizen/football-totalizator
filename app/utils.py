@@ -6,22 +6,19 @@ MSK = ZoneInfo("Europe/Moscow")
 
 
 # =========================================================
-# DATETIME SAFE PARSING
+# DATETIME HELPERS
 # =========================================================
 
 def parse_datetime(value):
-
     if not value:
         return None
 
     try:
-
         if isinstance(value, datetime):
             dt = value
         else:
-            dt = datetime.fromisoformat(
-                str(value).replace("Z", "+00:00")
-            )
+            clean = str(value).replace("Z", "+00:00")
+            dt = datetime.fromisoformat(clean)
 
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
@@ -32,13 +29,8 @@ def parse_datetime(value):
         return None
 
 
-# =========================================================
-# MSK FORMAT
-# =========================================================
-
 @lru_cache(maxsize=2048)
-def to_msk(value):
-
+def cached_to_msk(value):
     dt = parse_datetime(value)
 
     if not dt:
@@ -47,32 +39,30 @@ def to_msk(value):
     return dt.astimezone(MSK).strftime("%d.%m.%Y %H:%M")
 
 
-# =========================================================
-# DEADLINE CHECK (FIXED LOGIC)
-# =========================================================
+def utc_now():
+    return datetime.now(timezone.utc)
+
 
 def is_before_deadline(match):
-
+    """
+    match может быть:
+    - tuple из БД (deadline на index 3)
+    - или dict (fallback через ключи)
+    """
     try:
-
-        if not match:
-            return False
-
-        # поддержка dict и tuple
         deadline = None
 
         if isinstance(match, dict):
             deadline = match.get("deadline")
         else:
-            # fallback под твои старые tuple запросы
-            deadline = match[3] if len(match) > 3 else None
+            deadline = match[3]
 
         dt = parse_datetime(deadline)
 
         if not dt:
             return False
 
-        return datetime.now(timezone.utc) < dt
+        return utc_now() < dt
 
     except Exception:
         return False
@@ -101,15 +91,27 @@ def get_flag(country):
 # =========================================================
 
 def get_club_logo(team_name):
-
     if not team_name:
         return "default.png"
 
     slug = (
-        team_name.lower()
+        team_name
+        .lower()
         .replace(" ", "-")
         .replace(".", "")
         .replace("'", "")
     )
 
     return f"{slug}-footballlogos-org.png"
+
+
+# =========================================================
+# TRANSLATION (ВАЖНО: чтобы не падал import)
+# =========================================================
+
+def translate_name(name):
+    """
+    Заглушка, чтобы не падал импорт.
+    Если у тебя есть словарь перевода — сюда вставишь.
+    """
+    return name
