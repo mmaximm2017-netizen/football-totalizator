@@ -357,8 +357,13 @@ def update_matches():
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
                     kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), status, home_score, away_score, league))
             else:
-                cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
-                    (status, home_score, away_score, kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league, str(api_id)))
+                # Если счёт уже был установлен вручную — не перезаписываем его
+                if status == 'FINISHED' and (home_score is not None and away_score is not None):
+                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
+                        (status, home_score, away_score, kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league, str(api_id)))
+                else:
+                    cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
+                        (status, kickoff_utc.strftime("%Y-%m-%dT%H:%M:%S"), deadline_utc.strftime("%Y-%m-%dT%H:%M:%S"), league, str(api_id)))
     finally: close_db(conn, cur)
 
 def update_matches_safe():
