@@ -470,7 +470,6 @@ def profile():
     """Страница профиля игрока (по умолчанию — свой)"""
     username = request.args.get('username')
     if username:
-        # Смотрим чужой профиль
         conn = get_db()
         cur = conn.cursor()
         try:
@@ -496,6 +495,28 @@ def profile():
     conn = get_db()
     cur = conn.cursor()
     try:
+        # Текущее место игрока
+        cur.execute("""
+            WITH ranked AS (
+                SELECT u.id, u.username,
+                       COALESCE(SUM(p.points), 0) as total,
+                       RANK() OVER (ORDER BY COALESCE(SUM(p.points), 0) DESC,
+                                             COUNT(CASE WHEN p.points >= 10 THEN 1 END) DESC,
+                                             COUNT(CASE WHEN p.points IN (7,8) THEN 1 END) DESC,
+                                             COUNT(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 END) DESC) as place
+                FROM users u
+                LEFT JOIN predictions p ON u.id = p.user_id AND p.tournament_id = %s
+                WHERE u.is_admin = 0
+                GROUP BY u.id
+            )
+            SELECT place, (SELECT COUNT(*) FROM users WHERE is_admin = 0) as total_players
+            FROM ranked
+            WHERE id = %s
+        """, (t_id, uid))
+        rank_row = cur.fetchone()
+        current_place = rank_row[0] if rank_row else None
+        total_players = rank_row[1] if rank_row else 0
+        
         # Основная статистика
         cur.execute("""
             SELECT 
@@ -545,7 +566,9 @@ def profile():
                     'home_score': r[4], 'away_score': r[5], 'points': r[6]} for r in cur.fetchall()]
     finally:
         close_db(conn, cur)
-    return render_template('profile.html', username=username, stats=stats, favorites=favorites, recent=recent, get_flag=get_flag, get_club_logo=get_club_logo)
+    return render_template('profile.html', username=username, stats=stats, favorites=favorites, recent=recent,
+                           current_place=current_place, total_players=total_players,
+                           get_flag=get_flag, get_club_logo=get_club_logo)
 
 @app.route('/match/<int:match_id>/predictions')
 @login_required
