@@ -125,15 +125,11 @@ def debug_match(match_id):
     try:
         from app.models.scoring import calculate_points
         
-        # Принудительно сбрасываем кеш
-                
         cur.execute("SELECT id, home_score, away_score FROM matches WHERE id = %s", (match_id,))
         match = cur.fetchone()
         
-        # Сначала удаляем все очки для этого матча
         cur.execute("UPDATE predictions SET points = 0 WHERE match_id = %s", (match_id,))
         
-        # Затем пересчитываем заново
         cur.execute("""SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s""", (match_id,))
         preds = cur.fetchall()
         
@@ -144,10 +140,6 @@ def debug_match(match_id):
                         (pts, p[0], match_id))
             updated += 1
         
-        # Принудительно сохраняем
-        cur.execute("COMMIT")
-        
-        # Проверяем, что сохранилось
         cur.execute("""SELECT u.username, p.home_goals, p.away_goals, p.points
             FROM predictions p JOIN users u ON p.user_id = u.id
             WHERE p.match_id = %s""", (match_id,))
@@ -161,6 +153,32 @@ def debug_match(match_id):
         return result
     finally:
         close_db(conn, cur)
+
+@admin_bp.route('/recalc_all')
+@admin_required
+def recalc_all():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        from app.models.scoring import calculate_points
+        
+        cur.execute("SELECT id, home_score, away_score FROM matches WHERE status = 'FINISHED'")
+        matches = cur.fetchall()
+        
+        total_updated = 0
+        for match in matches:
+            cur.execute("UPDATE predictions SET points = 0 WHERE match_id = %s", (match[0],))
+            cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s", (match[0],))
+            for p in cur.fetchall():
+                pts = calculate_points(match[1], match[2], p[1], p[2])
+                cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
+                            (pts, p[0], match[0]))
+                total_updated += 1
+        
+        flash(f"Все очки пересчитаны! Обновлено {total_updated} записей в {len(matches)} матчах.", "success")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for('admin.admin'))
 
 @admin_bp.route('/translate', methods=['POST'])
 @admin_required
@@ -196,22 +214,13 @@ def admin_fix_result():
                     (home_score, away_score, match_id))
         
         from app.models.scoring import calculate_points
-        from app.db import get_active_tournament_id
-        t_id = get_active_tournament_id()
-        
-        cur.execute("SELECT user_id, home_goals, away_goals, tournament_id FROM predictions WHERE match_id = %s",
-                    (match_id,))
-        preds = cur.fetchall()
-        
-        updated = 0
-        for p in preds:
-            user_id, pred_h, pred_a, pred_tid = p
-            pts = calculate_points(home_score, away_score, pred_h, pred_a)
+        cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s", (match_id,))
+        for p in cur.fetchall():
+            pts = calculate_points(home_score, away_score, p[1], p[2])
             cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s",
-                        (pts, user_id, match_id))
-            updated += 1
+                        (pts, p[0], match_id))
         
-        flash(f"Результат обновлён ({updated} записей)", "success")
+        flash(f"Результат матча #{match_id} обновлён: {home_score}:{away_score}", "success")
     finally:
         close_db(conn, cur)
     return redirect(url_for('admin.admin'))

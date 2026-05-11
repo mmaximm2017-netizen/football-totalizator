@@ -8,6 +8,13 @@
 </div>
 
 <div class="card">
+    <div class="card-header">🔄 Пересчитать все очки</div>
+    <form method="get" action="/admin/recalc_all">
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Пересчитать очки для всех завершённых матчей</button>
+    </form>
+</div>
+
+<div class="card">
     <div class="card-header">🌐 Перевести названия команд</div>
     <form method="post" action="/admin/translate"><button type="submit" class="btn btn-primary" style="width: 100%;">Перевести на русский</button></form>
 </div>
@@ -55,8 +62,7 @@
                             <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
                         </div>
                         <form method="post" style="display: flex; align-items: center; gap: 6px; margin: 0;">
-                            <input type="hidden" name="action" value="set_result">
-                            <input type="hidden" name="match_id" value="{{ m.id }}">
+                            <input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
                             <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
                             <span>:</span>
                             <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
