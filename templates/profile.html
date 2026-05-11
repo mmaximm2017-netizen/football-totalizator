@@ -2,6 +2,15 @@
 {% block content %}
 <div style="text-align: center; margin-bottom: 16px;">
     <h2 style="margin: 0; font-size: 22px;">👤 {{ username }}</h2>
+    {% if current_place %}
+    <p style="font-size: 14px; font-weight: 600; margin-top: 4px;">
+        Текущее место: 
+        {% if current_place == 1 %}🥇
+        {% elif current_place == 2 %}🥈
+        {% elif current_place == 3 %}🥉
+        {% else %}{{ current_place }}{% endif %}
+    </p>
+    {% endif %}
     <p style="color: #888; font-size: 13px;">Статистика в текущем турнире</p>
 </div>
 
