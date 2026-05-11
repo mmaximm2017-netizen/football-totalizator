@@ -1,5 +1,6 @@
 # app/routes/main.py
-from datetime import datetime, timedelta, timezone
+
+from datetime import datetime, timezone
 from collections import defaultdict
 from zoneinfo import ZoneInfo
 
@@ -14,13 +15,64 @@ from flask import (
 )
 
 from app.db import get_db, close_db
-from app.utils import cached_to_msk, is_before_deadline, get_flag, get_club_logo
+from app.utils import (
+    get_flag,
+    get_club_logo,
+    is_before_deadline
+)
+
 from app.config import START_DATE
 
 
 main_bp = Blueprint('main', __name__)
 
 MSK = ZoneInfo("Europe/Moscow")
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def to_msk(value):
+
+    if not value:
+        return ""
+
+    try:
+
+        if isinstance(value, datetime):
+
+            dt = value
+
+        else:
+
+            clean = str(value).replace("Z", "+00:00")
+
+            dt = datetime.fromisoformat(clean)
+
+        if dt.tzinfo is None:
+
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(MSK).strftime("%d.%m.%Y %H:%M")
+
+    except Exception:
+
+        return str(value)
+
+
+def get_active_tournament_id(cur):
+
+    cur.execute("""
+        SELECT id
+        FROM tournaments
+        WHERE is_active = 1
+        LIMIT 1
+    """)
+
+    row = cur.fetchone()
+
+    return row[0] if row else None
 
 
 # =========================================================
@@ -31,6 +83,7 @@ MSK = ZoneInfo("Europe/Moscow")
 def index():
 
     if 'user_id' not in session:
+
         return redirect(url_for('auth.login'))
 
     conn = get_db()
@@ -38,41 +91,62 @@ def index():
 
     try:
 
-        now = datetime.now(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
 
         league_filter = request.args.get('league', 'all')
 
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
-        today_msk = now.astimezone(MSK).strftime("%Y-%m-%d")
+        today_msk = now_utc.astimezone(MSK).strftime("%Y-%m-%d")
 
         # =================================================
-        # POST: MAKE PREDICTION
+        # POST: SAVE PREDICTION
         # =================================================
 
         if request.method == 'POST':
 
             match_id = request.form.get('match_id')
 
-            cur.execute("SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1")
-            row = cur.fetchone()
-            tournament_id = row[0] if row else None
+            tournament_id = get_active_tournament_id(cur)
 
             if not tournament_id:
+
                 flash("Активный турнир не найден", "error")
+
                 return redirect(url_for('main.index'))
+
+            # =============================================
+            # VALIDATE SCORE
+            # =============================================
 
             try:
 
-                home_goals = int(request.form.get('home_goals', '0').strip() or '0')
-                away_goals = int(request.form.get('away_goals', '0').strip() or '0')
+                home_goals = int(
+                    request.form.get('home_goals', '0').strip()
+                )
+
+                away_goals = int(
+                    request.form.get('away_goals', '0').strip()
+                )
 
                 if home_goals < 0 or away_goals < 0:
+
                     raise ValueError
 
-            except ValueError:
+            except Exception:
+
                 flash("Некорректный счёт", "error")
-                return redirect(url_for('main.index', league=league_filter))
+
+                return redirect(
+                    url_for(
+                        'main.index',
+                        league=league_filter
+                    )
+                )
+
+            # =============================================
+            # LOAD MATCH
+            # =============================================
 
             cur.execute("""
                 SELECT id,
@@ -87,16 +161,26 @@ def index():
             match = cur.fetchone()
 
             if not match:
+
                 flash("Матч не найден", "error")
+
                 return redirect(url_for('main.index'))
 
             if match[4] not in ('SCHEDULED', 'TIMED'):
-                flash("Ставки на этот матч закрыты", "error")
+
+                flash("Ставки закрыты", "error")
+
                 return redirect(url_for('main.index'))
 
             if not is_before_deadline(match):
+
                 flash("Дедлайн прошёл", "error")
+
                 return redirect(url_for('main.index'))
+
+            # =============================================
+            # UPSERT PREDICTION
+            # =============================================
 
             try:
 
@@ -152,18 +236,23 @@ def index():
 
                 conn.commit()
 
-                flash("✅ Ставка принята", "success")
+                flash("✅ Ставка сохранена", "success")
 
             except Exception as e:
 
                 conn.rollback()
 
-                flash(f"Ошибка сохранения ставки: {e}", "error")
+                flash(f"Ошибка сохранения: {e}", "error")
 
-            return redirect(url_for('main.index', league=league_filter))
+            return redirect(
+                url_for(
+                    'main.index',
+                    league=league_filter
+                )
+            )
 
         # =================================================
-        # GET: SHOW MATCHES
+        # GET MATCHES
         # =================================================
 
         if league_filter == 'all':
@@ -179,7 +268,11 @@ def index():
                        home_score,
                        away_score
                 FROM matches
-                WHERE status IN ('SCHEDULED', 'TIMED', 'FINISHED')
+                WHERE status IN (
+                    'SCHEDULED',
+                    'TIMED',
+                    'FINISHED'
+                )
                 AND kickoff_time >= %s
                 ORDER BY kickoff_time
             """, (start_date_str,))
@@ -197,17 +290,24 @@ def index():
                        home_score,
                        away_score
                 FROM matches
-                WHERE status IN ('SCHEDULED', 'TIMED', 'FINISHED')
+                WHERE status IN (
+                    'SCHEDULED',
+                    'TIMED',
+                    'FINISHED'
+                )
                 AND league = %s
                 AND kickoff_time >= %s
                 ORDER BY kickoff_time
-            """, (league_filter, start_date_str))
+            """, (
+                league_filter,
+                start_date_str
+            ))
+
+        rows = cur.fetchall()
 
         raw_matches = []
 
-        for m in cur.fetchall():
-
-        for m in cur.fetchall():
+        for m in rows:
 
             raw_matches.append({
                 'id': m[0],
@@ -221,13 +321,15 @@ def index():
                 'away_score': m[8]
             })
 
-        cur.execute("SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1")
-        row = cur.fetchone()
-        tournament_id = row[0] if row else None
+        # =================================================
+        # USER PREDICTIONS
+        # =================================================
 
-        match_ids = [match['id'] for match in raw_matches]
+        tournament_id = get_active_tournament_id(cur)
 
         user_data = {}
+
+        match_ids = [m['id'] for m in raw_matches]
 
         if match_ids and tournament_id:
 
@@ -248,32 +350,56 @@ def index():
 
             for row in cur.fetchall():
 
-                user_data[row[0]] = (
-                    row[1],
-                    row[2],
-                    row[3]
-                )
+                user_data[row[0]] = {
+                    'home': row[1],
+                    'away': row[2],
+                    'points': row[3]
+                }
+
+        # =================================================
+        # GROUP BY DAY
+        # =================================================
 
         matches_by_day = defaultdict(list)
 
         for match in raw_matches:
 
-            kickoff = match['kickoff_time']
-            if isinstance(kickoff, datetime):
-                kickoff_msk = kickoff.astimezone(MSK)
-            else:
-                kickoff_msk = datetime.fromisoformat(str(kickoff).replace('Z', '+00:00')).astimezone(MSK)
+            kickoff_raw = match['kickoff_time']
+
+            try:
+
+                if isinstance(kickoff_raw, datetime):
+
+                    kickoff_dt = kickoff_raw
+
+                else:
+
+                    kickoff_dt = datetime.fromisoformat(
+                        str(kickoff_raw).replace("Z", "+00:00")
+                    )
+
+                if kickoff_dt.tzinfo is None:
+
+                    kickoff_dt = kickoff_dt.replace(
+                        tzinfo=timezone.utc
+                    )
+
+                kickoff_msk = kickoff_dt.astimezone(MSK)
+
+            except Exception:
+
+                continue
 
             day_key = kickoff_msk.strftime("%Y-%m-%d")
 
-            match['day_key'] = day_key
+            day_label = kickoff_msk.strftime("%d.%m.%Y")
 
             match['deadline_passed'] = not is_before_deadline((
                 match['id'],
                 None,
                 None,
                 match['deadline'],
-                None
+                match['status']
             ))
 
             match['finished'] = (
@@ -282,9 +408,16 @@ def index():
 
             if match['id'] in user_data:
 
-                match['pred_home'] = user_data[match['id']][0]
-                match['pred_away'] = user_data[match['id']][1]
-                match['my_points'] = user_data[match['id']][2] if match['finished'] else 0
+                pred = user_data[match['id']]
+
+                match['pred_home'] = pred['home']
+                match['pred_away'] = pred['away']
+
+                match['my_points'] = (
+                    pred['points']
+                    if match['finished']
+                    else 0
+                )
 
             else:
 
@@ -292,9 +425,11 @@ def index():
                 match['pred_away'] = ''
                 match['my_points'] = 0
 
-            day_label = kickoff_msk.strftime("%d.%m.%Y")
-
             matches_by_day[(day_key, day_label)].append(match)
+
+        # =================================================
+        # BUILD DAYS
+        # =================================================
 
         days = []
 
@@ -304,12 +439,15 @@ def index():
         ):
 
             if day_key == today_msk:
+
                 day_type = 'today'
 
             elif day_key < today_msk:
+
                 day_type = 'past'
 
             else:
+
                 day_type = 'future'
 
             has_open = any(
@@ -326,12 +464,18 @@ def index():
                 'has_open': has_open
             })
 
+        # =================================================
+        # DEFAULT OPEN DAY
+        # =================================================
+
         open_day = None
 
         for d in days:
 
             if d['type'] == 'today':
+
                 open_day = d['key']
+
                 break
 
         if not open_day:
@@ -339,17 +483,20 @@ def index():
             for d in days:
 
                 if d['type'] == 'future':
+
                     open_day = d['key']
+
                     break
 
     finally:
+
         close_db(conn, cur)
 
     return render_template(
         'index.html',
         days=days,
         open_day=open_day,
-        to_msk=cached_to_msk,
+        to_msk=to_msk,
         current_filter=league_filter,
         get_flag=get_flag,
         get_club_logo=get_club_logo

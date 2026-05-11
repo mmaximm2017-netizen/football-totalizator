@@ -2,8 +2,8 @@ const CACHE_NAME = 'totish-cache-v2';
 const urlsToCache = [
     '/',
     '/static/manifest.json',
-    '/static/icon-192.png',
-    '/static/icon-512.png',
+    '/static/icon-192-new.png',
+    '/static/icon-512-new.png',
     '/static/push-worker.js'
 ];
 
@@ -37,8 +37,8 @@ self.addEventListener('push', event => {
     const title = data.title || 'ТОТИШ БРАТИШЕК';
     const options = {
         body: data.body || '',
-        icon: '/static/icon-192.png',
-        badge: '/static/icon-192.png',
+        icon: '/static/icon-192-new.png',
+        badge: '/static/icon-192-new.png',
         tag: data.tag || 'default',
         vibrate: [200, 100, 200],
         data: data.url || '/'
