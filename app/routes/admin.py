@@ -32,11 +32,13 @@ def admin():
     try:
         if request.method == 'POST':
             action = request.form.get('action')
-if action == 'update_matches':
-    from app.services import match_service, point_service
-    match_service.update_matches()  # принудительно, без проверки should_update
-    point_service.calculate_all_points()
-    flash("Обновлено", "success")
+            if action == 'update_matches':
+                from app.services import match_service, point_service
+                match_service.update_matches()
+                point_service.calculate_all_points()
+                flash("Обновлено", "success")
+                close_db(conn, cur)
+                return redirect(url_for('admin.admin'))
             elif action == 'add_match':
                 home = request.form['home_team']; away = request.form['away_team']; league = request.form.get('league', 'other')
                 try:
@@ -71,25 +73,11 @@ if action == 'update_matches':
                 point_service.calculate_points_for_match(match_id)
                 
                 flash("Результат внесён, очки пересчитаны", "success")
-                return redirect(url_for('admin.admin'))
-                
-                # Обновляем счёт и статус
-                cur.execute(
-                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
-                    (home_score, away_score, match_id)
-                )
-                
-                # Пересчитываем очки только для этого матча
-                from app.services import point_service
-                point_service.calculate_points_for_match(match_id)
-                
-                flash("Результат внесён, очки пересчитаны", "success")
                 close_db(conn, cur)
                 return redirect(url_for('admin.admin'))
         
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
         
-        # Матчи для внесения результата
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status IN ('SCHEDULED','TIMED') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         raw_free = cur.fetchall()
@@ -99,7 +87,6 @@ if action == 'update_matches':
             free_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
         free_days = [{'date': d, 'matches': free_by_day[d]} for d in sorted(free_by_day.keys())]
         
-        # Завершённые матчи для исправления
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status = 'FINISHED' AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         raw_finished = cur.fetchall()
@@ -109,19 +96,18 @@ if action == 'update_matches':
             fin_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
         finished_days = [{'date': d, 'matches': fin_by_day[d]} for d in sorted(fin_by_day.keys())]
         
-        # Все матчи
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
         
-        # Ручные матчи
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE (api_match_id IS NULL OR api_match_id = '') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         manual_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
         
         cur.execute("SELECT id, username FROM users")
         users = [{'id': u[0], 'username': u[1]} for u in cur.fetchall()]
-    finally: close_db(conn, cur)
+    finally:
+        close_db(conn, cur)
     return render_template('admin.html', free_days=free_days, finished_days=finished_days, all_matches=all_matches, manual_matches=manual_matches, users=users)
 
 @admin_bp.route('/translate', methods=['POST'])
