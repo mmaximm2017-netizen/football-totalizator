@@ -10,6 +10,8 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
     conn = get_db(); cur = conn.cursor(); now = utc_now()
     league_filter = request.args.get('league', 'all')
     start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
