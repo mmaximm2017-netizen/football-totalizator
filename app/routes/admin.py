@@ -71,6 +71,26 @@ def admin():
                     (home_score, away_score, match_id)
                 )
                 
+                # Пересчитываем очки прямо здесь (без открытия нового соединения)
+                from app.models.scoring import calculate_points
+                from app.db import get_active_tournament_id
+                t_id = get_active_tournament_id()
+                cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s AND tournament_id = %s", (match_id, t_id))
+                for p in cur.fetchall():
+                    pts = calculate_points(home_score, away_score, p[1], p[2])
+                    cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                                (pts, p[0], match_id, t_id))
+                
+                flash("Результат внесён, очки пересчитаны", "success")
+                close_db(conn, cur)
+                return redirect(url_for('admin.admin'))
+                
+                # Обновляем статус и счёт
+                cur.execute(
+                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
+                    (home_score, away_score, match_id)
+                )
+                
                 # Пересчитываем очки (соединение ещё открыто)
                 from app.services.point_service import calculate_points_for_match
                 calculate_points_for_match(match_id)
