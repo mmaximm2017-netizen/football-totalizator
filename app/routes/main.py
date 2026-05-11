@@ -260,5 +260,5 @@ def index():
         open_day=open_day,
         get_flag=get_flag,
         get_club_logo=get_club_logo,
-        cached_to_msk=cached_to_msk
+        to_msk=cached_to_msk, 
     )
