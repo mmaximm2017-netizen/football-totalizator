@@ -62,6 +62,18 @@ def admin():
                     flash("Результат должен быть числами", "error")
                     return redirect(url_for('admin.admin'))
                 
+                cur.execute(
+                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
+                    (home_score, away_score, match_id)
+                )
+                conn.commit()
+                
+                from app.services import point_service
+                point_service.calculate_points_for_match(match_id)
+                
+                flash("Результат внесён, очки пересчитаны", "success")
+                return redirect(url_for('admin.admin'))
+                
                 # Обновляем счёт и статус
                 cur.execute(
                     "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
