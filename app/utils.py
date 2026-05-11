@@ -1,151 +1,96 @@
-from datetime import datetime, timezone
+# app/utils.py
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from functools import lru_cache
-import os
-
-# =========================================================
-# TIME HELPERS
-# =========================================================
+import app.models.team_data as team_data
 
 MSK = ZoneInfo("Europe/Moscow")
+
+
+# =========================================================
+# DATETIME HELPERS
+# =========================================================
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 def parse_datetime(value):
     if not value:
         return None
-
     try:
         if isinstance(value, datetime):
             dt = value
         else:
             clean = str(value).replace("Z", "+00:00")
             dt = datetime.fromisoformat(clean)
-
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-
         return dt
-
-    except Exception:
+    except:
         return None
 
 
-def parse_utc_time(value):
-    return parse_datetime(value)
-
-
-@lru_cache(maxsize=2048)
-def cached_to_msk(value):
-    dt = parse_datetime(value)
-    if not dt:
-        return ""
-    return dt.astimezone(MSK).strftime("%d.%m.%Y %H:%M")
-
-
-def utc_now():
-    return datetime.now(timezone.utc)
+def parse_utc_time(utc_str):
+    return parse_datetime(utc_str)
 
 
 def is_before_deadline(match):
     try:
-        deadline = None
-
         if isinstance(match, dict):
             deadline = match.get("deadline")
         else:
             deadline = match[3]
-
         dt = parse_datetime(deadline)
         if not dt:
             return False
-
         return utc_now() < dt
-
-    except Exception:
+    except:
         return False
+
+
+@lru_cache(maxsize=200)
+def cached_to_msk(utc_time_str):
+    if not utc_time_str:
+        return "—"
+    dt = parse_datetime(utc_time_str)
+    if not dt:
+        return "—"
+    dt_msk = dt.astimezone(MSK)
+    weekdays_ru = {
+        "Monday": "Понедельник", "Tuesday": "Вторник", "Wednesday": "Среда",
+        "Thursday": "Четверг", "Friday": "Пятница", "Saturday": "Суббота", "Sunday": "Воскресенье"
+    }
+    weekday = weekdays_ru.get(dt_msk.strftime("%A"), dt_msk.strftime("%A"))
+    return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
 
 
 # =========================================================
 # FLAGS
 # =========================================================
 
-FLAGS = {
-    "Россия": "🇷🇺",
-    "Англия": "🏴",
-    "Испания": "🇪🇸",
-    "Италия": "🇮🇹",
-    "Германия": "🇩🇪",
-    "Франция": "🇫🇷"
-}
-
-
-def get_flag(country):
-    return FLAGS.get(country, "⚽")
+def get_flag(name):
+    translated = team_data.TEAM_NAMES.get(name, name)
+    code = team_data.TEAM_FLAGS.get(translated)
+    if code:
+        return f'<img src="https://flagcdn.com/w40/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+    return ""
 
 
 # =========================================================
-# CLUB LOGOS (FLEXIBLE MATCHING SYSTEM)
+# CLUB LOGOS (через словарь)
 # =========================================================
 
-# Загружаем список файлов логотипов один раз при старте
-CLUB_LOGO_FILES = set()
-
-LOGO_DIR = "static/clubs"
-
-if os.path.exists(LOGO_DIR):
-    CLUB_LOGO_FILES = set(os.listdir(LOGO_DIR))
-
-
-def normalize_team(name: str):
-    if not name:
-        return ""
-
-    return (
-        name.lower()
-        .replace("fc ", "")
-        .replace("fk ", "")
-        .replace(" ", "-")
-        .replace(".", "")
-        .replace("'", "")
-        .strip()
-    )
-
-
-def find_logo_by_fuzzy(name: str):
-    """
-    Умный поиск логотипа:
-    1. пробует полное совпадение по нормализованному имени
-    2. пробует частичное совпадение
-    3. fallback по ключевым словам
-    """
-
-    if not name:
-        return "/static/clubs/default.png"
-
-    norm = normalize_team(name)
-
-    # 1. точное вхождение
-    for file in CLUB_LOGO_FILES:
-        if norm in file:
-            return f"/static/clubs/{file}"
-
-    # 2. fallback по ключевым словам
-    keywords = norm.split("-")
-    for file in CLUB_LOGO_FILES:
-        if any(k in file for k in keywords if len(k) > 3):
-            return f"/static/clubs/{file}"
-
-    # 3. дефолт
-    return "/static/clubs/default.png"
-
-
-def get_club_logo(team_name):
-    return find_logo_by_fuzzy(team_name)
+def get_club_logo(name):
+    logo_url = team_data.CLUB_LOGOS.get(name)
+    if logo_url:
+        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
+    return ""
 
 
 # =========================================================
-# TRANSLATE (заглушка)
+# TRANSLATE
 # =========================================================
 
 def translate_name(name):
-    return name
+    return team_data.TEAM_NAMES.get(name, name)
