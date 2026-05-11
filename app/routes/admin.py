@@ -65,13 +65,11 @@ def admin():
                     close_db(conn, cur)
                     return redirect(url_for('admin.admin'))
                 
-                # Обновляем статус и счёт
                 cur.execute(
                     "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
                     (home_score, away_score, match_id)
                 )
                 
-                # Пересчитываем очки прямо здесь (без открытия нового соединения)
                 from app.models.scoring import calculate_points
                 from app.db import get_active_tournament_id
                 t_id = get_active_tournament_id()
@@ -84,24 +82,9 @@ def admin():
                 flash("Результат внесён, очки пересчитаны", "success")
                 close_db(conn, cur)
                 return redirect(url_for('admin.admin'))
-                
-                # Обновляем статус и счёт
-                cur.execute(
-                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
-                    (home_score, away_score, match_id)
-                )
-                
-                # Пересчитываем очки (соединение ещё открыто)
-                from app.services.point_service import calculate_points_for_match
-                calculate_points_for_match(match_id)
-                
-                flash("Результат внесён, очки пересчитаны", "success")
-                close_db(conn, cur)
-                return redirect(url_for('admin.admin'))
         
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
         
-        # Матчи для внесения результата
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status IN ('SCHEDULED','TIMED') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         raw_free = cur.fetchall()
@@ -111,7 +94,6 @@ def admin():
             free_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
         free_days = [{'date': d, 'matches': free_by_day[d]} for d in sorted(free_by_day.keys())]
         
-        # Завершённые матчи для исправления
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE status = 'FINISHED' AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         raw_finished = cur.fetchall()
@@ -121,12 +103,10 @@ def admin():
             fin_by_day[day].append({'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]})
         finished_days = [{'date': d, 'matches': fin_by_day[d]} for d in sorted(fin_by_day.keys())]
         
-        # Все матчи
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         all_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
         
-        # Ручные матчи
         cur.execute("""SELECT id, home_team, away_team, kickoff_time, status FROM matches
             WHERE (api_match_id IS NULL OR api_match_id = '') AND kickoff_time >= %s ORDER BY kickoff_time""", (start_date_str,))
         manual_matches = [{'id': m[0], 'home_team': m[1], 'away_team': m[2], 'kickoff_time': m[3], 'status': m[4]} for m in cur.fetchall()]
@@ -204,18 +184,23 @@ def admin_fix_result():
         cur.execute("UPDATE matches SET home_score=%s, away_score=%s WHERE id=%s",
                     (home_score, away_score, match_id))
         
-        # Пересчитываем очки прямо здесь, используя это же соединение
         from app.models.scoring import calculate_points
         from app.db import get_active_tournament_id
         t_id = get_active_tournament_id()
-        cur.execute("SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s AND tournament_id = %s",
-                    (match_id, t_id))
-        for p in cur.fetchall():
-            pts = calculate_points(home_score, away_score, p[1], p[2])
-            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
-                        (pts, p[0], match_id, t_id))
         
-        flash(f"Результат матча #{match_id} обновлён: {home_score}:{away_score}", "success")
+        cur.execute("SELECT user_id, home_goals, away_goals, tournament_id FROM predictions WHERE match_id = %s",
+                    (match_id,))
+        preds = cur.fetchall()
+        
+        updated = 0
+        for p in preds:
+            user_id, pred_h, pred_a, pred_tid = p
+            pts = calculate_points(home_score, away_score, pred_h, pred_a)
+            cur.execute("UPDATE predictions SET points = %s WHERE user_id = %s AND match_id = %s AND tournament_id = %s",
+                        (pts, user_id, match_id, t_id))
+            updated += 1
+        
+        flash(f"Результат обновлён ({updated} записей)", "success")
     finally:
         close_db(conn, cur)
     return redirect(url_for('admin.admin'))
