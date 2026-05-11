@@ -1,7 +1,7 @@
 # app/routes/admin.py
 from datetime import datetime, timedelta
 from collections import defaultdict
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from app.db import get_db, close_db
 from app.utils import translate_name
 from app.config import START_DATE, MSK_OFFSET
@@ -33,8 +33,9 @@ def admin():
         if request.method == 'POST':
             action = request.form.get('action')
             if action == 'update_matches':
-                from app.services import match_service, point_service
+                from app.services import match_service
                 match_service.update_matches()
+                from app.services import point_service
                 point_service.calculate_all_points()
                 flash("Обновлено", "success")
             elif action == 'add_match':
@@ -51,13 +52,27 @@ def admin():
                     flash(f"Матч {home} – {away} добавлен", "success")
                 except Exception as e: flash(f"Ошибка: {e}", "error")
             elif action == 'set_result':
-                match_id = request.form['match_id']; home_score = request.form['home_score']; away_score = request.form['away_score']
-                try: home_score = int(home_score); away_score = int(away_score)
-                except: flash("Результат должен быть числами", "error"); return redirect(url_for('admin.admin'))
-                cur.execute("UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s", (home_score, away_score, match_id))
+                match_id = request.form['match_id']
+                home_score = request.form['home_score']
+                away_score = request.form['away_score']
+                try:
+                    home_score = int(home_score)
+                    away_score = int(away_score)
+                except:
+                    flash("Результат должен быть числами", "error")
+                    return redirect(url_for('admin.admin'))
+                
+                # Обновляем счёт и статус
+                cur.execute(
+                    "UPDATE matches SET status='FINISHED', home_score=%s, away_score=%s WHERE id=%s",
+                    (home_score, away_score, match_id)
+                )
+                
+                # Пересчитываем очки только для этого матча
                 from app.services import point_service
                 point_service.calculate_points_for_match(match_id)
-                flash("Результат внесён", "success")
+                
+                flash("Результат внесён, очки пересчитаны", "success")
         
         start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
         
