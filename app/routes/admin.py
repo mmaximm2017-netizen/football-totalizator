@@ -124,9 +124,17 @@ def debug_match(match_id):
     cur = conn.cursor()
     try:
         from app.models.scoring import calculate_points
+        
+        # Принудительно сбрасываем кеш
+        cur.execute("DISCARD ALL")
+        
         cur.execute("SELECT id, home_score, away_score FROM matches WHERE id = %s", (match_id,))
         match = cur.fetchone()
         
+        # Сначала удаляем все очки для этого матча
+        cur.execute("UPDATE predictions SET points = 0 WHERE match_id = %s", (match_id,))
+        
+        # Затем пересчитываем заново
         cur.execute("""SELECT user_id, home_goals, away_goals FROM predictions WHERE match_id = %s""", (match_id,))
         preds = cur.fetchall()
         
@@ -137,6 +145,10 @@ def debug_match(match_id):
                         (pts, p[0], match_id))
             updated += 1
         
+        # Принудительно сохраняем
+        cur.execute("COMMIT")
+        
+        # Проверяем, что сохранилось
         cur.execute("""SELECT u.username, p.home_goals, p.away_goals, p.points
             FROM predictions p JOIN users u ON p.user_id = u.id
             WHERE p.match_id = %s""", (match_id,))
