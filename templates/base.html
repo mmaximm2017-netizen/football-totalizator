@@ -6,7 +6,7 @@
     <title>ТОТИШ БРАТИШЕК</title>
     
     <!-- PWA-файлы и настройки -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v={{ range(1, 99999) | random }}">    
+    <link rel="manifest" href="/static/manifest.json?v=2">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     
@@ -141,7 +141,6 @@
 </head>
 <body>
     <div class="header">
-    <div class="header">
         ⚽ ТОТИШ БРАТИШЕК
         {% if g.is_admin %}
         <div style="font-size: 12px; margin-top: 4px; color: #ffeb3b;">
@@ -201,7 +200,6 @@
             const reg = await navigator.serviceWorker.register('/static/service-worker.js');
             console.log('Service Worker registered!', reg);
             
-            // Запрашиваем разрешение на уведомления
             if ('Notification' in window && Notification.permission === 'default') {
               const perm = await Notification.requestPermission();
               if (perm === 'granted') {
