@@ -61,7 +61,7 @@ def to_msk(value):
         return str(value)
 
 
-def get_active_tournament_id(cur):
+def get_active_tournament_id():
 
     cur.execute("""
         SELECT id
@@ -107,7 +107,7 @@ def index():
 
             match_id = request.form.get('match_id')
 
-            tournament_id = get_active_tournament_id(cur)
+            tournament_id = get_active_tournament_id()
 
             if not tournament_id:
 
@@ -325,7 +325,7 @@ def index():
         # USER PREDICTIONS
         # =================================================
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         user_data = {}
 

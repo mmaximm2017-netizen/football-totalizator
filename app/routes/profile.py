@@ -77,7 +77,7 @@ def profile():
         # TOURNAMENT
         # =================================================
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")

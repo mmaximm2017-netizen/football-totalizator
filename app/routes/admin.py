@@ -35,7 +35,7 @@ MSK = ZoneInfo("Europe/Moscow")
 # HELPERS
 # =========================================================
 
-def get_active_tournament_id(cur):
+def get_active_tournament_id():
     cur.execute(
         "SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1"
     )
@@ -207,7 +207,7 @@ def admin():
 
                 try:
 
-                    tournament_id = get_active_tournament_id(cur)
+                    tournament_id = get_active_tournament_id()
 
                     if not tournament_id:
                         flash("Активный турнир не найден", "error")
@@ -571,7 +571,7 @@ def recalc_all():
 
         from app.models.scoring import calculate_points
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")
@@ -681,7 +681,7 @@ def force_finish(match_id, h, a):
 
         from app.models.scoring import calculate_points
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")
@@ -858,7 +858,7 @@ def admin_fix_result():
 
     try:
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")
