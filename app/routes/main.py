@@ -1,33 +1,15 @@
-# app/routes/main.py
-
 from datetime import datetime, timezone
 from collections import defaultdict
 from zoneinfo import ZoneInfo
 
 from flask import (
-    Blueprint,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    session
+    Blueprint, render_template, request,
+    redirect, url_for, flash, session
 )
 
-from app.db import (
-    get_db,
-    close_db,
-    get_active_tournament_id
-)
-
-from app.utils import (
-    get_flag,
-    get_club_logo,
-    is_before_deadline
-)
-
+from app.db import get_db, close_db, get_active_tournament_id
+from app.utils import get_flag, get_club_logo, is_before_deadline
 from app.config import START_DATE
-
 
 main_bp = Blueprint('main', __name__)
 
@@ -39,30 +21,21 @@ MSK = ZoneInfo("Europe/Moscow")
 # =========================================================
 
 def to_msk(value):
-
     if not value:
         return ""
 
     try:
-
         if isinstance(value, datetime):
-
             dt = value
-
         else:
-
-            clean = str(value).replace("Z", "+00:00")
-
-            dt = datetime.fromisoformat(clean)
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
         if dt.tzinfo is None:
-
             dt = dt.replace(tzinfo=timezone.utc)
 
         return dt.astimezone(MSK).strftime("%d.%m.%Y %H:%M")
 
     except Exception:
-
         return str(value)
 
 
@@ -74,7 +47,6 @@ def to_msk(value):
 def index():
 
     if 'user_id' not in session:
-
         return redirect(url_for('auth.login'))
 
     conn = get_db()
@@ -82,61 +54,35 @@ def index():
 
     try:
 
-        now_utc = datetime.now(timezone.utc)
-
         league_filter = request.args.get('league', 'all')
-
-        start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
-
-        today_msk = now_utc.astimezone(MSK).strftime("%Y-%m-%d")
+        start_date = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
         # =================================================
-        # POST: SAVE PREDICTION
+        # SAVE PREDICTION
         # =================================================
 
         if request.method == 'POST':
 
             match_id = request.form.get('match_id')
-
             tournament_id = get_active_tournament_id()
 
             if not tournament_id:
-
                 flash("Активный турнир не найден", "error")
-
                 return redirect(url_for('main.index'))
 
             try:
-
-                home_goals = int(
-                    request.form.get('home_goals', '0').strip()
-                )
-
-                away_goals = int(
-                    request.form.get('away_goals', '0').strip()
-                )
+                home_goals = int(request.form.get('home_goals', 0))
+                away_goals = int(request.form.get('away_goals', 0))
 
                 if home_goals < 0 or away_goals < 0:
-
                     raise ValueError
 
             except Exception:
-
                 flash("Некорректный счёт", "error")
-
-                return redirect(
-                    url_for(
-                        'main.index',
-                        league=league_filter
-                    )
-                )
+                return redirect(url_for('main.index', league=league_filter))
 
             cur.execute("""
-                SELECT id,
-                       home_team,
-                       away_team,
-                       deadline,
-                       status
+                SELECT id, home_team, away_team, deadline, status
                 FROM matches
                 WHERE id = %s
             """, (match_id,))
@@ -144,151 +90,79 @@ def index():
             match = cur.fetchone()
 
             if not match:
-
                 flash("Матч не найден", "error")
-
                 return redirect(url_for('main.index'))
 
             if match[4] not in ('SCHEDULED', 'TIMED'):
-
                 flash("Ставки закрыты", "error")
-
                 return redirect(url_for('main.index'))
 
             if not is_before_deadline(match):
-
                 flash("Дедлайн прошёл", "error")
-
                 return redirect(url_for('main.index'))
 
-            try:
+            # UPSERT
+            cur.execute("""
+                SELECT 1
+                FROM predictions
+                WHERE user_id=%s AND match_id=%s AND tournament_id=%s
+            """, (session['user_id'], match_id, tournament_id))
 
+            exists = cur.fetchone()
+
+            if exists:
                 cur.execute("""
-                    SELECT 1
-                    FROM predictions
-                    WHERE user_id = %s
-                    AND match_id = %s
-                    AND tournament_id = %s
-                """, (
-                    session['user_id'],
-                    match_id,
-                    tournament_id
-                ))
+                    UPDATE predictions
+                    SET home_goals=%s, away_goals=%s
+                    WHERE user_id=%s AND match_id=%s AND tournament_id=%s
+                """, (home_goals, away_goals, session['user_id'], match_id, tournament_id))
+            else:
+                cur.execute("""
+                    INSERT INTO predictions (
+                        user_id, match_id, tournament_id,
+                        home_goals, away_goals
+                    )
+                    VALUES (%s,%s,%s,%s,%s)
+                """, (session['user_id'], match_id, tournament_id, home_goals, away_goals))
 
-                exists = cur.fetchone()
+            conn.commit()
+            flash("Ставка сохранена", "success")
 
-                if exists:
-
-                    cur.execute("""
-                        UPDATE predictions
-                        SET home_goals = %s,
-                            away_goals = %s
-                        WHERE user_id = %s
-                        AND match_id = %s
-                        AND tournament_id = %s
-                    """, (
-                        home_goals,
-                        away_goals,
-                        session['user_id'],
-                        match_id,
-                        tournament_id
-                    ))
-
-                else:
-
-                    cur.execute("""
-                        INSERT INTO predictions (
-                            user_id,
-                            match_id,
-                            tournament_id,
-                            home_goals,
-                            away_goals
-                        )
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (
-                        session['user_id'],
-                        match_id,
-                        tournament_id,
-                        home_goals,
-                        away_goals
-                    ))
-
-                conn.commit()
-
-                flash("✅ Ставка сохранена", "success")
-
-            except Exception as e:
-
-                conn.rollback()
-
-                flash(f"Ошибка сохранения: {e}", "error")
-
-            return redirect(
-                url_for(
-                    'main.index',
-                    league=league_filter
-                )
-            )
+            return redirect(url_for('main.index', league=league_filter))
 
         # =================================================
         # LOAD MATCHES
         # =================================================
 
         if league_filter == 'all':
-
             cur.execute("""
-                SELECT id,
-                       home_team,
-                       away_team,
-                       kickoff_time,
-                       deadline,
-                       status,
-                       league,
-                       home_score,
-                       away_score
+                SELECT id, home_team, away_team,
+                       kickoff_time, deadline,
+                       status, league,
+                       home_score, away_score
                 FROM matches
-                WHERE status IN (
-                    'SCHEDULED',
-                    'TIMED',
-                    'FINISHED'
-                )
+                WHERE status IN ('SCHEDULED','TIMED','FINISHED')
                 AND kickoff_time >= %s
                 ORDER BY kickoff_time
-            """, (start_date_str,))
-
+            """, (start_date,))
         else:
-
             cur.execute("""
-                SELECT id,
-                       home_team,
-                       away_team,
-                       kickoff_time,
-                       deadline,
-                       status,
-                       league,
-                       home_score,
-                       away_score
+                SELECT id, home_team, away_team,
+                       kickoff_time, deadline,
+                       status, league,
+                       home_score, away_score
                 FROM matches
-                WHERE status IN (
-                    'SCHEDULED',
-                    'TIMED',
-                    'FINISHED'
-                )
-                AND league = %s
+                WHERE status IN ('SCHEDULED','TIMED','FINISHED')
+                AND league=%s
                 AND kickoff_time >= %s
                 ORDER BY kickoff_time
-            """, (
-                league_filter,
-                start_date_str
-            ))
+            """, (league_filter, start_date))
 
         rows = cur.fetchall()
 
-        raw_matches = []
-
+        matches = []
         for m in rows:
-
-            raw_matches.append({
+            matches.append({
                 'id': m[0],
                 'home_team': m[1],
                 'away_team': m[2],
@@ -301,174 +175,61 @@ def index():
             })
 
         # =================================================
-        # USER PREDICTIONS
-        # =================================================
-
-        tournament_id = get_active_tournament_id()
-
-        user_data = {}
-
-        match_ids = [m['id'] for m in raw_matches]
-
-        if match_ids and tournament_id:
-
-            cur.execute("""
-                SELECT match_id,
-                       home_goals,
-                       away_goals,
-                       points
-                FROM predictions
-                WHERE user_id = %s
-                AND tournament_id = %s
-                AND match_id = ANY(%s)
-            """, (
-                session['user_id'],
-                tournament_id,
-                match_ids
-            ))
-
-            for row in cur.fetchall():
-
-                user_data[row[0]] = {
-                    'home': row[1],
-                    'away': row[2],
-                    'points': row[3]
-                }
-
-        # =================================================
         # GROUP BY DAY
         # =================================================
 
-        matches_by_day = defaultdict(list)
+        grouped = defaultdict(list)
 
-        for match in raw_matches:
+        for m in matches:
 
-            kickoff_raw = match['kickoff_time']
+            kt = m['kickoff_time']
 
-            try:
+            if isinstance(kt, str):
+                kt = datetime.fromisoformat(kt.replace("Z", "+00:00"))
 
-                if isinstance(kickoff_raw, datetime):
+            if kt.tzinfo is None:
+                kt = kt.replace(tzinfo=timezone.utc)
 
-                    kickoff_dt = kickoff_raw
+            kt_msk = kt.astimezone(MSK)
 
-                else:
+            day_key = kt_msk.strftime("%Y-%m-%d")
+            day_label = kt_msk.strftime("%d.%m.%Y")
 
-                    kickoff_dt = datetime.fromisoformat(
-                        str(kickoff_raw).replace("Z", "+00:00")
-                    )
-
-                if kickoff_dt.tzinfo is None:
-
-                    kickoff_dt = kickoff_dt.replace(
-                        tzinfo=timezone.utc
-                    )
-
-                kickoff_msk = kickoff_dt.astimezone(MSK)
-
-            except Exception:
-
-                continue
-
-            day_key = kickoff_msk.strftime("%Y-%m-%d")
-
-            day_label = kickoff_msk.strftime("%d.%m.%Y")
-
-            match['deadline_passed'] = not is_before_deadline((
-                match['id'],
-                None,
-                None,
-                match['deadline'],
-                match['status']
+            m['deadline_passed'] = not is_before_deadline((
+                m['id'], None, None, m['deadline'], m['status']
             ))
 
-            match['finished'] = (
-                match['status'] == 'FINISHED'
-            )
+            m['finished'] = (m['status'] == 'FINISHED')
 
-            if match['id'] in user_data:
-
-                pred = user_data[match['id']]
-
-                match['pred_home'] = pred['home']
-                match['pred_away'] = pred['away']
-
-                match['my_points'] = (
-                    pred['points']
-                    if match['finished']
-                    else 0
-                )
-
-            else:
-
-                match['pred_home'] = ''
-                match['pred_away'] = ''
-                match['my_points'] = 0
-
-            matches_by_day[(day_key, day_label)].append(match)
-
-        # =================================================
-        # BUILD DAYS
-        # =================================================
+            grouped[(day_key, day_label)].append(m)
 
         days = []
 
-        for (day_key, day_label), day_matches in sorted(
-            matches_by_day.items(),
-            key=lambda x: x[0][0]
-        ):
+        today = datetime.now(timezone.utc).astimezone(MSK).strftime("%Y-%m-%d")
 
-            if day_key == today_msk:
+        for (day_key, day_label), day_matches in sorted(grouped.items()):
 
-                day_type = 'today'
-
-            elif day_key < today_msk:
-
-                day_type = 'past'
-
+            if day_key == today:
+                dtype = 'today'
+            elif day_key < today:
+                dtype = 'past'
             else:
-
-                day_type = 'future'
-
-            has_open = any(
-                not m['deadline_passed']
-                for m in day_matches
-            )
+                dtype = 'future'
 
             days.append({
                 'key': day_key,
                 'label': day_label,
-                'type': day_type,
+                'type': dtype,
                 'matches': day_matches,
-                'count': len(day_matches),
-                'has_open': has_open
+                'count': len(day_matches)
             })
 
-        # =================================================
-        # OPEN DAY
-        # =================================================
-
-        open_day = None
-
-        for d in days:
-
-            if d['type'] == 'today':
-
-                open_day = d['key']
-
-                break
-
-        if not open_day:
-
-            for d in days:
-
-                if d['type'] == 'future':
-
-                    open_day = d['key']
-
-                    break
+        open_day = next(
+            (d['key'] for d in days if d['type'] == 'today'),
+            next((d['key'] for d in days if d['type'] == 'future'), None)
+        )
 
     finally:
-
         close_db(conn, cur)
 
     return render_template(

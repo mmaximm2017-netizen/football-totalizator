@@ -1,52 +1,115 @@
-# app/utils.py
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from functools import lru_cache
-from datetime import datetime, timedelta, timezone
-from app.config import MSK_OFFSET, WEEKDAYS
-from app.models import team_data
 
-@lru_cache(maxsize=500)
-def translate_name(name):
-    return team_data.TEAM_NAMES.get(name, name)
+MSK = ZoneInfo("Europe/Moscow")
 
-@lru_cache(maxsize=200)
-def cached_to_msk(utc_time_str):
-    if not utc_time_str: return "—"
-    clean_str = utc_time_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-    try: dt_utc = datetime.fromisoformat(clean_str)
-    except:
-        try: dt_utc = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
-        except: dt_utc = datetime.fromisoformat(utc_time_str)
-    dt_msk = dt_utc + timedelta(hours=MSK_OFFSET)
-    weekday = WEEKDAYS.get(dt_msk.strftime("%A"), dt_msk.strftime("%A"))
-    return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
 
-def parse_utc_time(utc_str):
-    if not utc_str: return None
-    clean_str = utc_str.replace('Z', '').replace('+00:00', '').replace('-00:00', '')
-    try: return datetime.fromisoformat(clean_str)
-    except:
-        try: return datetime.strptime(utc_str, "%Y-%m-%d %H:%M:%S")
-        except: return datetime.fromisoformat(utc_str)
+# =========================================================
+# DATETIME SAFE PARSING
+# =========================================================
 
-def utc_now():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+def parse_datetime(value):
 
-def is_before_deadline(match_tuple):
-    deadline_str = match_tuple[3]
-    if not deadline_str: return False
-    deadline = parse_utc_time(deadline_str)
-    if deadline is None: return False
-    return utc_now() < deadline
+    if not value:
+        return None
 
-def get_flag(name):
-    translated = team_data.TEAM_NAMES.get(name, name)
-    code = team_data.TEAM_FLAGS.get(translated)
-    if code:
-        return f'<img src="https://flagcdn.com/w40/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
-    return ""
+    try:
 
-def get_club_logo(name):
-    logo_url = team_data.CLUB_LOGOS.get(name)
-    if logo_url:
-        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
-    return ""
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            dt = datetime.fromisoformat(
+                str(value).replace("Z", "+00:00")
+            )
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt
+
+    except Exception:
+        return None
+
+
+# =========================================================
+# MSK FORMAT
+# =========================================================
+
+@lru_cache(maxsize=2048)
+def to_msk(value):
+
+    dt = parse_datetime(value)
+
+    if not dt:
+        return ""
+
+    return dt.astimezone(MSK).strftime("%d.%m.%Y %H:%M")
+
+
+# =========================================================
+# DEADLINE CHECK (FIXED LOGIC)
+# =========================================================
+
+def is_before_deadline(match):
+
+    try:
+
+        if not match:
+            return False
+
+        # поддержка dict и tuple
+        deadline = None
+
+        if isinstance(match, dict):
+            deadline = match.get("deadline")
+        else:
+            # fallback под твои старые tuple запросы
+            deadline = match[3] if len(match) > 3 else None
+
+        dt = parse_datetime(deadline)
+
+        if not dt:
+            return False
+
+        return datetime.now(timezone.utc) < dt
+
+    except Exception:
+        return False
+
+
+# =========================================================
+# FLAGS
+# =========================================================
+
+FLAGS = {
+    "Россия": "🇷🇺",
+    "Англия": "🏴",
+    "Испания": "🇪🇸",
+    "Италия": "🇮🇹",
+    "Германия": "🇩🇪",
+    "Франция": "🇫🇷"
+}
+
+
+def get_flag(country):
+    return FLAGS.get(country, "⚽")
+
+
+# =========================================================
+# CLUB LOGOS
+# =========================================================
+
+def get_club_logo(team_name):
+
+    if not team_name:
+        return "default.png"
+
+    slug = (
+        team_name.lower()
+        .replace(" ", "-")
+        .replace(".", "")
+        .replace("'", "")
+    )
+
+    return f"{slug}-footballlogos-org.png"
