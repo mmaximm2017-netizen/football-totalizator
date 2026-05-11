@@ -6,7 +6,7 @@
     <title>ТОТИШ БРАТИШЕК</title>
     
     <!-- PWA-файлы и настройки -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v={{ range(1, 99999) | random }}">    
     <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     
@@ -174,10 +174,17 @@
             <span class="icon">🏆</span>
             Таблица
         </a>
+        {% if g.is_admin %}
+        <a href="/admin" class="{% if request.path == '/admin' %}active{% endif %}">
+            <span class="icon">⚙️</span>
+            Админ
+        </a>
+        {% else %}
         <a href="/profile" class="{% if request.path == '/profile' %}active{% endif %}">
             <span class="icon">👤</span>
             Профиль
         </a>
+        {% endif %}
         <a href="/logout">
             <span class="icon">🚪</span>
             Выход
