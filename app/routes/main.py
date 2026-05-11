@@ -13,7 +13,7 @@ from flask import (
     session
 )
 
-from app.db import get_db, close_db, get_active_tournament_id
+from app.db import get_db, close_db
 from app.utils import cached_to_msk, is_before_deadline, get_flag, get_club_logo
 from app.config import START_DATE
 
@@ -54,7 +54,9 @@ def index():
 
             match_id = request.form.get('match_id')
 
-            tournament_id = get_active_tournament_id(cur)
+            cur.execute("SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1")
+            row = cur.fetchone()
+            tournament_id = row[0] if row else None
 
             if not tournament_id:
                 flash("Активный турнир не найден", "error")
@@ -221,7 +223,9 @@ def index():
                 'away_score': m[8]
             })
 
-        tournament_id = get_active_tournament_id(cur)
+        cur.execute("SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1")
+        row = cur.fetchone()
+        tournament_id = row[0] if row else None
 
         match_ids = [match['id'] for match in raw_matches]
 
