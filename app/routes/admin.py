@@ -364,12 +364,48 @@ def admin():
     finally:
         close_db(conn, cur)
 
+    # all_matches и manual_matches для разделов редактирования
+    cur.execute("""
+        SELECT id, home_team, away_team, kickoff_time, status
+        FROM matches
+        WHERE kickoff_time >= %s
+        ORDER BY kickoff_time
+    """, (start_date_str,))
+    
+    all_matches = []
+    for m in cur.fetchall():
+        all_matches.append({
+            'id': m[0],
+            'home_team': m[1],
+            'away_team': m[2],
+            'kickoff_time': m[3],
+            'status': m[4]
+        })
+    
+    cur.execute("""
+        SELECT id, home_team, away_team, kickoff_time, status
+        FROM matches
+        WHERE (api_match_id IS NULL OR api_match_id = '')
+        AND kickoff_time >= %s
+        ORDER BY kickoff_time
+    """, (start_date_str,))
+    
+    manual_matches = []
+    for m in cur.fetchall():
+        manual_matches.append({
+            'id': m[0],
+            'home_team': m[1],
+            'away_team': m[2],
+            'kickoff_time': m[3],
+            'status': m[4]
+        })
+
     return render_template(
         'admin.html',
         free_days=free_days,
         finished_days=finished_days,
-        all_matches=[],
-        manual_matches=[],
+        all_matches=all_matches,
+        manual_matches=manual_matches,
         users=users
     )
 
