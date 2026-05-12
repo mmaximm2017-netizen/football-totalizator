@@ -131,6 +131,10 @@
                             <span title="РПЛ">🇷🇺</span>
                             {% endif %}
                             <div class="match-info" style="font-size: 12px;">{{ to_msk(match.kickoff_time) }}</div>
+                            <!-- ДЕДЛАЙН -->
+                            <div class="match-info" style="font-size: 11px; color: #888; margin-left: 4px;">
+                                ⏰ дедлайн: {{ to_msk(match.deadline) }}
+                            </div>
                         </div>
                         {% if match.finished %}
                         <div class="match-info" style="background: #e8f5e9; padding: 2px 8px; border-radius: 12px; color: #2e7d32; font-size: 11px;">✅ Завершён</div>
@@ -143,11 +147,20 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                         <div style="flex: 1; min-width: 120px;">
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                {{ get_club_logo(match.home_team)|safe }}
+                                <!-- ФЛАГ ДЛЯ СБОРНЫХ (ЧМ-2026) -->
+                                {% if match.league == 'wc2026' %}
+                                    {{ get_flag(match.home_team)|safe }}
+                                {% else %}
+                                    {{ get_club_logo(match.home_team)|safe }}
+                                {% endif %}
                                 <span style="font-weight: 600;">{{ match.home_team }}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                {{ get_club_logo(match.away_team)|safe }}
+                                {% if match.league == 'wc2026' %}
+                                    {{ get_flag(match.away_team)|safe }}
+                                {% else %}
+                                    {{ get_club_logo(match.away_team)|safe }}
+                                {% endif %}
                                 <span style="font-weight: 600;">{{ match.away_team }}</span>
                             </div>
                         </div>
