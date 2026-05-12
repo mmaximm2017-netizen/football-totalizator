@@ -46,8 +46,10 @@
         body.dark .bottom-nav a.active { color: #4caf50; }
         body.dark .filter-btn { background: #2c2c3e; color: #ccc; border-color: #444; }
         body.dark .filter-btn.active { background: #4caf50; color: white; }
+        
+        /* ДЕНЬ В АККОРДЕОНЕ — ГЛАВНЫЙ БЛОК */
         body.dark .day-header { 
-            background: #1e2a3a; 
+            background: #1e2a3a !important; 
             color: #ffffff !important; 
         }
         body.dark .day-header div { 
@@ -56,7 +58,22 @@
         body.dark .day-header span { 
             color: #ffffff !important; 
         }
-        body.dark .month-header { background: #1a1a2e; }
+        body.dark .day-header .match-count { 
+            color: #aaaaaa !important; 
+        }
+        
+        /* МЕСЯЦ В АККОРДЕОНЕ */
+        body.dark .month-header { 
+            background: #1a1a2e !important; 
+            color: #ffffff !important; 
+        }
+        body.dark .month-header div { 
+            color: #ffffff !important; 
+        }
+        body.dark .month-header span { 
+            color: #ffffff !important; 
+        }
+        
         body.dark table { color: #e0e0e0; }
         body.dark th { background: #1a1a2e; color: #e0e0e0; }
         body.dark td { color: #e0e0e0; }
@@ -183,8 +200,9 @@
             opacity: 1; 
         }
         
-        .day-header { transition: background 0.2s; }
+        .day-header { transition: background 0.2s; cursor: pointer; }
         .day-header:active { background: #f5f5f5; }
+        body.dark .day-header:active { background: #0d1c2a !important; }
         
         @media (max-width: 480px) {
             .container { padding: 10px; }
