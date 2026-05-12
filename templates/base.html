@@ -23,17 +23,17 @@
             background-attachment: fixed;
             color: #1a1a1a; 
             min-height: 100vh; 
-            padding-bottom: 70px; 
+            padding-bottom: 80px; 
         }
         
         .header { background: #1a1a2e; color: white; padding: 16px 20px; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 100; }
         .header a { color: white; text-decoration: none; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; display: flex; justify-content: space-around; padding: 10px 5px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
-        .bottom-nav a { text-decoration: none; color: #888; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: color 0.2s; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; display: flex; justify-content: space-evenly; padding: 12px 5px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+        .bottom-nav a { text-decoration: none; color: #888; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: color 0.2s; flex: 1; }
         .bottom-nav a:active { transform: scale(0.95); }
         .bottom-nav a.active { color: #2e7d32; font-weight: 600; }
-        .bottom-nav a .icon { font-size: 22px; }
+        .bottom-nav a .icon { font-size: 26px; }
         
         .container { max-width: 600px; margin: 0 auto; padding: 16px; }
         
@@ -165,10 +165,6 @@
         <a href="/" class="{% if request.path == '/' %}active{% endif %}">
             <span class="icon">⚽</span>
             Матчи
-        </a>
-        <a href="/my-predictions" class="{% if request.path == '/my-predictions' %}active{% endif %}">
-            <span class="icon">📋</span>
-            Мои
         </a>
         <a href="/table" class="{% if request.path == '/table' %}active{% endif %}">
             <span class="icon">🏆</span>
