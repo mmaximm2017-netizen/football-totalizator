@@ -47,8 +47,9 @@
         body.dark .bottom-nav a.active { color: #4caf50; }
         body.dark .filter-btn { background: #2c2c3e; color: #ccc; border-color: #444; }
         body.dark .filter-btn.active { background: #4caf50; color: white; }
-        body.dark .day-header { background: #2c2c3e; color: #e0e0e0; }
-        body.dark .day-header span { color: #ccc; }
+        body.dark .day-header { background: #1e2a3a; color: #ffffff; }
+        body.dark .day-header span { color: #ffffff; }
+        body.dark .day-header div { color: #ffffff; }
         body.dark table { color: #e0e0e0; }
         body.dark th { background: #1a1a2e; color: #e0e0e0; }
         body.dark td { color: #e0e0e0; }
@@ -61,6 +62,16 @@
         body.dark .flash.success { background: #1b5e20; color: #c8e6c9; }
         body.dark .flash.error { background: #b71c1c; color: #ffcdd2; }
         body.dark .match-info { color: #aaa; }
+        
+        /* ============================================= */
+        /* TOGGLE SWITCH (iOS STYLE) */
+        /* ============================================= */
+        .switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: 0.3s; border-radius: 26px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2e7d32; }
+        input:checked + .slider:before { transform: translateX(22px); }
         
         .header { background: #1a1a2e; color: white; padding: 16px 20px; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 100; }
         .header a { color: white; text-decoration: none; }
@@ -176,13 +187,23 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        ⚽ ТОТИШ БРАТИШЕК
-        {% if g.is_admin %}
-        <div style="font-size: 12px; margin-top: 4px; color: #ffeb3b;">
-            ⚙️ СТРАНИЦА АДМИНИСТРАТОРА
+    <div class="header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+        <div style="flex: 1; text-align: center;">
+            ⚽ ТОТИШ БРАТИШЕК
+            {% if g.is_admin %}
+            <div style="font-size: 11px; margin-top: 2px; color: #ffeb3b;">
+                ⚙️ СТРАНИЦА АДМИНИСТРАТОРА
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span style="font-size: 16px;">☀️</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                <span class="slider"></span>
+            </label>
+            <span style="font-size: 16px;">🌙</span>
+        </div>
     </div>
 
     <div class="container">
@@ -217,10 +238,6 @@
             Профиль
         </a>
         {% endif %}
-        <a onclick="toggleTheme()" style="cursor: pointer;">
-            <span class="icon" id="theme-icon">🌙</span>
-            Тема
-        </a>
         <a href="/logout">
             <span class="icon">🚪</span>
             Выход
@@ -253,26 +270,26 @@
       // =============================================
       function toggleTheme() {
           const body = document.body;
-          const icon = document.getElementById('theme-icon');
+          const toggle = document.getElementById('theme-toggle');
           
           if (body.classList.contains('dark')) {
               body.classList.remove('dark');
-              icon.textContent = '🌙';
+              if (toggle) toggle.checked = false;
               localStorage.setItem('theme', 'light');
           } else {
               body.classList.add('dark');
-              icon.textContent = '☀️';
+              if (toggle) toggle.checked = true;
               localStorage.setItem('theme', 'dark');
           }
       }
       
-      // При загрузке проверяем сохранённую тему
+      // При загрузке устанавливаем ползунок в правильное положение
       (function() {
           const saved = localStorage.getItem('theme');
-          const icon = document.getElementById('theme-icon');
+          const toggle = document.getElementById('theme-toggle');
           if (saved === 'dark') {
               document.body.classList.add('dark');
-              if (icon) icon.textContent = '☀️';
+              if (toggle) toggle.checked = true;
           }
       })();
     </script>
