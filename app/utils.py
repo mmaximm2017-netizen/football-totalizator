@@ -1,5 +1,5 @@
 # app/utils.py
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from functools import lru_cache
 from app.models.team_data import TEAM_NAMES, TEAM_FLAGS, CLUB_LOGOS
