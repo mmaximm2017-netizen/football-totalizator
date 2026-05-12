@@ -1,104 +1,157 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% if months %}
-  {% for month in months %}
-  <div class="month-group" style="margin-bottom: 12px;">
-    <!-- Заголовок месяца -->
-    <div class="month-header" onclick="toggleMonth('month-{{ month.key }}')" style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
-        background: #1a1a2e;
-        color: white;
-        border-radius: 12px;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        margin-bottom: 4px;
+<style>
+    /* Анимация появления карточек */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-card {
+        animation: fadeInUp 0.4s ease forwards;
+        opacity: 0;
+    }
+    
+    /* Задержки для последовательного появления */
+    .card-delay-1 { animation-delay: 0.05s; }
+    .card-delay-2 { animation-delay: 0.10s; }
+    .card-delay-3 { animation-delay: 0.15s; }
+    .card-delay-4 { animation-delay: 0.20s; }
+    .card-delay-5 { animation-delay: 0.25s; }
+    .card-delay-6 { animation-delay: 0.30s; }
+    .card-delay-7 { animation-delay: 0.35s; }
+    .card-delay-8 { animation-delay: 0.40s; }
+    .card-delay-9 { animation-delay: 0.45s; }
+    .card-delay-10 { animation-delay: 0.50s; }
+    
+    /* Плавное появление месяцев */
+    .month-animate {
+        animation: fadeInUp 0.3s ease forwards;
+        opacity: 0;
+        animation-delay: 0.1s;
+    }
+</style>
+
+<script>
+    // Наблюдатель за появлением элементов при скролле (повторная анимация)
+    document.addEventListener('DOMContentLoaded', function() {
+        const animatedElements = document.querySelectorAll('.animate-card, .month-animate');
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    // Не удаляем класс, а просто запускаем анимацию
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        animatedElements.forEach(el => {
+            observer.observe(el);
+        });
+    });
+</script>
+
+{% for month in months %}
+<div class="month-animate" style="margin-bottom: 24px;">
+    <div class="month-header" onclick="toggleMonth('month-{{ loop.index }}')" style="
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 16px; background: #e0e0e0; border-radius: 12px; cursor: pointer;
+        font-weight: 700; font-size: 18px; margin-bottom: 12px;
+        transition: background 0.2s;
     ">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="arrow-month-{{ month.key }}" style="font-size: 16px; transition: transform 0.3s;">▶</span>
-            <div>
-                <div style="font-weight: 700; font-size: 16px;">📅 {{ month.label }}</div>
-                <div style="font-size: 12px; color: #ccc;">{{ month.count }} матчей</div>
-            </div>
+            <span id="arrow-month-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
+            <span>📅 {{ month.label }}</span>
         </div>
-        <span style="font-size: 14px; color: #ccc;">{{ month.days|length }} дн.</span>
+        <span style="font-size: 13px; font-weight: normal;">{{ month.count }} матчей</span>
     </div>
-
-    <!-- Дни внутри месяца -->
-    <div id="month-{{ month.key }}" class="month-content" style="display: none;">
+    <div id="month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 8px;">
         {% for day in month.days %}
-        <div class="day-group" style="margin-bottom: 4px;" data-day-type="{{ day.type }}">
-            <div class="day-header" onclick="toggleDay('day-{{ day.key }}')" style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 14px;
-                background: white;
-                border-radius: 10px;
-                cursor: pointer;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-                border-left: 4px solid {% if day.type == 'today' %}#2e7d32{% elif day.type == 'past' %}#c62828{% else %}transparent{% endif %};
-                margin-left: 8px;
+        <div class="day-group" style="margin-bottom: 8px;">
+            <div class="day-header" onclick="toggleDay('day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 10px 14px; background: #f0f0f0; border-radius: 10px; cursor: pointer;
+                margin: 8px 0 4px 0; border-left: 4px solid {% if day.type == 'today' %}#ff9800{% elif day.type == 'past' %}#9e9e9e{% else %}#4caf50{% endif %};
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-day-{{ day.key }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
-                    <div>
-                        <div style="font-weight: 600; font-size: 14px;">
-                            {% if day.type == 'today' %}📅 Сегодня, {{ day.label }}{% else %}📅 {{ day.label }}{% endif %}
-                        </div>
-                        <div style="font-size: 11px; color: #888;">{{ day.count }} матч.</div>
+                    <span id="arrow-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                    <div style="font-weight: 600;">
+                        {{ day.label }}
+                        {% if day.type == 'today' %} <span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">СЕГОДНЯ</span>{% endif %}
                     </div>
                 </div>
-                <span style="font-size: 12px; color: #888;">{{ day.count }}</span>
+                <span style="font-size: 12px; color: #666;">{{ day.count }} матчей</span>
             </div>
-            <div id="day-{{ day.key }}" class="day-content{% if day.key == open_day %} open{% endif %}">
-                {% for m in day.matches %}
-                <div class="card" style="margin: 4px 0 4px 20px; border-left: 3px solid {% if m.finished %}#1565c0{% elif m.deadline_passed %}#c62828{% else %}#2e7d32{% endif %};">
-                    <div>
-                        <span style="font-size: 12px; padding: 2px 8px; border-radius: 10px; {% if m.league == 'wc2026' %}background: #e8f5e9; color: #2e7d32;{% elif m.league == 'rpl' %}background: #e3f2fd; color: #1565c0;{% elif m.league == 'rcup' %}background: #ffebee; color: #c62828;{% else %}background: #f5f5f5; color: #666;{% endif %}">
-                            {% if m.league == 'wc2026' %}
-                            <img src="/static/clubs/wc2026-logo.png" width="14" height="14" style="vertical-align: middle; margin-right: 2px;">ЧМ-2026
-                            {% elif m.league == 'rpl' %}
-                            <img src="/static/clubs/russian-premier-league-footballlogos-org.png" width="14" height="14" style="vertical-align: middle; margin-right: 2px;">РПЛ
-                            {% elif m.league == 'rcup' %}🏆 Кубок России{% else %}📋 Другое{% endif %}
-                        </span>
-                        <div class="match-teams" style="margin-top: 6px; font-size: 15px; font-weight: 600;">
-                            {% if m.league == 'rpl' %}{{ get_club_logo(m.home_team)|safe }}{% endif %}
-                            {% if m.league == 'wc2026' %}{{ get_flag(m.home_team)|safe }}{% endif %}
-                            {{ m.home_team }} – {{ m.away_team }}
-                            {% if m.league == 'wc2026' %}{{ get_flag(m.away_team)|safe }}{% endif %}
-                            {% if m.league == 'rpl' %}{{ get_club_logo(m.away_team)|safe }}{% endif %}
+            <div id="day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+                {% for match in day.matches %}
+                <div class="card animate-card card-delay-{{ forloop.counter|default:1|add:'0'|slice:':1' }}" style="margin-bottom: 10px;">
+                    <div class="match-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            {% if match.league == 'wc2026' %}
+                            <span title="ЧМ-2026">🏆</span>
+                            {% elif match.league == 'rpl' %}
+                            <span title="РПЛ">🇷🇺</span>
+                            {% endif %}
+                            <div class="match-info" style="font-size: 12px;">{{ to_msk(match.kickoff_time) }}</div>
                         </div>
-                        <div class="match-info">🕒 {{ to_msk(m.kickoff_time) }} | ⏳ Дедлайн: {{ to_msk(m.deadline) }}</div>
-
-                        {% if m.finished %}
-                        <div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 8px;">
-                            <div style="font-weight: 600; color: #1565c0;">✅ Завершён: {{ m.home_score }} : {{ m.away_score }}</div>
-                            <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; color: #2e7d32; font-weight: 600; display: inline-block; margin-top: 4px;">📋 Ставки и очки всех участников</a>
-                        </div>
-                        {% elif m.deadline_passed %}
-                        <div style="color: #c62828; font-size: 12px; margin-top: 4px;">🔒 Приём ставок закрыт</div>
-                        <div style="margin-top: 8px;">
-                            <a href="/match/{{ m.id }}/predictions" style="font-size: 13px; text-decoration: none; color: #2e7d32; font-weight: 600;">📋 Ставки других игроков</a>
-                        </div>
+                        {% if match.finished %}
+                        <div class="match-info" style="background: #e8f5e9; padding: 2px 8px; border-radius: 12px; color: #2e7d32; font-size: 11px;">✅ Завершён</div>
+                        {% elif match.deadline_passed %}
+                        <div class="match-info" style="background: #ffebee; padding: 2px 8px; border-radius: 12px; color: #c62828; font-size: 11px;">⏰ Дедлайн прошёл</div>
                         {% else %}
-                        {% if not g.is_admin %}
-                        <form method="post" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-                            <input type="hidden" name="match_id" value="{{ m.id }}">
-                            <input type="number" name="home_goals" min="0" value="{{ m.pred_home }}" style="width: 48px; padding: 8px; font-size: 14px;">
-                            <span style="font-weight: bold;">:</span>
-                            <input type="number" name="away_goals" min="0" value="{{ m.pred_away }}" style="width: 48px; padding: 8px; font-size: 14px;">
-                            {% if m.pred_home != '' and m.pred_away != '' %}
-                            <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">✏️ Изменить</button>
+                        <div class="match-info" style="background: #e3f2fd; padding: 2px 8px; border-radius: 12px; color: #1565c0; font-size: 11px;">🎯 Принимаются ставки</div>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                        <div style="flex: 1; min-width: 120px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                {{ get_club_logo(match.home_team)|safe }}
+                                <span style="font-weight: 600;">{{ match.home_team }}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                {{ get_club_logo(match.away_team)|safe }}
+                                <span style="font-weight: 600;">{{ match.away_team }}</span>
+                            </div>
+                        </div>
+                        {% if match.finished %}
+                        <div style="text-align: center; min-width: 100px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #2e7d32;">
+                                {{ match.home_score }} : {{ match.away_score }}
+                            </div>
+                            {% if match.my_points > 0 %}
+                            <div style="font-size: 12px; color: #2e7d32;">+{{ match.my_points }} очков</div>
+                            {% endif %}
+                        </div>
+                        <div style="min-width: 80px; text-align: center;">
+                            <div class="match-info">Ваш прогноз</div>
+                            <div style="font-weight: 600;">{{ match.pred_home }} : {{ match.pred_away }}</div>
+                        </div>
+                        <a href="/match/{{ match.id }}/predictions" class="btn btn-outline" style="padding: 6px 12px; font-size: 12px;">📋 Ставки</a>
+                        {% else %}
+                        <form method="post" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <input type="hidden" name="match_id" value="{{ match.id }}">
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <input type="number" name="home_goals" value="{{ match.pred_home }}" min="0" max="99" style="width: 55px; text-align: center; padding: 8px;" {% if match.deadline_passed %}disabled{% endif %}>
+                                <span>:</span>
+                                <input type="number" name="away_goals" value="{{ match.pred_away }}" min="0" max="99" style="width: 55px; text-align: center; padding: 8px;" {% if match.deadline_passed %}disabled{% endif %}>
+                            </div>
+                            {% if not match.deadline_passed %}
+                            <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Сохранить</button>
                             {% else %}
-                            <button type="submit" class="btn btn-primary btn-pulse" style="padding: 8px 12px; font-size: 13px;">✅ Поставить</button>
+                            <button type="button" class="btn btn-disabled" disabled>Дедлайн прошёл</button>
                             {% endif %}
                         </form>
-                        {% else %}
-                        <div style="color: #888; font-size: 12px; margin-top: 4px;">🔒 Администратор не участвует в ставках</div>
+                        {% if match.pred_home != '' and not match.deadline_passed %}
+                        <a href="/match/{{ match.id }}/predictions" class="btn btn-outline" style="padding: 6px 12px; font-size: 12px;">📋 Ставки</a>
                         {% endif %}
                         {% endif %}
                     </div>
@@ -108,11 +161,14 @@
         </div>
         {% endfor %}
     </div>
-  </div>
-  {% endfor %}
+</div>
 {% else %}
-  <div class="card" style="text-align: center; padding: 30px;"><p>Нет доступных матчей</p></div>
-{% endif %}
+<div class="card" style="text-align: center; padding: 40px;">
+    <p style="font-size: 48px; margin-bottom: 12px;">⚽</p>
+    <p style="font-size: 18px; font-weight: 600;">Нет доступных матчей</p>
+    <p style="color: #888;">Скоро появятся новые матчи</p>
+</div>
+{% endfor %}
 
 <script>
 function toggleMonth(id) {
@@ -132,27 +188,54 @@ function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
     if (!content || !arrow) return;
-    if (content.classList.contains('open')) { content.classList.remove('open'); arrow.style.transform = 'rotate(0deg)'; }
-    else { content.classList.add('open'); arrow.style.transform = 'rotate(90deg)'; }
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        arrow.style.transform = 'rotate(0deg)';
+    } else {
+        content.classList.add('open');
+        arrow.style.transform = 'rotate(90deg)';
+    }
 }
 
+// Открываем сегодняшний день автоматически
 document.addEventListener('DOMContentLoaded', function() {
-    var openDay = '{{ open_day }}';
+    var openDay = '{{ open_day|default("") }}';
     if (openDay) {
-        // Раскрываем месяц, в котором находится сегодняшний день
-        var monthKey = openDay.substring(0, 7);
-        var monthContent = document.getElementById('month-' + monthKey);
-        var monthArrow = document.getElementById('arrow-month-' + monthKey);
-        if (monthContent) {
-            monthContent.style.display = 'block';
-            if (monthArrow) monthArrow.style.transform = 'rotate(90deg)';
-        }
-        // Прокручиваем к сегодняшнему дню
-        var dayContent = document.getElementById('day-' + openDay);
-        if (dayContent) {
-            setTimeout(function() { dayContent.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 400);
+        var elems = document.querySelectorAll('.day-group');
+        for (var i = 0; i < elems.length; i++) {
+            var header = elems[i].querySelector('.day-header');
+            if (header && header.innerText.includes(openDay)) {
+                var contentId = header.getAttribute('onclick').match(/'([^']+)'/)[1];
+                var content = document.getElementById(contentId);
+                var arrow = document.getElementById('arrow-' + contentId);
+                if (content && !content.classList.contains('open')) {
+                    content.classList.add('open');
+                    if (arrow) arrow.style.transform = 'rotate(90deg)';
+                }
+                break;
+            }
         }
     }
 });
 </script>
+
+<style>
+    body.dark .month-header {
+        background: #1a1a2e !important;
+        color: #ffffff !important;
+    }
+    body.dark .day-header {
+        background: #1e2a3a !important;
+        color: #ffffff !important;
+    }
+    body.dark .day-header span {
+        color: #aaaaaa !important;
+    }
+    body.dark .day-header div {
+        color: #ffffff !important;
+    }
+    body.dark .match-info {
+        color: #aaaaaa !important;
+    }
+</style>
 {% endblock %}
