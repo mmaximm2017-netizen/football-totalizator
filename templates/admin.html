@@ -37,37 +37,57 @@
     </form>
 </div>
 
+<!-- ========================================================= -->
+<!-- НЕ ЗАВЕРШЁННЫЕ МАТЧИ (с группировкой по месяцам) -->
+<!-- ========================================================= -->
 <div class="card">
     <div class="card-header">✅ Внести результат</div>
-    {% if free_days %}
-        {% for day in free_days %}
-        <div class="day-group" style="margin-bottom: 8px;">
-            <div class="day-header" onclick="toggleDay('free-day-{{ loop.index }}')" style="
+    {% if free_months %}
+        {% for month in free_months %}
+        <div class="month-group" style="margin-bottom: 12px;">
+            <div class="month-header" onclick="toggleMonth('free-month-{{ loop.index }}')" style="
                 display: flex; justify-content: space-between; align-items: center;
-                padding: 12px 14px; background: white; border-radius: 10px; cursor: pointer;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #1565c0; margin-bottom: 4px;
+                padding: 14px 16px; background: #e8e8e8; border-radius: 12px; cursor: pointer;
+                font-weight: 700; font-size: 16px; margin-bottom: 8px;
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-free-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
-                    <div style="font-weight: 600; font-size: 14px;">📅 {{ day.date }}</div>
+                    <span id="arrow-free-month-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
+                    <span>📅 {{ month.label }}</span>
                 </div>
-                <span style="font-size: 13px; color: #888;">{{ day.matches|length }} матч.</span>
+                <span style="font-size: 13px; font-weight: normal;">{{ month.total_matches }} матчей</span>
             </div>
-            <div id="free-day-{{ loop.index }}" class="day-content">
-                {% for m in day.matches %}
-                <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #1565c0;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 120px;">
-                            <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
-                            <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+            <div id="free-month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 16px;">
+                {% for day in month.days %}
+                <div class="day-group" style="margin-bottom: 8px;">
+                    <div class="day-header" onclick="toggleDay('free-day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+                        display: flex; justify-content: space-between; align-items: center;
+                        padding: 10px 12px; background: #f0f0f0; border-radius: 8px; cursor: pointer;
+                        margin: 8px 0 4px 0; border-left: 4px solid #1565c0;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="arrow-free-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                            <div style="font-weight: 600;">📅 {{ day.date }}</div>
                         </div>
-                        <form method="post" style="display: flex; align-items: center; gap: 6px; margin: 0;">
-                            <input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
-                            <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
-                            <span>:</span>
-                            <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
-                            <button type="submit" class="btn btn-primary" style="padding: 8px 12px; font-size: 13px;">Завершить</button>
-                        </form>
+                        <span style="font-size: 12px;">{{ day.matches|length }} матчей</span>
+                    </div>
+                    <div id="free-day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+                        {% for m in day.matches %}
+                        <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #1565c0;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 120px;">
+                                    <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
+                                    <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+                                </div>
+                                <form method="post" style="display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                    <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
+                                    <span>:</span>
+                                    <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
+                                    <button type="submit" class="btn btn-primary" style="padding: 8px 12px; font-size: 13px;">Завершить</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 {% endfor %}
@@ -79,37 +99,57 @@
     {% endif %}
 </div>
 
+<!-- ========================================================= -->
+<!-- ЗАВЕРШЁННЫЕ МАТЧИ (с группировкой по месяцам) -->
+<!-- ========================================================= -->
 <div class="card">
     <div class="card-header">🔧 Исправить результат завершённого матча</div>
-    {% if finished_days %}
-        {% for day in finished_days %}
-        <div class="day-group" style="margin-bottom: 8px;">
-            <div class="day-header" onclick="toggleDay('fix-day-{{ loop.index }}')" style="
+    {% if finished_months %}
+        {% for month in finished_months %}
+        <div class="month-group" style="margin-bottom: 12px;">
+            <div class="month-header" onclick="toggleMonth('finished-month-{{ loop.index }}')" style="
                 display: flex; justify-content: space-between; align-items: center;
-                padding: 12px 14px; background: white; border-radius: 10px; cursor: pointer;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #c62828; margin-bottom: 4px;
+                padding: 14px 16px; background: #e8e8e8; border-radius: 12px; cursor: pointer;
+                font-weight: 700; font-size: 16px; margin-bottom: 8px;
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-fix-day-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
-                    <div style="font-weight: 600; font-size: 14px;">📅 {{ day.date }}</div>
+                    <span id="arrow-finished-month-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
+                    <span>📅 {{ month.label }}</span>
                 </div>
-                <span style="font-size: 13px; color: #888;">{{ day.matches|length }} матч.</span>
+                <span style="font-size: 13px; font-weight: normal;">{{ month.total_matches }} матчей</span>
             </div>
-            <div id="fix-day-{{ loop.index }}" class="day-content">
-                {% for m in day.matches %}
-                <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #c62828;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 120px;">
-                            <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
-                            <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+            <div id="finished-month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 16px;">
+                {% for day in month.days %}
+                <div class="day-group" style="margin-bottom: 8px;">
+                    <div class="day-header" onclick="toggleDay('finished-day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+                        display: flex; justify-content: space-between; align-items: center;
+                        padding: 10px 12px; background: #f0f0f0; border-radius: 8px; cursor: pointer;
+                        margin: 8px 0 4px 0; border-left: 4px solid #c62828;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="arrow-finished-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                            <div style="font-weight: 600;">📅 {{ day.date }}</div>
                         </div>
-                        <form method="post" action="/admin/fix_result" style="display: flex; align-items: center; gap: 6px; margin: 0;">
-                            <input type="hidden" name="match_id" value="{{ m.id }}">
-                            <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
-                            <span>:</span>
-                            <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
-                            <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Обновить</button>
-                        </form>
+                        <span style="font-size: 12px;">{{ day.matches|length }} матчей</span>
+                    </div>
+                    <div id="finished-day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+                        {% for m in day.matches %}
+                        <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #c62828;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 120px;">
+                                    <div style="font-weight: 600;">{{ m.home_team }} – {{ m.away_team }}</div>
+                                    <div style="font-size: 12px; color: #888;">ID: {{ m.id }}</div>
+                                </div>
+                                <form method="post" action="/admin/fix_result" style="display: flex; align-items: center; gap: 6px; margin: 0;">
+                                    <input type="hidden" name="match_id" value="{{ m.id }}">
+                                    <input type="number" name="home_score" min="0" required style="width: 48px; padding: 8px;">
+                                    <span>:</span>
+                                    <input type="number" name="away_score" min="0" required style="width: 48px; padding: 8px;">
+                                    <button type="submit" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px;">Обновить</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 {% endfor %}
@@ -177,6 +217,19 @@
 </div>
 
 <script>
+function toggleMonth(id) {
+    var content = document.getElementById(id);
+    var arrow = document.getElementById('arrow-' + id);
+    if (!content || !arrow) return;
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        arrow.style.transform = 'rotate(90deg)';
+    } else {
+        content.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
 function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
@@ -190,46 +243,40 @@ function toggleDay(id) {
     }
 }
 
-// Добавляем обработчик для тёмной темы, чтобы стрелки были видны
+// Открываем первый месяц по умолчанию для удобства
 document.addEventListener('DOMContentLoaded', function() {
-    function updateArrowsColor() {
-        var isDark = document.body.classList.contains('dark');
-        var arrows = document.querySelectorAll('[id^="arrow-free-day-"], [id^="arrow-fix-day-"]');
-        arrows.forEach(function(arrow) {
-            if (isDark) {
-                arrow.style.color = '#ffffff';
-            } else {
-                arrow.style.color = '';
-            }
-        });
+    var firstMonth = document.querySelector('[id^="free-month-"]');
+    if (firstMonth) {
+        var arrow = document.getElementById('arrow-' + firstMonth.id);
+        firstMonth.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(90deg)';
     }
-    
-    // Наблюдатель за изменением темы
-    var observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-                updateArrowsColor();
-            }
-        });
-    });
-    observer.observe(document.body, { attributes: true });
-    updateArrowsColor();
+    var firstFinishedMonth = document.querySelector('[id^="finished-month-"]');
+    if (firstFinishedMonth) {
+        var arrow2 = document.getElementById('arrow-' + firstFinishedMonth.id);
+        firstFinishedMonth.style.display = 'block';
+        if (arrow2) arrow2.style.transform = 'rotate(90deg)';
+    }
 });
 </script>
 
 <style>
-/* Дополнительные стили для тёмной темы в админке */
-body.dark .day-header {
+/* Тёмная тема для админки */
+body.dark .month-header {
     background: #1e2a3a !important;
+    color: #ffffff !important;
+}
+body.dark .month-header span {
+    color: #ffffff !important;
+}
+body.dark .day-header {
+    background: #2c2c3e !important;
     color: #ffffff !important;
 }
 body.dark .day-header div {
     color: #ffffff !important;
 }
 body.dark .day-header span {
-    color: #ffffff !important;
-}
-body.dark .day-header .match-count {
     color: #aaaaaa !important;
 }
 body.dark .day-content .card {

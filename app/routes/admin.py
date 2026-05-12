@@ -308,6 +308,7 @@ def admin():
 
         raw_matches = cur.fetchall()
 
+        # Группировка по дням
         free_by_day = defaultdict(list)
         finished_by_day = defaultdict(list)
 
@@ -337,35 +338,55 @@ def admin():
             else:
                 free_by_day[day].append(item)
 
-        # ИСПРАВЛЕНО: форматирование даты
-        free_days = [
-            {'date': format_date_ru(d), 'matches': free_by_day[d]}
-            for d in sorted(free_by_day.keys())
-        ]
+        # Словари для группировки по месяцам (для НЕ завершённых матчей)
+        free_months = defaultdict(list)
+        for day_str in sorted(free_by_day.keys()):
+            month_key = day_str[:7]  # YYYY-MM
+            free_months[month_key].append({
+                'date': format_date_ru(day_str),
+                'matches': free_by_day[day_str],
+                'count': len(free_by_day[day_str])
+            })
 
-        finished_days = [
-            {'date': format_date_ru(d), 'matches': finished_by_day[d]}
-            for d in sorted(finished_by_day.keys())
-        ]
+        # Словари для группировки по месяцам (для завершённых матчей)
+        finished_months = defaultdict(list)
+        for day_str in sorted(finished_by_day.keys()):
+            month_key = day_str[:7]
+            finished_months[month_key].append({
+                'date': format_date_ru(day_str),
+                'matches': finished_by_day[day_str],
+                'count': len(finished_by_day[day_str])
+            })
 
-        # =============================================
-        # ALL MATCHES (для удаления)
-        # =============================================
-        cur.execute("""
-            SELECT id, home_team, away_team, kickoff_time, status
-            FROM matches
-            WHERE kickoff_time >= %s
-            ORDER BY kickoff_time
-        """, (start_date_str,))
+        # Формируем список месяцев с днями для НЕ завершённых матчей
+        month_names = {
+            '01': 'Январь', '02': 'Февраль', '03': 'Март',
+            '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+            '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+            '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+        }
 
-        all_matches = []
-        for m in cur.fetchall():
-            all_matches.append({
-                'id': m[0],
-                'home_team': m[1],
-                'away_team': m[2],
-                'kickoff_time': m[3],
-                'status': m[4]
+        free_months_list = []
+        for mk in sorted(free_months.keys()):
+            year, month = mk.split('-')
+            month_label = f"{month_names[month]} {year}"
+            free_months_list.append({
+                'key': mk,
+                'label': month_label,
+                'days': free_months[mk],
+                'total_matches': sum(d['count'] for d in free_months[mk])
+            })
+
+        # Формируем список месяцев с днями для завершённых матчей
+        finished_months_list = []
+        for mk in sorted(finished_months.keys()):
+            year, month = mk.split('-')
+            month_label = f"{month_names[month]} {year}"
+            finished_months_list.append({
+                'key': mk,
+                'label': month_label,
+                'days': finished_months[mk],
+                'total_matches': sum(d['count'] for d in finished_months[mk])
             })
 
         # =============================================
@@ -410,9 +431,8 @@ def admin():
 
     return render_template(
         'admin.html',
-        free_days=free_days,
-        finished_days=finished_days,
-        all_matches=all_matches,
+        free_months=free_months_list,
+        finished_months=finished_months_list,
         manual_matches=manual_matches,
         users=users
     )
