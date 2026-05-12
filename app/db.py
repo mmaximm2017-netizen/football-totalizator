@@ -141,7 +141,7 @@ def init_db():
         if not cur.fetchone():
             cur.execute("""
             INSERT INTO tournaments (name, is_active, start_date)
-            VALUES ('Main Tournament', 1, NOW())
+            VALUES ('Кубок Матч-премьер', 1, '2026-05-06')
             """)
 
         # =====================================================
