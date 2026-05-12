@@ -15,7 +15,7 @@ from flask import (
 )
 
 from app.db import get_db, close_db, get_active_tournament_id
-from app.utils import get_flag, get_club_logo, cached_to_msk, is_before_deadline
+from app.utils import get_flag, get_club_logo, cached_to_msk, is_before_deadline, format_date_ru
 from app.config import START_DATE
 
 main_bp = Blueprint('main', __name__)
@@ -241,7 +241,7 @@ def index():
 
             days.append({
                 "key": day,
-                "label": day,
+                "label": format_date_ru(day),  # ← ИСПРАВЛЕНО: красивая дата
                 "type": t,
                 "matches": grouped[day],
                 "count": len(grouped[day]),
