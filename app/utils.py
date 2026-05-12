@@ -2,7 +2,7 @@
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from functools import lru_cache
-import app.models.team_data as team_data
+from app.models.team_data import TEAM_NAMES, TEAM_FLAGS, CLUB_LOGOS
 
 MSK = ZoneInfo("Europe/Moscow")
 
@@ -84,23 +84,39 @@ def format_date_ru(date_str):
 
 
 # =========================================================
-# FLAGS
+# TEAM ICON (умный выбор: флаг для сборной, эмблема для клуба)
+# =========================================================
+
+def get_team_icon(name):
+    """Возвращает флаг для сборной или эмблему для клуба"""
+    translated = TEAM_NAMES.get(name, name)
+    if translated in TEAM_FLAGS:
+        return f'<img src="https://flagcdn.com/w40/{TEAM_FLAGS[translated]}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+    else:
+        logo = CLUB_LOGOS.get(translated)
+        if logo:
+            return f'<img src="{logo}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
+    return ""
+
+
+# =========================================================
+# FLAGS (старая функция, оставлена для совместимости)
 # =========================================================
 
 def get_flag(name):
-    translated = team_data.TEAM_NAMES.get(name, name)
-    code = team_data.TEAM_FLAGS.get(translated)
+    translated = TEAM_NAMES.get(name, name)
+    code = TEAM_FLAGS.get(translated)
     if code:
         return f'<img src="https://flagcdn.com/w40/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
     return ""
 
 
 # =========================================================
-# CLUB LOGOS (через словарь)
+# CLUB LOGOS (старая функция, оставлена для совместимости)
 # =========================================================
 
 def get_club_logo(name):
-    logo_url = team_data.CLUB_LOGOS.get(name)
+    logo_url = CLUB_LOGOS.get(name)
     if logo_url:
         return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
     return ""
@@ -111,4 +127,4 @@ def get_club_logo(name):
 # =========================================================
 
 def translate_name(name):
-    return team_data.TEAM_NAMES.get(name, name)
+    return TEAM_NAMES.get(name, name)
