@@ -92,12 +92,12 @@ def get_team_icon(name):
     translated = TEAM_NAMES.get(name, name)
     if translated in TEAM_FLAGS:
         code = TEAM_FLAGS[translated]
-        # Используем flagsapi.com (работает надёжнее flagcdn.com)
-        return f'<img src="https://flagsapi.com/{code.upper()}/shiny/24.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+        # flagcdn.com с прямым URL и принудительной загрузкой
+        return f'<img src="https://flagcdn.com/32x24/{code}.png" width="20" height="15" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}" loading="eager">'
     else:
         logo = CLUB_LOGOS.get(translated)
         if logo:
-            return f'<img src="{logo}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
+            return f'<img src="{logo}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{translated}" loading="eager">'
     return ""
 
 
@@ -109,7 +109,7 @@ def get_flag(name):
     translated = TEAM_NAMES.get(name, name)
     code = TEAM_FLAGS.get(translated)
     if code:
-        return f'<img src="https://flagsapi.com/{code.upper()}/shiny/24.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+        return f'<img src="https://flagcdn.com/32x24/{code}.png" width="20" height="15" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}" loading="eager">'
     return ""
 
 
@@ -120,7 +120,7 @@ def get_flag(name):
 def get_club_logo(name):
     logo_url = CLUB_LOGOS.get(name)
     if logo_url:
-        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="">'
+        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{name}" loading="eager">'
     return ""
 
 
