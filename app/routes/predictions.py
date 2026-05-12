@@ -52,8 +52,10 @@ def match_predictions(match_id):
             'away_score': m[7],
         }
 
-        # безопасная проверка дедлайна
-        deadline_passed = not is_before_deadline(m[4])
+        # единый стиль: передаём словарь с deadline
+        deadline_passed = not is_before_deadline({
+            "deadline": m[4]
+        })
 
         if not deadline_passed:
             flash("Ставки будут доступны после дедлайна", "error")

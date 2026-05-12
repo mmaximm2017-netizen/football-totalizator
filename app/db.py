@@ -11,37 +11,20 @@ db_pool = None
 
 
 def init_pool():
-    """
-    Создаём пул только при первом обращении.
-    Это защищает от падений при импорте и запуске.
-    """
     global db_pool
-
     if db_pool is None:
-        db_pool = SimpleConnectionPool(
-            1,
-            5,
-            DATABASE_URL
-        )
+        db_pool = SimpleConnectionPool(1, 5, DATABASE_URL)
 
 
 def get_db():
-    """
-    Берём соединение из пула.
-    """
     if db_pool is None:
         init_pool()
-
     return db_pool.getconn()
 
 
 def close_db(conn, cur=None):
-    """
-    Возвращаем соединение в пул.
-    """
     if cur and not cur.closed:
         cur.close()
-
     if conn and not conn.closed and db_pool:
         db_pool.putconn(conn)
 
@@ -55,7 +38,6 @@ def init_db():
     cur = conn.cursor()
 
     try:
-        # USERS
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -65,7 +47,6 @@ def init_db():
         );
         """)
 
-        # TOURNAMENTS
         cur.execute("""
         CREATE TABLE IF NOT EXISTS tournaments (
             id SERIAL PRIMARY KEY,
@@ -76,7 +57,6 @@ def init_db():
         );
         """)
 
-        # MATCHES
         cur.execute("""
         CREATE TABLE IF NOT EXISTS matches (
             id SERIAL PRIMARY KEY,
@@ -92,7 +72,6 @@ def init_db():
         );
         """)
 
-        # PREDICTIONS
         cur.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             user_id INTEGER,
@@ -110,6 +89,7 @@ def init_db():
 
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_kickoff ON matches(kickoff_time);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_league ON matches(league);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
