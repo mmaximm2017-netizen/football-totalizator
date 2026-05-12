@@ -25,7 +25,9 @@ def get_db():
 def close_db(conn, cur=None):
     if cur and not cur.closed:
         cur.close()
-    if conn and not conn.closed and db_pool:
+    if conn and not conn.closed:
+        if db_pool is None:
+            init_pool()
         db_pool.putconn(conn)
 
 
