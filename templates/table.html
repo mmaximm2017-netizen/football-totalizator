@@ -4,23 +4,29 @@
     <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
 </div>
 
-<!-- Выбор турнира -->
-<div class="filter-bar" style="justify-content: center;">
-    {% for t in tournaments %}
-    <a href="/table?tid={{ t.id }}" class="filter-btn {% if selected_tid == t.id %}active{% endif %}">
-        {% if t.name == 'ЧМ-2026' %}
-        <img src="/static/clubs/wc2026-logo.png" width="16" height="16" style="vertical-align: middle; margin-right: 4px;">ЧМ-2026
-        {% elif t.name == 'Кубок Матч-премьер' %}
-        <img src="https://flagcdn.com/w40/ru.png" width="20" height="14" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;">Кубок Матч-премьер
-        {% else %}
-        {{ t.name }}
-        {% endif %}
-    </a>
-    {% endfor %}
+<!-- Выбор турнира (выпадающий список) -->
+<div class="filter-bar" style="justify-content: center; flex-direction: column; align-items: center; gap: 12px;">
+    <select id="tournament-select" onchange="location.href='/table?tid=' + this.value" style="
+        max-width: 300px; padding: 10px 16px; border-radius: 24px;
+        font-size: 14px; font-weight: 500; cursor: pointer;
+    ">
+        {% for t in tournaments %}
+        <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
+            {% if t.is_active %}🏆 АКТИВНЫЙ — {% endif %}{{ t.name }}
+            {% if t.start_date != '—' %} (с {{ t.start_date[:4] }}){% endif %}
+        </option>
+        {% endfor %}
+    </select>
+    
+    {% if not selected_is_active %}
+    <div style="font-size: 12px; color: #888;">
+        📜 Архивный турнир (только для просмотра)
+    </div>
+    {% endif %}
 </div>
 
 {% if table %}
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 16px;">
     <table style="width: 100%; border-collapse: collapse; background: white; font-size: 14px;">
         <thead>
             <tr style="background: #263238; color: white;">
@@ -58,6 +64,13 @@
         </tbody>
     </table>
 </div>
+
+<!-- Информация о турнире -->
+<div style="text-align: center; margin-top: 16px; font-size: 12px; color: #888;">
+    📅 {{ selected_name }}
+    {% if selected_start_date != '—' %} — начался {{ selected_start_date[:10] if selected_start_date|length > 10 else selected_start_date }}{% endif %}
+</div>
+
 {% else %}
 <div class="card" style="text-align: center; padding: 40px;">
     <p style="font-size: 48px; margin-bottom: 12px;">🏟️</p>

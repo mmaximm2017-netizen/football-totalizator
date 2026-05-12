@@ -15,17 +15,22 @@ def table():
     try:
 
         # =================================================
-        # TOURNAMENTS
+        # TOURNAMENTS (все, для выбора в выпадающем списке)
         # =================================================
 
         cur.execute("""
-            SELECT id, name, is_active
+            SELECT id, name, is_active, start_date
             FROM tournaments
-            ORDER BY is_active DESC, id DESC
+            ORDER BY is_active DESC, start_date DESC, id DESC
         """)
 
         tournaments = [
-            {'id': r[0], 'name': r[1], 'is_active': r[2]}
+            {
+                'id': r[0],
+                'name': r[1],
+                'is_active': r[2],
+                'start_date': r[3] if r[3] else '—'
+            }
             for r in cur.fetchall()
         ]
 
@@ -33,9 +38,7 @@ def table():
         tid = request.args.get('tid', type=int)
 
         if not tid:
-
             active = next((t for t in tournaments if t['is_active']), None)
-
             if active:
                 tid = active['id']
             elif tournaments:
@@ -46,17 +49,20 @@ def table():
                     table=[],
                     tournaments=[],
                     selected_tid=None,
-                    selected_name="Нет турниров"
+                    selected_name="Нет турниров",
+                    selected_is_active=False
                 )
 
         cur.execute("""
-            SELECT name
+            SELECT name, is_active, start_date
             FROM tournaments
             WHERE id = %s
         """, (tid,))
 
         row = cur.fetchone()
         selected_name = row[0] if row else "Турнир"
+        selected_is_active = row[1] if row else False
+        selected_start_date = row[2] if row else "—"
 
         # =================================================
         # RANKING
@@ -130,5 +136,7 @@ def table():
         table=table_data,
         tournaments=tournaments,
         selected_tid=tid,
-        selected_name=selected_name
+        selected_name=selected_name,
+        selected_is_active=selected_is_active,
+        selected_start_date=selected_start_date
     )
