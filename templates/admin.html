@@ -59,18 +59,18 @@
             <div id="free-month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 16px;">
                 {% for day in month.days %}
                 <div class="day-group" style="margin-bottom: 8px;">
-                    <div class="day-header" onclick="toggleDay('free-day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+                    <div class="day-header" onclick="toggleDay('free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')" style="
                         display: flex; justify-content: space-between; align-items: center;
                         padding: 10px 12px; background: #f0f0f0; border-radius: 8px; cursor: pointer;
                         margin: 8px 0 4px 0; border-left: 4px solid #1565c0;
                     ">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span id="arrow-free-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                            <span id="arrow-free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
                             <div style="font-weight: 600;">📅 {{ day.date }}</div>
                         </div>
                         <span style="font-size: 12px;">{{ day.matches|length }} матчей</span>
                     </div>
-                    <div id="free-day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+                    <div id="free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content" style="overflow: hidden; transition: max-height 0.4s ease; max-height: 0; opacity: 0;">
                         {% for m in day.matches %}
                         <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #1565c0;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -121,18 +121,18 @@
             <div id="finished-month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 16px;">
                 {% for day in month.days %}
                 <div class="day-group" style="margin-bottom: 8px;">
-                    <div class="day-header" onclick="toggleDay('finished-day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+                    <div class="day-header" onclick="toggleDay('finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')" style="
                         display: flex; justify-content: space-between; align-items: center;
                         padding: 10px 12px; background: #f0f0f0; border-radius: 8px; cursor: pointer;
                         margin: 8px 0 4px 0; border-left: 4px solid #c62828;
                     ">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span id="arrow-finished-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                            <span id="arrow-finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
                             <div style="font-weight: 600;">📅 {{ day.date }}</div>
                         </div>
                         <span style="font-size: 12px;">{{ day.matches|length }} матчей</span>
                     </div>
-                    <div id="finished-day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+                    <div id="finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content" style="overflow: hidden; transition: max-height 0.4s ease; max-height: 0; opacity: 0;">
                         {% for m in day.matches %}
                         <div class="card" style="margin: 4px 0 4px 12px; padding: 12px; border-left: 3px solid #c62828;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -234,11 +234,13 @@ function toggleDay(id) {
     var content = document.getElementById(id);
     var arrow = document.getElementById('arrow-' + id);
     if (!content || !arrow) return;
-    if (content.classList.contains('open')) {
-        content.classList.remove('open');
+    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+        content.style.maxHeight = '0';
+        content.style.opacity = '0';
         arrow.style.transform = 'rotate(0deg)';
     } else {
-        content.classList.add('open');
+        content.style.maxHeight = content.scrollHeight + 'px';
+        content.style.opacity = '1';
         arrow.style.transform = 'rotate(90deg)';
     }
 }
@@ -293,6 +295,21 @@ body.dark .day-content .card input {
     background: #1e1e2e !important;
     color: #ffffff !important;
     border-color: #444 !important;
+}
+
+.month-content {
+    transition: all 0.3s ease;
+}
+
+.day-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 0;
+    opacity: 0;
+}
+.day-content.open {
+    max-height: 3000px;
+    opacity: 1;
 }
 </style>
 {% endblock %}
