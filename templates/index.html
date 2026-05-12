@@ -48,7 +48,6 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.style.animationPlayState = 'running';
-                    // Не удаляем класс, а просто запускаем анимацию
                     observer.unobserve(entry.target);
                 }
             });
@@ -93,7 +92,9 @@
             </div>
             <div id="day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
                 {% for match in day.matches %}
-                <div class="card animate-card card-delay-{{ forloop.counter|default:1|add:'0'|slice:':1' }}" style="margin-bottom: 10px;">
+                {% set delay = loop.index % 10 %}
+                {% if delay == 0 %}{% set delay = 10 %}{% endif %}
+                <div class="card animate-card card-delay-{{ delay }}" style="margin-bottom: 10px;">
                     <div class="match-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
                             {% if match.league == 'wc2026' %}
