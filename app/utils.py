@@ -91,7 +91,9 @@ def get_team_icon(name):
     """Возвращает флаг для сборной или эмблему для клуба"""
     translated = TEAM_NAMES.get(name, name)
     if translated in TEAM_FLAGS:
-        return f'<img src="https://flagcdn.com/w40/{TEAM_FLAGS[translated]}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+        code = TEAM_FLAGS[translated]
+        # Используем flagsapi.com (работает надёжнее flagcdn.com)
+        return f'<img src="https://flagsapi.com/{code.upper()}/shiny/24.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
     else:
         logo = CLUB_LOGOS.get(translated)
         if logo:
@@ -107,7 +109,7 @@ def get_flag(name):
     translated = TEAM_NAMES.get(name, name)
     code = TEAM_FLAGS.get(translated)
     if code:
-        return f'<img src="https://flagcdn.com/w40/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
+        return f'<img src="https://flagsapi.com/{code.upper()}/shiny/24.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="">'
     return ""
 
 
