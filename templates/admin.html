@@ -189,5 +189,63 @@ function toggleDay(id) {
         arrow.style.transform = 'rotate(90deg)';
     }
 }
+
+// Добавляем обработчик для тёмной темы, чтобы стрелки были видны
+document.addEventListener('DOMContentLoaded', function() {
+    function updateArrowsColor() {
+        var isDark = document.body.classList.contains('dark');
+        var arrows = document.querySelectorAll('[id^="arrow-free-day-"], [id^="arrow-fix-day-"]');
+        arrows.forEach(function(arrow) {
+            if (isDark) {
+                arrow.style.color = '#ffffff';
+            } else {
+                arrow.style.color = '';
+            }
+        });
+    }
+    
+    // Наблюдатель за изменением темы
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                updateArrowsColor();
+            }
+        });
+    });
+    observer.observe(document.body, { attributes: true });
+    updateArrowsColor();
+});
 </script>
+
+<style>
+/* Дополнительные стили для тёмной темы в админке */
+body.dark .day-header {
+    background: #1e2a3a !important;
+    color: #ffffff !important;
+}
+body.dark .day-header div {
+    color: #ffffff !important;
+}
+body.dark .day-header span {
+    color: #ffffff !important;
+}
+body.dark .day-header .match-count {
+    color: #aaaaaa !important;
+}
+body.dark .day-content .card {
+    background: #2c2c3e !important;
+    color: #e0e0e0 !important;
+}
+body.dark .day-content .card div {
+    color: #e0e0e0 !important;
+}
+body.dark .day-content .card .match-info {
+    color: #aaaaaa !important;
+}
+body.dark .day-content .card input {
+    background: #1e1e2e !important;
+    color: #ffffff !important;
+    border-color: #444 !important;
+}
+</style>
 {% endblock %}

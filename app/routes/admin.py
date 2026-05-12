@@ -18,7 +18,7 @@ from flask import (
 from markupsafe import escape
 
 from app.db import get_db, close_db
-from app.utils import translate_name
+from app.utils import translate_name, format_date_ru
 from app.config import START_DATE
 
 
@@ -337,13 +337,14 @@ def admin():
             else:
                 free_by_day[day].append(item)
 
+        # ИСПРАВЛЕНО: форматирование даты
         free_days = [
-            {'date': d, 'matches': free_by_day[d]}
+            {'date': format_date_ru(d), 'matches': free_by_day[d]}
             for d in sorted(free_by_day.keys())
         ]
 
         finished_days = [
-            {'date': d, 'matches': finished_by_day[d]}
+            {'date': format_date_ru(d), 'matches': finished_by_day[d]}
             for d in sorted(finished_by_day.keys())
         ]
 
@@ -529,7 +530,7 @@ def debug_match(match_id):
             </tr>
             """
 
-        result += "</table>"
+        result += "}</table>"
 
         return result
 
