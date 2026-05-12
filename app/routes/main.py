@@ -240,13 +240,18 @@ def index():
             else:
                 t = "future"
 
+            has_open = any(
+                not x["deadline_passed"]
+                for x in grouped[day]
+            )
+
             days.append({
                 "key": day,
                 "label": day,
                 "type": t,
                 "matches": grouped[day],
                 "count": len(grouped[day]),
-                "has_open": any(not x["deadline_passed"] for x in grouped[day])
+                "has_open": has_open
             })
 
         open_day = next((d["key"] for d in days if d["type"] == "today"), None)
