@@ -40,7 +40,7 @@
 </style>
 
 <script>
-    // Наблюдатель за появлением элементов при скролле (повторная анимация)
+    // Наблюдатель за появлением элементов при скролле
     document.addEventListener('DOMContentLoaded', function() {
         const animatedElements = document.querySelectorAll('.animate-card, .month-animate');
         
@@ -57,32 +57,60 @@
             observer.observe(el);
         });
     });
+    
+    function toggleMonth(monthId) {
+        var content = document.getElementById('month-content-' + monthId);
+        var arrow = document.getElementById('arrow-month-' + monthId);
+        if (!content || !arrow) return;
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            arrow.style.transform = 'rotate(90deg)';
+        } else {
+            content.style.display = 'none';
+            arrow.style.transform = 'rotate(0deg)';
+        }
+    }
+    
+    function toggleDay(dayId) {
+        var content = document.getElementById('day-content-' + dayId);
+        var arrow = document.getElementById('arrow-day-' + dayId);
+        if (!content || !arrow) return;
+        if (content.classList.contains('open')) {
+            content.classList.remove('open');
+            arrow.style.transform = 'rotate(0deg)';
+        } else {
+            content.classList.add('open');
+            arrow.style.transform = 'rotate(90deg)';
+        }
+    }
 </script>
 
 {% for month in months %}
+{% set month_idx = loop.index %}
 <div class="month-animate" style="margin-bottom: 24px;">
-    <div class="month-header" onclick="toggleMonth('month-{{ loop.index }}')" style="
+    <div class="month-header" onclick="toggleMonth('{{ month_idx }}')" style="
         display: flex; justify-content: space-between; align-items: center;
         padding: 12px 16px; background: #e0e0e0; border-radius: 12px; cursor: pointer;
         font-weight: 700; font-size: 18px; margin-bottom: 12px;
         transition: background 0.2s;
     ">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="arrow-month-{{ loop.index }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
+            <span id="arrow-month-{{ month_idx }}" style="font-size: 14px; transition: transform 0.3s;">▶</span>
             <span>📅 {{ month.label }}</span>
         </div>
         <span style="font-size: 13px; font-weight: normal;">{{ month.count }} матчей</span>
     </div>
-    <div id="month-{{ loop.index }}" class="month-content" style="display: none; margin-left: 8px;">
+    <div id="month-content-{{ month_idx }}" class="month-content" style="display: none; margin-left: 8px;">
         {% for day in month.days %}
+        {% set day_idx = loop.index %}
         <div class="day-group" style="margin-bottom: 8px;">
-            <div class="day-header" onclick="toggleDay('day-{{ loop.parentloop.index }}-{{ loop.index }}')" style="
+            <div class="day-header" onclick="toggleDay('{{ month_idx }}_{{ day_idx }}')" style="
                 display: flex; justify-content: space-between; align-items: center;
                 padding: 10px 14px; background: #f0f0f0; border-radius: 10px; cursor: pointer;
                 margin: 8px 0 4px 0; border-left: 4px solid {% if day.type == 'today' %}#ff9800{% elif day.type == 'past' %}#9e9e9e{% else %}#4caf50{% endif %};
             ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="arrow-day-{{ loop.parentloop.index }}-{{ loop.index }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                    <span id="arrow-day-{{ month_idx }}_{{ day_idx }}" style="font-size: 12px; transition: transform 0.3s;">▶</span>
                     <div style="font-weight: 600;">
                         {{ day.label }}
                         {% if day.type == 'today' %} <span style="background: #ff9800; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">СЕГОДНЯ</span>{% endif %}
@@ -90,7 +118,7 @@
                 </div>
                 <span style="font-size: 12px; color: #666;">{{ day.count }} матчей</span>
             </div>
-            <div id="day-{{ loop.parentloop.index }}-{{ loop.index }}" class="day-content">
+            <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content">
                 {% for match in day.matches %}
                 {% set delay = loop.index % 10 %}
                 {% if delay == 0 %}{% set delay = 10 %}{% endif %}
@@ -172,46 +200,25 @@
 {% endfor %}
 
 <script>
-function toggleMonth(id) {
-    var content = document.getElementById(id);
-    var arrow = document.getElementById('arrow-' + id);
-    if (!content || !arrow) return;
-    if (content.style.display === 'none' || content.style.display === '') {
-        content.style.display = 'block';
-        arrow.style.transform = 'rotate(90deg)';
-    } else {
-        content.style.display = 'none';
-        arrow.style.transform = 'rotate(0deg)';
-    }
-}
-
-function toggleDay(id) {
-    var content = document.getElementById(id);
-    var arrow = document.getElementById('arrow-' + id);
-    if (!content || !arrow) return;
-    if (content.classList.contains('open')) {
-        content.classList.remove('open');
-        arrow.style.transform = 'rotate(0deg)';
-    } else {
-        content.classList.add('open');
-        arrow.style.transform = 'rotate(90deg)';
-    }
-}
-
 // Открываем сегодняшний день автоматически
 document.addEventListener('DOMContentLoaded', function() {
     var openDay = '{{ open_day|default("") }}';
     if (openDay) {
-        var elems = document.querySelectorAll('.day-group');
+        var elems = document.querySelectorAll('.day-header');
         for (var i = 0; i < elems.length; i++) {
-            var header = elems[i].querySelector('.day-header');
+            var header = elems[i];
             if (header && header.innerText.includes(openDay)) {
-                var contentId = header.getAttribute('onclick').match(/'([^']+)'/)[1];
-                var content = document.getElementById(contentId);
-                var arrow = document.getElementById('arrow-' + contentId);
-                if (content && !content.classList.contains('open')) {
-                    content.classList.add('open');
-                    if (arrow) arrow.style.transform = 'rotate(90deg)';
+                var onclickStr = header.getAttribute('onclick');
+                if (onclickStr) {
+                    var match = onclickStr.match(/toggleDay\('([^']+)'\)/);
+                    if (match && match[1]) {
+                        var content = document.getElementById('day-content-' + match[1]);
+                        var arrow = document.getElementById('arrow-day-' + match[1]);
+                        if (content && !content.classList.contains('open')) {
+                            content.classList.add('open');
+                            if (arrow) arrow.style.transform = 'rotate(90deg)';
+                        }
+                    }
                 }
                 break;
             }
