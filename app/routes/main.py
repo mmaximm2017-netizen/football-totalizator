@@ -260,5 +260,6 @@ def index():
         open_day=open_day,
         get_flag=get_flag,
         get_club_logo=get_club_logo,
-        to_msk=cached_to_msk, 
+        to_msk=cached_to_msk,
+        current_filter=league,
     )
