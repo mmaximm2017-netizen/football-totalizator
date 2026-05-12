@@ -43,12 +43,6 @@ def parse_dt(value):
         return None
 
 
-def to_msk_day(dt):
-    if not dt:
-        return None
-    return dt.astimezone(MSK).strftime("%Y-%m-%d")
-
-
 # =========================================================
 # INDEX
 # =========================================================
@@ -256,12 +250,39 @@ def index():
 
         open_day = next((d["key"] for d in days if d["type"] == "today"), None)
 
+        # =================================================
+        # GROUP BY MONTH
+        # =================================================
+
+        months = defaultdict(list)
+        for d in days:
+            month_key = d['key'][:7]
+            months[month_key].append(d)
+
+        month_names = {
+            '01': 'Январь', '02': 'Февраль', '03': 'Март',
+            '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+            '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+            '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+        }
+
+        grouped_months = []
+        for mk in sorted(months.keys()):
+            year, month = mk.split('-')
+            month_label = f"{month_names[month]} {year}"
+            grouped_months.append({
+                'key': mk,
+                'label': month_label,
+                'days': months[mk],
+                'count': sum(d['count'] for d in months[mk])
+            })
+
     finally:
         close_db(conn, cur)
 
     return render_template(
         "index.html",
-        days=days,
+        months=grouped_months,
         open_day=open_day,
         get_flag=get_flag,
         get_club_logo=get_club_logo,
