@@ -347,6 +347,50 @@ def admin():
             for d in sorted(finished_by_day.keys())
         ]
 
+        # =============================================
+        # ALL MATCHES (для удаления)
+        # =============================================
+        cur.execute("""
+            SELECT id, home_team, away_team, kickoff_time, status
+            FROM matches
+            WHERE kickoff_time >= %s
+            ORDER BY kickoff_time
+        """, (start_date_str,))
+
+        all_matches = []
+        for m in cur.fetchall():
+            all_matches.append({
+                'id': m[0],
+                'home_team': m[1],
+                'away_team': m[2],
+                'kickoff_time': m[3],
+                'status': m[4]
+            })
+
+        # =============================================
+        # MANUAL MATCHES (для редактирования)
+        # =============================================
+        cur.execute("""
+            SELECT id, home_team, away_team, kickoff_time, status
+            FROM matches
+            WHERE (api_match_id IS NULL OR api_match_id = '')
+            AND kickoff_time >= %s
+            ORDER BY kickoff_time
+        """, (start_date_str,))
+
+        manual_matches = []
+        for m in cur.fetchall():
+            manual_matches.append({
+                'id': m[0],
+                'home_team': m[1],
+                'away_team': m[2],
+                'kickoff_time': m[3],
+                'status': m[4]
+            })
+
+        # =============================================
+        # USERS
+        # =============================================
         cur.execute("""
             SELECT id, username
             FROM users
@@ -354,7 +398,6 @@ def admin():
         """)
 
         users = []
-
         for u in cur.fetchall():
             users.append({
                 'id': u[0],
@@ -363,42 +406,6 @@ def admin():
 
     finally:
         close_db(conn, cur)
-
-    # all_matches и manual_matches для разделов редактирования
-    cur.execute("""
-        SELECT id, home_team, away_team, kickoff_time, status
-        FROM matches
-        WHERE kickoff_time >= %s
-        ORDER BY kickoff_time
-    """, (start_date_str,))
-    
-    all_matches = []
-    for m in cur.fetchall():
-        all_matches.append({
-            'id': m[0],
-            'home_team': m[1],
-            'away_team': m[2],
-            'kickoff_time': m[3],
-            'status': m[4]
-        })
-    
-    cur.execute("""
-        SELECT id, home_team, away_team, kickoff_time, status
-        FROM matches
-        WHERE (api_match_id IS NULL OR api_match_id = '')
-        AND kickoff_time >= %s
-        ORDER BY kickoff_time
-    """, (start_date_str,))
-    
-    manual_matches = []
-    for m in cur.fetchall():
-        manual_matches.append({
-            'id': m[0],
-            'home_team': m[1],
-            'away_team': m[2],
-            'kickoff_time': m[3],
-            'status': m[4]
-        })
 
     return render_template(
         'admin.html',
