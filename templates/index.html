@@ -144,18 +144,21 @@
                         {% endif %}
                     </div>
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                        <!-- УМНЫЙ БЛОК: сначала пробуем флаг, если нет — эмблема клуба -->
                         <div style="flex: 1; min-width: 120px;">
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                {% if match.league == 'wc2026' %}
-                                    {{ get_flag(match.home_team)|safe }}
+                                {% set flag = get_flag(match.home_team) %}
+                                {% if flag %}
+                                    {{ flag|safe }}
                                 {% else %}
                                     {{ get_club_logo(match.home_team)|safe }}
                                 {% endif %}
                                 <span style="font-weight: 600;">{{ match.home_team }}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                {% if match.league == 'wc2026' %}
-                                    {{ get_flag(match.away_team)|safe }}
+                                {% set flag = get_flag(match.away_team) %}
+                                {% if flag %}
+                                    {{ flag|safe }}
                                 {% else %}
                                     {{ get_club_logo(match.away_team)|safe }}
                                 {% endif %}
