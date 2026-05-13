@@ -1,15 +1,11 @@
 # app/utils.py
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from functools import lru_cache
-from app.models.team_data import TEAM_NAMES, TEAM_FLAGS, CLUB_LOGOS
+import app.models.team_data as team_data
 
 MSK = ZoneInfo("Europe/Moscow")
 
-
-# =========================================================
-# DATETIME HELPERS
-# =========================================================
 
 def utc_now():
     return datetime.now(timezone.utc)
@@ -65,12 +61,7 @@ def cached_to_msk(utc_time_str):
     return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
 
 
-# =========================================================
-# DATE FORMAT FOR DISPLAY (7 мая 2026 г.)
-# =========================================================
-
 def format_date_ru(date_str):
-    """Преобразует YYYY-MM-DD в '7 мая 2026 г.'"""
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%d")
         months = {
@@ -83,50 +74,23 @@ def format_date_ru(date_str):
         return date_str
 
 
-# =========================================================
-# TEAM ICON (умный выбор: флаг для сборной, эмблема для клуба)
-# =========================================================
-
-def get_team_icon(name):
-    """Возвращает флаг для сборной или эмблему для клуба"""
-    translated = TEAM_NAMES.get(name, name)
-    if translated in TEAM_FLAGS:
-        code = TEAM_FLAGS[translated]
-        # flagcdn.com с прямым URL и принудительной загрузкой
-        return f'<img src="https://flagcdn.com/32x24/{code}.png" width="20" height="15" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}" loading="eager">'
-    else:
-        logo = CLUB_LOGOS.get(translated)
-        if logo:
-            return f'<img src="{logo}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{translated}" loading="eager">'
-    return ""
-
-
-# =========================================================
-# FLAGS (старая функция, оставлена для совместимости)
-# =========================================================
-
 def get_flag(name):
-    translated = TEAM_NAMES.get(name, name)
-    code = TEAM_FLAGS.get(translated)
+    """Возвращает флаг из папки /static/flags/"""
+    translated = team_data.TEAM_NAMES.get(name, name)
+    code = team_data.TEAM_FLAGS.get(translated)
     if code:
-        return f'<img src="https://flagcdn.com/32x24/{code}.png" width="20" height="15" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}" loading="eager">'
+        # Флаги лежат в static/flags/ с названием code.png (например, bf.png)
+        return f'<img src="/static/flags/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}">'
     return ""
 
-
-# =========================================================
-# CLUB LOGOS (старая функция, оставлена для совместимости)
-# =========================================================
 
 def get_club_logo(name):
-    logo_url = CLUB_LOGOS.get(name)
+    """Возвращает эмблему клуба из /static/clubs/"""
+    logo_url = team_data.CLUB_LOGOS.get(name)
     if logo_url:
-        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{name}" loading="eager">'
+        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{name}">'
     return ""
 
 
-# =========================================================
-# TRANSLATE
-# =========================================================
-
 def translate_name(name):
-    return TEAM_NAMES.get(name, name)
+    return team_data.TEAM_NAMES.get(name, name)
