@@ -23,7 +23,7 @@
             background-attachment: fixed;
             color: #1a1a1a;
             min-height: 100vh;
-            padding-bottom: 96px;
+            padding-bottom: 84px;
             transition: background 0.3s, color 0.3s;
         }
 
@@ -89,14 +89,6 @@
             font-size: 25px;
             font-weight: 900;
             letter-spacing: 0.8px;
-        }
-
-        .splash-subtitle {
-            margin-top: 8px;
-            font-size: 12px;
-            color: rgba(255,255,255,0.74);
-            text-transform: uppercase;
-            letter-spacing: 1.6px;
         }
 
         .splash-loader {
@@ -293,21 +285,21 @@
         /* ============================================= */
 
         .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255,255,255,0.96);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            display: flex;
-            justify-content: space-evenly;
-            padding: 10px 5px 14px;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.18);
-            z-index: 100;
-            border-radius: 22px 22px 0 0;
-            transition: background 0.3s;
-        }
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    display: flex;
+    justify-content: space-evenly;
+    padding: 10px 5px 14px;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.18);
+    z-index: 9998;
+    border-radius: 0;
+    transition: background 0.3s;
+}
 
         .bottom-nav a {
             text-decoration: none;
@@ -636,7 +628,6 @@
         <div class="splash-inner">
             <div class="splash-logo">⚽</div>
             <div class="splash-title">ТОТИШ БРАТИШЕК</div>
-            <div class="splash-subtitle">футбол · прогнозы · друзья</div>
             <div class="splash-loader"><span></span></div>
         </div>
     </div>
