@@ -3,3 +3,4 @@ requests==2.31.0
 schedule==1.2.0
 understatapi
 psycopg2-binary
+python-dotenv==1.2.2
