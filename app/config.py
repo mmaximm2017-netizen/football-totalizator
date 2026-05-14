@@ -9,7 +9,7 @@ ADMIN_PASSWORD = "admin123"
 MSK_OFFSET = 3
 START_DATE = datetime(2026, 5, 6)
 
-DATABASE_URL = "postgresql://admin:o9TURy3G7gDFVJO6s04E6jtISWbpcDMM@dpg-d7sf75egkk3c73e2a6qg-a.frankfurt-postgres.render.com/football_ou1f?sslmode=require"
+DATABASE_URL = "postgresql://neondb_owner:npg_1LCchKjFH4fN@ep-falling-block-alh8f3s4-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require"
 SECRET_KEY = "fifa2026-totalizator-secret-key-dont-change"
 
 WEEKDAYS = {
