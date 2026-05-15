@@ -1,6 +1,5 @@
-const CACHE_NAME = 'totish-cache-v2';
+const CACHE_NAME = 'totish-cache-v3';
 const urlsToCache = [
-    '/',
     '/static/manifest.json',
     '/static/icon-192-new.png',
     '/static/icon-512-new.png',
