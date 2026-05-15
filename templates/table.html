@@ -353,7 +353,7 @@
             >
                 {% for t in tournaments %}
                 <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
-                    {% if t.is_active %}АКТИВНЫЙ — {% endif %}{{ t.name }}
+                    {{ t.name }}{% if not t.is_active %} · архив{% endif %}
                     {% if t.start_date != '—' %} (с {{ t.start_date[:4] }}){% endif %}
                 </option>
                 {% endfor %}
