@@ -1,109 +1,507 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="text-align: center; margin-bottom: 16px;">
-    <h2 style="margin: 0; font-size: 22px;">👤 {{ username }}</h2>
-    {% if current_place %}
-    <div style="margin-top: 8px; display: inline-block; background: #1a1a2e; color: white; padding: 8px 18px; border-radius: 20px; font-size: 16px; font-weight: 700;">
-        {% if current_place == 1 %}🥇 1 место
-        {% elif current_place == 2 %}🥈 2 место
-        {% elif current_place == 3 %}🥉 3 место
-        {% else %}{{ current_place }} место{% endif %}
-    </div>
-    {% endif %}
-    <p style="color: #888; font-size: 13px; margin-top: 8px;">Статистика в текущем турнире</p>
-</div>
-
-<!-- Общая статистика -->
-<div class="card">
-    <div class="card-header">📊 Общие показатели</div>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-around; text-align: center;">
-        <div>
-            <div style="font-size: 28px; font-weight: 700; color: #2e7d32;">{{ stats.total_points }}</div>
-            <div style="font-size: 12px; color: #888;">Всего очков</div>
-        </div>
-        <div>
-            <div style="font-size: 28px; font-weight: 700; color: #1565c0;">{{ stats.avg_points }}</div>
-            <div style="font-size: 12px; color: #888;">Средний балл</div>
-        </div>
-        <div>
-            <div style="font-size: 28px; font-weight: 700; color: #333;">{{ stats.total_bets }}</div>
-            <div style="font-size: 12px; color: #888;">Всего ставок</div>
-        </div>
-    </div>
-</div>
-
-<!-- Детализация -->
-<div class="card">
-    <div class="card-header">🎯 Точность прогнозов</div>
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-around; text-align: center;">
-        <div>
-            <div style="font-size: 22px; font-weight: 700; color: #2e7d32;">{{ stats.exact_scores }}</div>
-            <div style="font-size: 11px; color: #888;">Точных счетов</div>
-        </div>
-        <div>
-            <div style="font-size: 22px; font-weight: 700; color: #1565c0;">{{ stats.exact_diffs }}</div>
-            <div style="font-size: 11px; color: #888;">Точных разниц</div>
-        </div>
-        <div>
-            <div style="font-size: 22px; font-weight: 700; color: #ff8f00;">{{ stats.outcomes }}</div>
-            <div style="font-size: 11px; color: #888;">Угадано исходов</div>
-        </div>
-        <div>
-            <div style="font-size: 22px; font-weight: 700; color: #c62828;">{{ stats.close_misses }}</div>
-            <div style="font-size: 11px; color: #888;">Ошибка в 1 гол</div>
-        </div>
-        <div>
-            <div style="font-size: 22px; font-weight: 700; color: #999;">{{ stats.misses }}</div>
-            <div style="font-size: 11px; color: #888;">Мимо</div>
-        </div>
-    </div>
-</div>
-
-<!-- История последних матчей -->
-<div class="card">
-    <div class="card-header">📋 Последние матчи</div>
-    {% if recent %}
-    <div style="overflow-x: auto;">
-        <table class="recent-table">
-            <tr style="background: #263238; color: white;">
-                <th style="padding: 8px;">Матч</th>
-                <th style="padding: 8px; text-align: center;">Прогноз</th>
-                <th style="padding: 8px; text-align: center;">Результат</th>
-                <th style="padding: 8px; text-align: center;">Очки</th>
-            </tr>
-            {% for r in recent %}
-            <tr style="border-bottom: 1px solid #eee; 
-                {% if r.points >= 10 %}background: #e8f5e9;
-                {% elif r.points >= 7 %}background: #e3f2fd;
-                {% elif r.points >= 3 %}background: #fff3e0;
-                {% elif r.points == 2 %}background: #fce4ec;
-                {% elif r.points == 0 %}background: #fafafa;
-                {% endif %}" class="recent-row">
-                <td style="padding: 8px; color: #1a1a1a;">{{ r.home_team }} – {{ r.away_team }}</td>
-                <td style="padding: 8px; text-align: center; color: #1a1a1a;">{{ r.home_goals }}:{{ r.away_goals }}</td>
-                <td style="padding: 8px; text-align: center; color: #1a1a1a;">{{ r.home_score }}:{{ r.away_score }}</td>
-                <td style="padding: 8px; text-align: center; font-weight: 700; color: #1a1a1a;">{% if r.points > 0 %}+{{ r.points }}{% else %}0{% endif %}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-    {% else %}
-    <p style="color: #888; text-align: center;">Пока нет завершённых матчей</p>
-    {% endif %}
-</div>
-
-<p style="text-align: center;"><a href="/" style="color: #2e7d32; text-decoration: none; font-weight: 600;">← На главную</a></p>
 
 <style>
-    /* Тёмная тема для таблицы последних матчей */
-    body.dark .recent-table th { background: #1a1a2e; color: #e0e0e0; }
-    body.dark .recent-table td { color: #e0e0e0 !important; }
-    body.dark .recent-row { color: #e0e0e0 !important; }
-    body.dark .recent-row td { color: #e0e0e0 !important; }
-    body.dark .recent-row[style*="background: #e8f5e9"] { background: #1b3a1b !important; }
-    body.dark .recent-row[style*="background: #e3f2fd"] { background: #1a2a3a !important; }
-    body.dark .recent-row[style*="background: #fff3e0"] { background: #3a2a1a !important; }
-    body.dark .recent-row[style*="background: #fce4ec"] { background: #3a1a2a !important; }
-    body.dark .recent-row[style*="background: #fafafa"] { background: #2c2c3e !important; }
+    .profile-screen {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .profile-hero {
+        position: relative;
+        overflow: hidden;
+
+        border-radius: 28px;
+        padding: 22px 18px;
+
+        background:
+            radial-gradient(circle at 0% 0%, rgba(76,175,80,0.22), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(33,150,243,0.18), transparent 34%),
+            linear-gradient(160deg, rgba(27,38,59,0.98), rgba(12,18,30,0.98));
+
+        border: 1px solid rgba(255,255,255,0.08);
+
+        box-shadow:
+            0 18px 44px rgba(0,0,0,0.36);
+    }
+
+    .profile-name {
+        font-size: 28px;
+        font-weight: 1000;
+        letter-spacing: -0.6px;
+        margin-bottom: 10px;
+        color: #f4f7fb;
+    }
+
+    .profile-subtitle {
+        color: rgba(244,247,251,0.60);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .place-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        margin-top: 16px;
+
+        min-height: 42px;
+        padding: 0 16px;
+
+        border-radius: 999px;
+
+        background:
+            linear-gradient(145deg, rgba(76,175,80,0.20), rgba(76,175,80,0.08));
+
+        border: 1px solid rgba(76,175,80,0.22);
+
+        color: #8ee996;
+
+        font-size: 15px;
+        font-weight: 1000;
+
+        box-shadow:
+            0 12px 24px rgba(0,0,0,0.24);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        border-radius: 22px;
+        padding: 16px 12px;
+
+        background:
+            linear-gradient(160deg, rgba(27,38,59,0.96), rgba(16,24,39,0.96));
+
+        border: 1px solid rgba(255,255,255,0.08);
+
+        text-align: center;
+
+        box-shadow:
+            0 12px 30px rgba(0,0,0,0.28);
+    }
+
+    .stat-value {
+        font-size: 30px;
+        line-height: 1;
+        font-weight: 1000;
+        letter-spacing: -0.8px;
+        margin-bottom: 8px;
+        color: #8ee996;
+    }
+
+    .stat-label {
+        color: rgba(244,247,251,0.54);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.3;
+    }
+
+    .section-card {
+        border-radius: 26px;
+        padding: 18px;
+
+        background:
+            linear-gradient(160deg, rgba(27,38,59,0.96), rgba(16,24,39,0.96));
+
+        border: 1px solid rgba(255,255,255,0.08);
+
+        box-shadow:
+            0 14px 36px rgba(0,0,0,0.28);
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 1000;
+        color: #f4f7fb;
+        margin-bottom: 16px;
+        letter-spacing: -0.3px;
+    }
+
+    .accuracy-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .accuracy-item {
+        border-radius: 18px;
+        padding: 14px;
+
+        background: rgba(255,255,255,0.05);
+
+        border: 1px solid rgba(255,255,255,0.06);
+
+        text-align: center;
+    }
+
+    .accuracy-value {
+        font-size: 24px;
+        font-weight: 1000;
+        margin-bottom: 6px;
+    }
+
+    .accuracy-label {
+        color: rgba(244,247,251,0.56);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.3;
+    }
+
+    .green {
+        color: #8ee996;
+    }
+
+    .blue {
+        color: #82bfff;
+    }
+
+    .orange {
+        color: #ffb74d;
+    }
+
+    .red {
+        color: #ff8a80;
+    }
+
+    .gray {
+        color: rgba(244,247,251,0.72);
+    }
+
+    .matches-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .match-row {
+        border-radius: 20px;
+        padding: 14px;
+
+        background: rgba(255,255,255,0.045);
+
+        border: 1px solid rgba(255,255,255,0.06);
+
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .match-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .match-teams {
+        font-size: 14px;
+        font-weight: 900;
+        color: #f4f7fb;
+        line-height: 1.3;
+    }
+
+    .match-points {
+        min-width: 52px;
+        height: 34px;
+
+        border-radius: 12px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 14px;
+        font-weight: 1000;
+    }
+
+    .points-good {
+        background: rgba(76,175,80,0.16);
+        color: #8ee996;
+    }
+
+    .points-mid {
+        background: rgba(255,183,77,0.16);
+        color: #ffcc80;
+    }
+
+    .points-bad {
+        background: rgba(255,255,255,0.08);
+        color: rgba(244,247,251,0.72);
+    }
+
+    .match-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        color: rgba(244,247,251,0.58);
+
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .back-btn {
+        height: 54px;
+
+        border-radius: 18px;
+
+        background:
+            linear-gradient(135deg, #2e7d32, #43a047);
+
+        color: white;
+
+        text-decoration: none;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 15px;
+        font-weight: 1000;
+
+        box-shadow:
+            0 14px 30px rgba(46,125,50,0.26);
+    }
+
+    .empty-box {
+        text-align: center;
+
+        padding: 36px 20px;
+
+        border-radius: 22px;
+
+        background: rgba(255,255,255,0.05);
+
+        border: 1px solid rgba(255,255,255,0.06);
+
+        color: rgba(244,247,251,0.58);
+
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 430px) {
+
+        .profile-name {
+            font-size: 24px;
+        }
+
+        .stats-grid {
+            gap: 8px;
+        }
+
+        .stat-card {
+            padding: 14px 10px;
+            border-radius: 18px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+        }
+
+        .accuracy-grid {
+            gap: 8px;
+        }
+
+        .accuracy-item {
+            padding: 12px;
+        }
+
+        .accuracy-value {
+            font-size: 22px;
+        }
+    }
 </style>
+
+<div class="profile-screen">
+
+    <section class="profile-hero">
+
+        <div class="profile-name">
+            👤 {{ username }}
+        </div>
+
+        <div class="profile-subtitle">
+            Статистика текущего турнира
+        </div>
+
+        {% if current_place %}
+        <div class="place-pill">
+
+            {% if current_place == 1 %}
+                🥇 1 место
+            {% elif current_place == 2 %}
+                🥈 2 место
+            {% elif current_place == 3 %}
+                🥉 3 место
+            {% else %}
+                {{ current_place }} место
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+    </section>
+
+    <section class="stats-grid">
+
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ stats.total_points }}
+            </div>
+
+            <div class="stat-label">
+                Всего<br>очков
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value blue">
+                {{ stats.avg_points }}
+            </div>
+
+            <div class="stat-label">
+                Средний<br>балл
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value gray">
+                {{ stats.total_bets }}
+            </div>
+
+            <div class="stat-label">
+                Всего<br>ставок
+            </div>
+        </div>
+
+    </section>
+
+    <section class="section-card">
+
+        <div class="section-title">
+            🎯 Точность прогнозов
+        </div>
+
+        <div class="accuracy-grid">
+
+            <div class="accuracy-item">
+                <div class="accuracy-value green">
+                    {{ stats.exact_scores }}
+                </div>
+
+                <div class="accuracy-label">
+                    Точных<br>счётов
+                </div>
+            </div>
+
+            <div class="accuracy-item">
+                <div class="accuracy-value blue">
+                    {{ stats.exact_diffs }}
+                </div>
+
+                <div class="accuracy-label">
+                    Точных<br>разниц
+                </div>
+            </div>
+
+            <div class="accuracy-item">
+                <div class="accuracy-value orange">
+                    {{ stats.outcomes }}
+                </div>
+
+                <div class="accuracy-label">
+                    Угадано<br>исходов
+                </div>
+            </div>
+
+            <div class="accuracy-item">
+                <div class="accuracy-value red">
+                    {{ stats.close_misses }}
+                </div>
+
+                <div class="accuracy-label">
+                    Ошибка<br>в 1 гол
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="section-card">
+
+        <div class="section-title">
+            ⚽ Последние матчи
+        </div>
+
+        {% if recent %}
+
+        <div class="matches-list">
+
+            {% for r in recent %}
+
+            <div class="match-row">
+
+                <div class="match-top">
+
+                    <div class="match-teams">
+                        {{ r.home_team }} — {{ r.away_team }}
+                    </div>
+
+                    <div class="match-points
+                        {% if r.points >= 7 %}
+                            points-good
+                        {% elif r.points >= 3 %}
+                            points-mid
+                        {% else %}
+                            points-bad
+                        {% endif %}
+                    ">
+                        +{{ r.points }}
+                    </div>
+
+                </div>
+
+                <div class="match-bottom">
+
+                    <div>
+                        Прогноз: {{ r.home_goals }}:{{ r.away_goals }}
+                    </div>
+
+                    <div>
+                        Итог: {{ r.home_score }}:{{ r.away_score }}
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-box">
+            Пока нет завершённых матчей
+        </div>
+
+        {% endif %}
+
+    </section>
+
+    <a href="/" class="back-btn">
+        ← Вернуться к матчам
+    </a>
+
+</div>
+
 {% endblock %}
