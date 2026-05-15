@@ -1155,30 +1155,6 @@ def delete_tournament(tid):
     cur = conn.cursor()
 
     try:
-cur.execute("""
-    SELECT is_active
-    FROM tournaments
-    WHERE id = %s
-""", (tid,))
-
-row = cur.fetchone()
-
-if not row:
-    flash("Турнир не найден", "error")
-    return redirect(url_for('admin.admin'))
-
-if row[0] == 1:
-    flash("Нельзя удалить активный турнир", "error")
-    return redirect(url_for('admin.admin'))
-
-@admin_bp.route('/delete_tournament/<int:tid>')
-@admin_required
-def delete_tournament(tid):
-
-    conn = get_db()
-    cur = conn.cursor()
-
-    try:
 
         cur.execute("""
             SELECT is_active
