@@ -37,25 +37,25 @@ def table():
         # безопасный выбор турнира
         tid = request.args.get('tid', type=int)
 
-if not tid:
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+         if not tid:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
 
-    today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
+            today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
 
-    current = next(
-        (
-            t for t in tournaments
-            if t['start_date'] != '—' and t['start_date'] <= today
-        ),
-        None
-    )
+            current = next(
+                (
+                    t for t in tournaments
+                    if t['start_date'] != '—' and t['start_date'] <= today
+                ),
+                None
+            )
 
-    if current:
-        tid = current['id']
-    elif tournaments:
-        tid = tournaments[0]['id']
-    else:
+            if current:
+                tid = current['id']
+            elif tournaments:
+                tid = tournaments[0]['id']
+            else:
                 return render_template(
                     'table.html',
                     table=[],
