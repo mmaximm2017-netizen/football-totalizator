@@ -709,8 +709,15 @@
                 <div class="match-card-v2 {{ card_state }}">
 <div class="match-topline">
     <div class="match-meta-v2">
+
         <div class="league-label">
-            ...
+            {% if match.league == 'wc2026' %}
+                ЧМ-2026
+            {% elif match.league == 'rpl' %}
+                РПЛ
+            {% else %}
+                Матч
+            {% endif %}
         </div>
 
         <div class="time-label">
@@ -718,18 +725,19 @@
         </div>
 
         <div class="time-label">
-           Приём до: {{ to_msk(match.deadline) }}
+            Приём до: {{ to_msk(match.deadline) }}
         </div>
+
     </div>
 
     {% if match.finished %}
         <div class="status-pill-v2 status-done">✅ Завершён</div>
-                        {% elif match.deadline_passed %}
-                            <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
-                        {% else %}
-                            <div class="status-pill-v2 status-open">🎯 Ставки</div>
-                        {% endif %}
-                    </div>
+    {% elif match.deadline_passed %}
+        <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
+    {% else %}
+        <div class="status-pill-v2 status-open">🎯 Ставки</div>
+    {% endif %}
+</div>
 
                     <div class="teams-center">
                         <div class="team-v2">
