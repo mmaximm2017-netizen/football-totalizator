@@ -343,11 +343,7 @@
                 <div class="team-logo-box">
                     {% set home_flag = get_flag(match.home_team) %}
 
-                    {% if home_flag %}
-                        {{ home_flag|safe }}
-                    {% else %}
-                        {{ get_club_logo(match.home_team)|safe }}
-                    {% endif %}
+⚽
                 </div>
 
                 <div class="team-name">
@@ -379,11 +375,7 @@
                 <div class="team-logo-box">
                     {% set away_flag = get_flag(match.away_team) %}
 
-                    {% if away_flag %}
-                        {{ away_flag|safe }}
-                    {% else %}
-                        {{ get_club_logo(match.away_team)|safe }}
-                    {% endif %}
+⚽
                 </div>
 
                 <div class="team-name">
