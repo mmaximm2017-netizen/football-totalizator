@@ -1,4 +1,4 @@
-﻿# app/routes/main.py
+# app/routes/main.py
 
 from datetime import datetime, timezone
 from collections import defaultdict
@@ -76,7 +76,7 @@ def index():
 
     if 'user_id' not in session:
         if is_ajax_request():
-            return ajax_error("РќСѓР¶РЅРѕ РІРѕР№С‚Рё РІ Р°РєРєР°СѓРЅС‚", 401)
+            return ajax_error("Нужно войти в аккаунт", 401)
 
         return redirect(url_for('auth.login'))
 
@@ -106,9 +106,9 @@ def index():
 
             except Exception:
                 if is_ajax_request():
-                    return ajax_error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃС‡С‘С‚")
+                    return ajax_error("Некорректный счёт")
 
-                flash("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃС‡С‘С‚", "error")
+                flash("Некорректный счёт", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
@@ -135,18 +135,18 @@ WHERE id = %s
 
             if not match:
                 if is_ajax_request():
-                    return ajax_error("РњР°С‚С‡ РЅРµ РЅР°Р№РґРµРЅ", 404)
+                    return ajax_error("Матч не найден", 404)
 
-                flash("РњР°С‚С‡ РЅРµ РЅР°Р№РґРµРЅ", "error")
+                flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
 
             if not is_before_deadline({
                 "deadline": match[4]
             }):
                 if is_ajax_request():
-                    return ajax_error("Р”РµРґР»Р°Р№РЅ РїСЂРѕС€С‘Р»")
+                    return ajax_error("Дедлайн прошёл")
 
-                flash("Р”РµРґР»Р°Р№РЅ РїСЂРѕС€С‘Р»", "error")
+                flash("Дедлайн прошёл", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
@@ -191,7 +191,7 @@ WHERE id = %s
 
             if is_ajax_request():
                 return ajax_success(
-                    "РџСЂРѕРіРЅРѕР· СЃРѕС…СЂР°РЅС‘РЅ",
+                    "Прогноз сохранён",
                     {
                         "match_id": int(match_id),
                         "home_goals": h,
@@ -199,7 +199,7 @@ WHERE id = %s
                     }
                 )
 
-            flash("РЎС‚Р°РІРєР° СЃРѕС…СЂР°РЅРµРЅР°", "success")
+            flash("Ставка сохранена", "success")
 
             return redirect(url_for('main.index', league=league))
 
@@ -343,18 +343,18 @@ WHERE id = %s
             months[month_key].append(d)
 
         month_names = {
-            '01': 'РЇРЅРІР°СЂСЊ',
-            '02': 'Р¤РµРІСЂР°Р»СЊ',
-            '03': 'РњР°СЂС‚',
-            '04': 'РђРїСЂРµР»СЊ',
-            '05': 'РњР°Р№',
-            '06': 'РСЋРЅСЊ',
-            '07': 'РСЋР»СЊ',
-            '08': 'РђРІРіСѓСЃС‚',
-            '09': 'РЎРµРЅС‚СЏР±СЂСЊ',
-            '10': 'РћРєС‚СЏР±СЂСЊ',
-            '11': 'РќРѕСЏР±СЂСЊ',
-            '12': 'Р”РµРєР°Р±СЂСЊ'
+            '01': 'Январь',
+            '02': 'Февраль',
+            '03': 'Март',
+            '04': 'Апрель',
+            '05': 'Май',
+            '06': 'Июнь',
+            '07': 'Июль',
+            '08': 'Август',
+            '09': 'Сентябрь',
+            '10': 'Октябрь',
+            '11': 'Ноябрь',
+            '12': 'Декабрь'
         }
 
         grouped_months = []
