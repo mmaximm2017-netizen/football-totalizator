@@ -1,4 +1,4 @@
-# app/routes/main.py
+﻿# app/routes/main.py
 
 from datetime import datetime, timezone
 from collections import defaultdict
@@ -76,7 +76,7 @@ def index():
 
     if 'user_id' not in session:
         if is_ajax_request():
-            return ajax_error("Нужно войти в аккаунт", 401)
+            return ajax_error("РќСѓР¶РЅРѕ РІРѕР№С‚Рё РІ Р°РєРєР°СѓРЅС‚", 401)
 
         return redirect(url_for('auth.login'))
 
@@ -106,9 +106,9 @@ def index():
 
             except Exception:
                 if is_ajax_request():
-                    return ajax_error("Некорректный счёт")
+                    return ajax_error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃС‡С‘С‚")
 
-                flash("Некорректный счёт", "error")
+                flash("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃС‡С‘С‚", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
@@ -122,7 +122,7 @@ SELECT
     (
         SELECT t.id
         FROM tournaments t
-        WHERE t.start_date <= DATE(matches.kickoff_time)
+        WHERE t.start_date::date <= DATE(matches.kickoff_time)
         ORDER BY t.start_date DESC, t.id DESC
         LIMIT 1
     ) AS tournament_id
@@ -135,18 +135,18 @@ WHERE id = %s
 
             if not match:
                 if is_ajax_request():
-                    return ajax_error("Матч не найден", 404)
+                    return ajax_error("РњР°С‚С‡ РЅРµ РЅР°Р№РґРµРЅ", 404)
 
-                flash("Матч не найден", "error")
+                flash("РњР°С‚С‡ РЅРµ РЅР°Р№РґРµРЅ", "error")
                 return redirect(url_for('main.index'))
 
             if not is_before_deadline({
                 "deadline": match[4]
             }):
                 if is_ajax_request():
-                    return ajax_error("Дедлайн прошёл")
+                    return ajax_error("Р”РµРґР»Р°Р№РЅ РїСЂРѕС€С‘Р»")
 
-                flash("Дедлайн прошёл", "error")
+                flash("Р”РµРґР»Р°Р№РЅ РїСЂРѕС€С‘Р»", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
@@ -191,7 +191,7 @@ WHERE id = %s
 
             if is_ajax_request():
                 return ajax_success(
-                    "Прогноз сохранён",
+                    "РџСЂРѕРіРЅРѕР· СЃРѕС…СЂР°РЅС‘РЅ",
                     {
                         "match_id": int(match_id),
                         "home_goals": h,
@@ -199,7 +199,7 @@ WHERE id = %s
                     }
                 )
 
-            flash("Ставка сохранена", "success")
+            flash("РЎС‚Р°РІРєР° СЃРѕС…СЂР°РЅРµРЅР°", "success")
 
             return redirect(url_for('main.index', league=league))
 
@@ -343,18 +343,18 @@ WHERE id = %s
             months[month_key].append(d)
 
         month_names = {
-            '01': 'Январь',
-            '02': 'Февраль',
-            '03': 'Март',
-            '04': 'Апрель',
-            '05': 'Май',
-            '06': 'Июнь',
-            '07': 'Июль',
-            '08': 'Август',
-            '09': 'Сентябрь',
-            '10': 'Октябрь',
-            '11': 'Ноябрь',
-            '12': 'Декабрь'
+            '01': 'РЇРЅРІР°СЂСЊ',
+            '02': 'Р¤РµРІСЂР°Р»СЊ',
+            '03': 'РњР°СЂС‚',
+            '04': 'РђРїСЂРµР»СЊ',
+            '05': 'РњР°Р№',
+            '06': 'РСЋРЅСЊ',
+            '07': 'РСЋР»СЊ',
+            '08': 'РђРІРіСѓСЃС‚',
+            '09': 'РЎРµРЅС‚СЏР±СЂСЊ',
+            '10': 'РћРєС‚СЏР±СЂСЊ',
+            '11': 'РќРѕСЏР±СЂСЊ',
+            '12': 'Р”РµРєР°Р±СЂСЊ'
         }
 
         grouped_months = []
