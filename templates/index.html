@@ -190,10 +190,12 @@
     }
 
     .match-card-v2.finished {
-        background:
-            radial-gradient(circle at 50% 0%, rgba(76,175,80,0.10), transparent 38%),
-            linear-gradient(160deg, #172132 0%, #101624 100%);
-			.match-card-v2:active {
+    background:
+        radial-gradient(circle at 50% 0%, rgba(76,175,80,0.10), transparent 38%),
+        linear-gradient(160deg, #172132 0%, #101624 100%);
+    }
+
+    .match-card-v2:active {
     transform: scale(0.992);
     }
     }
@@ -705,28 +707,23 @@
                 {% endif %}
 
                 <div class="match-card-v2 {{ card_state }}">
-                    <div class="match-topline">
-                        <div class="match-meta-v2">
-                            <div class="league-label">
-                                {% if match.league == 'wc2026' %}
-                                    ЧМ-2026
-                                {% elif match.league == 'rpl' %}
-                                    РПЛ
-                                {% else %}
-                                    ⚽ Матч
-                                {% endif %}
-                            </div>
+<div class="match-topline">
+    <div class="match-meta-v2">
+        <div class="league-label">
+            ...
+        </div>
 
-                            <div class="time-label">
-                            Начало: {{ to_msk(match.kickoff_time) }}
-                    </div>
+        <div class="time-label">
+            Начало: ...
+        </div>
 
-                            <div class="time-label">
-                            Приём до: {{ to_msk(match.deadline) }}
-                    </div>
+        <div class="time-label">
+            Приём до: ...
+        </div>
+    </div>
 
-                        {% if match.finished %}
-                            <div class="status-pill-v2 status-done">✅ Завершён</div>
+    {% if match.finished %}
+        <div class="status-pill-v2 status-done">✅ Завершён</div>
                         {% elif match.deadline_passed %}
                             <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
                         {% else %}
