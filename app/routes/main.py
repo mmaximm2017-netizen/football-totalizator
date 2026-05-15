@@ -247,19 +247,19 @@ WHERE id = %s
 
         if match_ids:
 
-cur.execute("""
-    SELECT
-        p.match_id,
-        p.home_goals,
-        p.away_goals,
-        p.points
-    FROM predictions p
-    WHERE p.user_id = %s
-      AND p.match_id = ANY(%s)
-""", (
-    session['user_id'],
-    match_ids
-))
+            cur.execute("""
+                SELECT
+                    p.match_id,
+                    p.home_goals,
+                    p.away_goals,
+                    p.points
+                FROM predictions p
+                WHERE p.user_id = %s
+                  AND p.match_id = ANY(%s)
+            """, (
+                session['user_id'],
+                match_ids
+            ))
 
             for r in cur.fetchall():
                 user_preds[r[0]] = {
