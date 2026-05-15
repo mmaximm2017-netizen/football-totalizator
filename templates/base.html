@@ -647,10 +647,6 @@
             background-color: #2e7d32;
         }
 
-        input:checked + .slider:before {
-            transform: translateX(22px);
-        }
-
         /* ============================================= */
         /* ACCORDIONS COMPAT */
         /* ============================================= */
@@ -730,30 +726,6 @@
                     {% endif %}
                 </div>
 
-                <div style="
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    flex-shrink:0;
-                ">
-                    <span style="font-size: 15px;">☀️</span>
-
-                    <label class="switch">
-                        <input
-                            type="checkbox"
-                            id="theme-toggle"
-                            onchange="toggleTheme()"
-                            checked
-                        >
-
-                        <span class="slider"></span>
-                    </label>
-
-                    <span style="font-size: 15px;">🌙</span>
-                </div>
-
-            </div>
-        </div>
 
         <div class="container">
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -839,39 +811,6 @@
             });
         }
 
-        function toggleTheme() {
-            const body = document.body;
-            const toggle = document.getElementById('theme-toggle');
-
-            if (body.classList.contains('dark')) {
-                body.classList.remove('dark');
-
-                if (toggle) toggle.checked = false;
-
-                localStorage.setItem('theme', 'light');
-            } else {
-                body.classList.add('dark');
-
-                if (toggle) toggle.checked = true;
-
-                localStorage.setItem('theme', 'dark');
-            }
-        }
-
-        (function() {
-            const saved = localStorage.getItem('theme');
-            const toggle = document.getElementById('theme-toggle');
-
-            if (saved === 'light') {
-                document.body.classList.remove('dark');
-
-                if (toggle) toggle.checked = false;
-            } else {
-                document.body.classList.add('dark');
-
-                if (toggle) toggle.checked = true;
-            }
-        })();
     </script>
 
 </body>
