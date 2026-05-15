@@ -216,12 +216,6 @@ def admin():
 
                 try:
 
-                    tournament_id = get_active_tournament_id(cur)
-
-                    if not tournament_id:
-                        flash("Активный турнир не найден", "error")
-                        return redirect(url_for('admin.admin'))
-
                     cur.execute("""
                         UPDATE matches
                         SET status = 'FINISHED',
@@ -241,13 +235,11 @@ def admin():
                     from app.models.scoring import calculate_points
 
                     cur.execute("""
-                        SELECT user_id, home_goals, away_goals
+                        SELECT user_id, home_goals, away_goals, tournament_id
                         FROM predictions
                         WHERE match_id = %s
-                        AND tournament_id = %s
                     """, (
                         match_id,
-                        tournament_id
                     ))
 
                     predictions = cur.fetchall()
@@ -271,7 +263,7 @@ def admin():
                             pts,
                             p[0],
                             match_id,
-                            tournament_id
+                            p[3]
                         ))
 
                     conn.commit()
