@@ -1106,7 +1106,7 @@ def admin_new_tournament():
 
             return redirect(url_for('admin.admin'))
 
-         cur.execute("""
+        cur.execute("""
             INSERT INTO tournaments (
                 name,
                 is_active,
