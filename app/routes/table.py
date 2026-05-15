@@ -37,7 +37,7 @@ def table():
         # безопасный выбор турнира
         tid = request.args.get('tid', type=int)
 
-         if not tid:
+        if not tid:
             from datetime import datetime
             from zoneinfo import ZoneInfo
 
