@@ -410,25 +410,25 @@ def admin():
                 'status': m[4]
             })
 
-# =============================================
-# TOURNAMENTS
-# =============================================
+        # =============================================
+        # TOURNAMENTS
+        # =============================================
 
-cur.execute("""
-    SELECT id, name, is_active, start_date
-    FROM tournaments
-    ORDER BY is_active DESC, id DESC
-""")
+        cur.execute("""
+            SELECT id, name, is_active, start_date
+            FROM tournaments
+            ORDER BY is_active DESC, id DESC
+        """)
 
-tournaments = []
+        tournaments = []
 
-for t in cur.fetchall():
-    tournaments.append({
-        'id': t[0],
-        'name': t[1],
-        'is_active': t[2],
-        'start_date': t[3]
-    })
+        for t in cur.fetchall():
+            tournaments.append({
+                'id': t[0],
+                'name': t[1],
+                'is_active': t[2],
+                'start_date': t[3]
+            })
     
         # =============================================
         # USERS
