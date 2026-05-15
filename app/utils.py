@@ -80,7 +80,7 @@ def get_flag(name):
     code = team_data.TEAM_FLAGS.get(translated)
     if code:
         # Флаги лежат в static/flags/ с названием code.png (например, bf.png)
-        return f'<img src="/static/flags/{code}.png" width="24" height="16" style="vertical-align: middle; margin-right: 4px; border-radius: 2px;" alt="{translated}">'
+    return f'<img src="/static/flags/{code}.svg" class="flag-icon" alt="{translated}">'
     return ""
 
 
