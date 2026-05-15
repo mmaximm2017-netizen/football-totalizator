@@ -1,22 +1,242 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
-    <div class="card" style="width: 100%; max-width: 380px; padding: 24px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 48px; margin-bottom: 8px;">⚽</div>
-            <h2 style="font-size: 22px; font-weight: 700;">Вход</h2>
-            <p style="color: #888; font-size: 13px;">Войдите, чтобы делать ставки</p>
+
+<style>
+    .auth-screen {
+        min-height: calc(100vh - 180px);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        padding-top: 10px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+
+        border-radius: 30px;
+        padding: 28px 22px;
+
+        background:
+            radial-gradient(circle at 50% 0%, rgba(76,175,80,0.16), transparent 34%),
+            linear-gradient(160deg, rgba(27,38,59,0.98), rgba(12,18,30,0.98));
+
+        border: 1px solid rgba(255,255,255,0.08);
+
+        box-shadow:
+            0 22px 54px rgba(0,0,0,0.42);
+    }
+
+    .auth-top {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .auth-logo {
+        width: 92px;
+        height: 92px;
+
+        margin: 0 auto 18px;
+
+        border-radius: 28px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.96), rgba(214,228,255,0.92));
+
+        color: #111827;
+
+        font-size: 46px;
+
+        box-shadow:
+            0 0 0 7px rgba(255,255,255,0.04),
+            0 0 34px rgba(76,175,80,0.22),
+            0 20px 44px rgba(0,0,0,0.34);
+    }
+
+    .auth-title {
+        font-size: 28px;
+        font-weight: 1000;
+        letter-spacing: -0.5px;
+
+        color: #f4f7fb;
+
+        margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+        color: rgba(244,247,251,0.58);
+
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .auth-form {
+        margin-top: 20px;
+    }
+
+    .auth-form label {
+        margin-bottom: 6px;
+    }
+
+    .auth-input {
+        height: 56px !important;
+
+        border-radius: 18px !important;
+
+        background: rgba(255,255,255,0.07) !important;
+
+        border: 1px solid rgba(255,255,255,0.08) !important;
+
+        margin-bottom: 16px !important;
+
+        font-size: 16px !important;
+        font-weight: 700;
+
+        color: #fff !important;
+
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .auth-input:focus {
+        border-color: rgba(76,175,80,0.55) !important;
+
+        box-shadow:
+            0 0 0 4px rgba(76,175,80,0.12) !important;
+    }
+
+    .auth-btn {
+        width: 100%;
+        height: 56px;
+
+        margin-top: 4px;
+
+        border: none;
+        border-radius: 18px;
+
+        background:
+            linear-gradient(135deg, #2e7d32, #43a047);
+
+        color: white;
+
+        font-size: 16px;
+        font-weight: 1000;
+
+        box-shadow:
+            0 14px 32px rgba(46,125,50,0.28);
+
+        transition:
+            transform 0.18s ease,
+            box-shadow 0.18s ease;
+    }
+
+    .auth-btn:active {
+        transform: scale(0.985);
+    }
+
+    .auth-bottom {
+        margin-top: 22px;
+
+        text-align: center;
+    }
+
+    .auth-link {
+        color: #8ee996;
+
+        text-decoration: none;
+
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    @media (max-width: 430px) {
+
+        .auth-card {
+            border-radius: 26px;
+            padding: 24px 18px;
+        }
+
+        .auth-title {
+            font-size: 26px;
+        }
+
+        .auth-logo {
+            width: 84px;
+            height: 84px;
+
+            border-radius: 24px;
+
+            font-size: 42px;
+        }
+    }
+</style>
+
+<div class="auth-screen">
+
+    <div class="auth-card">
+
+        <div class="auth-top">
+
+            <div class="auth-logo">
+                ⚽
+            </div>
+
+            <div class="auth-title">
+                Вход
+            </div>
+
+            <div class="auth-subtitle">
+                Войдите, чтобы делать прогнозы<br>
+                и следить за таблицей
+            </div>
+
         </div>
-        <form method="post">
+
+        <form method="post" class="auth-form">
+
             <label>Логин</label>
-            <input type="text" name="username" required placeholder="Ваш логин">
+
+            <input
+                class="auth-input"
+                type="text"
+                name="username"
+                required
+                placeholder="Введите логин"
+            >
+
             <label>Пароль</label>
-            <input type="password" name="password" required placeholder="Ваш пароль">
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Войти</button>
+
+            <input
+                class="auth-input"
+                type="password"
+                name="password"
+                required
+                placeholder="Введите пароль"
+            >
+
+            <button type="submit" class="auth-btn">
+                Войти
+            </button>
+
         </form>
-        <div style="text-align: center; margin-top: 16px;">
-            <a href="/register" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Зарегистрироваться</a>
+
+        <div class="auth-bottom">
+
+            <a href="/register" class="auth-link">
+                Зарегистрироваться
+            </a>
+
         </div>
+
     </div>
+
 </div>
+
 {% endblock %}

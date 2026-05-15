@@ -1,24 +1,144 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
-    <div class="card" style="width: 100%; max-width: 380px; padding: 24px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 48px; margin-bottom: 8px;">📝</div>
-            <h2 style="font-size: 22px; font-weight: 700;">Регистрация</h2>
-            <p style="color: #888; font-size: 13px;">Присоединяйтесь к турниру</p>
+
+<style>
+    .auth-screen {
+        min-height: calc(100vh - 180px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: 10px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 30px;
+        padding: 28px 22px;
+        background:
+            radial-gradient(circle at 50% 0%, rgba(76,175,80,0.16), transparent 34%),
+            linear-gradient(160deg, rgba(27,38,59,0.98), rgba(12,18,30,0.98));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 22px 54px rgba(0,0,0,0.42);
+    }
+
+    .auth-top {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .auth-logo {
+        width: 92px;
+        height: 92px;
+        margin: 0 auto 18px;
+        border-radius: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(214,228,255,0.92));
+        color: #111827;
+        font-size: 44px;
+        box-shadow:
+            0 0 0 7px rgba(255,255,255,0.04),
+            0 0 34px rgba(76,175,80,0.22),
+            0 20px 44px rgba(0,0,0,0.34);
+    }
+
+    .auth-title {
+        font-size: 28px;
+        font-weight: 1000;
+        letter-spacing: -0.5px;
+        color: #f4f7fb;
+        margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+        color: rgba(244,247,251,0.58);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .auth-form {
+        margin-top: 20px;
+    }
+
+    .auth-input {
+        height: 56px !important;
+        border-radius: 18px !important;
+        background: rgba(255,255,255,0.07) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        margin-bottom: 16px !important;
+        font-size: 16px !important;
+        font-weight: 700;
+        color: #fff !important;
+    }
+
+    .auth-btn {
+        width: 100%;
+        height: 56px;
+        margin-top: 4px;
+        border: none;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #2e7d32, #43a047);
+        color: white;
+        font-size: 16px;
+        font-weight: 1000;
+        box-shadow: 0 14px 32px rgba(46,125,50,0.28);
+    }
+
+    .auth-btn:active {
+        transform: scale(0.985);
+    }
+
+    .auth-bottom {
+        margin-top: 22px;
+        text-align: center;
+    }
+
+    .auth-link {
+        color: #8ee996;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 900;
+    }
+</style>
+
+<div class="auth-screen">
+    <div class="auth-card">
+        <div class="auth-top">
+            <div class="auth-logo">⚽</div>
+
+            <div class="auth-title">
+                Регистрация
+            </div>
+
+            <div class="auth-subtitle">
+                Присоединяйтесь к закрытому турниру
+            </div>
         </div>
-        <form method="post">
+
+        <form method="post" class="auth-form">
             <label>Логин</label>
-            <input type="text" name="username" required placeholder="Придумайте логин">
+            <input class="auth-input" type="text" name="username" required placeholder="Придумайте логин">
+
             <label>Пароль</label>
-            <input type="password" name="password" required placeholder="Придумайте пароль">
+            <input class="auth-input" type="password" name="password" required placeholder="Придумайте пароль">
+
             <label>Инвайт-код</label>
-            <input type="text" name="invite_code" required placeholder="Введите инвайт-код">
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Зарегистрироваться</button>
+            <input class="auth-input" type="text" name="invite_code" required placeholder="Введите инвайт-код">
+
+            <button type="submit" class="auth-btn">
+                Зарегистрироваться
+            </button>
         </form>
-        <div style="text-align: center; margin-top: 16px;">
-            <a href="/login" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Уже есть аккаунт? Войти</a>
+
+        <div class="auth-bottom">
+            <a href="/login" class="auth-link">
+                Уже есть аккаунт? Войти
+            </a>
         </div>
     </div>
 </div>
+
 {% endblock %}
