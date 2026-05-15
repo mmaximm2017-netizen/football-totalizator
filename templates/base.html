@@ -561,9 +561,33 @@
         0 6px 18px rgba(76,175,80,0.12);
 }
 
-.bottom-nav a .icon {
-    font-size: 22px;
-    line-height: 1;
+.nav-icon {
+    width: 22px;
+    height: 22px;
+
+    opacity: 0.72;
+
+    transition:
+        opacity 0.2s,
+        transform 0.2s,
+        filter 0.2s;
+
+    filter: brightness(0) invert(1);
+}
+
+.bottom-nav a.active .nav-icon {
+    opacity: 1;
+
+    transform: translateY(-1px);
+
+    filter:
+        brightness(0)
+        invert(77%)
+        sepia(35%)
+        saturate(557%)
+        hue-rotate(74deg)
+        brightness(102%)
+        contrast(95%);
 }
 
         /* ============================================= */
@@ -746,48 +770,48 @@
         </div>
 
         {% if session.user_id %}
-        <nav class="bottom-nav">
+ <nav class="bottom-nav">
 
-            <a
-                href="/"
-                class="{% if request.path == '/' %}active{% endif %}"
-            >
-                <span class="icon">⚽</span>
-                Матчи
-            </a>
+    <a
+        href="/"
+        class="{% if request.path == '/' %}active{% endif %}"
+    >
+        <img src="/static/icons/matches.svg" class="nav-icon">
+        Матчи
+    </a>
 
-            <a
-                href="/table"
-                class="{% if request.path == '/table' %}active{% endif %}"
-            >
-                <span class="icon">🏆</span>
-                Таблица
-            </a>
+    <a
+        href="/table"
+        class="{% if request.path == '/table' %}active{% endif %}"
+    >
+        <img src="/static/icons/table.svg" class="nav-icon">
+        Таблица
+    </a>
 
-            {% if g.is_admin %}
-            <a
-                href="/admin"
-                class="{% if request.path.startswith('/admin') %}active{% endif %}"
-            >
-                <span class="icon">⚙️</span>
-                Админ
-            </a>
-            {% else %}
-            <a
-                href="/profile"
-                class="{% if request.path == '/profile' %}active{% endif %}"
-            >
-                <span class="icon">👤</span>
-                Профиль
-            </a>
-            {% endif %}
+    {% if g.is_admin %}
+    <a
+        href="/admin"
+        class="{% if request.path.startswith('/admin') %}active{% endif %}"
+    >
+        <img src="/static/icons/profile.svg" class="nav-icon">
+        Админ
+    </a>
+    {% else %}
+    <a
+        href="/profile"
+        class="{% if request.path == '/profile' %}active{% endif %}"
+    >
+        <img src="/static/icons/profile.svg" class="nav-icon">
+        Профиль
+    </a>
+    {% endif %}
 
-            <a href="/logout">
-                <span class="icon">🚪</span>
-                Выход
-            </a>
+    <a href="/logout">
+        <img src="/static/icons/logout.svg" class="nav-icon">
+        Выход
+    </a>
 
-        </nav>
+</nav>
         {% endif %}
 
     </div>
