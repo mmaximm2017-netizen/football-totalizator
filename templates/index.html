@@ -799,5 +799,92 @@
 {% endfor %}
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('.predict-form-v2');
+
+    forms.forEach(function (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const button = form.querySelector('button[type="submit"]');
+            const card = form.closest('.match-card-v2');
+            const box = form.closest('.prediction-box');
+
+            if (!button || !card || !box) {
+                form.submit();
+                return;
+            }
+
+            const originalText = button.textContent;
+
+            button.disabled = true;
+            button.textContent = 'Сохраняем...';
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new FormData(form)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+                    button.textContent = data.message || 'Ошибка';
+                    setTimeout(function () {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }, 1200);
+                    return;
+                }
+
+                const home = data.home_goals;
+                const away = data.away_goals;
+
+                card.classList.add('predicted');
+                box.classList.add('saved');
+
+                let lock = box.querySelector('.lock-pill');
+                if (!lock) {
+                    const title = box.querySelector('.prediction-title');
+                    if (title) {
+                        lock = document.createElement('span');
+                        lock.className = 'lock-pill';
+                        title.appendChild(lock);
+                    }
+                }
+
+                if (lock) {
+                    lock.textContent = '✓ сохранён';
+                }
+
+                const predictionText = box.querySelector('.my-prediction-v2');
+
+                if (predictionText) {
+                    predictionText.innerHTML = 'Текущий прогноз: <b>' + home + ':' + away + '</b>';
+                }
+
+                button.textContent = '✓ Сохранено';
+
+                setTimeout(function () {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }, 900);
+
+            } catch (error) {
+                button.textContent = 'Ошибка сети';
+
+                setTimeout(function () {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }, 1200);
+            }
+        });
+    });
+});
+</script>
 
 {% endblock %}

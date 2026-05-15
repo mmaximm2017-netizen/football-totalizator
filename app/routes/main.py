@@ -11,7 +11,8 @@ from flask import (
     redirect,
     url_for,
     flash,
-    session
+    session,
+    jsonify
 )
 
 from app.db import get_db, close_db, get_active_tournament_id
@@ -43,6 +44,29 @@ def parse_dt(value):
         return None
 
 
+def is_ajax_request():
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def ajax_error(message, status=400):
+    return jsonify({
+        "ok": False,
+        "message": message
+    }), status
+
+
+def ajax_success(message, data=None):
+    payload = {
+        "ok": True,
+        "message": message
+    }
+
+    if data:
+        payload.update(data)
+
+    return jsonify(payload)
+
+
 # =========================================================
 # INDEX
 # =========================================================
@@ -51,6 +75,9 @@ def parse_dt(value):
 def index():
 
     if 'user_id' not in session:
+        if is_ajax_request():
+            return ajax_error("Нужно войти в аккаунт", 401)
+
         return redirect(url_for('auth.login'))
 
     conn = get_db()
@@ -74,9 +101,14 @@ def index():
             try:
                 h = int(request.form.get('home_goals', 0))
                 a = int(request.form.get('away_goals', 0))
+
                 if h < 0 or a < 0:
                     raise ValueError
+
             except Exception:
+                if is_ajax_request():
+                    return ajax_error("Некорректный счёт")
+
                 flash("Некорректный счёт", "error")
                 return redirect(url_for('main.index'))
 
@@ -89,19 +121,29 @@ def index():
             match = cur.fetchone()
 
             if not match:
+                if is_ajax_request():
+                    return ajax_error("Матч не найден", 404)
+
                 flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
 
             if not is_before_deadline({
                 "deadline": match[4]
             }):
+                if is_ajax_request():
+                    return ajax_error("Дедлайн прошёл")
+
                 flash("Дедлайн прошёл", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
                 SELECT 1 FROM predictions
                 WHERE user_id=%s AND match_id=%s AND tournament_id=%s
-            """, (session['user_id'], match_id, tid))
+            """, (
+                session['user_id'],
+                match_id,
+                tid
+            ))
 
             exists = cur.fetchone()
 
@@ -110,7 +152,13 @@ def index():
                     UPDATE predictions
                     SET home_goals=%s, away_goals=%s
                     WHERE user_id=%s AND match_id=%s AND tournament_id=%s
-                """, (h, a, session['user_id'], match_id, tid))
+                """, (
+                    h,
+                    a,
+                    session['user_id'],
+                    match_id,
+                    tid
+                ))
             else:
                 cur.execute("""
                     INSERT INTO predictions (
@@ -118,9 +166,25 @@ def index():
                         home_goals, away_goals
                     )
                     VALUES (%s,%s,%s,%s,%s)
-                """, (session['user_id'], match_id, tid, h, a))
+                """, (
+                    session['user_id'],
+                    match_id,
+                    tid,
+                    h,
+                    a
+                ))
 
             conn.commit()
+
+            if is_ajax_request():
+                return ajax_success(
+                    "Прогноз сохранён",
+                    {
+                        "match_id": int(match_id),
+                        "home_goals": h,
+                        "away_goals": a
+                    }
+                )
 
             flash("Ставка сохранена", "success")
 
@@ -177,7 +241,11 @@ def index():
                 WHERE user_id=%s
                 AND tournament_id=%s
                 AND match_id = ANY(%s)
-            """, (session['user_id'], tid, match_ids))
+            """, (
+                session['user_id'],
+                tid,
+                match_ids
+            ))
 
             for r in cur.fetchall():
                 user_preds[r[0]] = {
@@ -255,21 +323,32 @@ def index():
         # =================================================
 
         months = defaultdict(list)
+
         for d in days:
             month_key = d['key'][:7]
             months[month_key].append(d)
 
         month_names = {
-            '01': 'Январь', '02': 'Февраль', '03': 'Март',
-            '04': 'Апрель', '05': 'Май', '06': 'Июнь',
-            '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
-            '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+            '01': 'Январь',
+            '02': 'Февраль',
+            '03': 'Март',
+            '04': 'Апрель',
+            '05': 'Май',
+            '06': 'Июнь',
+            '07': 'Июль',
+            '08': 'Август',
+            '09': 'Сентябрь',
+            '10': 'Октябрь',
+            '11': 'Ноябрь',
+            '12': 'Декабрь'
         }
 
         grouped_months = []
+
         for mk in sorted(months.keys()):
             year, month = mk.split('-')
             month_label = f"{month_names[month]} {year}"
+
             grouped_months.append({
                 'key': mk,
                 'label': month_label,
