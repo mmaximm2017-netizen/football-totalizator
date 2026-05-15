@@ -1,81 +1,431 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="text-align: center; margin-bottom: 16px;">
-    <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
-</div>
 
-<!-- Выбор турнира (выпадающий список) -->
-<div class="filter-bar" style="justify-content: center; flex-direction: column; align-items: center; gap: 12px;">
-    <select id="tournament-select" onchange="location.href='/table?tid=' + this.value" style="
-        max-width: 300px; padding: 10px 16px; border-radius: 24px;
-        font-size: 14px; font-weight: 500; cursor: pointer;
-    ">
-        {% for t in tournaments %}
-        <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
-            {% if t.is_active %}🏆 АКТИВНЫЙ — {% endif %}{{ t.name }}
-            {% if t.start_date != '—' %} (с {{ t.start_date[:4] }}){% endif %}
-        </option>
-        {% endfor %}
-    </select>
-    
-    {% if not selected_is_active %}
-    <div style="font-size: 12px; color: #888;">
-        📜 Архивный турнир (только для просмотра)
-    </div>
-    {% endif %}
-</div>
+<style>
+    .leaderboard-screen {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
 
-{% if table %}
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 14px;">
-        <thead>
-            <tr style="background: #263238; color: white;">
-                <th style="padding: 12px 8px; text-align: center; width: 50px; border-radius: 12px 0 0 0;">#</th>
-                <th style="padding: 12px 8px; text-align: left;">Игрок</th>
-                <th style="padding: 12px 8px; text-align: center; width: 80px; border-radius: 0 12px 0 0;">Очки</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in table %}
-            <tr style="{% if row.place == 1 %}background: linear-gradient(135deg, #fff9c4, #fff176);{% elif row.place == 2 %}background: #f5f5f5;{% elif row.place == 3 %}background: #fff3e0;{% endif %} border-bottom: 1px solid #eee;">
-                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 16px;">
+    .leaderboard-hero {
+        position: relative;
+        overflow: hidden;
+
+        border-radius: 26px;
+        padding: 18px;
+
+        background:
+            radial-gradient(circle at 20% 0%, rgba(255,193,7,0.20), transparent 32%),
+            radial-gradient(circle at 90% 20%, rgba(76,175,80,0.18), transparent 34%),
+            linear-gradient(160deg, rgba(27,38,59,0.98), rgba(12,18,30,0.98));
+
+        border: 1px solid rgba(255,255,255,0.08);
+
+        box-shadow: 0 18px 44px rgba(0,0,0,0.36);
+    }
+
+    .leaderboard-title {
+        font-size: 24px;
+        font-weight: 1000;
+        letter-spacing: -0.4px;
+        margin-bottom: 6px;
+    }
+
+    .leaderboard-subtitle {
+        font-size: 13px;
+        color: rgba(244,247,251,0.62);
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .tournament-select-wrap {
+        margin-top: 8px;
+    }
+
+    .tournament-select {
+        width: 100%;
+        margin: 0;
+
+        background: rgba(255,255,255,0.08);
+        color: #f4f7fb;
+
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 18px;
+
+        padding: 13px 14px;
+
+        font-size: 14px;
+        font-weight: 800;
+
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .archive-note {
+        margin-top: 10px;
+        font-size: 12px;
+        color: rgba(244,247,251,0.54);
+        font-weight: 700;
+    }
+
+    .leaderboard-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .player-row {
+        position: relative;
+
+        display: grid;
+        grid-template-columns: 54px 1fr auto;
+        align-items: center;
+        gap: 10px;
+
+        min-height: 72px;
+
+        border-radius: 22px;
+        padding: 12px 14px;
+
+        background:
+            linear-gradient(160deg, rgba(27,38,59,0.96), rgba(16,24,39,0.96));
+
+        border: 1px solid rgba(255,255,255,0.075);
+
+        box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+    }
+
+    .player-row.top-1 {
+        background:
+            radial-gradient(circle at 0% 0%, rgba(255,193,7,0.20), transparent 34%),
+            linear-gradient(160deg, rgba(38,33,18,0.98), rgba(18,24,32,0.98));
+
+        border-color: rgba(255,193,7,0.24);
+        box-shadow:
+            0 16px 38px rgba(0,0,0,0.34),
+            0 0 24px rgba(255,193,7,0.08);
+    }
+
+    .player-row.top-2 {
+        background:
+            radial-gradient(circle at 0% 0%, rgba(190,200,214,0.16), transparent 34%),
+            linear-gradient(160deg, rgba(30,36,48,0.98), rgba(16,24,39,0.98));
+
+        border-color: rgba(190,200,214,0.18);
+    }
+
+    .player-row.top-3 {
+        background:
+            radial-gradient(circle at 0% 0%, rgba(205,127,50,0.16), transparent 34%),
+            linear-gradient(160deg, rgba(34,27,22,0.98), rgba(16,24,39,0.98));
+
+        border-color: rgba(205,127,50,0.18);
+    }
+
+    .place-box {
+        width: 44px;
+        height: 44px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 16px;
+
+        background: rgba(255,255,255,0.07);
+
+        color: rgba(244,247,251,0.86);
+
+        font-size: 15px;
+        font-weight: 1000;
+
+        border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .top-1 .place-box {
+        background: rgba(255,193,7,0.15);
+        color: #ffd76a;
+        border-color: rgba(255,193,7,0.24);
+    }
+
+    .top-2 .place-box {
+        background: rgba(190,200,214,0.13);
+        color: #dbe3ef;
+        border-color: rgba(190,200,214,0.18);
+    }
+
+    .top-3 .place-box {
+        background: rgba(205,127,50,0.13);
+        color: #e7a86b;
+        border-color: rgba(205,127,50,0.18);
+    }
+
+    .player-main {
+        min-width: 0;
+    }
+
+    .player-name {
+        display: block;
+
+        color: #f4f7fb;
+        text-decoration: none;
+
+        font-size: 16px;
+        font-weight: 1000;
+        letter-spacing: -0.2px;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .player-meta {
+        margin-top: 4px;
+
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+
+        font-size: 11px;
+        color: rgba(244,247,251,0.52);
+        font-weight: 800;
+    }
+
+    .leader-pill {
+        padding: 3px 8px;
+        border-radius: 999px;
+
+        background: rgba(255,193,7,0.14);
+        color: #ffd76a;
+
+        border: 1px solid rgba(255,193,7,0.18);
+
+        font-size: 10px;
+        font-weight: 1000;
+    }
+
+    .shared-pill {
+        padding: 3px 8px;
+        border-radius: 999px;
+
+        background: rgba(255,255,255,0.07);
+        color: rgba(244,247,251,0.62);
+
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .points-box {
+        min-width: 74px;
+        text-align: right;
+    }
+
+    .points-number {
+        display: block;
+
+        color: #8ee996;
+
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 1000;
+        letter-spacing: -0.6px;
+    }
+
+    .points-label {
+        margin-top: 3px;
+
+        display: block;
+
+        font-size: 10px;
+        color: rgba(244,247,251,0.46);
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .tournament-info-card {
+        padding: 14px 16px;
+
+        border-radius: 20px;
+
+        background: rgba(255,255,255,0.055);
+
+        border: 1px solid rgba(255,255,255,0.07);
+
+        color: rgba(244,247,251,0.58);
+
+        font-size: 12px;
+        font-weight: 700;
+
+        text-align: center;
+    }
+
+    .empty-leaderboard {
+        text-align: center;
+
+        padding: 42px 20px;
+
+        border-radius: 26px;
+
+        background:
+            linear-gradient(160deg, rgba(27,38,59,0.96), rgba(16,24,39,0.96));
+
+        border: 1px solid rgba(255,255,255,0.075);
+
+        box-shadow: 0 14px 36px rgba(0,0,0,0.28);
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    .empty-title {
+        font-size: 18px;
+        font-weight: 1000;
+        margin-bottom: 6px;
+    }
+
+    .empty-text {
+        color: rgba(244,247,251,0.58);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    body:not(.dark) .leaderboard-hero,
+    body:not(.dark) .player-row,
+    body:not(.dark) .empty-leaderboard {
+        color: #f4f7fb;
+    }
+
+    body:not(.dark) .tournament-info-card {
+        color: rgba(244,247,251,0.70);
+        background: rgba(16,24,39,0.75);
+    }
+
+    @media (max-width: 430px) {
+        .leaderboard-title {
+            font-size: 22px;
+        }
+
+        .player-row {
+            grid-template-columns: 48px 1fr auto;
+            padding: 11px 12px;
+            min-height: 68px;
+            border-radius: 20px;
+        }
+
+        .place-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+        }
+
+        .player-name {
+            font-size: 15px;
+        }
+
+        .points-number {
+            font-size: 26px;
+        }
+
+        .points-box {
+            min-width: 62px;
+        }
+    }
+</style>
+
+<div class="leaderboard-screen">
+
+    <section class="leaderboard-hero">
+        <div class="leaderboard-title">🏆 Турнирная таблица</div>
+
+        <div class="leaderboard-subtitle">
+            Рейтинг участников по очкам
+        </div>
+
+        <div class="tournament-select-wrap">
+            <select
+                id="tournament-select"
+                class="tournament-select"
+                onchange="location.href='/table?tid=' + this.value"
+            >
+                {% for t in tournaments %}
+                <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
+                    {% if t.is_active %}АКТИВНЫЙ — {% endif %}{{ t.name }}
+                    {% if t.start_date != '—' %} (с {{ t.start_date[:4] }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if not selected_is_active %}
+        <div class="archive-note">
+            Архивный турнир, только просмотр
+        </div>
+        {% endif %}
+    </section>
+
+    {% if table %}
+    <section class="leaderboard-list">
+        {% for row in table %}
+
+        <div class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
+            <div class="place-box">
+                {% if row.place == 1 %}
+                    1
+                {% elif row.place == 2 %}
+                    2
+                {% elif row.place == 3 %}
+                    3
+                {% else %}
+                    {{ row.place }}
+                {% endif %}
+            </div>
+
+            <div class="player-main">
+                <a href="/profile?username={{ row.username }}" class="player-name">
+                    {{ row.username }}
+                </a>
+
+                <div class="player-meta">
                     {% if row.place == 1 %}
-                        🥇
-                    {% elif row.place == 2 %}
-                        🥈
-                    {% elif row.place == 3 %}
-                        🥉
-                    {% else %}
-                        {{ row.place }}
+                    <span class="leader-pill">ЛИДЕР</span>
                     {% endif %}
+
                     {% if row.shared %}
-                        <br><span style="font-size: 10px; color: #888;">(делят место)</span>
+                    <span class="shared-pill">делят место</span>
                     {% endif %}
-                </td>
-                <td style="padding: 14px 8px; font-weight: {% if row.place <= 3 %}600{% else %}400{% endif %};">
-                    <a href="/profile?username={{ row.username }}" style="color: #333; text-decoration: none;">{{ row.username }}</a>
-                    {% if row.place == 1 %}<span style="font-size: 11px; color: #f57f17; margin-left: 6px;">ЛИДЕР</span>{% endif %}
-                </td>
-                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 18px; color: {% if row.points > 0 %}#2e7d32{% else %}#888{% endif %};">
-                    {{ row.points }}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+
+            <div class="points-box">
+                <span class="points-number">{{ row.points }}</span>
+                <span class="points-label">очков</span>
+            </div>
+        </div>
+
+        {% endfor %}
+    </section>
+
+    <div class="tournament-info-card">
+        {{ selected_name }}
+        {% if selected_start_date != '—' %}
+            · начало {{ selected_start_date[:10] if selected_start_date|length > 10 else selected_start_date }}
+        {% endif %}
+    </div>
+
+    {% else %}
+    <section class="empty-leaderboard">
+        <div class="empty-icon">🏟️</div>
+        <div class="empty-title">Таблица пока пуста</div>
+        <div class="empty-text">
+            Как только появятся результаты, здесь будет рейтинг участников.
+        </div>
+    </section>
+    {% endif %}
+
 </div>
 
-<!-- Информация о турнире -->
-<div style="text-align: center; margin-top: 16px; font-size: 12px; color: #888;">
-    📅 {{ selected_name }}
-    {% if selected_start_date != '—' %} — начался {{ selected_start_date[:10] if selected_start_date|length > 10 else selected_start_date }}{% endif %}
-</div>
-
-{% else %}
-<div class="card" style="text-align: center; padding: 40px;">
-    <p style="font-size: 48px; margin-bottom: 12px;">🏟️</p>
-    <p style="font-size: 18px; font-weight: 600;">Таблица пока пуста</p>
-    <p style="color: #888;">Как только появятся результаты — здесь будет турнирная таблица</p>
-</div>
-{% endif %}
 {% endblock %}
