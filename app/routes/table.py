@@ -90,7 +90,7 @@ def table():
         selected_name = row[0] if row else "Турнир"
         selected_is_active = row[1] if row else False
         selected_start_date = row[2] if row else "—"
-                selected_status = next(
+        selected_status = next(
             (t['status'] for t in tournaments if t['id'] == tid),
             'archive'
         )
