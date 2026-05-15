@@ -718,13 +718,12 @@
                             </div>
 
                             <div class="time-label">
-                            Приём до {{ to_msk(match.deadline) }}
-                        </div>
+                            Начало: {{ to_msk(match.kickoff_time) }}
+                    </div>
 
                             <div class="time-label">
-                                Дедлайн: {{ to_msk(match.deadline) }}
-                            </div>
-                        </div>
+                            Приём до: {{ to_msk(match.deadline) }}
+                    </div>
 
                         {% if match.finished %}
                             <div class="status-pill-v2 status-done">✅ Завершён</div>
