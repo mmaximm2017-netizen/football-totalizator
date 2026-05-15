@@ -1106,19 +1106,13 @@ def admin_new_tournament():
 
             return redirect(url_for('admin.admin'))
 
-        cur.execute("""
-            UPDATE tournaments
-            SET is_active = 0
-            WHERE is_active = 1
-        """)
-
-        cur.execute("""
+         cur.execute("""
             INSERT INTO tournaments (
                 name,
                 is_active,
                 start_date
             )
-            VALUES (%s, 1, %s)
+            VALUES (%s, 0, %s)
         """, (
             name,
             start_date

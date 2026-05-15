@@ -96,7 +96,6 @@ def index():
         if request.method == 'POST':
 
             match_id = request.form.get('match_id')
-            tid = get_active_tournament_id()
 
             try:
                 h = int(request.form.get('home_goals', 0))
@@ -113,12 +112,26 @@ def index():
                 return redirect(url_for('main.index'))
 
             cur.execute("""
-                SELECT id, home_team, away_team, kickoff_time, deadline, status
-                FROM matches
-                WHERE id = %s
+SELECT
+    id,
+    home_team,
+    away_team,
+    kickoff_time,
+    deadline,
+    status,
+    (
+        SELECT t.id
+        FROM tournaments t
+        WHERE t.start_date <= DATE(matches.kickoff_time)
+        ORDER BY t.start_date DESC, t.id DESC
+        LIMIT 1
+    ) AS tournament_id
+FROM matches
+WHERE id = %s
             """, (match_id,))
 
             match = cur.fetchone()
+            tid = match[6]
 
             if not match:
                 if is_ajax_request():
@@ -227,7 +240,6 @@ def index():
         # USER PREDICTIONS
         # =================================================
 
-        tid = get_active_tournament_id()
 
         match_ids = [m["id"] for m in raw_matches]
 
@@ -235,17 +247,19 @@ def index():
 
         if match_ids:
 
-            cur.execute("""
-                SELECT match_id, home_goals, away_goals, points
-                FROM predictions
-                WHERE user_id=%s
-                AND tournament_id=%s
-                AND match_id = ANY(%s)
-            """, (
-                session['user_id'],
-                tid,
-                match_ids
-            ))
+cur.execute("""
+    SELECT
+        p.match_id,
+        p.home_goals,
+        p.away_goals,
+        p.points
+    FROM predictions p
+    WHERE p.user_id = %s
+      AND p.match_id = ANY(%s)
+""", (
+    session['user_id'],
+    match_ids
+))
 
             for r in cur.fetchall():
                 user_preds[r[0]] = {

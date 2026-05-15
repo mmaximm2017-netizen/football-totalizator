@@ -255,20 +255,45 @@ def init_db():
 # =========================================================
 
 def get_active_tournament_id():
+    """
+    Возвращает текущий турнир по дате старта:
+    последний турнир, у которого start_date <= сегодня.
+    Если такого нет — возвращает турнир с is_active = 1.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
     conn = get_db()
     cur = conn.cursor()
 
     try:
+        today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
+
         cur.execute("""
-        SELECT id
-        FROM tournaments
-        WHERE is_active = 1
-        LIMIT 1
+            SELECT id
+            FROM tournaments
+            WHERE start_date IS NOT NULL
+              AND start_date <= %s
+            ORDER BY start_date DESC, id DESC
+            LIMIT 1
+        """, (today,))
+
+        row = cur.fetchone()
+
+        if row:
+            return row[0]
+
+        cur.execute("""
+            SELECT id
+            FROM tournaments
+            WHERE is_active = 1
+            ORDER BY id DESC
+            LIMIT 1
         """)
 
         row = cur.fetchone()
 
-        return row[0] if row else 1
+        return row[0] if row else None
 
     finally:
         close_db(conn, cur)

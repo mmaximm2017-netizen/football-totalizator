@@ -21,7 +21,7 @@ def table():
         cur.execute("""
             SELECT id, name, is_active, start_date
             FROM tournaments
-            ORDER BY is_active DESC, start_date DESC, id DESC
+            ORDER BY start_date DESC, id DESC
         """)
 
         tournaments = [
@@ -37,13 +37,25 @@ def table():
         # безопасный выбор турнира
         tid = request.args.get('tid', type=int)
 
-        if not tid:
-            active = next((t for t in tournaments if t['is_active']), None)
-            if active:
-                tid = active['id']
-            elif tournaments:
-                tid = tournaments[0]['id']
-            else:
+if not tid:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
+
+    current = next(
+        (
+            t for t in tournaments
+            if t['start_date'] != '—' and t['start_date'] <= today
+        ),
+        None
+    )
+
+    if current:
+        tid = current['id']
+    elif tournaments:
+        tid = tournaments[0]['id']
+    else:
                 return render_template(
                     'table.html',
                     table=[],
