@@ -34,20 +34,35 @@ def table():
             for r in cur.fetchall()
         ]
 
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
+
+        current_tid = None
+
+        for t in sorted(
+            [x for x in tournaments if x['start_date'] != '—' and x['start_date'] <= today],
+            key=lambda x: (x['start_date'], x['id']),
+            reverse=True
+        ):
+            current_tid = t['id']
+            break
+
+        for t in tournaments:
+            if t['start_date'] != '—' and t['start_date'] > today:
+                t['status'] = 'future'
+            elif t['id'] == current_tid:
+                t['status'] = 'current'
+            else:
+                t['status'] = 'archive'
+                
         # безопасный выбор турнира
         tid = request.args.get('tid', type=int)
 
         if not tid:
-            from datetime import datetime
-            from zoneinfo import ZoneInfo
-
-            today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
-
             current = next(
-                (
-                    t for t in tournaments
-                    if t['start_date'] != '—' and t['start_date'] <= today
-                ),
+                (t for t in tournaments if t['status'] == 'current'),
                 None
             )
 
@@ -75,6 +90,10 @@ def table():
         selected_name = row[0] if row else "Турнир"
         selected_is_active = row[1] if row else False
         selected_start_date = row[2] if row else "—"
+                selected_status = next(
+            (t['status'] for t in tournaments if t['id'] == tid),
+            'archive'
+        )
 
         # =================================================
         # RANKING
@@ -150,5 +169,6 @@ def table():
         selected_tid=tid,
         selected_name=selected_name,
         selected_is_active=selected_is_active,
-        selected_start_date=selected_start_date
+        selected_start_date=selected_start_date,
+        selected_status=selected_status
     )

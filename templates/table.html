@@ -353,14 +353,23 @@
             >
                 {% for t in tournaments %}
                 <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
-                    {{ t.name }}{% if not t.is_active %} · архив{% endif %}
+                    {{ t.name }}
+                    {% if t.status == 'future' %}
+                        · будущий
+                    {% elif t.status == 'archive' %}
+                        · архив
+                    {% endif %}
                     {% if t.start_date != '—' %} (с {{ t.start_date[:4] }}){% endif %}
                 </option>
                 {% endfor %}
             </select>
         </div>
 
-        {% if not selected_is_active %}
+        {% if selected_status == 'future' %}
+        <div class="archive-note">
+            Будущий турнир. Ставки уже доступны на матчи после даты старта.
+        </div>
+        {% elif selected_status == 'archive' %}
         <div class="archive-note">
             Архивный турнир, только просмотр
         </div>
