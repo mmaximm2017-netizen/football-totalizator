@@ -1,20 +1,25 @@
 {
   "name": "ТОТИШ БРАТИШЕК",
-  "short_name": "Тотализатор",
+  "short_name": "Тотиш",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f0f0f0",
-  "theme_color": "#1a1a2e",
+  "orientation": "portrait",
+  "background_color": "#080d1a",
+  "theme_color": "#080d1a",
+  "description": "Футбольный тотализатор для друзей",
   "icons": [
     {
       "src": "/static/icon-192-new.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/static/icon-512-new.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
