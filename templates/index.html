@@ -171,7 +171,10 @@
         border: 1px solid rgba(255,255,255,0.08);
 
         box-shadow: 0 18px 42px rgba(0,0,0,0.36);
-
+        transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+	
         animation: matchFade 0.32s ease both;
     }
 
@@ -190,6 +193,9 @@
         background:
             radial-gradient(circle at 50% 0%, rgba(76,175,80,0.10), transparent 38%),
             linear-gradient(160deg, #172132 0%, #101624 100%);
+			.match-card-v2:active {
+    transform: scale(0.992);
+    }
     }
 
     @keyframes matchFade {
@@ -236,7 +242,9 @@
     .status-pill-v2 {
         padding: 7px 11px;
         border-radius: 999px;
-        font-size: 11px;
+        font-size: 10px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
         font-weight: 1000;
         white-space: nowrap;
     }
@@ -655,7 +663,7 @@
     <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}')">
         <div class="month-left">
             <span id="arrow-month-{{ month_idx }}" class="month-arrow">▶</span>
-            <span class="month-title">📅 {{ month.label }}</span>
+            <span class="month-title">{{ month.label }}</span>
         </div>
 
         <span class="month-count">{{ month.count }} матчей</span>
@@ -701,17 +709,17 @@
                         <div class="match-meta-v2">
                             <div class="league-label">
                                 {% if match.league == 'wc2026' %}
-                                    🏆 ЧМ-2026
+                                    ЧМ-2026
                                 {% elif match.league == 'rpl' %}
-                                    🇷🇺 РПЛ
+                                    РПЛ
                                 {% else %}
                                     ⚽ Матч
                                 {% endif %}
                             </div>
 
                             <div class="time-label">
-                                {{ to_msk(match.kickoff_time) }}
-                            </div>
+                            Приём до {{ to_msk(match.deadline) }}
+                        </div>
 
                             <div class="time-label">
                                 Дедлайн: {{ to_msk(match.deadline) }}
