@@ -586,6 +586,40 @@
         {% endif %}
     </div>
 
+<div class="admin-card">
+    <div class="admin-card-header">Турниры</div>
+
+    {% for t in tournaments %}
+    <div class="admin-match-card">
+        <div class="admin-match-row">
+            <div class="admin-match-main">
+                <div class="admin-match-title">
+                    {{ t.name }}
+                    {% if t.is_active %}
+                        <span style="color:#7CFF8A;">●</span>
+                    {% endif %}
+                </div>
+
+                <div class="admin-match-meta">
+                    Старт: {{ t.start_date or '—' }}
+                </div>
+            </div>
+
+            {% if not t.is_active %}
+            <a
+                href="/admin/delete_tournament/{{ t.id }}"
+                onclick="return confirm('Удалить турнир {{ t.name }}?')"
+                class="admin-btn admin-btn-red admin-btn-small"
+                style="text-decoration:none; display:flex; align-items:center; justify-content:center;"
+            >
+                Удалить
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
     <div class="admin-card">
         <div class="admin-card-header">Начать новый турнир</div>
 

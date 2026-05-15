@@ -410,6 +410,26 @@ def admin():
                 'status': m[4]
             })
 
+# =============================================
+# TOURNAMENTS
+# =============================================
+
+cur.execute("""
+    SELECT id, name, is_active, start_date
+    FROM tournaments
+    ORDER BY is_active DESC, id DESC
+""")
+
+tournaments = []
+
+for t in cur.fetchall():
+    tournaments.append({
+        'id': t[0],
+        'name': t[1],
+        'is_active': t[2],
+        'start_date': t[3]
+    })
+    
         # =============================================
         # USERS
         # =============================================
@@ -434,7 +454,8 @@ def admin():
         free_months=free_months_list,
         finished_months=finished_months_list,
         manual_matches=manual_matches,
-        users=users
+users=users,
+tournaments=tournaments
     )
 
 
@@ -1134,7 +1155,26 @@ def delete_tournament(tid):
     cur = conn.cursor()
 
     try:
-        cur.execute("DELETE FROM tournaments WHERE id = %s", (tid,))
+cur.execute("""
+    SELECT is_active
+    FROM tournaments
+    WHERE id = %s
+""", (tid,))
+
+row = cur.fetchone()
+
+if not row:
+    flash("Турнир не найден", "error")
+    return redirect(url_for('admin.admin'))
+
+if row[0] == 1:
+    flash("Нельзя удалить активный турнир", "error")
+    return redirect(url_for('admin.admin'))
+
+cur.execute("""
+    DELETE FROM tournaments
+    WHERE id = %s
+""", (tid,))
         conn.commit()
         flash(f"Турнир #{tid} удалён", "success")
     except Exception as e:
