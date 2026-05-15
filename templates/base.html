@@ -6,7 +6,7 @@
 
     <title>ТОТИШ БРАТИШЕК</title>
 
-    <link rel="manifest" href="/static/manifest.json?v=2">
+    <link rel="manifest" href="/static/manifest.json?v=3">
 
     <meta name="theme-color" content="#080d1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,10 +20,8 @@
 
         :root {
             --bg-main: #080d1a;
-            --bg-soft: #101827;
             --surface: #151f32;
             --surface-soft: #1b263b;
-            --surface-light: rgba(255,255,255,0.06);
 
             --text-main: #f4f7fb;
             --text-soft: rgba(244,247,251,0.68);
@@ -31,7 +29,7 @@
 
             --accent: #4caf50;
             --accent-soft: rgba(76,175,80,0.16);
-            --accent-strong: #66d36e;
+            --accent-strong: #8ee996;
 
             --danger: #ef5350;
             --warning: #ffb74d;
@@ -46,11 +44,10 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
             min-height: 100vh;
             overflow-x: hidden;
-            padding-bottom: 82px;
+
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
             color: var(--text-main);
 
@@ -61,17 +58,10 @@
 
             background-attachment: fixed;
 
-            transition: background 0.3s, color 0.3s;
+            padding-bottom: 110px;
         }
 
-        /* Светлая тема пока остаётся, но основная эстетика теперь тёмная */
-        body:not(.dark) {
-            color: var(--text-main);
-        }
-
-        /* ============================================= */
-        /* SPLASH SCREEN */
-        /* ============================================= */
+        /* SPLASH */
 
         #app-splash {
             position: fixed;
@@ -182,14 +172,12 @@
             to { opacity: 1; }
         }
 
-        /* ============================================= */
         /* HEADER */
-        /* ============================================= */
 
         .header {
             position: sticky;
             top: 0;
-            z-index: 999;
+            z-index: 900;
 
             background: rgba(8,13,26,0.88);
 
@@ -205,8 +193,13 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.24);
         }
 
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .app-title {
-            flex: 1;
             text-align: center;
             font-weight: 900;
             font-size: 19px;
@@ -223,12 +216,10 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 14px 12px;
+            padding: 14px 12px 24px;
         }
 
-        /* ============================================= */
-        /* BASE CARDS */
-        /* ============================================= */
+        /* BASE COMPONENTS */
 
         .card {
             background:
@@ -244,23 +235,7 @@
 
             box-shadow: var(--shadow-deep);
 
-            transition:
-                transform 0.18s ease,
-                box-shadow 0.18s ease,
-                background 0.3s,
-                color 0.3s;
-
             animation: cardIn 0.35s ease both;
-        }
-
-        .card:active {
-            transform: scale(0.985);
-            box-shadow: 0 10px 28px rgba(0,0,0,0.32);
-        }
-
-        .card-header {
-            color: var(--text-main);
-            font-weight: 900;
         }
 
         @keyframes cardIn {
@@ -275,10 +250,6 @@
             }
         }
 
-        /* ============================================= */
-        /* BUTTONS */
-        /* ============================================= */
-
         .btn {
             padding: 10px 16px;
             border-radius: 14px;
@@ -292,15 +263,6 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-
-            transition:
-                transform 0.12s,
-                box-shadow 0.2s,
-                background 0.2s;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
         }
 
         .btn-primary {
@@ -327,10 +289,6 @@
             cursor: not-allowed;
         }
 
-        /* ============================================= */
-        /* FORMS */
-        /* ============================================= */
-
         input,
         select {
             width: 100%;
@@ -347,11 +305,6 @@
 
             background: rgba(255,255,255,0.07);
             color: var(--text-main);
-
-            transition:
-                border-color 0.2s,
-                box-shadow 0.2s,
-                background 0.2s;
         }
 
         input::placeholder {
@@ -361,14 +314,8 @@
         input:focus,
         select:focus {
             outline: none;
-
             border-color: rgba(76,175,80,0.58);
-
             box-shadow: 0 0 0 4px rgba(76,175,80,0.13);
-        }
-
-        input[type="number"] {
-            text-align: center;
         }
 
         label {
@@ -378,10 +325,6 @@
             font-size: 14px;
             color: var(--text-soft);
         }
-
-        /* ============================================= */
-        /* TABLES */
-        /* ============================================= */
 
         table {
             width: 100%;
@@ -404,14 +347,6 @@
             border-bottom: 1px solid var(--border-soft);
         }
 
-        tbody tr:hover {
-            background: rgba(255,255,255,0.045);
-        }
-
-        /* ============================================= */
-        /* FILTERS */
-        /* ============================================= */
-
         .filter-bar {
             display: flex;
             gap: 6px;
@@ -431,12 +366,6 @@
             cursor: pointer;
             text-decoration: none;
             color: var(--text-soft);
-
-            transition: all 0.2s;
-        }
-
-        .filter-btn:active {
-            transform: scale(0.96);
         }
 
         .filter-btn.active {
@@ -444,10 +373,6 @@
             color: #8ee996;
             border-color: rgba(76,175,80,0.35);
         }
-
-        /* ============================================= */
-        /* FLASH */
-        /* ============================================= */
 
         .flash {
             padding: 12px;
@@ -468,209 +393,119 @@
             border: 1px solid rgba(239,83,80,0.22);
         }
 
-        /* ============================================= */
-        /* TEXT HELPERS */
-        /* ============================================= */
+        a {
+            color: var(--accent-strong);
+        }
 
         .match-info {
             color: var(--text-soft);
         }
 
-        a {
-            color: var(--accent-strong);
-        }
+        /* BOTTOM NAV: ВАЖНО, ОНА СНАРУЖИ app-shell */
 
-        /* ============================================= */
-        /* FIXED BOTTOM NAV */
-        /* ============================================= */
+        .bottom-nav {
+            position: fixed;
 
-.bottom-nav {
-    position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
 
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
+            height: 72px;
 
-    height: 72px;
+            background:
+                linear-gradient(
+                    160deg,
+                    rgba(24,32,52,0.94),
+                    rgba(12,18,30,0.96)
+                );
 
-    background:
-        linear-gradient(
-            160deg,
-            rgba(24,32,52,0.92),
-            rgba(12,18,30,0.94)
-        );
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
 
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
-
-    border-radius: 26px;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow:
-        0 14px 40px rgba(0,0,0,0.42),
-        inset 0 1px 0 rgba(255,255,255,0.04);
-
-    z-index: 99999;
-
-    padding-bottom: env(safe-area-inset-bottom);
-}
-
-.bottom-nav a {
-    position: relative;
-
-    text-decoration: none;
-
-    color: rgba(244,247,251,0.50);
-
-    font-size: 11px;
-    font-weight: 700;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    gap: 4px;
-
-    transition:
-        color 0.2s,
-        transform 0.15s,
-        background 0.2s;
-
-    flex: 1;
-
-    height: 58px;
-
-    margin: 0 4px;
-
-    border-radius: 18px;
-}
-
-.bottom-nav a.active {
-    color: #9df5a3;
-
-    background: rgba(76,175,80,0.14);
-
-    box-shadow:
-        inset 0 0 0 1px rgba(76,175,80,0.16),
-        0 6px 18px rgba(76,175,80,0.12);
-}
-
-.nav-icon {
-    width: 22px;
-    height: 22px;
-
-    opacity: 0.72;
-
-    transition:
-        opacity 0.2s,
-        transform 0.2s,
-        filter 0.2s;
-
-    filter: brightness(0) invert(1);
-}
-
-.bottom-nav a.active .nav-icon {
-    opacity: 1;
-
-    transform: translateY(-1px);
-
-    filter:
-        brightness(0)
-        invert(77%)
-        sepia(35%)
-        saturate(557%)
-        hue-rotate(74deg)
-        brightness(102%)
-        contrast(95%);
-}
-
-        /* ============================================= */
-        /* THEME SWITCH */
-        /* ============================================= */
-
-        .switch {
-            position: relative;
-            display: inline-block;
-
-            width: 48px;
-            height: 26px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-
-            cursor: pointer;
-
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-
-            background-color: rgba(255,255,255,0.18);
-
-            transition: 0.3s;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
 
             border-radius: 26px;
+
+            border: 1px solid rgba(255,255,255,0.08);
+
+            box-shadow:
+                0 14px 40px rgba(0,0,0,0.42),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+
+            z-index: 99999;
+
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
-        .slider:before {
-            position: absolute;
+        .bottom-nav a {
+            position: relative;
 
-            content: "";
+            text-decoration: none;
 
-            height: 20px;
-            width: 20px;
+            color: rgba(244,247,251,0.50);
 
-            left: 3px;
-            bottom: 3px;
+            font-size: 11px;
+            font-weight: 700;
 
-            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
 
-            transition: 0.3s;
+            gap: 4px;
 
-            border-radius: 50%;
+            flex: 1;
+
+            height: 58px;
+
+            margin: 0 4px;
+
+            border-radius: 18px;
         }
 
-        input:checked + .slider {
-            background-color: #2e7d32;
+        .bottom-nav a.active {
+            color: #9df5a3;
+
+            background: rgba(76,175,80,0.14);
+
+            box-shadow:
+                inset 0 0 0 1px rgba(76,175,80,0.16),
+                0 6px 18px rgba(76,175,80,0.12);
         }
 
-        /* ============================================= */
-        /* ACCORDIONS COMPAT */
-        /* ============================================= */
+        .nav-icon {
+            width: 22px;
+            height: 22px;
 
-        .day-content {
-            overflow: hidden;
-            transition: max-height 0.4s ease, opacity 0.3s ease;
-            max-height: 0;
-            opacity: 0;
-            scroll-margin-top: 70px;
+            opacity: 0.72;
+
+            filter: brightness(0) invert(1);
         }
 
-        .day-content.open {
-            max-height: 3000px;
+        .bottom-nav a.active .nav-icon {
             opacity: 1;
-        }
 
-        /* ============================================= */
-        /* MOBILE */
-        /* ============================================= */
+            transform: translateY(-1px);
+
+            filter:
+                brightness(0)
+                invert(77%)
+                sepia(35%)
+                saturate(557%)
+                hue-rotate(74deg)
+                brightness(102%)
+                contrast(95%);
+        }
 
         @media (max-width: 480px) {
+            body {
+                padding-bottom: 106px;
+            }
+
             .container {
-                padding: 12px 10px;
+                padding: 12px 10px 24px;
             }
 
             .card {
@@ -687,11 +522,17 @@
             .app-title {
                 font-size: 18px;
             }
+
+            .bottom-nav {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+            }
         }
     </style>
 </head>
 
-<body class="dark">
+<body>
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -709,13 +550,8 @@
 
     <div class="app-shell">
 
-        <div class="header">
-            <div style="
-                display:flex;
-                align-items:center;
-                justify-content:space-between;
-            ">
-
+        <header class="header">
+            <div class="header-inner">
                 <div class="app-title">
                     ⚽ ТОТИШ БРАТИШЕК
 
@@ -725,9 +561,10 @@
                     </div>
                     {% endif %}
                 </div>
+            </div>
+        </header>
 
-
-        <div class="container">
+        <main class="container">
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, msg in messages %}
@@ -739,54 +576,54 @@
             {% endwith %}
 
             {% block content %}{% endblock %}
-        </div>
-
-        {% if session.user_id %}
- <nav class="bottom-nav">
-
-    <a
-        href="/"
-        class="{% if request.path == '/' %}active{% endif %}"
-    >
-        <img src="/static/icons/matches.svg" class="nav-icon">
-        Матчи
-    </a>
-
-    <a
-        href="/table"
-        class="{% if request.path == '/table' %}active{% endif %}"
-    >
-        <img src="/static/icons/table.svg" class="nav-icon">
-        Таблица
-    </a>
-
-    {% if g.is_admin %}
-    <a
-        href="/admin"
-        class="{% if request.path.startswith('/admin') %}active{% endif %}"
-    >
-        <img src="/static/icons/profile.svg" class="nav-icon">
-        Админ
-    </a>
-    {% else %}
-    <a
-        href="/profile"
-        class="{% if request.path == '/profile' %}active{% endif %}"
-    >
-        <img src="/static/icons/profile.svg" class="nav-icon">
-        Профиль
-    </a>
-    {% endif %}
-
-    <a href="/logout">
-        <img src="/static/icons/logout.svg" class="nav-icon">
-        Выход
-    </a>
-
-</nav>
-        {% endif %}
+        </main>
 
     </div>
+
+    {% if session.user_id %}
+    <nav class="bottom-nav">
+
+        <a
+            href="/"
+            class="{% if request.path == '/' %}active{% endif %}"
+        >
+            <img src="/static/icons/matches.svg" class="nav-icon">
+            Матчи
+        </a>
+
+        <a
+            href="/table"
+            class="{% if request.path == '/table' %}active{% endif %}"
+        >
+            <img src="/static/icons/table.svg" class="nav-icon">
+            Таблица
+        </a>
+
+        {% if g.is_admin %}
+        <a
+            href="/admin"
+            class="{% if request.path.startswith('/admin') %}active{% endif %}"
+        >
+            <img src="/static/icons/profile.svg" class="nav-icon">
+            Админ
+        </a>
+        {% else %}
+        <a
+            href="/profile"
+            class="{% if request.path == '/profile' %}active{% endif %}"
+        >
+            <img src="/static/icons/profile.svg" class="nav-icon">
+            Профиль
+        </a>
+        {% endif %}
+
+        <a href="/logout">
+            <img src="/static/icons/logout.svg" class="nav-icon">
+            Выход
+        </a>
+
+    </nav>
+    {% endif %}
 
     <script>
         function hideSplash() {
@@ -810,7 +647,6 @@
                 }
             });
         }
-
     </script>
 
 </body>
