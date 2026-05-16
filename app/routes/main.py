@@ -140,7 +140,6 @@ WHERE id = %s
             """, (match_id,))
 
             match = cur.fetchone()
-            tid = match[6]
 
             if not match:
                 if is_ajax_request():
@@ -148,6 +147,8 @@ WHERE id = %s
 
                 flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
+
+            tid = match[6]
 
             if not is_before_deadline({
                 "deadline": match[4]
