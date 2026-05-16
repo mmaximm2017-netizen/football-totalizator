@@ -22,20 +22,16 @@ def create_app():
     app.permanent_session_lifetime = timedelta(days=7)
 
     # =====================================================
-    # INIT DB + STARTUP TASKS
+    # INIT DB
     # =====================================================
     with app.app_context():
         init_db()
 
-        try:
-            from app.services.match_service import update_matches
-            from app.services.point_service import calculate_all_points
-
-            update_matches()
-            calculate_all_points()
-
-        except Exception as e:
-            logging.warning(f"Startup data load failed: {e}")
+        # IMPORTANT:
+        # Do not run heavy data sync in web startup.
+        # Under Gunicorn/Render create_app() can run in multiple workers,
+        # which may trigger duplicate API/DB sync work and slow boot.
+        # Keep match/points sync manual (admin action) for now.
 
     # =====================================================
     # BLUEPRINTS
