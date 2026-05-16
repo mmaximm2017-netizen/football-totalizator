@@ -172,8 +172,9 @@
 
         box-shadow: 0 18px 42px rgba(0,0,0,0.36);
         transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease;
+            transform 0.18s ease,
+            border-color 0.18s ease,
+            box-shadow 0.18s ease;
 	
         animation: matchFade 0.32s ease both;
     }
@@ -216,13 +217,13 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 10px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .match-meta-v2 {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 3px;
         min-width: 0;
     }
 
@@ -234,10 +235,15 @@
     }
 
     .time-label {
-        font-size: 12px;
+        font-size: 11px;
         color: rgba(244,247,251,0.62);
         font-weight: 800;
         line-height: 1.25;
+    }
+
+    .start-time-label {
+        color: rgba(244,247,251,0.48);
+        font-weight: 750;
     }
 
     .deadline-row {
@@ -247,11 +253,15 @@
         flex-wrap: wrap;
     }
 
+    .deadline-full {
+        display: none;
+    }
+
     .deadline-timer {
         display: inline-flex;
         align-items: center;
-        min-height: 22px;
-        padding: 3px 8px;
+        min-height: 21px;
+        padding: 3px 9px;
         border-radius: 999px;
         background: rgba(76,175,80,0.10);
         color: #8ee996;
@@ -276,10 +286,10 @@
     }
 
     .status-pill-v2 {
-        padding: 6px 10px;
+        padding: 5px 8px;
         border-radius: 999px;
-        font-size: 10px;
-        letter-spacing: 0.4px;
+        font-size: 9px;
+        letter-spacing: 0.3px;
         text-transform: uppercase;
         font-weight: 1000;
         white-space: nowrap;
@@ -305,7 +315,7 @@
         grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr);
         align-items: center;
         gap: 8px;
-        margin: 12px 0;
+        margin: 13px 0 12px;
     }
 
     .team-v2 {
@@ -406,10 +416,10 @@
     }
 
     .prediction-box {
-        margin-top: 10px;
-        padding: 12px;
+        margin-top: 8px;
+        padding: 10px;
 
-        border-radius: 20px;
+        border-radius: 18px;
 
         background: rgba(255,255,255,0.055);
 
@@ -425,16 +435,16 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         gap: 10px;
     }
 
     .prediction-label {
-        font-size: 12px;
-        font-weight: 1000;
-        color: rgba(244,247,251,0.68);
+        font-size: 11px;
+        font-weight: 900;
+        color: rgba(244,247,251,0.52);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.45px;
     }
 
     .lock-pill {
@@ -557,10 +567,13 @@
         font-weight: 1000;
 
         box-shadow: 0 12px 26px rgba(46,125,50,0.24);
+        transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
     }
 
     .save-btn-v2:active {
         transform: scale(0.98);
+        filter: brightness(1.05);
+        box-shadow: 0 8px 18px rgba(46,125,50,0.20);
     }
 
     .disabled-btn-v2 {
@@ -626,6 +639,21 @@
         font-weight: 900;
 
         background: rgba(76,175,80,0.08);
+        transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+    }
+
+    .bets-link-v2:active {
+        transform: scale(0.96);
+        background: rgba(76,175,80,0.15);
+        border-color: rgba(76,175,80,0.48);
+    }
+
+    .stepper-btn:focus-visible,
+    .save-btn-v2:focus-visible,
+    .bets-link-v2:focus-visible,
+    .bets-sheet-close:focus-visible {
+        outline: 2px solid rgba(142,233,150,0.72);
+        outline-offset: 2px;
     }
 
     .bets-sheet-overlay {
@@ -1006,12 +1034,12 @@
             {% endif %}
         </div>
 
-        <div class="time-label">
+        <div class="time-label start-time-label">
             Начало: {{ to_msk(match.kickoff_time) }}
         </div>
 
         <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
-            <span>Приём до: {{ to_msk(match.deadline) }}</span>
+            <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
             <span
                 class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
                 data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
