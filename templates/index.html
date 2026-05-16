@@ -1077,7 +1077,11 @@
                     {% set card_state = 'predicted' %}
                 {% endif %}
 
-                <div class="match-card-v2 {{ card_state }}">
+                <div
+                    class="match-card-v2 {{ card_state }}"
+                    data-finished="{% if match.finished %}1{% else %}0{% endif %}"
+                    data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
+                >
 <div class="match-topline">
     <div class="match-meta-v2">
 
@@ -1529,6 +1533,41 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    function applyDeadlineClosedState(card) {
+        if (!card) return;
+
+        card.dataset.deadlineClosed = '1';
+        card.classList.add('locked');
+
+        const controls = card.querySelectorAll('.score-input-v2, .stepper-btn');
+        controls.forEach(function (control) {
+            control.disabled = true;
+        });
+
+        const submitButton = card.querySelector('.predict-form-v2 button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Дедлайн прошёл';
+        }
+
+        if (card.dataset.finished === '1') {
+            return;
+        }
+
+        const topLine = card.querySelector('.match-topline');
+        if (!topLine) return;
+
+        let statusPill = topLine.querySelector('.status-pill-v2');
+
+        if (!statusPill) {
+            statusPill = document.createElement('div');
+            topLine.appendChild(statusPill);
+        }
+
+        statusPill.className = 'status-pill-v2 status-closed';
+        statusPill.textContent = '⏰ Закрыто';
+    }
+
     function formatDeadlineRemaining(ms) {
         const totalSeconds = Math.max(0, Math.floor(ms / 1000));
         const days = Math.floor(totalSeconds / 86400);
@@ -1551,6 +1590,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll('[data-deadline]').forEach(function (timer) {
             const rawDeadline = timer.dataset.deadline;
+            const card = timer.closest('.match-card-v2');
 
             if (!rawDeadline) return;
 
@@ -1562,9 +1602,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
             timer.classList.remove('warning', 'danger', 'closed');
 
+            if (card && card.dataset.deadlineClosed === '1') {
+                timer.textContent = 'Ставки закрыты';
+                timer.classList.add('closed');
+                return;
+            }
+
             if (remaining <= 0) {
                 timer.textContent = 'Ставки закрыты';
                 timer.classList.add('closed');
+                applyDeadlineClosedState(card);
                 return;
             }
 
@@ -1645,13 +1692,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (!response.ok || !data.ok) {
                     button.textContent = data.message || 'Ошибка';
+                    const messageText = String(data.message || '').toLowerCase();
+
+                    if (messageText.includes('дедлайн')) {
+                        applyDeadlineClosedState(card);
+                    }
 
                     setTimeout(function () {
-                        button.disabled = false;
-                        button.textContent = originalText;
-                        controls.forEach(function (control) {
-                            control.disabled = false;
-                        });
+                        if (card.dataset.deadlineClosed === '1') {
+                            applyDeadlineClosedState(card);
+                        } else {
+                            button.disabled = false;
+                            button.textContent = originalText;
+                            controls.forEach(function (control) {
+                                control.disabled = false;
+                            });
+                        }
                         form.dataset.saving = '0';
                     }, 1200);
 
@@ -1718,11 +1774,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.textContent = 'Ошибка сети';
 
                 setTimeout(function () {
-                    button.disabled = false;
-                    button.textContent = originalText;
-                    controls.forEach(function (control) {
-                        control.disabled = false;
-                    });
+                    if (card.dataset.deadlineClosed === '1') {
+                        applyDeadlineClosedState(card);
+                    } else {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                        controls.forEach(function (control) {
+                            control.disabled = false;
+                        });
+                    }
                     form.dataset.saving = '0';
                 }, 1200);
             }
