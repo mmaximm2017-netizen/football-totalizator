@@ -575,7 +575,7 @@ def debug_match(match_id):
 # RECALCULATE ALL
 # =========================================================
 
-@admin_bp.route('/recalc_all')
+@admin_bp.route('/recalc_all', methods=['POST'])
 @admin_required
 def recalc_all():
 
@@ -1133,9 +1133,15 @@ def admin_new_tournament():
 # DELETE TOURNAMENT
 # =========================================================
 
-@admin_bp.route('/delete_tournament/<int:tid>')
+@admin_bp.route('/delete_tournament', methods=['POST'])
 @admin_required
-def delete_tournament(tid):
+def delete_tournament():
+
+    tid = request.form.get('tid', type=int)
+
+    if not tid:
+        flash("Турнир не найден", "error")
+        return redirect(url_for('admin.admin'))
 
     conn = get_db()
     cur = conn.cursor()

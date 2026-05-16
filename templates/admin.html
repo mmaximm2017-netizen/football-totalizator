@@ -390,7 +390,7 @@
                 <button type="submit" class="admin-btn">Обновить матчи из API</button>
             </form>
 
-            <form method="get" action="/admin/recalc_all">
+            <form method="post" action="/admin/recalc_all">
                 <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
             </form>
 
@@ -610,14 +610,16 @@
             </div>
 
             {% if not t.is_active %}
-            <a
-                href="/admin/delete_tournament/{{ t.id }}"
-                onclick="return confirm('Удалить турнир {{ t.name }}?')"
-                class="admin-btn admin-btn-red admin-btn-small"
-                style="text-decoration:none; display:flex; align-items:center; justify-content:center;"
-            >
-                Удалить
-            </a>
+            <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
+                <input type="hidden" name="tid" value="{{ t.id }}">
+                <button
+                    type="submit"
+                    class="admin-btn admin-btn-red admin-btn-small"
+                    style="text-decoration:none; display:flex; align-items:center; justify-content:center;"
+                >
+                    Удалить
+                </button>
+            </form>
             {% endif %}
         </div>
     </div>
