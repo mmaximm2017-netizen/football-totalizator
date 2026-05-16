@@ -1022,25 +1022,27 @@
 
 {% for month in months %}
 {% set month_idx = loop.index %}
+{% set month_is_open = month.days | selectattr('key', 'equalto', open_day) | list | length > 0 %}
 
 <div class="month-block">
     <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}')">
         <div class="month-left">
-            <span id="arrow-month-{{ month_idx }}" class="month-arrow">▶</span>
+            <span id="arrow-month-{{ month_idx }}" class="month-arrow" {% if month_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
             <span class="month-title">{{ month.label }}</span>
         </div>
 
         <span class="month-count">{{ month.count }} матчей</span>
     </div>
 
-    <div id="month-content-{{ month_idx }}" class="month-content">
+    <div id="month-content-{{ month_idx }}" class="month-content" style="display: {% if month_is_open %}block{% else %}none{% endif %};">
         {% for day in month.days %}
         {% set day_idx = loop.index %}
+        {% set day_is_open = day.key == open_day %}
 
         <div class="day-block">
             <div class="day-header-v2 {{ day.type }}" onclick="toggleDay('{{ month_idx }}_{{ day_idx }}')">
                 <div class="day-left">
-                    <span id="arrow-day-{{ month_idx }}_{{ day_idx }}" class="day-arrow">▶</span>
+                    <span id="arrow-day-{{ month_idx }}_{{ day_idx }}" class="day-arrow" {% if day_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
 
                     <div class="day-title">
                         {{ day.label }}
@@ -1054,7 +1056,7 @@
                 <span class="day-count">{{ day.count }} матчей</span>
             </div>
 
-            <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content">
+            <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content {% if day_is_open %}open{% endif %}">
                 {% for match in day.matches %}
 
                 {% set has_prediction = match.pred_home != '' %}
