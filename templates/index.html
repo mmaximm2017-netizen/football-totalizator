@@ -1672,6 +1672,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             form.dataset.saving = '1';
             const originalText = button.textContent;
+            const homeInput = form.querySelector('input[name="home_goals"]');
+            const awayInput = form.querySelector('input[name="away_goals"]');
+            const submittedHome = homeInput ? homeInput.value : '';
+            const submittedAway = awayInput ? awayInput.value : '';
 
             button.disabled = true;
             button.textContent = 'Сохраняем...';
@@ -1714,8 +1718,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                const home = data.home_goals;
-                const away = data.away_goals;
+                const home = data.home_goals ?? submittedHome;
+                const away = data.away_goals ?? submittedAway;
 
                 card.classList.add('predicted');
                 box.classList.add('saved');
@@ -1738,7 +1742,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 card.classList.add('save-success-pulse');
 
-                const predictionText = box.querySelector('.my-prediction-v2');
+                let predictionText = box.querySelector('.my-prediction-v2');
+                const bottomLine = box.querySelector('.match-bottomline');
+
+                if (!predictionText && bottomLine) {
+                    predictionText = document.createElement('div');
+                    predictionText.className = 'my-prediction-v2';
+                    bottomLine.prepend(predictionText);
+                }
 
                 if (predictionText) {
                     predictionText.innerHTML = 'Текущий прогноз: <b>' + home + ':' + away + '</b>';
@@ -1747,8 +1758,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 let betsLink = box.querySelector('.bets-link-v2');
 
                 if (!betsLink && data.match_id) {
-                    const bottomLine = box.querySelector('.match-bottomline');
-
                     if (bottomLine) {
                         betsLink = document.createElement('a');
                         betsLink.className = 'bets-link-v2';
