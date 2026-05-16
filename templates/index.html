@@ -350,7 +350,7 @@
     .teams-center {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr);
-        align-items: center;
+        align-items: start;
         gap: 6px;
         margin: 8px 0 7px;
         padding: 1px 0 0;
@@ -360,6 +360,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
         gap: 4px;
         min-width: 0;
     }
@@ -396,7 +397,15 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        align-self: center;
         gap: 4px;
+    }
+
+    .team-name-v2 {
+        text-align: center;
+        line-height: 1.2;
+        white-space: normal;
+        overflow-wrap: break-word;
     }
 
     .vs-badge {
