@@ -39,9 +39,36 @@ def fetch_matches():
         except Exception as e: logger.error(f"API error: {e}")
     return all_matches
 
+def parse_optional_int(value):
+    try:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            if value == "":
+                return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
 def create_match_from_understat(match, prefix, league_tag):
+    goals = match.get('goals', {}) or {}
+    home_goal = parse_optional_int(goals.get('h'))
+    away_goal = parse_optional_int(goals.get('a'))
+
+    is_result = bool(match.get('isResult'))
+    is_finished = is_result and home_goal is not None and away_goal is not None
+
+    status = 'FINISHED' if is_finished else 'SCHEDULED'
+    score = {
+        'fullTime': {
+            'home': home_goal if is_finished else None,
+            'away': away_goal if is_finished else None
+        }
+    }
+
     return {'id': f"{prefix}_{match['id']}", 'home_team': match['h']['title'], 'away_team': match['a']['title'],
-            'utcDate': match['datetime'], 'status': 'SCHEDULED', 'score': {'fullTime': {'home': None, 'away': None}}, 'league': league_tag}
+            'utcDate': match['datetime'], 'status': status, 'score': score, 'league': league_tag}
 
 def resolve_rpl_season():
     env_season = os.getenv("RPL_SEASON")
@@ -70,10 +97,33 @@ def fetch_rpl_matches():
         try:
             understat = UnderstatClient()
             league_data = understat.league(league="RFPL").get_match_data(season=season)
+
+            finished_mapped = 0
+            scheduled_mapped = 0
+            invalid_score_rows = 0
+
             for match in league_data:
-                all_matches.append(create_match_from_understat(match, "rpl", "rpl"))
+                mapped = create_match_from_understat(match, "rpl", "rpl")
+                all_matches.append(mapped)
+
+                if mapped.get('status') == 'FINISHED':
+                    finished_mapped += 1
+                else:
+                    scheduled_mapped += 1
+
+                if (
+                    match.get('isResult')
+                    and mapped.get('status') != 'FINISHED'
+                ):
+                    invalid_score_rows += 1
 
             logger.info("RPL matches fetched: %s", len(all_matches))
+            logger.info(
+                "RPL mapping summary: finished=%s scheduled=%s invalid_score_rows=%s",
+                finished_mapped,
+                scheduled_mapped,
+                invalid_score_rows
+            )
             return all_matches
 
         except Exception as e:
