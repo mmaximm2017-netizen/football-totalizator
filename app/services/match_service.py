@@ -1,5 +1,6 @@
 # app/services/match_service.py
 import logging
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -42,14 +43,45 @@ def create_match_from_understat(match, prefix, league_tag):
     return {'id': f"{prefix}_{match['id']}", 'home_team': match['h']['title'], 'away_team': match['a']['title'],
             'utcDate': match['datetime'], 'status': 'SCHEDULED', 'score': {'fullTime': {'home': None, 'away': None}}, 'league': league_tag}
 
+def resolve_rpl_season():
+    env_season = os.getenv("RPL_SEASON")
+    if env_season:
+        return str(env_season).strip()
+
+    now_msk = datetime.now(MSK)
+    # Russian league season usually starts in summer and is labeled by start year.
+    season_start_year = now_msk.year if now_msk.month >= 7 else now_msk.year - 1
+    return str(season_start_year)
+
 def fetch_rpl_matches():
-    if not UNDERSTAT_AVAILABLE: return []
+    if not UNDERSTAT_AVAILABLE:
+        return []
+
+    season = resolve_rpl_season()
+    max_attempts = 3
+    retry_delay_sec = 1.5
+
+    logger.info("RPL sync start")
+    logger.info("RPL selected season: %s", season)
+
     all_matches = []
-    try:
-        understat = UnderstatClient()
-        league_data = understat.league(league="RFPL").get_match_data(season="2025")
-        for match in league_data: all_matches.append(create_match_from_understat(match, "rpl", "rpl"))
-    except Exception as e: logger.error(f"Understat error: {e}")
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            understat = UnderstatClient()
+            league_data = understat.league(league="RFPL").get_match_data(season=season)
+            for match in league_data:
+                all_matches.append(create_match_from_understat(match, "rpl", "rpl"))
+
+            logger.info("RPL matches fetched: %s", len(all_matches))
+            return all_matches
+
+        except Exception as e:
+            logger.warning("RPL attempt failed (%s/%s): %s", attempt, max_attempts, e)
+            if attempt < max_attempts:
+                time.sleep(retry_delay_sec)
+
+    logger.error("RPL sync failed")
     return all_matches
 
 def should_update():
