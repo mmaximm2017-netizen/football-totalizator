@@ -212,6 +212,13 @@
         transform: scale(0.992);
     }
 
+    .match-card-v2.save-success-pulse {
+        box-shadow:
+            0 14px 34px rgba(0,78,140,0.16),
+            0 0 0 2px rgba(46,125,50,0.22),
+            inset 0 1px 0 rgba(255,255,255,0.70);
+    }
+
     @keyframes matchFade {
         from {
             opacity: 0;
@@ -1605,16 +1612,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const button = form.querySelector('button[type="submit"]');
             const card = form.closest('.match-card-v2');
             const box = form.closest('.prediction-box');
+            const controls = form.querySelectorAll('.stepper-btn, .score-input-v2');
 
             if (!button || !card || !box) {
                 form.submit();
                 return;
             }
 
+            if (form.dataset.saving === '1') {
+                return;
+            }
+
+            form.dataset.saving = '1';
             const originalText = button.textContent;
 
             button.disabled = true;
             button.textContent = 'Сохраняем...';
+            controls.forEach(function (control) {
+                control.disabled = true;
+            });
 
             try {
                 const response = await fetch('/', {
@@ -1633,6 +1649,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     setTimeout(function () {
                         button.disabled = false;
                         button.textContent = originalText;
+                        controls.forEach(function (control) {
+                            control.disabled = false;
+                        });
+                        form.dataset.saving = '0';
                     }, 1200);
 
                     return;
@@ -1660,6 +1680,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     lock.textContent = '✓ сохранён';
                 }
 
+                card.classList.add('save-success-pulse');
+
                 const predictionText = box.querySelector('.my-prediction-v2');
 
                 if (predictionText) {
@@ -1683,9 +1705,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.textContent = '✓ Сохранено';
 
                 setTimeout(function () {
+                    card.classList.remove('save-success-pulse');
                     button.disabled = false;
-                    button.textContent = originalText;
-                }, 900);
+                    button.textContent = 'Изменить прогноз';
+                    controls.forEach(function (control) {
+                        control.disabled = false;
+                    });
+                    form.dataset.saving = '0';
+                }, 800);
 
             } catch (error) {
                 button.textContent = 'Ошибка сети';
@@ -1693,6 +1720,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(function () {
                     button.disabled = false;
                     button.textContent = originalText;
+                    controls.forEach(function (control) {
+                        control.disabled = false;
+                    });
+                    form.dataset.saving = '0';
                 }, 1200);
             }
         });
