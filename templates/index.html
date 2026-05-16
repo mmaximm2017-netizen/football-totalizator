@@ -1676,6 +1676,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const awayInput = form.querySelector('input[name="away_goals"]');
             const submittedHome = homeInput ? homeInput.value : '';
             const submittedAway = awayInput ? awayInput.value : '';
+            const formData = new FormData(form);
 
             button.disabled = true;
             button.textContent = 'Сохраняем...';
@@ -1689,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: new FormData(form)
+                    body: formData
                 });
 
                 const data = await response.json();
