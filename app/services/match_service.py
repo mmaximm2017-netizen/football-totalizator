@@ -124,6 +124,10 @@ def update_matches():
                 else:
                     cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
                         (status, kickoff_utc, deadline_utc, league, str(api_id)))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally: close_db(conn, cur)
 
 def update_matches_safe():
