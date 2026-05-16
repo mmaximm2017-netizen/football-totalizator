@@ -1209,85 +1209,91 @@
                                 {% endif %}
                             </div>
 
-                            <form method="post" class="predict-form-v2">
-                                <input type="hidden" name="match_id" value="{{ match.id }}">
+                            {% if not g.is_admin %}
+                                <form method="post" class="predict-form-v2">
+                                    <input type="hidden" name="match_id" value="{{ match.id }}">
 
-                                <div class="score-input-row">
-                                    <div class="score-stepper" data-stepper>
-                                        <button
-                                            type="button"
-                                            class="stepper-btn"
-                                            data-step="-1"
-                                            aria-label="Уменьшить голы {{ match.home_team }}"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >−</button>
+                                    <div class="score-input-row">
+                                        <div class="score-stepper" data-stepper>
+                                            <button
+                                                type="button"
+                                                class="stepper-btn"
+                                                data-step="-1"
+                                                aria-label="Уменьшить голы {{ match.home_team }}"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >−</button>
 
-                                        <input
-                                            class="score-input-v2"
-                                            type="number"
-                                            name="home_goals"
-                                            value="{{ match.pred_home if match.pred_home != '' else 0 }}"
-                                            min="0"
-                                            max="99"
-                                            inputmode="numeric"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >
+                                            <input
+                                                class="score-input-v2"
+                                                type="number"
+                                                name="home_goals"
+                                                value="{{ match.pred_home if match.pred_home != '' else 0 }}"
+                                                min="0"
+                                                max="99"
+                                                inputmode="numeric"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >
 
-                                        <button
-                                            type="button"
-                                            class="stepper-btn"
-                                            data-step="1"
-                                            aria-label="Увеличить голы {{ match.home_team }}"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >+</button>
+                                            <button
+                                                type="button"
+                                                class="stepper-btn"
+                                                data-step="1"
+                                                aria-label="Увеличить голы {{ match.home_team }}"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >+</button>
+                                        </div>
+
+                                        <span class="score-divider">:</span>
+
+                                        <div class="score-stepper" data-stepper>
+                                            <button
+                                                type="button"
+                                                class="stepper-btn"
+                                                data-step="-1"
+                                                aria-label="Уменьшить голы {{ match.away_team }}"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >−</button>
+
+                                            <input
+                                                class="score-input-v2"
+                                                type="number"
+                                                name="away_goals"
+                                                value="{{ match.pred_away if match.pred_away != '' else 0 }}"
+                                                min="0"
+                                                max="99"
+                                                inputmode="numeric"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >
+
+                                            <button
+                                                type="button"
+                                                class="stepper-btn"
+                                                data-step="1"
+                                                aria-label="Увеличить голы {{ match.away_team }}"
+                                                {% if match.deadline_passed %}disabled{% endif %}
+                                            >+</button>
+                                        </div>
                                     </div>
 
-                                    <span class="score-divider">:</span>
-
-                                    <div class="score-stepper" data-stepper>
-                                        <button
-                                            type="button"
-                                            class="stepper-btn"
-                                            data-step="-1"
-                                            aria-label="Уменьшить голы {{ match.away_team }}"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >−</button>
-
-                                        <input
-                                            class="score-input-v2"
-                                            type="number"
-                                            name="away_goals"
-                                            value="{{ match.pred_away if match.pred_away != '' else 0 }}"
-                                            min="0"
-                                            max="99"
-                                            inputmode="numeric"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >
-
-                                        <button
-                                            type="button"
-                                            class="stepper-btn"
-                                            data-step="1"
-                                            aria-label="Увеличить голы {{ match.away_team }}"
-                                            {% if match.deadline_passed %}disabled{% endif %}
-                                        >+</button>
-                                    </div>
-                                </div>
-
-                                {% if not match.deadline_passed %}
-                                    <button type="submit" class="save-btn-v2">
-                                        {% if has_prediction %}
-                                            Изменить прогноз
-                                        {% else %}
-                                            Сохранить прогноз
-                                        {% endif %}
-                                    </button>
-                                {% else %}
-                                    <button type="button" class="disabled-btn-v2" disabled>
-                                        Дедлайн прошёл
-                                    </button>
-                                {% endif %}
-                            </form>
+                                    {% if not match.deadline_passed %}
+                                        <button type="submit" class="save-btn-v2">
+                                            {% if has_prediction %}
+                                                Изменить прогноз
+                                            {% else %}
+                                                Сохранить прогноз
+                                            {% endif %}
+                                        </button>
+                                    {% else %}
+                                        <button type="button" class="disabled-btn-v2" disabled>
+                                            Дедлайн прошёл
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            {% else %}
+                                <button type="button" class="disabled-btn-v2" disabled>
+                                    Админ не участвует в ставках
+                                </button>
+                            {% endif %}
 
                             <div class="match-bottomline">
                                 <div class="my-prediction-v2">

@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
+    g,
     render_template,
     request,
     redirect,
@@ -94,6 +95,12 @@ def index():
         # =================================================
 
         if request.method == 'POST':
+            if getattr(g, "is_admin", False):
+                if is_ajax_request():
+                    return ajax_error("Админ не участвует в ставках", 403)
+
+                flash("Админ не участвует в ставках", "error")
+                return redirect(url_for('main.index'))
 
             match_id = request.form.get('match_id')
             home_raw = request.form.get('home_goals')
