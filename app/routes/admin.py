@@ -395,12 +395,17 @@ def admin():
 
         manual_matches = []
         for m in cur.fetchall():
+            kickoff = m[3]
+            kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+
             manual_matches.append({
                 'id': m[0],
                 'home_team': m[1],
                 'away_team': m[2],
                 'kickoff_time': m[3],
-                'status': m[4]
+                'status': m[4],
+                'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
+                'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else ""
             })
 
         # =============================================
@@ -977,8 +982,10 @@ def admin_edit_match():
     match_id = request.form.get('match_id')
     home_team = request.form.get('home_team', '').strip()
     away_team = request.form.get('away_team', '').strip()
+    match_date = request.form.get('match_date', '').strip()
+    match_time = request.form.get('match_time', '').strip()
 
-    if not match_id or not home_team or not away_team:
+    if not match_id or not home_team or not away_team or not match_date or not match_time:
 
         flash("Заполните все поля", "error")
 
@@ -988,17 +995,60 @@ def admin_edit_match():
     cur = conn.cursor()
 
     try:
-
         cur.execute("""
-            UPDATE matches
-            SET home_team = %s,
-                away_team = %s
+            SELECT status
+            FROM matches
             WHERE id = %s
-        """, (
-            home_team,
-            away_team,
-            match_id
-        ))
+        """, (match_id,))
+
+        row = cur.fetchone()
+
+        if not row:
+            flash("Матч не найден", "error")
+            return redirect(url_for('admin.admin'))
+
+        status = row[0]
+
+        try:
+            dt_msk = datetime.strptime(
+                f"{match_date} {match_time}",
+                "%Y-%m-%d %H:%M"
+            ).replace(tzinfo=MSK)
+        except Exception:
+            flash("Некорректная дата или время", "error")
+            return redirect(url_for('admin.admin'))
+
+        kickoff_utc = dt_msk.astimezone(timezone.utc)
+        deadline_utc = kickoff_utc - timedelta(hours=1)
+
+        if status == 'FINISHED':
+            cur.execute("""
+                UPDATE matches
+                SET home_team = %s,
+                    away_team = %s
+                WHERE id = %s
+            """, (
+                home_team,
+                away_team,
+                match_id
+            ))
+
+            flash("Для FINISHED матча время не изменяется", "error")
+        else:
+            cur.execute("""
+                UPDATE matches
+                SET home_team = %s,
+                    away_team = %s,
+                    kickoff_time = %s,
+                    deadline = %s
+                WHERE id = %s
+            """, (
+                home_team,
+                away_team,
+                kickoff_utc,
+                deadline_utc,
+                match_id
+            ))
 
         if cur.rowcount == 0:
             flash("Матч не найден", "error")

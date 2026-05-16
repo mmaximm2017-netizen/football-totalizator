@@ -574,6 +574,17 @@
                         <input type="text" name="away_team" value="{{ m.away_team }}" required>
                     </div>
 
+                    <div class="admin-form-row" style="margin-top: 10px;">
+                        <div>
+                            <label>Дата (МСК)</label>
+                            <input type="date" name="match_date" value="{{ m.match_date_msk }}" required>
+                        </div>
+                        <div>
+                            <label>Время (МСК)</label>
+                            <input type="time" name="match_time" value="{{ m.match_time_msk }}" required>
+                        </div>
+                    </div>
+
                     <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">
                         Сохранить
                     </button>
