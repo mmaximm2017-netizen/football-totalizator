@@ -1158,6 +1158,129 @@ document.addEventListener('DOMContentLoaded', function () {
         sheetContent.innerHTML = '<div class="bets-sheet-loading">Загружаем ставки...</div>';
     }
 
+    function createCompactBetsStyle() {
+        const style = document.createElement('style');
+
+        style.textContent = `
+            .bets-sheet-content .predictions-page {
+                gap: 8px !important;
+            }
+
+            .bets-sheet-content .predictions-hero {
+                padding: 10px 12px !important;
+                border-radius: 18px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .predictions-title,
+            .bets-sheet-content .predictions-subtitle {
+                display: none !important;
+            }
+
+            .bets-sheet-content .teams-row {
+                grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+                gap: 8px !important;
+            }
+
+            .bets-sheet-content .team-side {
+                gap: 4px !important;
+            }
+
+            .bets-sheet-content .team-logo-box {
+                width: 34px !important;
+                height: 34px !important;
+                border-radius: 12px !important;
+                font-size: 18px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .team-logo-box img {
+                width: 26px !important;
+                height: 26px !important;
+            }
+
+            .bets-sheet-content .team-name {
+                max-width: 112px !important;
+                font-size: 13px !important;
+                line-height: 1.08 !important;
+            }
+
+            .bets-sheet-content .match-center {
+                gap: 2px !important;
+            }
+
+            .bets-sheet-content .score-box {
+                min-width: 58px !important;
+                height: 38px !important;
+                border-radius: 14px !important;
+                font-size: 19px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .score-label {
+                font-size: 9px !important;
+                letter-spacing: 0.5px !important;
+            }
+
+            .bets-sheet-content .predictions-list {
+                gap: 7px !important;
+            }
+
+            .bets-sheet-content .prediction-row {
+                padding: 9px 11px !important;
+                border-radius: 16px !important;
+                gap: 8px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .prediction-name {
+                font-size: 14px !important;
+                line-height: 1.1 !important;
+            }
+
+            .bets-sheet-content .prediction-meta {
+                margin-top: 2px !important;
+                font-size: 10px !important;
+                line-height: 1.1 !important;
+            }
+
+            .bets-sheet-content .points-pill {
+                margin-top: 4px !important;
+                padding: 3px 7px !important;
+                font-size: 9px !important;
+            }
+
+            .bets-sheet-content .prediction-score {
+                min-width: 58px !important;
+                height: 38px !important;
+                border-radius: 14px !important;
+                font-size: 19px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .empty-predictions {
+                padding: 22px 14px !important;
+                border-radius: 18px !important;
+                box-shadow: none !important;
+            }
+
+            .bets-sheet-content .empty-icon {
+                font-size: 30px !important;
+                margin-bottom: 8px !important;
+            }
+
+            .bets-sheet-content .empty-title {
+                font-size: 15px !important;
+            }
+
+            .bets-sheet-content .empty-text {
+                font-size: 12px !important;
+            }
+        `;
+
+        return style;
+    }
+
     async function loadBetsIntoSheet(url) {
         if (!sheetContent) {
             window.location.href = url;
@@ -1191,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            sheetContent.replaceChildren(...styles, page);
+            sheetContent.replaceChildren(...styles, createCompactBetsStyle(), page);
 
         } catch (error) {
             window.location.href = url;
