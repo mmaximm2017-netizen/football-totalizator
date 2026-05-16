@@ -109,14 +109,24 @@ def update_matches():
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
                     kickoff_utc, deadline_utc, status, home_score, away_score, league))
             else:
-                cur.execute("SELECT home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
-                existing_scores = cur.fetchone()
-                existing_home = existing_scores[0] if existing_scores else None
-                existing_away = existing_scores[1] if existing_scores else None
+                cur.execute("SELECT status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
+                existing_match = cur.fetchone()
+                existing_status = existing_match[0] if existing_match else None
+                existing_home = existing_match[1] if existing_match else None
+                existing_away = existing_match[2] if existing_match else None
                 
                 if existing_home is not None and existing_away is not None:
                     home_score = existing_home
                     away_score = existing_away
+
+                # Do not downgrade already finished matches with known score.
+                if (
+                    existing_status == 'FINISHED'
+                    and existing_home is not None
+                    and existing_away is not None
+                    and status != 'FINISHED'
+                ):
+                    status = 'FINISHED'
                 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
                     cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
