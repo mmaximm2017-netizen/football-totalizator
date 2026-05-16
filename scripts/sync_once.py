@@ -2,8 +2,7 @@ import logging
 import sys
 
 from app import create_app
-from app.services.match_service import update_matches
-from app.services.point_service import calculate_all_points
+from app.services.match_service import run_sync_with_lock
 
 
 def main():
@@ -14,11 +13,13 @@ def main():
     app = create_app()
 
     with app.app_context():
-        update_matches()
-        print("matches updated")
-
-        calculate_all_points()
-        print("points calculated")
+        completed = run_sync_with_lock()
+        if completed:
+            print("matches updated")
+            print("points calculated")
+        else:
+            print("sync already running")
+            return
 
     print("sync done")
 

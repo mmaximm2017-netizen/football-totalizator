@@ -108,13 +108,14 @@ def admin():
 
             if action == 'update_matches':
 
-                from app.services.match_service import update_matches
-                from app.services.point_service import calculate_all_points
+                from app.services.match_service import run_sync_with_lock
 
                 try:
-                    update_matches()
-                    calculate_all_points()
-                    flash("Матчи и очки обновлены", "success")
+                    completed = run_sync_with_lock()
+                    if completed:
+                        flash("Матчи и очки обновлены", "success")
+                    else:
+                        flash("Обновление уже выполняется", "error")
                 except Exception as e:
                     flash(f"Ошибка обновления: {e}", "error")
 
@@ -455,9 +456,15 @@ tournaments=tournaments
 # DEBUG MATCH
 # =========================================================
 
-@admin_bp.route('/debug_match/<int:match_id>')
+@admin_bp.route('/debug_match', methods=['POST'])
 @admin_required
-def debug_match(match_id):
+def debug_match():
+
+    match_id = request.form.get('match_id', type=int)
+
+    if not match_id:
+        flash("Матч не найден", "error")
+        return redirect(url_for('admin.admin'))
 
     conn = get_db()
     cur = conn.cursor()
@@ -681,9 +688,17 @@ def recalc_all():
 # FORCE FINISH MATCH
 # =========================================================
 
-@admin_bp.route('/force_finish/<int:match_id>/<int:h>/<int:a>')
+@admin_bp.route('/force_finish', methods=['POST'])
 @admin_required
-def force_finish(match_id, h, a):
+def force_finish():
+
+    match_id = request.form.get('match_id', type=int)
+    h = request.form.get('home_score', type=int)
+    a = request.form.get('away_score', type=int)
+
+    if match_id is None or h is None or a is None:
+        flash("Некорректные данные матча", "error")
+        return redirect(url_for('admin.admin'))
 
     conn = get_db()
     cur = conn.cursor()

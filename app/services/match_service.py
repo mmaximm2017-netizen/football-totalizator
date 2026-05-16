@@ -12,6 +12,7 @@ from app.utils import translate_name, parse_utc_time, utc_now
 logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
+SYNC_LOCK_KEY = 88422031
 
 # Пробуем импортировать Understat
 try:
@@ -233,6 +234,45 @@ def update_matches():
         raise
     finally: close_db(conn, cur)
 
+def try_acquire_sync_lock(lock_key=SYNC_LOCK_KEY):
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
+        row = cur.fetchone()
+        acquired = bool(row and row[0])
+        return conn, cur, acquired
+    except Exception as e:
+        logger.warning("Sync lock unavailable, continuing without lock: %s", e)
+        close_db(conn, cur)
+        return None, None, True
+
+def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
+    if not conn or not cur:
+        return
+    try:
+        cur.execute("SELECT pg_advisory_unlock(%s)", (lock_key,))
+    except Exception as e:
+        logger.warning("Failed to release sync lock: %s", e)
+    finally:
+        close_db(conn, cur)
+
+def run_sync_with_lock():
+    lock_conn = lock_cur = None
+    try:
+        lock_conn, lock_cur, acquired = try_acquire_sync_lock()
+        if not acquired:
+            logger.info("sync already running")
+            return False
+
+        update_matches()
+        from app.services import point_service
+        point_service.calculate_all_points()
+        return True
+    finally:
+        release_sync_lock(lock_conn, lock_cur)
+
 def update_matches_safe():
     global _last_update_time
     if not should_update():
@@ -242,6 +282,4 @@ def update_matches_safe():
         logger.info("Обновление не требуется (кеш)")
         return
     _last_update_time = time.time()
-    update_matches()
-    from app.services import point_service
-    point_service.calculate_all_points()
+    run_sync_with_lock()
