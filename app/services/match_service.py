@@ -115,7 +115,9 @@ def update_matches():
                 existing_home = existing_match[1] if existing_match else None
                 existing_away = existing_match[2] if existing_match else None
                 
-                if existing_home is not None and existing_away is not None:
+                is_locked_completed = existing_home is not None and existing_away is not None
+
+                if is_locked_completed:
                     home_score = existing_home
                     away_score = existing_away
 
@@ -127,6 +129,11 @@ def update_matches():
                     and status != 'FINISHED'
                 ):
                     status = 'FINISHED'
+
+                # Keep completed matches immutable on sync:
+                # do not overwrite status/kickoff/deadline/league once both scores are known.
+                if is_locked_completed:
+                    continue
                 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
                     cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
