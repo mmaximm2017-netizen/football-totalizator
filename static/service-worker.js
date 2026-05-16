@@ -1,9 +1,10 @@
-const CACHE_NAME = 'totish-cache-v4';
+const CACHE_NAME = 'totish-cache-v5';
 
 const STATIC_ASSETS = [
     '/static/manifest.json',
     '/static/icon-192-new.png',
     '/static/icon-512-new.png',
+    '/static/apple-touch-icon.png',
     '/static/push-worker.js'
 ];
 

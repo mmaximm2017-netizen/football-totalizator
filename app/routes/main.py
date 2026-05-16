@@ -332,6 +332,19 @@ WHERE id = %s
 
         open_day = next((d["key"] for d in days if d["type"] == "today"), None)
 
+        # Show only one актуальный игровой день on the home page:
+        # 1) today (MSK) if present
+        # 2) otherwise nearest future day
+        # 3) otherwise no days
+        selected_day = None
+        if days:
+            selected_day = next((d for d in days if d["key"] == today), None)
+            if selected_day is None:
+                selected_day = next((d for d in days if d["key"] > today), None)
+
+        days = [selected_day] if selected_day else []
+        open_day = selected_day["key"] if selected_day else None
+
         # =================================================
         # GROUP BY MONTH
         # =================================================

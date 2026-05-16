@@ -115,7 +115,11 @@ def update_matches():
                 existing_home = existing_match[1] if existing_match else None
                 existing_away = existing_match[2] if existing_match else None
                 
-                is_locked_completed = existing_home is not None and existing_away is not None
+                is_locked_completed = (
+                    existing_status == 'FINISHED'
+                    and existing_home is not None
+                    and existing_away is not None
+                )
 
                 if is_locked_completed:
                     home_score = existing_home
