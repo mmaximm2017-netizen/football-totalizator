@@ -240,6 +240,41 @@
         line-height: 1.25;
     }
 
+    .deadline-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .deadline-timer {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(76,175,80,0.10);
+        color: #8ee996;
+        font-size: 11px;
+        font-weight: 1000;
+        letter-spacing: 0.1px;
+    }
+
+    .deadline-timer.warning {
+        background: rgba(255,183,77,0.13);
+        color: #ffcc80;
+    }
+
+    .deadline-timer.danger {
+        background: rgba(239,83,80,0.15);
+        color: #ff8a80;
+    }
+
+    .deadline-timer.closed {
+        background: rgba(255,255,255,0.07);
+        color: rgba(244,247,251,0.58);
+    }
+
     .status-pill-v2 {
         padding: 6px 10px;
         border-radius: 999px;
@@ -975,8 +1010,18 @@
             Начало: {{ to_msk(match.kickoff_time) }}
         </div>
 
-        <div class="time-label">
-            Приём до: {{ to_msk(match.deadline) }}
+        <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
+            <span>Приём до: {{ to_msk(match.deadline) }}</span>
+            <span
+                class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
+                data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
+            >
+                {% if match.deadline_passed %}
+                    Ставки закрыты
+                {% else %}
+                    До закрытия: —
+                {% endif %}
+            </span>
         </div>
 
     </div>
@@ -1375,6 +1420,58 @@ document.addEventListener('DOMContentLoaded', function () {
             closeBetsSheet();
         }
     });
+
+    function formatDeadlineRemaining(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const hh = String(hours).padStart(2, '0');
+        const mm = String(minutes).padStart(2, '0');
+        const ss = String(seconds).padStart(2, '0');
+
+        if (days > 0) {
+            return days + 'д ' + hh + ':' + mm + ':' + ss;
+        }
+
+        return hh + ':' + mm + ':' + ss;
+    }
+
+    function updateDeadlineTimers() {
+        const now = Date.now();
+
+        document.querySelectorAll('[data-deadline]').forEach(function (timer) {
+            const rawDeadline = timer.dataset.deadline;
+
+            if (!rawDeadline) return;
+
+            const deadlineMs = Date.parse(rawDeadline);
+
+            if (Number.isNaN(deadlineMs)) return;
+
+            const remaining = deadlineMs - now;
+
+            timer.classList.remove('warning', 'danger', 'closed');
+
+            if (remaining <= 0) {
+                timer.textContent = 'Ставки закрыты';
+                timer.classList.add('closed');
+                return;
+            }
+
+            timer.textContent = 'До закрытия: ' + formatDeadlineRemaining(remaining);
+
+            if (remaining < 60 * 60 * 1000) {
+                timer.classList.add('danger');
+            } else if (remaining < 6 * 60 * 60 * 1000) {
+                timer.classList.add('warning');
+            }
+        });
+    }
+
+    updateDeadlineTimers();
+    setInterval(updateDeadlineTimers, 1000);
 
     const steppers = document.querySelectorAll('[data-stepper]');
 
