@@ -1343,6 +1343,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // One-time initial scroll to the day that is pre-opened by backend open_day.
+    (function scrollToOpenedDayOnce() {
+        const openedDayContent = document.querySelector('.day-content.open');
+        if (!openedDayContent) return;
+
+        const dayBlock = openedDayContent.closest('.day-block');
+        const dayHeader = dayBlock ? dayBlock.querySelector('.day-header-v2') : null;
+        if (!dayHeader) return;
+
+        const fixedHeader = document.querySelector('.header');
+        const headerOffset = fixedHeader ? fixedHeader.offsetHeight + 10 : 12;
+        const targetTop = dayHeader.getBoundingClientRect().top + window.scrollY - headerOffset;
+
+        setTimeout(function () {
+            window.scrollTo({
+                top: Math.max(0, targetTop),
+                behavior: 'smooth'
+            });
+        }, 120);
+    })();
+
     const sheetOverlay = document.querySelector('[data-bets-sheet-overlay]');
     const sheetPanel = document.querySelector('[data-bets-sheet-panel]');
     const sheetContent = document.querySelector('[data-bets-sheet-content]');
