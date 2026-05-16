@@ -282,6 +282,10 @@ def admin():
 
                 return redirect(url_for('admin.admin'))
 
+            else:
+                flash("Неизвестное действие", "error")
+                return redirect(url_for('admin.admin'))
+
         # =================================================
         # PAGE DATA
         # =================================================

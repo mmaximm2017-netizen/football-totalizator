@@ -123,6 +123,13 @@ body {
 
             animation: logoPulse 1.15s ease-in-out infinite alternate;
         }
+        
+        .splash-logo img {
+            width: 74px;
+            height: 74px;
+            object-fit: contain;
+            display: block;
+        }
 
         .splash-title {
             font-size: 25px;
@@ -212,6 +219,17 @@ body {
             font-weight: 900;
             font-size: 19px;
             letter-spacing: 0.2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .app-title-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            flex-shrink: 0;
         }
 
         .admin-label {
@@ -555,7 +573,9 @@ body {
 
     <div id="app-splash">
         <div class="splash-inner">
-            <div class="splash-logo">⚽</div>
+            <div class="splash-logo">
+                <img src="/static/icon-192-new.png" alt="App icon">
+            </div>
 
             <div class="splash-title">
                 ТОТИШ БРАТИШЕК
@@ -572,7 +592,8 @@ body {
         <header class="header">
             <div class="header-inner">
                 <div class="app-title">
-                    ⚽ ТОТИШ БРАТИШЕК
+                    <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
+                    ТОТИШ БРАТИШЕК
 
                     {% if g.is_admin %}
                     <div class="admin-label">

@@ -386,15 +386,18 @@
 
         <div class="admin-grid">
             <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="action" value="update_matches">
                 <button type="submit" class="admin-btn">Обновить матчи из API</button>
             </form>
 
             <form method="post" action="/admin/recalc_all">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
             </form>
 
             <form method="post" action="/admin/translate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
             </form>
         </div>
@@ -404,6 +407,7 @@
         <div class="admin-card-header">Добавить матч вручную</div>
 
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="add_match">
 
             <label>Команда 1</label>
@@ -473,6 +477,7 @@
                                     </div>
 
                                     <form method="post" class="score-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                         <input type="hidden" name="action" value="set_result">
                                         <input type="hidden" name="match_id" value="{{ m.id }}">
 
@@ -533,6 +538,7 @@
                                     </div>
 
                                     <form method="post" action="/admin/fix_result" class="score-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                         <input type="hidden" name="match_id" value="{{ m.id }}">
 
                                         <input class="score-input" type="number" name="home_score" min="0" required>
@@ -562,6 +568,7 @@
             {% for m in manual_matches %}
             <div class="admin-match-card">
                 <form method="post" action="/admin/edit_match" class="edit-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="match_id" value="{{ m.id }}">
 
                     <div class="admin-match-title" style="margin-bottom: 10px;">
@@ -591,6 +598,7 @@
                 </form>
 
                 <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="match_id" value="{{ m.id }}">
                     <button type="submit" class="admin-btn admin-btn-red">Удалить</button>
                 </form>
@@ -622,6 +630,7 @@
 
             {% if not t.is_active %}
             <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="tid" value="{{ t.id }}">
                 <button
                     type="submit"
@@ -641,6 +650,7 @@
         <div class="admin-card-header">Начать новый турнир</div>
 
         <form method="post" action="/admin/new_tournament" onsubmit="return confirm('Создать новый турнир? Текущая таблица уйдёт в архив, очки обнулятся.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label>Название турнира</label>
             <input type="text" name="name" value="ЧМ-2026" required>
 
@@ -648,15 +658,6 @@
             <input type="date" name="start_date" value="2026-06-11" required>
 
             <button type="submit" class="admin-btn admin-btn-blue">Создать новый турнир</button>
-        </form>
-    </div>
-
-    <div class="admin-card">
-        <div class="admin-card-header">Сбросить турнирную таблицу</div>
-
-        <form method="post" onsubmit="return confirm('Точно обнулить все очки и результаты? Это действие необратимо!')">
-            <input type="hidden" name="action" value="reset_all_points">
-            <button type="submit" class="admin-btn admin-btn-red">Обнулить все очки</button>
         </form>
     </div>
 

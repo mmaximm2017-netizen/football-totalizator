@@ -1211,6 +1211,7 @@
 
                             {% if not g.is_admin %}
                                 <form method="post" class="predict-form-v2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <input type="hidden" name="match_id" value="{{ match.id }}">
 
                                     <div class="score-input-row">

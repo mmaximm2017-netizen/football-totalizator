@@ -51,6 +51,13 @@
             0 16px 34px rgba(0,78,140,0.16);
     }
 
+    .auth-logo img {
+        width: 62px;
+        height: 62px;
+        object-fit: contain;
+        display: block;
+    }
+
     .auth-title {
         font-size: 28px;
         font-weight: 1000;
@@ -138,7 +145,9 @@
 <div class="auth-screen">
     <div class="auth-card">
         <div class="auth-top">
-            <div class="auth-logo">⚽</div>
+            <div class="auth-logo">
+                <img src="/static/icon-192-new.png" alt="App icon">
+            </div>
 
             <div class="auth-title">
                 Регистрация
@@ -150,6 +159,7 @@
         </div>
 
         <form method="post" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label>Логин</label>
             <input class="auth-input" type="text" name="username" required placeholder="Придумайте логин">
 
