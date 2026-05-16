@@ -687,6 +687,95 @@
         display: none;
     }
 
+    .bets-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .bets-compact-match {
+        padding: 10px 12px;
+        border-radius: 16px;
+        background:
+            linear-gradient(145deg, rgba(76,175,80,0.13), rgba(255,255,255,0.045));
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #f4f7fb;
+        font-size: 15px;
+        font-weight: 1000;
+        line-height: 1.18;
+        text-align: center;
+    }
+
+    .bets-compact-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .bets-compact-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 58px 46px;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 7px 9px 7px 11px;
+        border-radius: 14px;
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.04));
+        border: 1px solid rgba(255,255,255,0.075);
+    }
+
+    .bets-compact-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #f4f7fb;
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    .bets-compact-score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        border-radius: 11px;
+        background: rgba(255,255,255,0.08);
+        color: #f4f7fb;
+        font-size: 16px;
+        font-weight: 1000;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .bets-compact-points {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        border-radius: 11px;
+        background: rgba(76,175,80,0.12);
+        color: #8ee996;
+        font-size: 14px;
+        font-weight: 1000;
+    }
+
+    .bets-compact-points.zero {
+        background: rgba(255,255,255,0.06);
+        color: rgba(244,247,251,0.62);
+    }
+
+    .bets-compact-empty {
+        padding: 24px 14px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.055);
+        border: 1px solid rgba(255,255,255,0.075);
+        color: rgba(244,247,251,0.68);
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
     .bets-sheet-loading {
         padding: 34px 16px 38px;
         text-align: center;
@@ -1158,127 +1247,75 @@ document.addEventListener('DOMContentLoaded', function () {
         sheetContent.innerHTML = '<div class="bets-sheet-loading">Загружаем ставки...</div>';
     }
 
-    function createCompactBetsStyle() {
-        const style = document.createElement('style');
+    function compactPointsText(rawText) {
+        const match = String(rawText || '').match(/-?\d+/);
+        const points = match ? Number(match[0]) : 0;
 
-        style.textContent = `
-            .bets-sheet-content .predictions-page {
-                gap: 8px !important;
+        return points > 0 ? '+' + points : '0';
+    }
+
+    function buildCompactBetsView(doc) {
+        const page = doc.querySelector('.predictions-page');
+
+        if (!page) return null;
+
+        const teamNames = Array.from(page.querySelectorAll('.team-name')).map(function (node) {
+            return node.textContent.trim();
+        });
+        const score = page.querySelector('.score-box')?.textContent.trim() || 'VS';
+        const rows = Array.from(page.querySelectorAll('.prediction-row'));
+        const wrapper = document.createElement('div');
+        const matchLine = document.createElement('div');
+        const list = document.createElement('div');
+
+        wrapper.className = 'bets-compact';
+        matchLine.className = 'bets-compact-match';
+        list.className = 'bets-compact-list';
+
+        matchLine.textContent = [teamNames[0], score, teamNames[1]].filter(Boolean).join(' ');
+        wrapper.appendChild(matchLine);
+
+        if (!rows.length) {
+            const empty = document.createElement('div');
+
+            empty.className = 'bets-compact-empty';
+            empty.textContent = 'Пока нет прогнозов';
+            wrapper.appendChild(empty);
+
+            return wrapper;
+        }
+
+        rows.forEach(function (row) {
+            const name = row.querySelector('.prediction-name')?.textContent.trim() || 'Игрок';
+            const prediction = row.querySelector('.prediction-score')?.textContent.trim() || '—';
+            const points = compactPointsText(row.querySelector('.points-pill')?.textContent || '');
+            const item = document.createElement('div');
+            const nameNode = document.createElement('div');
+            const scoreNode = document.createElement('div');
+            const pointsNode = document.createElement('div');
+
+            item.className = 'bets-compact-row';
+            nameNode.className = 'bets-compact-name';
+            scoreNode.className = 'bets-compact-score';
+            pointsNode.className = 'bets-compact-points';
+
+            if (points === '0') {
+                pointsNode.classList.add('zero');
             }
 
-            .bets-sheet-content .predictions-hero {
-                padding: 10px 12px !important;
-                border-radius: 18px !important;
-                box-shadow: none !important;
-            }
+            nameNode.textContent = name;
+            scoreNode.textContent = prediction;
+            pointsNode.textContent = points;
 
-            .bets-sheet-content .predictions-title,
-            .bets-sheet-content .predictions-subtitle {
-                display: none !important;
-            }
+            item.appendChild(nameNode);
+            item.appendChild(scoreNode);
+            item.appendChild(pointsNode);
+            list.appendChild(item);
+        });
 
-            .bets-sheet-content .teams-row {
-                grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
-                gap: 8px !important;
-            }
+        wrapper.appendChild(list);
 
-            .bets-sheet-content .team-side {
-                gap: 4px !important;
-            }
-
-            .bets-sheet-content .team-logo-box {
-                width: 34px !important;
-                height: 34px !important;
-                border-radius: 12px !important;
-                font-size: 18px !important;
-                box-shadow: none !important;
-            }
-
-            .bets-sheet-content .team-logo-box img {
-                width: 26px !important;
-                height: 26px !important;
-            }
-
-            .bets-sheet-content .team-name {
-                max-width: 112px !important;
-                font-size: 13px !important;
-                line-height: 1.08 !important;
-            }
-
-            .bets-sheet-content .match-center {
-                gap: 2px !important;
-            }
-
-            .bets-sheet-content .score-box {
-                min-width: 58px !important;
-                height: 38px !important;
-                border-radius: 14px !important;
-                font-size: 19px !important;
-                box-shadow: none !important;
-            }
-
-            .bets-sheet-content .score-label {
-                font-size: 9px !important;
-                letter-spacing: 0.5px !important;
-            }
-
-            .bets-sheet-content .predictions-list {
-                gap: 7px !important;
-            }
-
-            .bets-sheet-content .prediction-row {
-                padding: 9px 11px !important;
-                border-radius: 16px !important;
-                gap: 8px !important;
-                box-shadow: none !important;
-            }
-
-            .bets-sheet-content .prediction-name {
-                font-size: 14px !important;
-                line-height: 1.1 !important;
-            }
-
-            .bets-sheet-content .prediction-meta {
-                margin-top: 2px !important;
-                font-size: 10px !important;
-                line-height: 1.1 !important;
-            }
-
-            .bets-sheet-content .points-pill {
-                margin-top: 4px !important;
-                padding: 3px 7px !important;
-                font-size: 9px !important;
-            }
-
-            .bets-sheet-content .prediction-score {
-                min-width: 58px !important;
-                height: 38px !important;
-                border-radius: 14px !important;
-                font-size: 19px !important;
-                box-shadow: none !important;
-            }
-
-            .bets-sheet-content .empty-predictions {
-                padding: 22px 14px !important;
-                border-radius: 18px !important;
-                box-shadow: none !important;
-            }
-
-            .bets-sheet-content .empty-icon {
-                font-size: 30px !important;
-                margin-bottom: 8px !important;
-            }
-
-            .bets-sheet-content .empty-title {
-                font-size: 15px !important;
-            }
-
-            .bets-sheet-content .empty-text {
-                font-size: 12px !important;
-            }
-        `;
-
-        return style;
+        return wrapper;
     }
 
     async function loadBetsIntoSheet(url) {
@@ -1304,17 +1341,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const html = await response.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const page = doc.querySelector('.predictions-page');
-            const styles = Array.from(doc.querySelectorAll('style')).map(function (style) {
-                return style.cloneNode(true);
-            });
+            const compactView = buildCompactBetsView(doc);
 
-            if (!page) {
+            if (!compactView) {
                 window.location.href = url;
                 return;
             }
 
-            sheetContent.replaceChildren(...styles, createCompactBetsStyle(), page);
+            sheetContent.replaceChildren(compactView);
 
         } catch (error) {
             window.location.href = url;
