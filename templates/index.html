@@ -358,8 +358,8 @@
     }
 
     .team-logo-v2 {
-        width: 58px;
-        height: 58px;
+        width: 62px;
+        height: 62px;
         border-radius: 18px;
 
         display: flex;
@@ -377,8 +377,8 @@
     }
 
     .team-logo-v2 img {
-        width: 44px !important;
-        height: 44px !important;
+        width: 48px !important;
+        height: 48px !important;
         object-fit: contain;
         margin: 0 !important;
     }
@@ -935,14 +935,14 @@
         }
 
         .team-logo-v2 {
-            width: 52px;
-            height: 52px;
+            width: 56px;
+            height: 56px;
             border-radius: 16px;
         }
 
         .team-logo-v2 img {
-            width: 40px !important;
-            height: 40px !important;
+            width: 44px !important;
+            height: 44px !important;
         }
 
         .team-name-v2 {
@@ -1115,8 +1115,6 @@
         <div class="status-pill-v2 status-done">✅ Завершён</div>
     {% elif match.deadline_passed %}
         <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
-    {% else %}
-        <div class="status-pill-v2 status-open">🎯 Ставки</div>
     {% endif %}
 </div>
 
@@ -1274,7 +1272,11 @@
 
                                 {% if not match.deadline_passed %}
                                     <button type="submit" class="save-btn-v2">
-                                        Сохранить прогноз
+                                        {% if has_prediction %}
+                                            Изменить прогноз
+                                        {% else %}
+                                            Сохранить прогноз
+                                        {% endif %}
                                     </button>
                                 {% else %}
                                     <button type="button" class="disabled-btn-v2" disabled>
