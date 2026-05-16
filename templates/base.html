@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 
     <meta name="theme-color" content="#dff2ff">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <style>
@@ -644,6 +645,23 @@ body {
     {% endif %}
 
     <script>
+        function attachCsrfToPostForms() {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+            if (!csrfToken) return;
+
+            document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function(form) {
+                if (form.querySelector('input[name="csrf_token"]')) return;
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrf_token';
+                input.value = csrfToken;
+                form.appendChild(input);
+            });
+        }
+
         function hideSplash() {
             const splash = document.getElementById('app-splash');
 
@@ -654,6 +672,7 @@ body {
             }, 650);
         }
 
+        attachCsrfToPostForms();
         window.addEventListener('load', hideSplash);
 
         if ('serviceWorker' in navigator) {
