@@ -96,12 +96,21 @@ def index():
         if request.method == 'POST':
 
             match_id = request.form.get('match_id')
+            home_raw = request.form.get('home_goals')
+            away_raw = request.form.get('away_goals')
+
+            if not match_id or home_raw is None or away_raw is None:
+                if is_ajax_request():
+                    return ajax_error("Не хватает данных прогноза", 400)
+
+                flash("Не хватает данных прогноза", "error")
+                return redirect(url_for('main.index'))
 
             try:
-                h = int(request.form.get('home_goals', 0))
-                a = int(request.form.get('away_goals', 0))
+                h = int(str(home_raw).strip())
+                a = int(str(away_raw).strip())
 
-                if h < 0 or a < 0:
+                if h < 0 or a < 0 or h > 99 or a > 99:
                     raise ValueError
 
             except Exception:
