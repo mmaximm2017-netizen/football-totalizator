@@ -593,6 +593,112 @@
         background: rgba(76,175,80,0.08);
     }
 
+    .bets-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        background: rgba(3,7,15,0.62);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.22s ease, visibility 0.22s ease;
+    }
+
+    .bets-sheet-overlay.open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .bets-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100001;
+        max-height: min(82vh, 720px);
+        padding: 8px 12px calc(18px + env(safe-area-inset-bottom));
+        border-radius: 28px 28px 0 0;
+        background:
+            radial-gradient(circle at 50% 0%, rgba(76,175,80,0.16), transparent 32%),
+            linear-gradient(180deg, rgba(24,32,52,0.98), rgba(8,13,26,0.99));
+        border: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 0;
+        box-shadow: 0 -22px 60px rgba(0,0,0,0.52);
+        transform: translateY(104%);
+        transition: transform 0.28s ease;
+        overflow: hidden;
+    }
+
+    .bets-sheet.open {
+        transform: translateY(0);
+    }
+
+    .bets-sheet-handle {
+        width: 46px;
+        height: 5px;
+        border-radius: 999px;
+        margin: 4px auto 10px;
+        background: rgba(244,247,251,0.28);
+    }
+
+    .bets-sheet-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 2px 2px 10px;
+    }
+
+    .bets-sheet-title {
+        color: #f4f7fb;
+        font-size: 16px;
+        font-weight: 1000;
+    }
+
+    .bets-sheet-close {
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.08);
+        color: rgba(244,247,251,0.86);
+        font-size: 24px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .bets-sheet-content {
+        max-height: calc(min(82vh, 720px) - 76px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: 6px;
+    }
+
+    .bets-sheet-content .predictions-page {
+        gap: 10px;
+    }
+
+    .bets-sheet-content .predictions-hero,
+    .bets-sheet-content .prediction-row,
+    .bets-sheet-content .empty-predictions {
+        box-shadow: none;
+    }
+
+    .bets-sheet-content .back-link {
+        display: none;
+    }
+
+    .bets-sheet-loading {
+        padding: 34px 16px 38px;
+        text-align: center;
+        color: rgba(244,247,251,0.72);
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    body.bets-sheet-lock {
+        overflow: hidden;
+    }
+
     .empty-home {
         text-align: center;
         padding: 42px 20px;
@@ -863,7 +969,11 @@
                                     {% endif %}
                                 </div>
 
-                                <a href="/match/{{ match.id }}/predictions" class="bets-link-v2">
+                                <a
+                                    href="/match/{{ match.id }}/predictions"
+                                    class="bets-link-v2"
+                                    data-bets-sheet
+                                >
                                     Ставки
                                 </a>
                             </div>
@@ -964,7 +1074,11 @@
                                 </div>
 
                                 {% if match.deadline_passed or has_prediction %}
-                                    <a href="/match/{{ match.id }}/predictions" class="bets-link-v2">
+                                    <a
+                                        href="/match/{{ match.id }}/predictions"
+                                        class="bets-link-v2"
+                                        {% if match.deadline_passed %}data-bets-sheet{% endif %}
+                                    >
                                         Ставки
                                     </a>
                                 {% endif %}
@@ -991,8 +1105,120 @@
 
 </div>
 
+<div class="bets-sheet-overlay" data-bets-sheet-overlay></div>
+
+<section class="bets-sheet" data-bets-sheet-panel aria-hidden="true">
+    <div class="bets-sheet-handle"></div>
+
+    <div class="bets-sheet-top">
+        <div class="bets-sheet-title">
+            Ставки игроков
+        </div>
+
+        <button type="button" class="bets-sheet-close" data-bets-sheet-close aria-label="Закрыть ставки">
+            ×
+        </button>
+    </div>
+
+    <div class="bets-sheet-content" data-bets-sheet-content>
+        <div class="bets-sheet-loading">
+            Загружаем ставки...
+        </div>
+    </div>
+</section>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const sheetOverlay = document.querySelector('[data-bets-sheet-overlay]');
+    const sheetPanel = document.querySelector('[data-bets-sheet-panel]');
+    const sheetContent = document.querySelector('[data-bets-sheet-content]');
+    const sheetClose = document.querySelector('[data-bets-sheet-close]');
+
+    function openBetsSheet() {
+        if (!sheetOverlay || !sheetPanel) return;
+
+        sheetOverlay.classList.add('open');
+        sheetPanel.classList.add('open');
+        sheetPanel.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('bets-sheet-lock');
+    }
+
+    function closeBetsSheet() {
+        if (!sheetOverlay || !sheetPanel) return;
+
+        sheetOverlay.classList.remove('open');
+        sheetPanel.classList.remove('open');
+        sheetPanel.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('bets-sheet-lock');
+    }
+
+    function setSheetLoading() {
+        if (!sheetContent) return;
+
+        sheetContent.innerHTML = '<div class="bets-sheet-loading">Загружаем ставки...</div>';
+    }
+
+    async function loadBetsIntoSheet(url) {
+        if (!sheetContent) {
+            window.location.href = url;
+            return;
+        }
+
+        setSheetLoading();
+        openBetsSheet();
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                window.location.href = url;
+                return;
+            }
+
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const page = doc.querySelector('.predictions-page');
+            const styles = Array.from(doc.querySelectorAll('style')).map(function (style) {
+                return style.cloneNode(true);
+            });
+
+            if (!page) {
+                window.location.href = url;
+                return;
+            }
+
+            sheetContent.replaceChildren(...styles, page);
+
+        } catch (error) {
+            window.location.href = url;
+        }
+    }
+
+    document.querySelectorAll('[data-bets-sheet]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            loadBetsIntoSheet(link.href);
+        });
+    });
+
+    if (sheetOverlay) {
+        sheetOverlay.addEventListener('click', closeBetsSheet);
+    }
+
+    if (sheetClose) {
+        sheetClose.addEventListener('click', closeBetsSheet);
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeBetsSheet();
+        }
+    });
+
     const steppers = document.querySelectorAll('[data-stepper]');
 
     steppers.forEach(function (stepper) {
