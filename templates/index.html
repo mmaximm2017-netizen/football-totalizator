@@ -251,6 +251,21 @@
         min-width: 0;
     }
 
+    .league-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .tournament-logo {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+        flex-shrink: 0;
+        border-radius: 6px;
+    }
+
     .league-label {
         font-size: 12px;
         font-weight: 1000;
@@ -316,6 +331,15 @@
         background: rgba(93,120,148,0.12);
         color: #5d7894;
         border-color: rgba(93,120,148,0.16);
+    }
+
+    .topline-right {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 6px;
+        min-width: 0;
     }
 
     .status-pill-v2 {
@@ -923,6 +947,30 @@
     }
 
     @media (max-width: 430px) {
+        .match-topline {
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .league-row {
+            gap: 6px;
+        }
+
+        .tournament-logo {
+            width: 16px;
+            height: 16px;
+        }
+
+        .deadline-timer {
+            min-height: 24px;
+            padding: 4px 9px;
+            font-size: 10px;
+        }
+
+        .topline-right {
+            gap: 5px;
+        }
+
         .month-title {
             font-size: 19px;
         }
@@ -1094,20 +1142,39 @@
 <div class="match-topline">
     <div class="match-meta-v2">
 
-        <div class="league-label">
-            {% if match.league == 'wc2026' %}
-                ЧМ-2026
-            {% elif match.league == 'rpl' %}
-                РПЛ
-            {% else %}
-                Матч
+        <div class="league-row">
+            {% if match.league == 'rpl' %}
+                <img
+                    src="/static/clubs/russian-premier-league-footballlogos-org.png"
+                    alt="РПЛ"
+                    class="tournament-logo"
+                >
+            {% elif match.league == 'wc2026' %}
+                <img
+                    src="/static/clubs/wc2026-logo.png"
+                    alt="ЧМ-2026"
+                    class="tournament-logo"
+                >
             {% endif %}
+
+            <div class="league-label">
+                {% if match.league == 'wc2026' %}
+                    ЧМ-2026
+                {% elif match.league == 'rpl' %}
+                    РПЛ
+                {% else %}
+                    Матч
+                {% endif %}
+            </div>
         </div>
 
         <div class="time-label start-time-label">
             Начало: {{ to_msk(match.kickoff_time) }}
         </div>
 
+    </div>
+
+    <div class="topline-right">
         <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
             <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
             <span
@@ -1122,13 +1189,12 @@
             </span>
         </div>
 
+        {% if match.finished %}
+            <div class="status-pill-v2 status-done">✅ Завершён</div>
+        {% elif match.deadline_passed %}
+            <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
+        {% endif %}
     </div>
-
-    {% if match.finished %}
-        <div class="status-pill-v2 status-done">✅ Завершён</div>
-    {% elif match.deadline_passed %}
-        <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
-    {% endif %}
 </div>
 
                     <div class="teams-center">
@@ -1572,12 +1638,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const topLine = card.querySelector('.match-topline');
         if (!topLine) return;
+        const rightColumn = topLine.querySelector('.topline-right');
 
         let statusPill = topLine.querySelector('.status-pill-v2');
 
         if (!statusPill) {
             statusPill = document.createElement('div');
-            topLine.appendChild(statusPill);
+            (rightColumn || topLine).appendChild(statusPill);
         }
 
         statusPill.className = 'status-pill-v2 status-closed';
