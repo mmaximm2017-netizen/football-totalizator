@@ -45,6 +45,14 @@ TEAM_FLAGS = {
 }
 
 CLUB_LOGOS = {
+    "Факел": "/static/clubs/russia_fakel_512x512.football-logos.cc.png",
+    "Факел Воронеж": "/static/clubs/russia_fakel_512x512.football-logos.cc.png",
+    "Урал": "/static/clubs/russia_ural_512x512.football-logos.cc.png",
+    "Урал Екатеринбург": "/static/clubs/russia_ural_512x512.football-logos.cc.png",
+    "Родина": "/static/clubs/FC_Rodina_Logo.svg.png",
+    "Родина Москва": "/static/clubs/FC_Rodina_Logo.svg.png",
+    "Ротор": "/static/clubs/russia_rotor_512x512.football-logos.cc.png",
+    "Ротор Волгоград": "/static/clubs/russia_rotor_512x512.football-logos.cc.png",
     "Спартак": "/static/clubs/spartak-moscow-footballlogos-org.png",
     "Динамо": "/static/clubs/dynamo-moscow-footballlogos-org.png",
     "ЦСКА": "/static/clubs/cska-moscow-footballlogos-org.png",
