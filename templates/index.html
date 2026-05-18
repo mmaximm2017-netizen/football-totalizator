@@ -420,9 +420,10 @@
     }
 
     .status-done {
-        background: rgba(46,125,50,0.12);
-        color: #2e7d32;
-        border-color: rgba(46,125,50,0.18);
+        background: rgba(66,118,88,0.13);
+        color: #315f48;
+        border-color: rgba(66,118,88,0.24);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.30);
     }
 
     .teams-center {
@@ -1273,28 +1274,30 @@
     </div>
 
     <div class="topline-right">
-        <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
-            <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
-            <span class="deadline-label">⏰ До закрытия</span>
-            <span
-                class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
-                data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
-            >
-                {% if match.deadline_passed %}
-                    Ставки закрыты
-                {% else %}
-                    —
-                {% endif %}
-            </span>
-            <span class="deadline-helper">
-                до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
-            </span>
-        </div>
-
         {% if match.finished %}
-            <div class="status-pill-v2 status-done">✅ Завершён</div>
-        {% elif match.deadline_passed %}
-            <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
+            <div class="status-pill-v2 status-done">✓ Матч завершён</div>
+        {% else %}
+            <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
+                <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
+                <span class="deadline-label">⏰ До закрытия</span>
+                <span
+                    class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
+                    data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
+                >
+                    {% if match.deadline_passed %}
+                        Ставки закрыты
+                    {% else %}
+                        —
+                    {% endif %}
+                </span>
+                <span class="deadline-helper">
+                    до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
+                </span>
+            </div>
+
+            {% if match.deadline_passed %}
+                <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
+            {% endif %}
         {% endif %}
     </div>
 </div>
