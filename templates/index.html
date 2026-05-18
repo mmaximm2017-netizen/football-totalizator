@@ -436,7 +436,7 @@
 
     .teams-center {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr);
         align-items: start;
         gap: 4px;
         margin: 9px 0 7px;
@@ -1108,7 +1108,7 @@
         }
 
         .teams-center {
-            grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+            grid-template-columns: minmax(0, 1fr) 122px minmax(0, 1fr);
             gap: 4px;
         }
 
@@ -1356,6 +1356,7 @@
     </div>
 </div>
 
+                    {% if match.finished %}
                     <div class="teams-center">
                         <div class="team-v2">
                             <div class="team-logo-v2">
@@ -1374,15 +1375,11 @@
                         </div>
 
                         <div class="center-score">
-                            {% if match.finished %}
-                                <div class="final-score">
-                                    {{ match.home_score }}:{{ match.away_score }}
-                                </div>
+                            <div class="final-score">
+                                {{ match.home_score }}:{{ match.away_score }}
+                            </div>
 
-                                <div class="center-sub">ИТОГ</div>
-                            {% else %}
-                                <div class="vs-badge">—</div>
-                            {% endif %}
+                            <div class="center-sub">ИТОГ</div>
                         </div>
 
                         <div class="team-v2">
@@ -1401,6 +1398,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     {% if match.finished %}
                         <div class="prediction-box {% if has_prediction %}saved{% endif %}">
@@ -1452,12 +1450,32 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="prediction-box {% if has_prediction %}saved{% endif %}">
-                            {% if not g.is_admin %}
-                                <form method="post" class="predict-form-v2">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                    <input type="hidden" name="match_id" value="{{ match.id }}">
+                        {% if not g.is_admin %}
+                            <form method="post" class="predict-form-v2 predict-form-inline" id="predict-form-{{ match.id }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="match_id" value="{{ match.id }}">
+                            </form>
+                        {% endif %}
 
+                        <div class="teams-center">
+                            <div class="team-v2">
+                                <div class="team-logo-v2">
+                                    {% set home_flag = get_flag(match.home_team) %}
+
+                                    {% if home_flag %}
+                                        {{ home_flag|safe }}
+                                    {% else %}
+                                        {{ get_club_logo(match.home_team)|safe }}
+                                    {% endif %}
+                                </div>
+
+                                <div class="team-name-v2">
+                                    {{ match.home_team }}
+                                </div>
+                            </div>
+
+                            <div class="center-score">
+                                {% if not g.is_admin %}
                                     <div class="score-input-row">
                                         <div class="score-stepper" data-stepper>
                                             <button
@@ -1476,6 +1494,7 @@
                                                 min="0"
                                                 max="99"
                                                 inputmode="numeric"
+                                                form="predict-form-{{ match.id }}"
                                                 {% if match.deadline_passed %}disabled{% endif %}
                                             >
 
@@ -1488,7 +1507,7 @@
                                             >+</button>
                                         </div>
 
-                                        <span class="score-divider">:</span>
+                                        <span class="score-divider">—</span>
 
                                         <div class="score-stepper" data-stepper>
                                             <button
@@ -1507,6 +1526,7 @@
                                                 min="0"
                                                 max="99"
                                                 inputmode="numeric"
+                                                form="predict-form-{{ match.id }}"
                                                 {% if match.deadline_passed %}disabled{% endif %}
                                             >
 
@@ -1519,46 +1539,66 @@
                                             >+</button>
                                         </div>
                                     </div>
+                                {% else %}
+                                    <div class="vs-badge">—</div>
+                                {% endif %}
+                            </div>
 
-                                    {% if not match.deadline_passed %}
-                                        <button type="submit" class="save-btn-v2">
-                                            {% if has_prediction %}
-                                                Обновить
-                                            {% else %}
-                                                Сохранить
-                                            {% endif %}
-                                        </button>
-                                    {% else %}
-                                        <button type="button" class="disabled-btn-v2" disabled>
-                                            Дедлайн прошёл
-                                        </button>
-                                    {% endif %}
-                                </form>
-                            {% else %}
-                                <button type="button" class="disabled-btn-v2" disabled>
-                                    Админ не участвует в ставках
-                                </button>
-                            {% endif %}
+                            <div class="team-v2">
+                                <div class="team-logo-v2">
+                                    {% set away_flag = get_flag(match.away_team) %}
 
-                            <div class="match-bottomline">
-                                <div class="my-prediction-v2">
-                                    {% if has_prediction %}
-                                        Текущий прогноз: <b>{{ match.pred_home }}:{{ match.pred_away }}</b>
+                                    {% if away_flag %}
+                                        {{ away_flag|safe }}
                                     {% else %}
-                                        Прогноз ещё не сделан
+                                        {{ get_club_logo(match.away_team)|safe }}
                                     {% endif %}
                                 </div>
 
-                                {% if match.deadline_passed or has_prediction %}
-                                    <a
-                                        href="/match/{{ match.id }}/predictions"
-                                        class="bets-link-v2"
-                                        {% if match.deadline_passed %}data-bets-sheet{% endif %}
-                                    >
-                                        Игроки
-                                    </a>
+                                <div class="team-name-v2">
+                                    {{ match.away_team }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if not g.is_admin %}
+                            {% if not match.deadline_passed %}
+                                <button type="submit" class="save-btn-v2" form="predict-form-{{ match.id }}">
+                                    {% if has_prediction %}
+                                        Обновить
+                                    {% else %}
+                                        Сделать ставку
+                                    {% endif %}
+                                </button>
+                            {% else %}
+                                <button type="button" class="disabled-btn-v2" disabled>
+                                    Ставки закрыты
+                                </button>
+                            {% endif %}
+                        {% else %}
+                            <button type="button" class="disabled-btn-v2" disabled>
+                                Админ не участвует в ставках
+                            </button>
+                        {% endif %}
+
+                        <div class="match-bottomline">
+                            <div class="my-prediction-v2">
+                                {% if has_prediction %}
+                                    Текущий прогноз: <b>{{ match.pred_home }}:{{ match.pred_away }}</b>
+                                {% else %}
+                                    Прогноз ещё не сделан
                                 {% endif %}
                             </div>
+
+                            {% if match.deadline_passed or has_prediction %}
+                                <a
+                                    href="/match/{{ match.id }}/predictions"
+                                    class="bets-link-v2"
+                                    {% if match.deadline_passed %}data-bets-sheet{% endif %}
+                                >
+                                    Игроки
+                                </a>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
@@ -1795,7 +1835,10 @@ document.addEventListener('DOMContentLoaded', function () {
             control.disabled = true;
         });
 
-        const submitButton = card.querySelector('.predict-form-v2 button[type="submit"]');
+        const form = card.querySelector('.predict-form-v2');
+        const submitButton = form
+            ? (form.querySelector('button[type="submit"]') || card.querySelector('button[type="submit"][form="' + form.id + '"]'))
+            : null;
         if (submitButton) {
             submitButton.disabled = true;
             submitButton.textContent = 'Дедлайн прошёл';
@@ -1908,12 +1951,15 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
 
-            const button = form.querySelector('button[type="submit"]');
+            const button = form.querySelector('button[type="submit"]')
+                || document.querySelector('button[type="submit"][form="' + form.id + '"]');
             const card = form.closest('.match-card-v2');
-            const box = form.closest('.prediction-box');
-            const controls = form.querySelectorAll('.stepper-btn, .score-input-v2');
+            const box = form.closest('.prediction-box') || card;
+            const controls = card.querySelectorAll(
+                '.stepper-btn, .score-input-v2[form="' + form.id + '"], .score-input-v2:not([form])'
+            );
 
-            if (!button || !card || !box) {
+            if (!button || !card) {
                 form.submit();
                 return;
             }
