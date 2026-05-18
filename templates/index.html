@@ -191,6 +191,16 @@
         animation: matchFade 0.32s ease both;
     }
 
+    .match-card-v2::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        border: 2px solid rgba(244,210,122,0.74);
+        box-shadow: 0 0 0 1px rgba(255,232,163,0.28);
+    }
+
     .match-card-v2.predicted {
         border-color: rgba(0,119,200,0.22);
         box-shadow:
@@ -205,7 +215,7 @@
 
     .match-card-v2.locked {
         opacity: 0.96;
-        border-color: rgba(93,120,148,0.22);
+        border-color: rgba(225,186,102,0.84);
     }
 
     .match-card-v2.finished {
