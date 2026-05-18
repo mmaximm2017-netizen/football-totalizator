@@ -85,6 +85,29 @@ def validate_score(home_score, away_score):
         return None, None
 
 
+def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_time):
+    dt_msk = datetime.strptime(
+        f"{match_date} {match_time}",
+        "%Y-%m-%d %H:%M"
+    ).replace(tzinfo=MSK)
+
+    kickoff_utc = dt_msk.astimezone(timezone.utc)
+
+    if deadline_date or deadline_time:
+        if not deadline_date or not deadline_time:
+            raise ValueError("Укажите и дату, и время дедлайна")
+
+        deadline_msk = datetime.strptime(
+            f"{deadline_date} {deadline_time}",
+            "%Y-%m-%d %H:%M"
+        ).replace(tzinfo=MSK)
+    else:
+        deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+
+    deadline_utc = deadline_msk.astimezone(timezone.utc)
+    return kickoff_utc, deadline_utc
+
+
 # =========================================================
 # MAIN ADMIN PAGE
 # =========================================================
@@ -135,17 +158,15 @@ def admin():
 
                     match_date = request.form['match_date']
                     match_time = request.form['match_time']
+                    deadline_date = request.form.get('deadline_date', '').strip()
+                    deadline_time = request.form.get('deadline_time', '').strip()
 
-                    dt_msk = datetime.strptime(
-                        f"{match_date} {match_time}",
-                        "%Y-%m-%d %H:%M"
+                    kickoff_utc, deadline_utc = build_manual_deadline_utc(
+                        match_date,
+                        match_time,
+                        deadline_date,
+                        deadline_time
                     )
-
-                    dt_msk = dt_msk.replace(tzinfo=MSK)
-
-                    kickoff_utc = dt_msk.astimezone(timezone.utc)
-
-                    deadline_utc = kickoff_utc - timedelta(hours=1)
 
                     cur.execute("""
                         SELECT id
@@ -390,7 +411,7 @@ def admin():
         # MANUAL MATCHES (для редактирования)
         # =============================================
         cur.execute("""
-            SELECT id, home_team, away_team, kickoff_time, status
+            SELECT id, home_team, away_team, kickoff_time, deadline, status
             FROM matches
             WHERE (api_match_id IS NULL OR api_match_id = '')
             AND kickoff_time >= %s
@@ -400,16 +421,21 @@ def admin():
         manual_matches = []
         for m in cur.fetchall():
             kickoff = m[3]
+            deadline = m[4]
             kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+            deadline_msk = deadline.astimezone(MSK) if deadline else None
 
             manual_matches.append({
                 'id': m[0],
                 'home_team': m[1],
                 'away_team': m[2],
                 'kickoff_time': m[3],
-                'status': m[4],
+                'deadline': m[4],
+                'status': m[5],
                 'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
-                'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else ""
+                'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
+                'deadline_date_msk': deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
+                'deadline_time_msk': deadline_msk.strftime("%H:%M") if deadline_msk else ""
             })
 
         # =============================================
@@ -988,6 +1014,8 @@ def admin_edit_match():
     away_team = request.form.get('away_team', '').strip()
     match_date = request.form.get('match_date', '').strip()
     match_time = request.form.get('match_time', '').strip()
+    deadline_date = request.form.get('deadline_date', '').strip()
+    deadline_time = request.form.get('deadline_time', '').strip()
 
     if not match_id or not home_team or not away_team or not match_date or not match_time:
 
@@ -1014,16 +1042,18 @@ def admin_edit_match():
         status = row[0]
 
         try:
-            dt_msk = datetime.strptime(
-                f"{match_date} {match_time}",
-                "%Y-%m-%d %H:%M"
-            ).replace(tzinfo=MSK)
+            kickoff_utc, deadline_utc = build_manual_deadline_utc(
+                match_date,
+                match_time,
+                deadline_date,
+                deadline_time
+            )
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for('admin.admin'))
         except Exception:
             flash("Некорректная дата или время", "error")
             return redirect(url_for('admin.admin'))
-
-        kickoff_utc = dt_msk.astimezone(timezone.utc)
-        deadline_utc = kickoff_utc - timedelta(hours=1)
 
         if status == 'FINISHED':
             cur.execute("""
@@ -1037,7 +1067,7 @@ def admin_edit_match():
                 match_id
             ))
 
-            flash("Для FINISHED матча время не изменяется", "error")
+            flash("Для FINISHED матча изменение kickoff/deadline отключено для безопасности", "error")
         else:
             cur.execute("""
                 UPDATE matches

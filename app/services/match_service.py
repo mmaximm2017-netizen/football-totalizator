@@ -178,11 +178,11 @@ def update_matches():
             kickoff_msk = kickoff_utc.astimezone(MSK)
             
             if league == 'wc2026':
-                deadline_msk = kickoff_msk - timedelta(hours=2)
+                deadline_msk = kickoff_msk - timedelta(hours=6)
             else:
-                deadline_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-                if deadline_msk >= kickoff_msk:
-                    deadline_msk = kickoff_msk - timedelta(hours=1)
+                eleven_am_msk = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+                kickoff_minus_5m_msk = kickoff_msk - timedelta(minutes=5)
+                deadline_msk = min(eleven_am_msk, kickoff_minus_5m_msk)
             
             deadline_utc = deadline_msk.astimezone(timezone.utc)
             

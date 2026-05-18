@@ -428,6 +428,18 @@
                 </div>
             </div>
 
+            <div class="admin-form-row">
+                <div>
+                    <label>Дедлайн дата (МСК, опционально)</label>
+                    <input type="date" name="deadline_date">
+                </div>
+
+                <div>
+                    <label>Дедлайн время (МСК, опционально)</label>
+                    <input type="time" name="deadline_time">
+                </div>
+            </div>
+
             <label>Турнир</label>
             <select name="league">
                 <option value="other">Другое</option>
@@ -589,6 +601,17 @@
                         <div>
                             <label>Время (МСК)</label>
                             <input type="time" name="match_time" value="{{ m.match_time_msk }}" required>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row" style="margin-top: 10px;">
+                        <div>
+                            <label>Дедлайн дата (МСК, опционально)</label>
+                            <input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}">
+                        </div>
+                        <div>
+                            <label>Дедлайн время (МСК, опционально)</label>
+                            <input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}">
                         </div>
                     </div>
 
