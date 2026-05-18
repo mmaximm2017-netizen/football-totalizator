@@ -231,9 +231,17 @@
     }
 
     .match-card-v2.finished .team-logo-v2 {
+        width: 86px;
+        height: 86px;
         box-shadow:
             0 3px 10px rgba(0,0,0,0.14),
             inset 0 1px 0 rgba(255,255,255,0.10);
+    }
+
+    .match-card-v2.finished .team-logo-v2 img,
+    .match-card-v2.finished .team-logo-v2 .flag-icon {
+        width: 66px !important;
+        height: 66px !important;
     }
 
     .match-card-v2.finished .center-sub {
@@ -445,8 +453,8 @@
     }
 
 .team-logo-v2 {
-    width: 86px;
-    height: 86px;
+    width: 94px;
+    height: 94px;
     border-radius: 24px;
 
     display: flex;
@@ -465,8 +473,8 @@
 }
 
 .team-logo-v2 img {
-    width: 66px !important;
-    height: 66px !important;
+    width: 72px !important;
+    height: 72px !important;
     object-fit: contain;
     margin: 0 !important;
 }
@@ -482,6 +490,8 @@
 
     .team-name-v2 {
         text-align: center;
+        font-size: 15px;
+        font-weight: 900;
         line-height: 1.2;
         white-space: normal;
         overflow-wrap: break-word;
@@ -548,7 +558,7 @@
 
     .prediction-box {
         margin-top: 4px;
-        padding: 7px 9px;
+        padding: 6px 8px;
 
         border-radius: 18px;
 
@@ -576,7 +586,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         gap: 10px;
     }
 
@@ -602,19 +612,19 @@
     .predict-form-v2 {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 10px;
+        gap: 8px;
     }
 
     .score-input-row {
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
     }
 
     .score-input-v2 {
-        width: 54px !important;
-        height: 46px;
+        width: 48px !important;
+        height: 42px;
 
         margin: 0 !important;
 
@@ -625,7 +635,7 @@
 
         text-align: center;
 
-        font-size: 23px !important;
+        font-size: 21px !important;
         font-weight: 1000 !important;
 
         color: #063b73 !important;
@@ -655,10 +665,10 @@
 
     .score-stepper {
         display: grid;
-        grid-template-columns: 40px 54px 40px;
+        grid-template-columns: 36px 48px 36px;
         align-items: center;
-        height: 50px;
-        border-radius: 16px;
+        height: 44px;
+        border-radius: 14px;
         background:
             linear-gradient(145deg, rgba(255,255,255,0.92), rgba(222,241,255,0.74));
         border: 1px solid rgba(0,119,200,0.12);
@@ -669,12 +679,12 @@
     }
 
     .stepper-btn {
-        width: 40px;
-        height: 50px;
+        width: 36px;
+        height: 44px;
         border: 0;
         background: rgba(0,119,200,0.08);
         color: #0077c8;
-        font-size: 23px;
+        font-size: 20px;
         font-weight: 1000;
         line-height: 1;
         cursor: pointer;
@@ -694,8 +704,11 @@
     }
 
     .save-btn-v2 {
-        width: 100%;
-        height: 46px;
+        width: 66%;
+        min-width: 164px;
+        max-width: 240px;
+        margin: 0 auto;
+        height: 42px;
 
         border-radius: 14px;
         border: none;
@@ -704,12 +717,12 @@
 
         color: white;
 
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 900;
 
         box-shadow:
-            0 6px 12px rgba(0,119,200,0.12),
-            inset 0 1px 0 rgba(255,255,255,0.20);
+            0 5px 10px rgba(0,119,200,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.18);
         transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
     }
 
@@ -1083,14 +1096,14 @@
         }
 
         .team-logo-v2 {
-            width: 76px;
-            height: 76px;
+            width: 84px;
+            height: 84px;
             border-radius: 21px;
         }
 
         .team-logo-v2 img {
-            width: 60px !important;
-            height: 60px !important;
+            width: 64px !important;
+            height: 64px !important;
         }
 
         .team-name-v2 {
@@ -1116,22 +1129,39 @@
             font-size: 21px;
         }
 
+        .match-card-v2.finished .team-logo-v2 {
+            width: 76px;
+            height: 76px;
+        }
+
+        .match-card-v2.finished .team-logo-v2 img,
+        .match-card-v2.finished .team-logo-v2 .flag-icon {
+            width: 60px !important;
+            height: 60px !important;
+        }
+
         .score-input-v2 {
-            width: 48px !important;
-            height: 44px;
-            font-size: 22px !important;
+            width: 44px !important;
+            height: 40px;
+            font-size: 20px !important;
         }
 
         .score-stepper {
-            grid-template-columns: 36px 48px 36px;
-            height: 48px;
-            border-radius: 17px;
+            grid-template-columns: 34px 44px 34px;
+            height: 42px;
+            border-radius: 15px;
         }
 
         .stepper-btn {
-            width: 36px;
-            height: 48px;
-            font-size: 22px;
+            width: 34px;
+            height: 42px;
+            font-size: 19px;
+        }
+
+        .save-btn-v2 {
+            width: 74%;
+            min-width: 150px;
+            height: 40px;
         }
     }
 </style>
@@ -1328,7 +1358,6 @@
                                 <div class="center-sub">ИТОГ</div>
                             {% else %}
                                 <div class="vs-badge">—</div>
-                                <div class="center-sub">ПРОГНОЗ</div>
                             {% endif %}
                         </div>
 
@@ -1478,9 +1507,9 @@
                                     {% if not match.deadline_passed %}
                                         <button type="submit" class="save-btn-v2">
                                             {% if has_prediction %}
-                                                Изменить прогноз
+                                                Обновить
                                             {% else %}
-                                                Сохранить прогноз
+                                                Сохранить
                                             {% endif %}
                                         </button>
                                     {% else %}
@@ -1981,7 +2010,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(function () {
                     card.classList.remove('save-success-pulse');
                     button.disabled = false;
-                    button.textContent = 'Изменить прогноз';
+                    button.textContent = 'Обновить';
                     controls.forEach(function (control) {
                         control.disabled = false;
                     });
