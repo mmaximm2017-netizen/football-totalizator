@@ -224,6 +224,23 @@
             linear-gradient(160deg, rgba(255,255,255,0.82), rgba(232,246,255,0.72));
     }
 
+    .match-card-v2.finished .team-logo-v2 img,
+    .match-card-v2.finished .team-logo-v2 .flag-icon {
+        filter: grayscale(0.88) saturate(0.42) contrast(0.92);
+        opacity: 0.90;
+    }
+
+    .match-card-v2.finished .team-logo-v2 {
+        box-shadow:
+            0 3px 10px rgba(0,0,0,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.10);
+    }
+
+    .match-card-v2.finished .center-sub {
+        color: rgba(93,120,148,0.76);
+        letter-spacing: 0.55px;
+    }
+
     .match-card-v2:active {
         transform: scale(0.992);
     }
@@ -512,6 +529,16 @@
             0 12px 26px rgba(0,119,200,0.24);
     }
 
+    .match-card-v2.finished .final-score {
+        width: 74px;
+        height: 52px;
+        font-size: 24px;
+        background: linear-gradient(145deg, #0f73bb, #32a8ee);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.26),
+            0 9px 20px rgba(0,95,162,0.22);
+    }
+
     .center-sub {
         font-size: 10px;
         color: #5d7894;
@@ -728,6 +755,24 @@
 
         font-size: 12px;
         font-weight: 1000;
+    }
+
+    .points-v2.points-emerald {
+        background: rgba(46,125,50,0.15);
+        color: #1f6f2c;
+        border: 1px solid rgba(46,125,50,0.26);
+    }
+
+    .points-v2.points-cyan {
+        background: rgba(0,119,200,0.14);
+        color: #0a669f;
+        border: 1px solid rgba(0,119,200,0.24);
+    }
+
+    .points-v2.points-zero {
+        background: rgba(93,120,148,0.14);
+        color: #5d7894;
+        border: 1px solid rgba(93,120,148,0.22);
     }
 
     .bets-link-v2 {
@@ -1059,6 +1104,12 @@
             font-size: 20px;
         }
 
+        .match-card-v2.finished .final-score {
+            width: 66px;
+            height: 48px;
+            font-size: 21px;
+        }
+
         .score-input-v2 {
             width: 48px !important;
             height: 44px;
@@ -1295,11 +1346,30 @@
                             <div class="prediction-title">
                                 <span class="prediction-label">Ваш прогноз</span>
 
-                                {% if match.my_points > 0 %}
-                                    <span class="points-v2">+{{ match.my_points }}</span>
+                                {% set points_value = (match.my_points or 0)|int %}
+                                {% set points_abs = points_value|abs %}
+                                {% set mod100 = points_abs % 100 %}
+                                {% set mod10 = points_abs % 10 %}
+                                {% if mod100 >= 11 and mod100 <= 14 %}
+                                    {% set points_word = 'очков' %}
+                                {% elif mod10 == 1 %}
+                                    {% set points_word = 'очко' %}
+                                {% elif mod10 >= 2 and mod10 <= 4 %}
+                                    {% set points_word = 'очка' %}
                                 {% else %}
-                                    <span class="my-prediction-v2">0 очков</span>
+                                    {% set points_word = 'очков' %}
                                 {% endif %}
+                                {% if points_value >= 3 %}
+                                    {% set points_class = 'points-emerald' %}
+                                {% elif points_value > 0 %}
+                                    {% set points_class = 'points-cyan' %}
+                                {% else %}
+                                    {% set points_class = 'points-zero' %}
+                                {% endif %}
+
+                                <span class="points-v2 {{ points_class }}">
+                                    {% if points_value > 0 %}+{% endif %}{{ points_value }} {{ points_word }}
+                                </span>
                             </div>
 
                             <div class="match-bottomline">
@@ -1316,7 +1386,7 @@
                                     class="bets-link-v2"
                                     data-bets-sheet
                                 >
-                                    Ставки
+                                    Прогнозы
                                 </a>
                             </div>
                         </div>
@@ -1432,7 +1502,7 @@
                                         class="bets-link-v2"
                                         {% if match.deadline_passed %}data-bets-sheet{% endif %}
                                     >
-                                        Ставки
+                                        Прогнозы
                                     </a>
                                 {% endif %}
                             </div>
@@ -1893,7 +1963,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         betsLink = document.createElement('a');
                         betsLink.className = 'bets-link-v2';
                         betsLink.href = '/match/' + data.match_id + '/predictions';
-                        betsLink.textContent = 'Ставки';
+                        betsLink.textContent = 'Прогнозы';
                         bottomLine.appendChild(betsLink);
                     }
                 }
