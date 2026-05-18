@@ -439,7 +439,7 @@
         grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr);
         align-items: start;
         gap: 4px;
-        margin: 7px 0 6px;
+        margin: 9px 0 7px;
         padding: 1px 0 0;
     }
 
@@ -453,8 +453,8 @@
     }
 
 .team-logo-v2 {
-    width: 94px;
-    height: 94px;
+    width: 104px;
+    height: 104px;
     border-radius: 24px;
 
     display: flex;
@@ -473,8 +473,8 @@
 }
 
 .team-logo-v2 img {
-    width: 72px !important;
-    height: 72px !important;
+    width: 80px !important;
+    height: 80px !important;
     object-fit: contain;
     margin: 0 !important;
 }
@@ -490,8 +490,8 @@
 
     .team-name-v2 {
         text-align: center;
-        font-size: 15px;
-        font-weight: 900;
+        font-size: 16px;
+        font-weight: 950;
         line-height: 1.2;
         white-space: normal;
         overflow-wrap: break-word;
@@ -557,8 +557,8 @@
     }
 
     .prediction-box {
-        margin-top: 4px;
-        padding: 6px 8px;
+        margin-top: 2px;
+        padding: 5px 7px;
 
         border-radius: 18px;
 
@@ -612,19 +612,19 @@
     .predict-form-v2 {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: 7px;
     }
 
     .score-input-row {
         display: flex;
         justify-content: center;
-        align-items: center;
-        gap: 5px;
+        align-items: flex-end;
+        gap: 8px;
     }
 
     .score-input-v2 {
-        width: 48px !important;
-        height: 42px;
+        width: 44px !important;
+        height: 36px;
 
         margin: 0 !important;
 
@@ -635,7 +635,7 @@
 
         text-align: center;
 
-        font-size: 21px !important;
+        font-size: 20px !important;
         font-weight: 1000 !important;
 
         color: #063b73 !important;
@@ -657,17 +657,20 @@
     }
 
     .score-divider {
-        font-size: 26px;
-        font-weight: 1000;
-        color: #0077c8;
+        font-size: 24px;
+        font-weight: 700;
+        color: rgba(93,120,148,0.82);
         line-height: 1;
+        padding-bottom: 22px;
     }
 
     .score-stepper {
         display: grid;
-        grid-template-columns: 36px 48px 36px;
+        grid-template-columns: 1fr;
+        grid-template-rows: 28px 36px 28px;
         align-items: center;
-        height: 44px;
+        width: 44px;
+        height: auto;
         border-radius: 14px;
         background:
             linear-gradient(145deg, rgba(255,255,255,0.92), rgba(222,241,255,0.74));
@@ -679,12 +682,12 @@
     }
 
     .stepper-btn {
-        width: 36px;
-        height: 44px;
+        width: 44px;
+        height: 28px;
         border: 0;
         background: rgba(0,119,200,0.08);
         color: #0077c8;
-        font-size: 20px;
+        font-size: 16px;
         font-weight: 1000;
         line-height: 1;
         cursor: pointer;
@@ -697,6 +700,20 @@
         color: #005f9f;
     }
 
+    .score-stepper .stepper-btn[data-step="1"] {
+        grid-row: 1;
+        border-bottom: 1px solid rgba(0,119,200,0.10);
+    }
+
+    .score-stepper .score-input-v2 {
+        grid-row: 2;
+    }
+
+    .score-stepper .stepper-btn[data-step="-1"] {
+        grid-row: 3;
+        border-top: 1px solid rgba(0,119,200,0.10);
+    }
+
     .stepper-btn:disabled {
         cursor: not-allowed;
         color: rgba(93,120,148,0.42);
@@ -704,7 +721,7 @@
     }
 
     .save-btn-v2 {
-        width: 66%;
+        width: 62%;
         min-width: 164px;
         max-width: 240px;
         margin: 0 auto;
@@ -750,7 +767,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 10px;
+        margin-top: 7px;
         gap: 10px;
         flex-wrap: wrap;
     }
@@ -1096,14 +1113,14 @@
         }
 
         .team-logo-v2 {
-            width: 84px;
-            height: 84px;
+            width: 92px;
+            height: 92px;
             border-radius: 21px;
         }
 
         .team-logo-v2 img {
-            width: 64px !important;
-            height: 64px !important;
+            width: 70px !important;
+            height: 70px !important;
         }
 
         .team-name-v2 {
@@ -1141,27 +1158,34 @@
         }
 
         .score-input-v2 {
-            width: 44px !important;
-            height: 40px;
-            font-size: 20px !important;
+            width: 42px !important;
+            height: 34px;
+            font-size: 19px !important;
         }
 
         .score-stepper {
-            grid-template-columns: 34px 44px 34px;
-            height: 42px;
+            grid-template-columns: 1fr;
+            grid-template-rows: 27px 34px 27px;
+            width: 42px;
+            height: auto;
             border-radius: 15px;
         }
 
         .stepper-btn {
-            width: 34px;
-            height: 42px;
-            font-size: 19px;
+            width: 42px;
+            height: 27px;
+            font-size: 15px;
         }
 
         .save-btn-v2 {
-            width: 74%;
+            width: 72%;
             min-width: 150px;
             height: 40px;
+        }
+
+        .score-divider {
+            font-size: 22px;
+            padding-bottom: 19px;
         }
     }
 </style>
@@ -1429,14 +1453,6 @@
                         </div>
                     {% else %}
                         <div class="prediction-box {% if has_prediction %}saved{% endif %}">
-                            <div class="prediction-title">
-                                <span class="prediction-label">Ваш прогноз</span>
-
-                                {% if has_prediction %}
-                                    <span class="lock-pill">✓ сохранён</span>
-                                {% endif %}
-                            </div>
-
                             {% if not g.is_admin %}
                                 <form method="post" class="predict-form-v2">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
