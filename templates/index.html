@@ -288,13 +288,22 @@
 
     .deadline-row {
         display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 3px;
     }
 
     .deadline-full {
         display: none;
+    }
+
+    .deadline-label {
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        color: rgba(93,120,148,0.88);
+        text-transform: uppercase;
+        line-height: 1.1;
     }
 
     .deadline-timer {
@@ -331,6 +340,14 @@
         background: rgba(93,120,148,0.12);
         color: #5d7894;
         border-color: rgba(93,120,148,0.16);
+    }
+
+    .deadline-helper {
+        font-size: 10px;
+        font-weight: 700;
+        color: rgba(93,120,148,0.82);
+        line-height: 1.1;
+        white-space: nowrap;
     }
 
     .topline-right {
@@ -967,6 +984,10 @@
             font-size: 10px;
         }
 
+        .deadline-helper {
+            font-size: 9px;
+        }
+
         .topline-right {
             gap: 5px;
         }
@@ -1177,6 +1198,7 @@
     <div class="topline-right">
         <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
             <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
+            <span class="deadline-label">⏰ До закрытия</span>
             <span
                 class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
                 data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
@@ -1184,8 +1206,11 @@
                 {% if match.deadline_passed %}
                     Ставки закрыты
                 {% else %}
-                    До закрытия: —
+                    —
                 {% endif %}
+            </span>
+            <span class="deadline-helper">
+                до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
             </span>
         </div>
 
@@ -1698,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            timer.textContent = 'До закрытия: ' + formatDeadlineRemaining(remaining);
+            timer.textContent = formatDeadlineRemaining(remaining);
 
             if (remaining < 60 * 60 * 1000) {
                 timer.classList.add('danger');
