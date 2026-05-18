@@ -436,10 +436,10 @@
 
     .teams-center {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 128px minmax(0, 1fr);
         align-items: center;
-        gap: 2px;
-        margin: 8px 0 6px;
+        gap: 8px;
+        margin: 9px 0 7px;
         padding: 1px 0 0;
     }
 
@@ -453,19 +453,11 @@
     }
 
     .match-card-v2:not(.finished) .teams-center > .team-v2:first-child {
-        align-items: flex-end;
+        justify-self: start;
     }
 
     .match-card-v2:not(.finished) .teams-center > .team-v2:last-child {
-        align-items: flex-start;
-    }
-
-    .match-card-v2:not(.finished) .teams-center > .team-v2:first-child .team-name-v2 {
-        text-align: right;
-    }
-
-    .match-card-v2:not(.finished) .teams-center > .team-v2:last-child .team-name-v2 {
-        text-align: left;
+        justify-self: end;
     }
 
 .team-logo-v2 {
@@ -635,23 +627,23 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 6px;
+        gap: 9px;
     }
 
     .score-input-v2 {
-        width: 52px !important;
-        height: 34px;
+        width: 48px !important;
+        height: 40px;
 
         margin: 0 !important;
 
-        border-radius: 12px !important;
+        border-radius: 13px !important;
         border: 0 !important;
 
         background: transparent !important;
 
         text-align: center;
 
-        font-size: 18px !important;
+        font-size: 19px !important;
         font-weight: 1000 !important;
 
         color: #063b73 !important;
@@ -673,7 +665,7 @@
     }
 
     .score-divider {
-        font-size: 22px;
+        font-size: 21px;
         font-weight: 650;
         color: rgba(93,120,148,0.82);
         line-height: 1;
@@ -683,9 +675,9 @@
     .score-stepper {
         display: grid;
         grid-template-columns: 1fr;
-        grid-template-rows: 24px 34px 24px;
+        grid-template-rows: 28px 40px 28px;
         align-items: center;
-        width: 52px;
+        width: 48px;
         height: auto;
         border-radius: 12px;
         background:
@@ -699,11 +691,11 @@
 
     .stepper-btn {
         width: 100%;
-        height: 24px;
+        height: 28px;
         border: 0;
         background: rgba(0,119,200,0.08);
         color: #0077c8;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 1000;
         line-height: 1;
         cursor: pointer;
@@ -1129,8 +1121,8 @@
         }
 
         .teams-center {
-            grid-template-columns: minmax(0, 1fr) 108px minmax(0, 1fr);
-            gap: 2px;
+            grid-template-columns: minmax(0, 1fr) 118px minmax(0, 1fr);
+            gap: 6px;
         }
 
         .team-logo-v2 {
@@ -1179,22 +1171,22 @@
         }
 
         .score-input-v2 {
-            width: 46px !important;
-            height: 32px;
-            font-size: 17px !important;
+            width: 44px !important;
+            height: 36px;
+            font-size: 18px !important;
         }
 
         .score-stepper {
             grid-template-columns: 1fr;
-            grid-template-rows: 23px 32px 23px;
-            width: 46px;
+            grid-template-rows: 26px 36px 26px;
+            width: 44px;
             height: auto;
             border-radius: 12px;
         }
 
         .stepper-btn {
             width: 100%;
-            height: 23px;
+            height: 26px;
             font-size: 14px;
         }
 
