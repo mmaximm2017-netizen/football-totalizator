@@ -443,6 +443,17 @@
         padding: 1px 0 0;
     }
 
+    .match-card-v2:not(.finished) .teams-center {
+        padding: 9px 8px 10px;
+        border-radius: 18px;
+        background:
+            linear-gradient(162deg, rgba(255,255,255,0.52), rgba(221,241,255,0.34));
+        border: 1px solid rgba(0,119,200,0.13);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.42),
+            0 6px 14px rgba(0,78,140,0.08);
+    }
+
     .team-v2 {
         display: flex;
         flex-direction: column;
@@ -458,13 +469,11 @@
         align-content: start;
         align-items: start;
         gap: 8px;
-        padding: 8px 8px 9px;
-        border-radius: 18px;
-        background: linear-gradient(162deg, rgba(255,255,255,0.50), rgba(221,241,255,0.34));
-        border: 1px solid rgba(0,119,200,0.14);
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.42),
-            0 4px 10px rgba(0,78,140,0.06);
+        padding: 5px 5px 6px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.20);
+        border: 1px solid rgba(255,255,255,0.34);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.34);
     }
 
     .match-card-v2:not(.finished) .teams-center > .team-v2:first-child {
@@ -1166,6 +1175,11 @@
             gap: 6px;
         }
 
+        .match-card-v2:not(.finished) .teams-center {
+            padding: 8px 7px 9px;
+            border-radius: 16px;
+        }
+
         .team-logo-v2 {
             width: 92px;
             height: 92px;
@@ -1185,8 +1199,8 @@
         .match-card-v2:not(.finished) .team-v2 {
             grid-template-rows: auto minmax(32px, auto);
             gap: 7px;
-            padding: 7px 7px 8px;
-            border-radius: 16px;
+            padding: 4px 4px 5px;
+            border-radius: 12px;
         }
 
         .match-card-v2:not(.finished) .team-name-v2 {
