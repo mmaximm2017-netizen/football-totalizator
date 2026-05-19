@@ -167,10 +167,10 @@ def _prepare_admin_view_data(cur):
         })
 
     month_names = {
-        '01': 'РЇРЅРІР°СЂСЊ', '02': 'Р¤РµРІСЂР°Р»СЊ', '03': 'РњР°СЂС‚',
-        '04': 'РђРїСЂРµР»СЊ', '05': 'РњР°Р№', '06': 'РСЋРЅСЊ',
-        '07': 'РСЋР»СЊ', '08': 'РђРІРіСѓСЃС‚', '09': 'РЎРµРЅС‚СЏР±СЂСЊ',
-        '10': 'РћРєС‚СЏР±СЂСЊ', '11': 'РќРѕСЏР±СЂСЊ', '12': 'Р”РµРєР°Р±СЂСЊ'
+        '01': 'Январь', '02': 'Февраль', '03': 'Март',
+        '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+        '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+        '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
     }
 
     free_months_list = []
@@ -597,195 +597,8 @@ def admin():
                 return redirect(url_for('admin.admin'))
 
         return render_template('admin.html')
-
-        # =================================================
-        # PAGE DATA
-        # =================================================
-
-        start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
-
-        cur.execute("""
-            SELECT id,
-                   home_team,
-                   away_team,
-                   kickoff_time,
-                   status
-            FROM matches
-            WHERE kickoff_time >= %s
-            ORDER BY kickoff_time
-        """, (start_date_str,))
-
-        raw_matches = cur.fetchall()
-
-        # Группировка по дням
-        free_by_day = defaultdict(list)
-        finished_by_day = defaultdict(list)
-
-        for m in raw_matches:
-
-            kickoff = m[3]
-
-            if isinstance(kickoff, str):
-                kickoff = kickoff.replace('Z', '+00:00')
-                try:
-                    kickoff = datetime.fromisoformat(kickoff)
-                except:
-                    kickoff = kickoff[:10]
-
-            day = str(kickoff)[:10]
-
-            item = {
-                'id': m[0],
-                'home_team': m[1],
-                'away_team': m[2],
-                'kickoff_time': m[3],
-                'status': m[4]
-            }
-
-            if m[4] == 'FINISHED':
-                finished_by_day[day].append(item)
-            else:
-                free_by_day[day].append(item)
-
-        # Словари для группировки по месяцам (для НЕ завершённых матчей)
-        free_months = defaultdict(list)
-        for day_str in sorted(free_by_day.keys()):
-            month_key = day_str[:7]  # YYYY-MM
-            free_months[month_key].append({
-                'date': format_date_ru(day_str),
-                'matches': free_by_day[day_str],
-                'count': len(free_by_day[day_str])
-            })
-
-        # Словари для группировки по месяцам (для завершённых матчей)
-        finished_months = defaultdict(list)
-        for day_str in sorted(finished_by_day.keys()):
-            month_key = day_str[:7]
-            finished_months[month_key].append({
-                'date': format_date_ru(day_str),
-                'matches': finished_by_day[day_str],
-                'count': len(finished_by_day[day_str])
-            })
-
-        # Формируем список месяцев с днями для НЕ завершённых матчей
-        month_names = {
-            '01': 'Январь', '02': 'Февраль', '03': 'Март',
-            '04': 'Апрель', '05': 'Май', '06': 'Июнь',
-            '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
-            '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
-        }
-
-        free_months_list = []
-        for mk in sorted(free_months.keys()):
-            year, month = mk.split('-')
-            month_label = f"{month_names[month]} {year}"
-            free_months_list.append({
-                'key': mk,
-                'label': month_label,
-                'days': free_months[mk],
-                'total_matches': sum(d['count'] for d in free_months[mk])
-            })
-
-        # Формируем список месяцев с днями для завершённых матчей
-        finished_months_list = []
-        for mk in sorted(finished_months.keys()):
-            year, month = mk.split('-')
-            month_label = f"{month_names[month]} {year}"
-            finished_months_list.append({
-                'key': mk,
-                'label': month_label,
-                'days': finished_months[mk],
-                'total_matches': sum(d['count'] for d in finished_months[mk])
-            })
-
-        # =============================================
-        # MANUAL MATCHES (для редактирования)
-        # =============================================
-        cur.execute("""
-            SELECT id, home_team, away_team, kickoff_time, deadline, status
-            FROM matches
-            WHERE (api_match_id IS NULL OR api_match_id = '')
-            AND kickoff_time >= %s
-            ORDER BY kickoff_time
-        """, (start_date_str,))
-
-        manual_matches = []
-        for m in cur.fetchall():
-            kickoff = m[3]
-            deadline = m[4]
-            kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
-            deadline_msk = deadline.astimezone(MSK) if deadline else None
-
-            manual_matches.append({
-                'id': m[0],
-                'home_team': m[1],
-                'away_team': m[2],
-                'kickoff_time': m[3],
-                'deadline': m[4],
-                'status': m[5],
-                'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
-                'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
-                'deadline_date_msk': deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
-                'deadline_time_msk': deadline_msk.strftime("%H:%M") if deadline_msk else ""
-            })
-
-        # =============================================
-        # TOURNAMENTS
-        # =============================================
-
-        cur.execute("""
-            SELECT id, name, is_active, start_date
-            FROM tournaments
-            ORDER BY is_active DESC, id DESC
-        """)
-
-        tournaments = []
-
-        for t in cur.fetchall():
-            tournaments.append({
-                'id': t[0],
-                'name': t[1],
-                'is_active': t[2],
-                'start_date': t[3]
-            })
-    
-        # =============================================
-        # USERS
-        # =============================================
-        cur.execute("""
-            SELECT id, username, is_admin
-            FROM users
-            ORDER BY username
-        """)
-
-        users = []
-        title_users = []
-        for u in cur.fetchall():
-            item = {
-                'id': u[0],
-                'username': u[1],
-                'is_admin': u[2]
-            }
-            users.append(item)
-            if u[2] == 0:
-                title_users.append({
-                    'id': u[0],
-                    'username': u[1]
-                })
-
     finally:
         close_db(conn, cur)
-
-    return render_template(
-        'admin.html',
-        free_months=free_months_list,
-        finished_months=finished_months_list,
-        manual_matches=manual_matches,
-        users=users,
-        title_users=title_users,
-        allowed_titles=ALLOWED_TITLES,
-        tournaments=tournaments
-    )
 
 
 @admin_bp.route('/matches', methods=['GET'])
@@ -1620,3 +1433,4 @@ def delete_tournament():
         close_db(conn, cur)
 
     return redirect(url_for('admin.admin'))
+

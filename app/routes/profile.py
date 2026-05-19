@@ -11,124 +11,75 @@ from flask import (
 )
 
 from app.db import get_db, close_db, get_active_tournament_id
+from app.services.ranking_service import get_tournament_ranking
 from app.utils import get_flag, get_club_logo
 
 
 profile_bp = Blueprint('profile', __name__)
 
 
-# =========================================================
-# PROFILE
-# =========================================================
-
 @profile_bp.route('/profile')
 def profile():
-
     conn = get_db()
     cur = conn.cursor()
 
     try:
-
-        # =================================================
-        # SAFE USER RESOLVE
-        # =================================================
-
         username = request.args.get('username')
 
         if username:
-
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT id
                 FROM users
                 WHERE username = %s
-            """, (username,))
-
+                """,
+                (username,),
+            )
             row = cur.fetchone()
-
             if not row:
                 flash("Игрок не найден", "error")
                 return redirect(url_for('table.table'))
-
             uid = row[0]
-
         else:
-
             uid = session.get('user_id')
-
             if not uid:
                 flash("Сессия не найдена", "error")
                 return redirect(url_for('auth.login'))
 
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT username
                 FROM users
                 WHERE id = %s
-            """, (uid,))
-
+                """,
+                (uid,),
+            )
             row = cur.fetchone()
-
             if not row:
                 flash("Пользователь не найден", "error")
                 return redirect(url_for('auth.login'))
-
             username = row[0]
 
-        # =================================================
-        # TOURNAMENT
-        # =================================================
-
         tournament_id = get_active_tournament_id()
-
         if not tournament_id:
             flash("Активный турнир не найден", "error")
             return redirect(url_for('table.table'))
 
-        # =================================================
-        # PLACE (RANKING)
-        # =================================================
+        ranking = get_tournament_ranking(tournament_id)
+        user_row = next((r for r in ranking if r['user_id'] == uid), None)
+        current_place = user_row['place'] if user_row else None
 
-        cur.execute("""
-            WITH ranked AS (
-                SELECT
-                    u.id,
-                    COALESCE(SUM(p.points), 0) AS total_points,
-                    RANK() OVER (
-                        ORDER BY
-                            COALESCE(SUM(p.points), 0) DESC,
-                            COUNT(CASE WHEN p.points >= 10 THEN 1 END) DESC,
-                            COUNT(CASE WHEN p.points BETWEEN 7 AND 9 THEN 1 END) DESC,
-                            COUNT(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 END) DESC,
-                            u.id ASC
-                    ) AS place
-                FROM users u
-                LEFT JOIN predictions p
-                    ON u.id = p.user_id
-                    AND p.tournament_id = %s
-                WHERE u.is_admin = 0
-                GROUP BY u.id
-            )
-            SELECT place
-            FROM ranked
-            WHERE id = %s
-        """, (tournament_id, uid))
-
-        row = cur.fetchone()
-        current_place = row[0] if row else None
-
-        # total players
-        cur.execute("""
+        cur.execute(
+            """
             SELECT COUNT(*)
             FROM users
             WHERE is_admin = 0
-        """)
-
+            """
+        )
         total_players = cur.fetchone()[0] or 0
 
-        # =================================================
-        # STATS
-        # =================================================
-
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 COUNT(*) AS total_bets,
                 COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0),
@@ -143,10 +94,11 @@ def profile():
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status = 'FINISHED'
-        """, (uid, tournament_id))
+            """,
+            (uid, tournament_id),
+        )
 
         row = cur.fetchone() or (0, 0, 0, 0, 0, 0, 0, 0)
-
         stats = {
             'total_bets': row[0],
             'exact_scores': row[1],
@@ -158,11 +110,8 @@ def profile():
             'total_points': row[7],
         }
 
-        # =================================================
-        # RECENT MATCHES
-        # =================================================
-
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 m.home_team,
                 m.away_team,
@@ -178,7 +127,9 @@ def profile():
               AND m.status = 'FINISHED'
             ORDER BY m.kickoff_time DESC
             LIMIT 10
-        """, (uid, tournament_id))
+            """,
+            (uid, tournament_id),
+        )
 
         recent = [
             {
@@ -193,24 +144,16 @@ def profile():
             for r in cur.fetchall()
         ]
 
-        # =================================================
-        # TITLES
-        # =================================================
-
-        cur.execute("""
+        cur.execute(
+            """
             SELECT title, awarded_at
             FROM user_titles
             WHERE user_id = %s
             ORDER BY awarded_at DESC
-        """, (uid,))
-
-        titles = [
-            {
-                'title': r[0],
-                'awarded_at': r[1],
-            }
-            for r in cur.fetchall()
-        ]
+            """,
+            (uid,),
+        )
+        titles = [{'title': r[0], 'awarded_at': r[1]} for r in cur.fetchall()]
 
     finally:
         close_db(conn, cur)
@@ -224,5 +167,5 @@ def profile():
         current_place=current_place,
         total_players=total_players,
         get_flag=get_flag,
-        get_club_logo=get_club_logo
+        get_club_logo=get_club_logo,
     )
