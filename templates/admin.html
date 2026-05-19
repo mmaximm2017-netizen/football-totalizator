@@ -43,6 +43,30 @@
         margin-bottom: 14px;
     }
 
+    .admin-section-title {
+        font-size: 20px;
+        font-weight: 1000;
+        color: #063b73;
+        letter-spacing: -0.3px;
+        margin: 4px 2px 0;
+    }
+
+    .admin-section-subtitle {
+        font-size: 12px;
+        color: #5d7894;
+        font-weight: 700;
+        margin: -6px 2px 4px;
+    }
+
+    .admin-subsection-title {
+        font-size: 12px;
+        color: #5d7894;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.35px;
+        margin-bottom: 6px;
+    }
+
     .admin-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -92,12 +116,6 @@
         gap: 10px;
     }
 
-    .admin-divider {
-        height: 1px;
-        background: rgba(0,119,200,0.12);
-        margin: 12px 0;
-    }
-
     .admin-empty {
         color: #5d7894;
         text-align: center;
@@ -115,20 +133,14 @@
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-
         padding: 14px 16px;
         margin-bottom: 8px;
-
         border-radius: 18px;
         cursor: pointer;
-
         background:
             linear-gradient(160deg, rgba(255,255,255,0.90), rgba(226,244,255,0.76)) !important;
-
         border: 1px solid rgba(255,255,255,0.60);
-
         color: #063b73 !important;
-
         box-shadow:
             0 10px 24px rgba(0,78,140,0.12);
     }
@@ -173,20 +185,14 @@
         justify-content: space-between;
         align-items: center;
         gap: 10px;
-
         padding: 12px 12px;
         margin: 8px 0 6px 0;
-
         border-radius: 16px;
         cursor: pointer;
-
         background: rgba(255,255,255,0.62) !important;
-
         color: #063b73 !important;
-
         border: 1px solid rgba(0,119,200,0.12);
         border-left: 4px solid #1565c0;
-
         backdrop-filter: blur(10px);
     }
 
@@ -229,12 +235,9 @@
         margin: 6px 0 6px 10px;
         padding: 13px;
         border-radius: 18px;
-
         background:
             linear-gradient(160deg, rgba(255,255,255,0.88), rgba(232,246,255,0.74)) !important;
-
         border: 1px solid rgba(255,255,255,0.58);
-
         box-shadow:
             0 10px 26px rgba(0,78,140,0.12);
     }
@@ -375,15 +378,17 @@
 </style>
 
 <div class="admin-screen">
-
     <div>
         <div class="admin-title">⚙️ Админ-панель</div>
-        <div class="admin-subtitle">Управление матчами, результатами и турнирами</div>
+        <div class="admin-subtitle">Управление матчами, результатами, турнирами и титулами</div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">Быстрые действия</div>
+    <div class="admin-section-title">Матчи</div>
+    <div class="admin-section-subtitle">Обновление матчей, ручное добавление, результаты и редактирование</div>
 
+    <div class="admin-card">
+        <div class="admin-card-header">Обновить матчи из API</div>
+        <div class="admin-subsection-title">1.1 • Обновить матчи из API</div>
         <div class="admin-grid">
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -405,7 +410,7 @@
 
     <div class="admin-card">
         <div class="admin-card-header">Добавить матч вручную</div>
-
+        <div class="admin-subsection-title">1.2 • Добавить матч вручную</div>
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="add_match">
@@ -421,7 +426,6 @@
                     <label>Дата матча</label>
                     <input type="date" name="match_date" required>
                 </div>
-
                 <div>
                     <label>Время МСК</label>
                     <input type="time" name="match_time" value="19:00" required>
@@ -433,7 +437,6 @@
                     <label>Дедлайн дата (МСК, опционально)</label>
                     <input type="date" name="deadline_date">
                 </div>
-
                 <div>
                     <label>Дедлайн время (МСК, опционально)</label>
                     <input type="time" name="deadline_time">
@@ -453,8 +456,8 @@
     </div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Внести результат</div>
-
+        <div class="admin-card-header">Внести/исправить результат</div>
+        <div class="admin-subsection-title">1.3 • Внести результат</div>
         {% if free_months %}
             {% for month in free_months %}
             <div class="month-group">
@@ -463,7 +466,6 @@
                         <span id="arrow-free-month-{{ loop.index }}" class="month-arrow">▶</span>
                         <span class="month-label">{{ month.label }}</span>
                     </div>
-
                     <span class="month-count">{{ month.total_matches }} матчей</span>
                 </div>
 
@@ -475,7 +477,6 @@
                                 <span id="arrow-free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span>
                                 <span class="day-label">{{ day.date }}</span>
                             </div>
-
                             <span class="day-count">{{ day.matches|length }} матчей</span>
                         </div>
 
@@ -492,11 +493,9 @@
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                         <input type="hidden" name="action" value="set_result">
                                         <input type="hidden" name="match_id" value="{{ m.id }}">
-
                                         <input class="score-input" type="number" name="home_score" min="0" required>
                                         <span class="score-divider">:</span>
                                         <input class="score-input" type="number" name="away_score" min="0" required>
-
                                         <button type="submit" class="admin-btn admin-btn-small">Завершить</button>
                                     </form>
                                 </div>
@@ -514,8 +513,7 @@
     </div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Исправить результат завершённого матча</div>
-
+        <div class="admin-subsection-title">1.3 • Исправить результат</div>
         {% if finished_months %}
             {% for month in finished_months %}
             <div class="month-group">
@@ -524,7 +522,6 @@
                         <span id="arrow-finished-month-{{ loop.index }}" class="month-arrow">▶</span>
                         <span class="month-label">{{ month.label }}</span>
                     </div>
-
                     <span class="month-count">{{ month.total_matches }} матчей</span>
                 </div>
 
@@ -536,7 +533,6 @@
                                 <span id="arrow-finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span>
                                 <span class="day-label">{{ day.date }}</span>
                             </div>
-
                             <span class="day-count">{{ day.matches|length }} матчей</span>
                         </div>
 
@@ -552,11 +548,9 @@
                                     <form method="post" action="/admin/fix_result" class="score-form">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                         <input type="hidden" name="match_id" value="{{ m.id }}">
-
                                         <input class="score-input" type="number" name="home_score" min="0" required>
                                         <span class="score-divider">:</span>
                                         <input class="score-input" type="number" name="away_score" min="0" required>
-
                                         <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Обновить</button>
                                     </form>
                                 </div>
@@ -574,8 +568,8 @@
     </div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Редактировать матчи, добавленные вручную</div>
-
+        <div class="admin-card-header">Редактировать матч</div>
+        <div class="admin-subsection-title">1.4 • Редактировать матч</div>
         {% if manual_matches %}
             {% for m in manual_matches %}
             <div class="admin-match-card">
@@ -615,9 +609,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">
-                        Сохранить
-                    </button>
+                    <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
                 </form>
 
                 <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')">
@@ -632,48 +624,43 @@
         {% endif %}
     </div>
 
-<div class="admin-card">
-    <div class="admin-card-header">Турниры</div>
-
-    {% for t in tournaments %}
-    <div class="admin-match-card">
-        <div class="admin-match-row">
-            <div class="admin-match-main">
-                <div class="admin-match-title">
-                    {{ t.name }}
-                    {% if t.is_active %}
-                        <span style="color:#7CFF8A;">●</span>
-                    {% endif %}
-                </div>
-
-                <div class="admin-match-meta">
-                    Старт: {{ t.start_date or '—' }}
-                </div>
-            </div>
-
-            {% if not t.is_active %}
-            <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="tid" value="{{ t.id }}">
-                <button
-                    type="submit"
-                    class="admin-btn admin-btn-red admin-btn-small"
-                    style="text-decoration:none; display:flex; align-items:center; justify-content:center;"
-                >
-                    Удалить
-                </button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
+    <div class="admin-section-title">Турниры</div>
+    <div class="admin-section-subtitle">Список турниров, удаление и запуск нового</div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Начать новый турнир</div>
+        <div class="admin-card-header">Турниры</div>
+        <div class="admin-subsection-title">2.1 • Турниры</div>
+        {% for t in tournaments %}
+        <div class="admin-match-card">
+            <div class="admin-match-row">
+                <div class="admin-match-main">
+                    <div class="admin-match-title">
+                        {{ t.name }}
+                        {% if t.is_active %}
+                            <span style="color:#7CFF8A;">●</span>
+                        {% endif %}
+                    </div>
+                    <div class="admin-match-meta">Старт: {{ t.start_date or '—' }}</div>
+                </div>
 
+                {% if not t.is_active %}
+                <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="tid" value="{{ t.id }}">
+                    <button type="submit" class="admin-btn admin-btn-red admin-btn-small" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">Удалить</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Начать новый турнир / Завершить турнир</div>
+        <div class="admin-subsection-title">2.2 • Начать новый турнир</div>
         <form method="post" action="/admin/new_tournament" onsubmit="return confirm('Создать новый турнир? Текущая таблица уйдёт в архив, очки обнулятся.')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
             <label>Название турнира</label>
             <input type="text" name="name" value="ЧМ-2026" required>
 
@@ -684,9 +671,31 @@
         </form>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">Выдать титул</div>
+    <div class="admin-section-title">Пользователи</div>
+    <div class="admin-section-subtitle">Список игроков и ручная выдача титулов</div>
 
+    <div class="admin-card">
+        <div class="admin-card-header">Список пользователей</div>
+        <div class="admin-subsection-title">3.1 • Список пользователей</div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                </tr>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.username }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Выдача титулов</div>
+        <div class="admin-subsection-title">3.2 • Выдача титула</div>
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="award_title">
@@ -710,27 +719,6 @@
             <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 12px;">Выдать титул</button>
         </form>
     </div>
-
-    <div class="admin-card">
-        <div class="admin-card-header">Список пользователей</div>
-
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <tr>
-                    <th>ID</th>
-                    <th>Имя</th>
-                </tr>
-
-                {% for u in users %}
-                <tr>
-                    <td>{{ u.id }}</td>
-                    <td>{{ u.username }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-    </div>
-
 </div>
 
 <script>
@@ -766,22 +754,18 @@ function toggleDay(id) {
 
 document.addEventListener('DOMContentLoaded', function() {
     var firstMonth = document.querySelector('[id^="free-month-"]');
-
     if (firstMonth) {
         var arrow = document.getElementById('arrow-' + firstMonth.id);
         firstMonth.style.display = 'block';
-
         if (arrow) {
             arrow.style.transform = 'rotate(90deg)';
         }
     }
 
     var firstFinishedMonth = document.querySelector('[id^="finished-month-"]');
-
     if (firstFinishedMonth) {
         var arrow2 = document.getElementById('arrow-' + firstFinishedMonth.id);
         firstFinishedMonth.style.display = 'block';
-
         if (arrow2) {
             arrow2.style.transform = 'rotate(90deg)';
         }
