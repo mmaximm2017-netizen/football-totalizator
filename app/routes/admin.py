@@ -29,6 +29,10 @@ from app.config import START_DATE
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 MSK = ZoneInfo("Europe/Moscow")
+ALLOWED_TITLES = (
+    "Обладатель Кубка Матч-Премьер",
+    "Чемпион Мира 2026",
+)
 
 
 # =========================================================
@@ -303,6 +307,59 @@ def admin():
 
                 return redirect(url_for('admin.admin'))
 
+            # =============================================
+            # AWARD TITLE
+            # =============================================
+
+            elif action == 'award_title':
+
+                user_id = request.form.get('user_id', type=int)
+                title = (request.form.get('title') or '').strip()
+
+                if not user_id or not title:
+                    flash("Укажите пользователя и титул", "error")
+                    return redirect(url_for('admin.admin'))
+
+                if title not in ALLOWED_TITLES:
+                    flash("Некорректный титул", "error")
+                    return redirect(url_for('admin.admin'))
+
+                try:
+                    cur.execute("""
+                        SELECT is_admin
+                        FROM users
+                        WHERE id = %s
+                    """, (user_id,))
+                    row = cur.fetchone()
+
+                    if not row:
+                        flash("Пользователь не найден", "error")
+                        return redirect(url_for('admin.admin'))
+
+                    if row[0] == 1:
+                        flash("Нельзя выдавать титул администратору", "error")
+                        return redirect(url_for('admin.admin'))
+
+                    cur.execute("""
+                        INSERT INTO user_titles (user_id, title, awarded_by)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id, title) DO NOTHING
+                    """, (user_id, title, session.get('user_id')))
+
+                    if cur.rowcount == 0:
+                        conn.rollback()
+                        flash("У пользователя уже есть этот титул", "error")
+                        return redirect(url_for('admin.admin'))
+
+                    conn.commit()
+                    flash("Титул выдан", "success")
+
+                except Exception as e:
+                    conn.rollback()
+                    flash(f"Ошибка выдачи титула: {e}", "error")
+
+                return redirect(url_for('admin.admin'))
+
             else:
                 flash("Неизвестное действие", "error")
                 return redirect(url_for('admin.admin'))
@@ -462,17 +519,25 @@ def admin():
         # USERS
         # =============================================
         cur.execute("""
-            SELECT id, username
+            SELECT id, username, is_admin
             FROM users
             ORDER BY username
         """)
 
         users = []
+        title_users = []
         for u in cur.fetchall():
-            users.append({
+            item = {
                 'id': u[0],
-                'username': u[1]
-            })
+                'username': u[1],
+                'is_admin': u[2]
+            }
+            users.append(item)
+            if u[2] == 0:
+                title_users.append({
+                    'id': u[0],
+                    'username': u[1]
+                })
 
     finally:
         close_db(conn, cur)
@@ -482,8 +547,10 @@ def admin():
         free_months=free_months_list,
         finished_months=finished_months_list,
         manual_matches=manual_matches,
-users=users,
-tournaments=tournaments
+        users=users,
+        title_users=title_users,
+        allowed_titles=ALLOWED_TITLES,
+        tournaments=tournaments
     )
 
 

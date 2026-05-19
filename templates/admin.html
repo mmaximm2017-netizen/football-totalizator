@@ -685,6 +685,33 @@
     </div>
 
     <div class="admin-card">
+        <div class="admin-card-header">Выдать титул</div>
+
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="action" value="award_title">
+
+            <label>Пользователь</label>
+            <select name="user_id" required>
+                <option value="">Выберите пользователя</option>
+                {% for u in title_users %}
+                <option value="{{ u.id }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+
+            <label style="margin-top:10px;">Титул</label>
+            <select name="title" required>
+                <option value="">Выберите титул</option>
+                {% for title in allowed_titles %}
+                <option value="{{ title }}">{{ title }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 12px;">Выдать титул</button>
+        </form>
+    </div>
+
+    <div class="admin-card">
         <div class="admin-card-header">Список пользователей</div>
 
         <div class="admin-table-wrap">
