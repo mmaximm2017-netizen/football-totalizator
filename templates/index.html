@@ -37,6 +37,9 @@
 
         cursor: pointer;
         user-select: none;
+        min-height: 58px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .month-left {
@@ -103,6 +106,9 @@
 
         cursor: pointer;
         user-select: none;
+        min-height: 54px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .day-header-v2.today {
@@ -364,7 +370,7 @@
 
     .deadline-label {
         font-size: 9px;
-        font-weight: 800;
+        font-weight: 700;
         letter-spacing: 0.2px;
         color: rgba(93,120,148,0.72);
         text-transform: uppercase;
@@ -409,7 +415,7 @@
 
     .deadline-helper {
         font-size: 10px;
-        font-weight: 650;
+        font-weight: 600;
         color: rgba(93,120,148,0.70);
         line-height: 1.1;
         white-space: nowrap;
@@ -472,6 +478,7 @@
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.42),
             0 6px 14px rgba(0,78,140,0.08);
+        transition: box-shadow 0.16s ease, border-color 0.16s ease;
     }
 
     .team-v2 {
@@ -808,6 +815,13 @@
         background: rgba(93,120,148,0.08);
     }
 
+    .match-card-v2.locked .score-stepper {
+        border-color: rgba(93,120,148,0.18);
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.36),
+            0 2px 6px rgba(0,78,140,0.05);
+    }
+
     .save-btn-v2 {
         display: block;
         width: 62%;
@@ -840,6 +854,11 @@
         box-shadow: 0 6px 14px rgba(0,119,200,0.14);
     }
 
+    .save-btn-v2:disabled {
+        filter: saturate(0.72);
+        box-shadow: 0 4px 10px rgba(93,120,148,0.14);
+    }
+
     .disabled-btn-v2 {
         display: block;
         width: 62%;
@@ -865,6 +884,7 @@
         margin-top: 6px;
         gap: 10px;
         flex-wrap: wrap;
+        row-gap: 7px;
     }
 
     .my-prediction-v2 {
@@ -1092,6 +1112,7 @@
         color: #063b73;
         font-size: 14px;
         font-weight: 900;
+        border: 1px solid rgba(93,120,148,0.18);
     }
 
     .bets-compact-score {
@@ -1301,20 +1322,20 @@
 
         .stepper-btn {
             width: 100%;
-            height: 26px;
+            height: 28px;
             font-size: 14px;
         }
 
         .save-btn-v2 {
             width: 68%;
             min-width: 150px;
-            height: 38px;
+            height: 40px;
         }
 
         .disabled-btn-v2 {
             width: 68%;
             min-width: 150px;
-            height: 38px;
+            height: 40px;
         }
 
         .score-divider {

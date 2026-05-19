@@ -67,7 +67,7 @@ body {
 
             background-attachment: fixed;
 
-            padding-bottom: 110px;
+            padding-bottom: calc(116px + env(safe-area-inset-bottom));
         }
 
         /* SPLASH */
@@ -455,7 +455,7 @@ body {
             right: 12px;
             bottom: 12px;
 
-            height: 62px;
+            min-height: 64px;
 
             background:
                 linear-gradient(
@@ -481,7 +481,10 @@ body {
 
             z-index: 99999;
 
-            padding-bottom: env(safe-area-inset-bottom);
+            padding:
+                0
+                4px
+                max(2px, env(safe-area-inset-bottom));
         }
 
 .bottom-nav a {
@@ -491,9 +494,7 @@ body {
     align-items: center;
     justify-content: center;
 
-    height: 64px;
-
-    height: 64px;
+    min-height: 62px;
 
     font-size: 13px;
     font-weight: 600;
@@ -501,11 +502,11 @@ body {
     text-decoration: none;
     color: #5d7894;
 
-    transition: 0.2s ease;
+    transition: transform 0.16s ease, color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
 .bottom-nav a:active {
-    transform: scale(0.96);
+    transform: scale(0.975);
 }
 .bottom-nav a.active {
     color: #0077c8;
@@ -520,8 +521,8 @@ body {
     border-radius: 18px;
 
     box-shadow:
-        inset 0 0 18px rgba(0,119,200,0.08),
-        0 0 12px rgba(0,119,200,0.08);
+        inset 0 0 14px rgba(0,119,200,0.07),
+        0 0 8px rgba(0,119,200,0.08);
 
     border: 1px solid rgba(0,119,200,0.12);
 }
@@ -533,12 +534,12 @@ body {
 
 .bottom-nav .nav-logout-btn {
     width: 100%;
-    height: 64px;
+    min-height: 62px;
     border: 0;
     background: transparent;
     color: #5d7894;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -547,7 +548,14 @@ body {
 }
 
 .bottom-nav .nav-logout-btn:active {
-    transform: scale(0.96);
+    transform: scale(0.975);
+}
+
+.bottom-nav a:focus-visible,
+.bottom-nav .nav-logout-btn:focus-visible {
+    outline: 2px solid rgba(0,119,200,0.46);
+    outline-offset: 2px;
+    border-radius: 14px;
 }
 
 .nav-icon {
@@ -574,7 +582,7 @@ body {
 
         @media (max-width: 480px) {
             body {
-                padding-bottom: 106px;
+                padding-bottom: calc(112px + env(safe-area-inset-bottom));
             }
 
             .container {
