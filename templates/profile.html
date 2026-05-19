@@ -321,6 +321,14 @@
         margin-top: 9px;
     }
 
+    .profile-race-cue {
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        color: rgba(93,120,148,0.86);
+        letter-spacing: 0.1px;
+    }
+
     .title-item {
         border-radius: 12px;
         padding: 7px 11px;
@@ -417,6 +425,15 @@
                 {{ current_place }} место
             {% endif %}
 
+        </div>
+        <div class="profile-race-cue">
+            {% if current_place == 1 %}
+                Вы ведёте турнирную гонку
+            {% elif current_place <= 3 %}
+                Вы в зоне лидеров
+            {% else %}
+                Борьба за подъём в таблице
+            {% endif %}
         </div>
         {% endif %}
 

@@ -119,6 +119,12 @@
         border-left-color: #9e9e9e;
     }
 
+    .month-header-v2:focus-visible,
+    .day-header-v2:focus-visible {
+        outline: 2px solid rgba(0,119,200,0.42);
+        outline-offset: 2px;
+    }
+
     .day-left {
         display: flex;
         align-items: center;
@@ -419,6 +425,23 @@
         color: rgba(93,120,148,0.70);
         line-height: 1.1;
         white-space: nowrap;
+    }
+
+    .deadline-cue {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15px;
+        color: rgba(93,120,148,0.64);
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+
+    .match-card-v2.urgency-mid .deadline-cue {
+        color: rgba(154,106,0,0.88);
+    }
+
+    .match-card-v2.urgency-hot .deadline-cue {
+        color: rgba(166,33,33,0.90);
     }
 
     .topline-right {
@@ -885,6 +908,26 @@
         gap: 10px;
         flex-wrap: wrap;
         row-gap: 7px;
+    }
+
+    .match-card-v2.urgency-mid {
+        box-shadow:
+            inset 0 1px 0 rgba(255,241,198,0.30),
+            0 0 0 1px rgba(255,232,163,0.36),
+            0 0 0 3px rgba(244,210,122,0.46),
+            0 10px 20px rgba(255,225,150,0.16),
+            0 14px 34px rgba(0,78,140,0.15),
+            inset 0 1px 0 rgba(255,255,255,0.70);
+    }
+
+    .match-card-v2.urgency-hot {
+        box-shadow:
+            inset 0 1px 0 rgba(255,241,198,0.30),
+            0 0 0 1px rgba(255,232,163,0.36),
+            0 0 0 3px rgba(244,210,122,0.54),
+            0 10px 20px rgba(255,225,150,0.18),
+            0 14px 34px rgba(0,78,140,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.70);
     }
 
     .my-prediction-v2 {
@@ -1502,6 +1545,7 @@
                 <span class="deadline-helper">
                     до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
                 </span>
+                <span class="deadline-cue">турнирный дедлайн</span>
             </div>
 
             {% if match.deadline_passed %}
@@ -2041,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[data-deadline]').forEach(function (timer) {
             const rawDeadline = timer.dataset.deadline;
             const card = timer.closest('.match-card-v2');
+            const cue = card ? card.querySelector('.deadline-cue') : null;
 
             if (!rawDeadline) return;
 
@@ -2051,6 +2096,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const remaining = deadlineMs - now;
 
             timer.classList.remove('warning', 'danger', 'closed');
+            if (card) {
+                card.classList.remove('urgency-mid', 'urgency-hot');
+            }
 
             if (card && card.dataset.deadlineClosed === '1') {
                 timer.textContent = 'Ставки закрыты';
@@ -2077,6 +2125,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateDeadlineTimers();
     setInterval(updateDeadlineTimers, 1000);
+
+    function updateDeadlineAtmosphere() {
+        document.querySelectorAll('[data-deadline]').forEach(function (timer) {
+            const card = timer.closest('.match-card-v2');
+            const cue = card ? card.querySelector('.deadline-cue') : null;
+            if (!card || !cue) return;
+
+            card.classList.remove('urgency-mid', 'urgency-hot');
+
+            if (timer.classList.contains('closed')) {
+                cue.textContent = 'ставки закрыты';
+                return;
+            }
+
+            if (timer.classList.contains('danger')) {
+                card.classList.add('urgency-hot');
+                cue.textContent = 'последние минуты';
+                return;
+            }
+
+            if (timer.classList.contains('warning')) {
+                card.classList.add('urgency-mid');
+                cue.textContent = 'скоро дедлайн';
+                return;
+            }
+
+            cue.textContent = 'турнирный дедлайн';
+        });
+    }
+
+    updateDeadlineAtmosphere();
+    setInterval(updateDeadlineAtmosphere, 1000);
 
     const steppers = document.querySelectorAll('[data-stepper]');
 

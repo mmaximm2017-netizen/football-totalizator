@@ -333,6 +333,26 @@
     text-align: right;
 }
 
+.player-row.race-near {
+    border-color: rgba(0,119,200,0.18);
+}
+
+.player-row.race-hot {
+    border-color: rgba(46,125,50,0.28);
+    box-shadow:
+        0 12px 24px rgba(0,78,140,0.14),
+        0 0 0 1px rgba(46,125,50,0.12);
+}
+
+.points-gap.gap-near {
+    color: rgba(0,119,200,0.82);
+}
+
+.points-gap.gap-hot {
+    color: rgba(46,125,50,0.90);
+    font-weight: 950;
+}
+
 .top-1 .points-gap {
     color: rgba(93,120,148,0.65);
 }
@@ -520,7 +540,8 @@
         {% set leader_points = table[0].points if table else 0 %}
         {% for row in table %}
 
-        <div class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
+        {% set gap = leader_points - row.points %}
+        <div class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %} {% if row.place != 1 and gap <= 1 %}race-hot{% elif row.place != 1 and gap <= 3 %}race-near{% endif %}">
             <div class="place-box">
                 {% if row.place == 1 %}
                     1
@@ -547,11 +568,11 @@
 
             <div class="points-box">
                 <span class="points-number">{{ row.points }}</span>
-                <span class="points-gap">
+                <span class="points-gap {% if row.place != 1 and gap <= 1 %}gap-hot{% elif row.place != 1 and gap <= 3 %}gap-near{% endif %}">
                     {% if row.place == 1 %}
                         —
                     {% else %}
-                        -{{ leader_points - row.points }}
+                        -{{ gap }}
                     {% endif %}
                 </span>
             </div>
