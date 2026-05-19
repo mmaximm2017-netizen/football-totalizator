@@ -6,7 +6,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: calc(100dvh - 150px);
 }
 
     .leaderboard-hero {
@@ -83,9 +82,7 @@
     display: flex;
     flex-direction: column;
     gap: 9px;
-    flex: 1;
-    min-height: clamp(360px, 58vh, 520px);
-    justify-content: space-between;
+    padding-bottom: 6px;
 }
 
     .player-row {
@@ -96,7 +93,7 @@
         align-items: center;
         gap: 9px;
 
-        min-height: 56px;
+        min-height: 52px;
 
         border-radius: 18px;
         padding: 8px 10px;
@@ -374,18 +371,10 @@
             font-size: 20px;
         }
 
-        .leaderboard-screen {
-            min-height: calc(100dvh - 132px);
-        }
-
-        .leaderboard-list {
-            min-height: clamp(330px, 55vh, 480px);
-        }
-
         .player-row {
             grid-template-columns: 40px minmax(0, 1fr) auto;
             padding: 8px 9px;
-            min-height: 52px;
+            min-height: 49px;
             border-radius: 17px;
         }
 
