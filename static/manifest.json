@@ -1,13 +1,13 @@
 {
-  "name": "ТОТИШ БРАТИШЕК",
-  "short_name": "Тотиш",
+  "name": "TOTISH BRATISHEK",
+  "short_name": "Totish",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#eaf6ff",
   "theme_color": "#dff2ff",
-  "description": "Футбольный тотализатор для друзей",
+  "description": "Football prediction app for friends",
   "icons": [
     {
       "src": "/static/icon-192-new.png",
@@ -23,4 +23,3 @@
     }
   ]
 }
-

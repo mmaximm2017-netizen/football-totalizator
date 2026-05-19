@@ -1,4 +1,4 @@
-# app/routes/main.py
+﻿# app/routes/main.py
 
 from datetime import datetime, timezone
 from collections import defaultdict
@@ -208,7 +208,7 @@ WHERE id = %s
 
             if is_ajax_request():
                 return ajax_success(
-                    "Прогноз сохранён",
+                    "������� �������",
                     {
                         "match_id": int(match_id),
                         "home_goals": h,
@@ -370,18 +370,18 @@ WHERE id = %s
             months[month_key].append(d)
 
         month_names = {
-            '01': 'Январь',
-            '02': 'Февраль',
-            '03': 'Март',
-            '04': 'Апрель',
-            '05': 'Май',
-            '06': 'Июнь',
-            '07': 'Июль',
-            '08': 'Август',
-            '09': 'Сентябрь',
-            '10': 'Октябрь',
-            '11': 'Ноябрь',
-            '12': 'Декабрь'
+            '01': '������',
+            '02': '�������',
+            '03': '����',
+            '04': '������',
+            '05': '���',
+            '06': '����',
+            '07': '����',
+            '08': '������',
+            '09': '��������',
+            '10': '�������',
+            '11': '������',
+            '12': '�������'
         }
 
         grouped_months = []
@@ -409,3 +409,5 @@ WHERE id = %s
         to_msk=cached_to_msk,
         current_filter=league,
     )
+
+

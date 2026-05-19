@@ -1,7 +1,6 @@
-# app/routes/predictions.py
+﻿# app/routes/predictions.py
 
-from datetime import datetime, timezone
-from flask import Blueprint, render_template, redirect, url_for, flash, session, request
+from flask import Blueprint, render_template, redirect, url_for, flash, session
 
 from app.db import get_db, close_db
 from app.services.tournament_service import get_active_tournament_id
@@ -53,7 +52,7 @@ def match_predictions(match_id):
             'away_score': m[7],
         }
 
-        # единый стиль: передаём словарь с deadline
+        # ������ �����: ������� ������� � deadline
         deadline_passed = not is_before_deadline({
             "deadline": m[4]
         })
@@ -246,3 +245,5 @@ def my_predictions():
         cancelled=cancelled,
         to_msk=cached_to_msk
     )
+
+

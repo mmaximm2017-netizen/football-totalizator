@@ -1,7 +1,7 @@
-// push-worker.js — обработчик push-уведомлений
+// push-worker.js - push notification handler
 self.addEventListener('push', event => {
     const data = event.data ? event.data.json() : {};
-    const title = data.title || 'ТОТИШ БРАТИШЕК';
+    const title = data.title || 'TOTISH BRATISHEK';
     const options = {
         body: data.body || '',
         icon: '/static/icon-192-new.png',
@@ -13,7 +13,7 @@ self.addEventListener('push', event => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// При клике на уведомление — открываем сайт
+// On notification click, open app URL
 self.addEventListener('notificationclick', event => {
     event.notification.close();
     const url = event.notification.data || '/';
@@ -30,4 +30,3 @@ self.addEventListener('notificationclick', event => {
         })
     );
 });
-

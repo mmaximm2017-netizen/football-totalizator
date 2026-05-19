@@ -1,6 +1,6 @@
-# app/routes/admin.py
+﻿# app/routes/admin.py
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from collections import defaultdict
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -18,7 +18,10 @@ from flask import (
 from markupsafe import escape
 
 from app.db import get_db, close_db
-from app.services.tournament_service import ensure_single_active_tournament
+from app.services.tournament_service import (
+    ensure_single_active_tournament,
+    get_active_tournament_id,
+)
 from app.utils import translate_name, format_date_ru
 from app.config import START_DATE
 
@@ -40,14 +43,6 @@ ALLOWED_TITLES = (
 # HELPERS
 # =========================================================
 
-def get_active_tournament_id(cur):
-    cur.execute(
-        "SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1"
-    )
-    row = cur.fetchone()
-    return row[0] if row else None
-
-
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -65,7 +60,7 @@ def admin_required(f):
             user = cur.fetchone()
 
             if not user or user[0] != 1:
-                flash("Доступ запрещён", "error")
+                flash("������ ��������", "error")
                 return redirect(url_for('main.index'))
 
         finally:
@@ -100,7 +95,7 @@ def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_ti
 
     if deadline_date or deadline_time:
         if not deadline_date or not deadline_time:
-            raise ValueError("Укажите и дату, и время дедлайна")
+            raise ValueError("������� � ����, � ����� ��������")
 
         deadline_msk = datetime.strptime(
             f"{deadline_date} {deadline_time}",
@@ -373,11 +368,11 @@ def admin():
                 try:
                     completed = run_sync_with_lock()
                     if completed:
-                        flash("Матчи и очки обновлены", "success")
+                        flash("����� � ���� ���������", "success")
                     else:
-                        flash("Обновление уже выполняется", "error")
+                        flash("���������� ��� �����������", "error")
                 except Exception as e:
-                    flash(f"Ошибка обновления: {e}", "error")
+                    flash(f"������ ����������: {e}", "error")
 
                 return redirect(url_for('admin.admin'))
 
@@ -420,7 +415,7 @@ def admin():
                     existing = cur.fetchone()
 
                     if existing:
-                        flash("Такой матч уже существует", "error")
+                        flash("����� ���� ��� ����������", "error")
                         return redirect(url_for('admin.admin'))
 
                     cur.execute("""
@@ -444,7 +439,7 @@ def admin():
                     conn.commit()
 
                     flash(
-                        f"Матч {home} — {away} добавлен",
+                        f"���� {home} � {away} ��������",
                         "success"
                     )
 
@@ -452,7 +447,7 @@ def admin():
 
                     conn.rollback()
 
-                    flash(f"Ошибка: {e}", "error")
+                    flash(f"������: {e}", "error")
 
                 return redirect(url_for('admin.admin'))
 
@@ -470,7 +465,7 @@ def admin():
                 )
 
                 if home_score is None:
-                    flash("Некорректный счёт", "error")
+                    flash("������������ ����", "error")
                     return redirect(url_for('admin.admin'))
 
                 try:
@@ -488,7 +483,7 @@ def admin():
                     ))
 
                     if cur.rowcount == 0:
-                        flash("Матч не найден", "error")
+                        flash("���� �� ������", "error")
                         return redirect(url_for('admin.admin'))
 
                     from app.models.scoring import calculate_points
@@ -528,7 +523,7 @@ def admin():
                     conn.commit()
 
                     flash(
-                        "Результат внесён, очки пересчитаны",
+                        "��������� �����, ���� �����������",
                         "success"
                     )
 
@@ -536,7 +531,7 @@ def admin():
 
                     conn.rollback()
 
-                    flash(f"Ошибка: {e}", "error")
+                    flash(f"������: {e}", "error")
 
                 return redirect(url_for('admin.admin'))
 
@@ -550,11 +545,11 @@ def admin():
                 title = (request.form.get('title') or '').strip()
 
                 if not user_id or not title:
-                    flash("Укажите пользователя и титул", "error")
+                    flash("������� ������������ � �����", "error")
                     return redirect(url_for('admin.admin'))
 
                 if title not in ALLOWED_TITLES:
-                    flash("Некорректный титул", "error")
+                    flash("������������ �����", "error")
                     return redirect(url_for('admin.admin'))
 
                 try:
@@ -566,11 +561,11 @@ def admin():
                     row = cur.fetchone()
 
                     if not row:
-                        flash("Пользователь не найден", "error")
+                        flash("������������ �� ������", "error")
                         return redirect(url_for('admin.admin'))
 
                     if row[0] == 1:
-                        flash("Нельзя выдавать титул администратору", "error")
+                        flash("������ �������� ����� ��������������", "error")
                         return redirect(url_for('admin.admin'))
 
                     cur.execute("""
@@ -581,20 +576,20 @@ def admin():
 
                     if cur.rowcount == 0:
                         conn.rollback()
-                        flash("У пользователя уже есть этот титул", "error")
+                        flash("� ������������ ��� ���� ���� �����", "error")
                         return redirect(url_for('admin.admin'))
 
                     conn.commit()
-                    flash("Титул выдан", "success")
+                    flash("����� �����", "success")
 
                 except Exception as e:
                     conn.rollback()
-                    flash(f"Ошибка выдачи титула: {e}", "error")
+                    flash(f"������ ������ ������: {e}", "error")
 
                 return redirect(url_for('admin.admin'))
 
             else:
-                flash("Неизвестное действие", "error")
+                flash("����������� ��������", "error")
                 return redirect(url_for('admin.admin'))
 
         return render_template('admin.html')
@@ -649,7 +644,7 @@ def debug_match():
     match_id = request.form.get('match_id', type=int)
 
     if not match_id:
-        flash("Матч не найден", "error")
+        flash("���� �� ������", "error")
         return redirect(url_for('admin.admin'))
 
     conn = get_db()
@@ -670,7 +665,7 @@ def debug_match():
         match = cur.fetchone()
 
         if not match:
-            return "Матч не найден", 404
+            return "���� �� ������", 404
 
         cur.execute("""
             UPDATE predictions
@@ -729,18 +724,18 @@ def debug_match():
 
         result = f"""
         <h3>
-            Матч #{match[0]}:
-            Счёт {match[1]}:{match[2]}
-            (обновлено {updated} записей)
+            ���� #{match[0]}:
+            ���� {match[1]}:{match[2]}
+            (��������� {updated} �������)
         </h3>
         """
 
         result += """
         <table border='1'>
             <tr>
-                <th>Игрок</th>
-                <th>Прогноз</th>
-                <th>Очки</th>
+                <th>�����</th>
+                <th>�������</th>
+                <th>����</th>
             </tr>
         """
 
@@ -779,10 +774,10 @@ def recalc_all():
 
         from app.models.scoring import calculate_points
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
-            flash("Активный турнир не найден", "error")
+            flash("�������� ������ �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         cur.execute("""
@@ -854,7 +849,7 @@ def recalc_all():
         conn.commit()
 
         flash(
-            f"Пересчитано {total_updated} прогнозов",
+            f"����������� {total_updated} ���������",
             "success"
         )
 
@@ -862,7 +857,7 @@ def recalc_all():
 
         conn.rollback()
 
-        flash(f"Ошибка пересчёта: {e}", "error")
+        flash(f"������ ���������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -883,7 +878,7 @@ def force_finish():
     a = request.form.get('away_score', type=int)
 
     if match_id is None or h is None or a is None:
-        flash("Некорректные данные матча", "error")
+        flash("������������ ������ �����", "error")
         return redirect(url_for('admin.admin'))
 
     conn = get_db()
@@ -892,15 +887,15 @@ def force_finish():
     try:
 
         if h < 0 or a < 0:
-            flash("Счёт не может быть отрицательным", "error")
+            flash("���� �� ����� ���� �������������", "error")
             return redirect(url_for('admin.admin'))
 
         from app.models.scoring import calculate_points
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
-            flash("Активный турнир не найден", "error")
+            flash("�������� ������ �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         cur.execute("""
@@ -916,7 +911,7 @@ def force_finish():
         ))
 
         if cur.rowcount == 0:
-            flash("Матч не найден", "error")
+            flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         cur.execute("""
@@ -968,7 +963,7 @@ def force_finish():
         conn.commit()
 
         flash(
-            f"Матч #{match_id} завершён: {h}:{a}",
+            f"���� #{match_id} ��������: {h}:{a}",
             "success"
         )
 
@@ -976,7 +971,7 @@ def force_finish():
 
         conn.rollback()
 
-        flash(f"Ошибка: {e}", "error")
+        flash(f"������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1034,7 +1029,7 @@ def admin_translate():
         conn.commit()
 
         flash(
-            f"Переведено {updated} матчей",
+            f"���������� {updated} ������",
             "success"
         )
 
@@ -1042,7 +1037,7 @@ def admin_translate():
 
         conn.rollback()
 
-        flash(f"Ошибка перевода: {e}", "error")
+        flash(f"������ ��������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1066,7 +1061,7 @@ def admin_fix_result():
     )
 
     if home_score is None:
-        flash("Некорректный счёт", "error")
+        flash("������������ ����", "error")
         return redirect(url_for('admin.admin'))
 
     conn = get_db()
@@ -1074,10 +1069,10 @@ def admin_fix_result():
 
     try:
 
-        tournament_id = get_active_tournament_id(cur)
+        tournament_id = get_active_tournament_id()
 
         if not tournament_id:
-            flash("Активный турнир не найден", "error")
+            flash("�������� ������ �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         cur.execute("""
@@ -1092,7 +1087,7 @@ def admin_fix_result():
         ))
 
         if cur.rowcount == 0:
-            flash("Матч не найден", "error")
+            flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         from app.models.scoring import calculate_points
@@ -1136,7 +1131,7 @@ def admin_fix_result():
         conn.commit()
 
         flash(
-            f"Результат обновлён: {home_score}:{away_score}",
+            f"��������� �������: {home_score}:{away_score}",
             "success"
         )
 
@@ -1144,7 +1139,7 @@ def admin_fix_result():
 
         conn.rollback()
 
-        flash(f"Ошибка: {e}", "error")
+        flash(f"������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1170,7 +1165,7 @@ def admin_edit_match():
 
     if not match_id or not home_team or not away_team or not match_date or not match_time:
 
-        flash("Заполните все поля", "error")
+        flash("��������� ��� ����", "error")
 
         return redirect(url_for('admin.admin'))
 
@@ -1187,7 +1182,7 @@ def admin_edit_match():
         row = cur.fetchone()
 
         if not row:
-            flash("Матч не найден", "error")
+            flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         status = row[0]
@@ -1203,7 +1198,7 @@ def admin_edit_match():
             flash(str(e), "error")
             return redirect(url_for('admin.admin'))
         except Exception:
-            flash("Некорректная дата или время", "error")
+            flash("������������ ���� ��� �����", "error")
             return redirect(url_for('admin.admin'))
 
         if status == 'FINISHED':
@@ -1218,7 +1213,7 @@ def admin_edit_match():
                 match_id
             ))
 
-            flash("Для FINISHED матча изменение kickoff/deadline отключено для безопасности", "error")
+            flash("��� FINISHED ����� ��������� kickoff/deadline ��������� ��� ������������", "error")
         else:
             cur.execute("""
                 UPDATE matches
@@ -1236,13 +1231,13 @@ def admin_edit_match():
             ))
 
         if cur.rowcount == 0:
-            flash("Матч не найден", "error")
+            flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         conn.commit()
 
         flash(
-            f"Матч #{match_id} обновлён",
+            f"���� #{match_id} �������",
             "success"
         )
 
@@ -1250,7 +1245,7 @@ def admin_edit_match():
 
         conn.rollback()
 
-        flash(f"Ошибка: {e}", "error")
+        flash(f"������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1270,7 +1265,7 @@ def admin_delete_match():
 
     if not match_id:
 
-        flash("Не указан match_id", "error")
+        flash("�� ������ match_id", "error")
 
         return redirect(url_for('admin.admin'))
 
@@ -1290,13 +1285,13 @@ def admin_delete_match():
         """, (match_id,))
 
         if cur.rowcount == 0:
-            flash("Матч не найден", "error")
+            flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         conn.commit()
 
         flash(
-            f"Матч #{match_id} удалён",
+            f"���� #{match_id} �����",
             "success"
         )
 
@@ -1304,7 +1299,7 @@ def admin_delete_match():
 
         conn.rollback()
 
-        flash(f"Ошибка удаления: {e}", "error")
+        flash(f"������ ��������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1325,7 +1320,7 @@ def admin_new_tournament():
 
     if not name:
 
-        flash("Введите название турнира", "error")
+        flash("������� �������� �������", "error")
 
         return redirect(url_for('admin.admin'))
 
@@ -1336,7 +1331,7 @@ def admin_new_tournament():
         single_active = ensure_single_active_tournament()
         if not single_active.get("ok"):
             flash(
-                "Обнаружено несколько активных турниров. Сначала исправьте active-state.",
+                "���������� ��������� �������� ��������. ������� ��������� active-state.",
                 "error",
             )
             return redirect(url_for('admin.admin'))
@@ -1351,7 +1346,7 @@ def admin_new_tournament():
 
         if existing:
 
-            flash("Турнир с таким названием уже существует", "error")
+            flash("������ � ����� ��������� ��� ����������", "error")
 
             return redirect(url_for('admin.admin'))
 
@@ -1370,7 +1365,7 @@ def admin_new_tournament():
         conn.commit()
 
         flash(
-            f"Турнир «{name}» создан",
+            f"������ �{name}� ������",
             "success"
         )
 
@@ -1378,7 +1373,7 @@ def admin_new_tournament():
 
         conn.rollback()
 
-        flash(f"Ошибка создания турнира: {e}", "error")
+        flash(f"������ �������� �������: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1397,7 +1392,7 @@ def delete_tournament():
     tid = request.form.get('tid', type=int)
 
     if not tid:
-        flash("Турнир не найден", "error")
+        flash("������ �� ������", "error")
         return redirect(url_for('admin.admin'))
 
     conn = get_db()
@@ -1414,11 +1409,11 @@ def delete_tournament():
         row = cur.fetchone()
 
         if not row:
-            flash("Турнир не найден", "error")
+            flash("������ �� ������", "error")
             return redirect(url_for('admin.admin'))
 
         if row[0] == 1:
-            flash("Нельзя удалить активный турнир", "error")
+            flash("������ ������� �������� ������", "error")
             return redirect(url_for('admin.admin'))
 
         cur.execute("""
@@ -1428,17 +1423,19 @@ def delete_tournament():
 
         conn.commit()
 
-        flash(f"Турнир #{tid} удалён", "success")
+        flash(f"������ #{tid} �����", "success")
 
     except Exception as e:
 
         conn.rollback()
 
-        flash(f"Ошибка: {e}", "error")
+        flash(f"������: {e}", "error")
 
     finally:
 
         close_db(conn, cur)
 
     return redirect(url_for('admin.admin'))
+
+
 

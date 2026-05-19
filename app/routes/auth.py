@@ -5,18 +5,18 @@ from datetime import timedelta
 import psycopg2
 from flask import (
     Blueprint,
+    current_app,
+    flash,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
     session,
-    flash,
-    current_app,
+    url_for,
 )
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from app.db import get_db, close_db
 from app.config import INVITE_CODE
+from app.db import close_db, get_db
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -36,7 +36,6 @@ def login():
 
         conn = get_db()
         cur = conn.cursor()
-
         try:
             cur.execute(
                 """
