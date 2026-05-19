@@ -17,7 +17,14 @@ from flask import (
 )
 
 from app.db import get_db, close_db
-from app.utils import get_flag, get_club_logo, cached_to_msk, is_before_deadline, format_date_ru
+from app.utils import (
+    get_flag,
+    get_club_logo,
+    cached_to_msk,
+    is_before_deadline,
+    format_date_ru,
+    format_month_label,
+)
 from app.config import START_DATE
 
 main_bp = Blueprint('main', __name__)
@@ -366,29 +373,18 @@ WHERE id = %s
         months = defaultdict(list)
 
         for d in days:
-            month_key = d['key'][:7]
+            day_dt = parse_dt(d["key"])
+            if day_dt:
+                month_key = f"{day_dt.year:04d}-{day_dt.month:02d}"
+            else:
+                month_key = d["key"][:7]
             months[month_key].append(d)
-
-        month_names = {
-            '01': '������',
-            '02': '�������',
-            '03': '����',
-            '04': '������',
-            '05': '���',
-            '06': '����',
-            '07': '����',
-            '08': '������',
-            '09': '��������',
-            '10': '�������',
-            '11': '������',
-            '12': '�������'
-        }
 
         grouped_months = []
 
         for mk in sorted(months.keys()):
             year, month = mk.split('-')
-            month_label = f"{month_names[month]} {year}"
+            month_label = format_month_label(year, month)
 
             grouped_months.append({
                 'key': mk,
