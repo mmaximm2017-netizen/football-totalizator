@@ -23,7 +23,7 @@ def parse_datetime(value):
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
-    except:
+    except Exception:
         return None
 
 
@@ -41,7 +41,7 @@ def is_before_deadline(match):
         if not dt:
             return False
         return utc_now() < dt
-    except:
+    except Exception:
         return False
 
 
@@ -54,8 +54,13 @@ def cached_to_msk(utc_time_str):
         return "—"
     dt_msk = dt.astimezone(MSK)
     weekdays_ru = {
-        "Monday": "Понедельник", "Tuesday": "Вторник", "Wednesday": "Среда",
-        "Thursday": "Четверг", "Friday": "Пятница", "Saturday": "Суббота", "Sunday": "Воскресенье"
+        "Monday": "Понедельник",
+        "Tuesday": "Вторник",
+        "Wednesday": "Среда",
+        "Thursday": "Четверг",
+        "Friday": "Пятница",
+        "Saturday": "Суббота",
+        "Sunday": "Воскресенье",
     }
     weekday = weekdays_ru.get(dt_msk.strftime("%A"), dt_msk.strftime("%A"))
     return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
@@ -65,12 +70,21 @@ def format_date_ru(date_str):
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%d")
         months = {
-            1: 'января', 2: 'февраля', 3: 'марта', 4: 'апреля',
-            5: 'мая', 6: 'июня', 7: 'июля', 8: 'августа',
-            9: 'сентября', 10: 'октября', 11: 'ноября', 12: 'декабря'
+            1: "января",
+            2: "февраля",
+            3: "марта",
+            4: "апреля",
+            5: "мая",
+            6: "июня",
+            7: "июля",
+            8: "августа",
+            9: "сентября",
+            10: "октября",
+            11: "ноября",
+            12: "декабря",
         }
         return f"{dt.day} {months[dt.month]} {dt.year} г."
-    except:
+    except Exception:
         return date_str
 
 
@@ -79,7 +93,6 @@ def get_flag(name):
     translated = team_data.TEAM_NAMES.get(name, name)
     code = team_data.TEAM_FLAGS.get(translated)
     if code:
-        # Флаги лежат в static/flags/ с названием code.png (например, bf.png)
         return f'<img src="/static/flags/{code}.svg" class="flag-icon" alt="{translated}">'
     return ""
 

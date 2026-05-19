@@ -196,7 +196,7 @@ def _prepare_admin_view_data(cur):
         })
 
     cur.execute("""
-        SELECT id, home_team, away_team, kickoff_time, deadline, status
+        SELECT id, home_team, away_team, kickoff_time, deadline, status, league
         FROM matches
         WHERE (api_match_id IS NULL OR api_match_id = '')
         AND kickoff_time >= %s
@@ -215,6 +215,7 @@ def _prepare_admin_view_data(cur):
             'kickoff_time': m[3],
             'deadline': m[4],
             'status': m[5],
+            'league': m[6] if len(m) > 6 else 'other',
             'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
             'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
             'deadline_date_msk': deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
@@ -260,6 +261,87 @@ def _prepare_admin_view_data(cur):
         'allowed_titles': ALLOWED_TITLES,
         'tournaments': tournaments
     }
+
+
+def _prepare_admin_matches_data(cur):
+    data = _prepare_admin_view_data(cur)
+
+    manual_matches = data.get('manual_matches', [])
+    month_names = {
+        '01': 'Январь', '02': 'Февраль', '03': 'Март',
+        '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+        '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+        '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+    }
+
+    for month_block in data.get('free_months', []):
+        key = month_block.get('key', '')
+        if '-' in key:
+            year, month = key.split('-', 1)
+            month_block['label'] = f"{month_names.get(month, month)} {year}"
+
+    for month_block in data.get('finished_months', []):
+        key = month_block.get('key', '')
+        if '-' in key:
+            year, month = key.split('-', 1)
+            month_block['label'] = f"{month_names.get(month, month)} {year}"
+    league_names = {
+        'rpl': 'РПЛ',
+        'wc2026': 'ЧМ-2026',
+        'rcup': 'Кубок России',
+        'other': 'Россия',
+        None: 'Россия',
+        '': 'Россия',
+    }
+
+    manual_grouped_map = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for m in manual_matches:
+        kickoff = m.get('kickoff_time')
+        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+        league_key = m.get('league') or 'other'
+        league_base = league_names.get(league_key, str(league_key).upper())
+        year = str(kickoff_msk.year) if kickoff_msk else ""
+        league_label = f"{league_base} {year}".strip()
+        month_key = kickoff_msk.strftime("%Y-%m") if kickoff_msk else "unknown"
+        day_key = kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "unknown"
+        manual_grouped_map[league_label][month_key][day_key].append(m)
+
+    manual_grouped = []
+    for league_label in sorted(manual_grouped_map.keys()):
+        months = []
+        league_total = 0
+        for month_key in sorted(manual_grouped_map[league_label].keys()):
+            if "-" in month_key:
+                year, month = month_key.split("-", 1)
+                month_label = f"{month_names.get(month, month)} {year}"
+            else:
+                month_label = month_key
+            days = []
+            month_total = 0
+            for day_key in sorted(manual_grouped_map[league_label][month_key].keys()):
+                matches_for_day = manual_grouped_map[league_label][month_key][day_key]
+                days.append({
+                    'key': day_key,
+                    'date': format_date_ru(day_key),
+                    'matches': matches_for_day
+                })
+                month_total += len(matches_for_day)
+            months.append({
+                'key': month_key,
+                'label': month_label,
+                'days': days,
+                'total_matches': month_total
+            })
+            league_total += month_total
+        manual_grouped.append({
+            'key': league_label.lower().replace(" ", "_"),
+            'label': league_label,
+            'months': months,
+            'total_matches': league_total
+        })
+
+    data['manual_grouped'] = manual_grouped
+    return data
 
 
 # =========================================================
@@ -712,7 +794,7 @@ def admin_matches():
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = _prepare_admin_view_data(cur)
+        data = _prepare_admin_matches_data(cur)
     finally:
         close_db(conn, cur)
     return render_template('admin_matches.html', **data)

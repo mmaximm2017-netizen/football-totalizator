@@ -17,13 +17,13 @@
     .admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
     .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .admin-empty{color:#5d7894;text-align:center;font-size:13px;font-weight:700;padding:14px 8px}
-    .month-group{margin-bottom:12px}
-    .month-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:16px;cursor:pointer;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.6);color:#063b73}
-    .month-header-left,.day-header-left{display:flex;align-items:center;gap:8px;min-width:0}
-    .month-arrow,.day-arrow{font-size:13px;transition:transform .25s ease;opacity:.76}
-    .month-label{font-size:15px;font-weight:1000}
-    .month-count,.day-count{font-size:12px;color:#5d7894;font-weight:800;white-space:nowrap}
-    .month-content{display:none}
+    .month-group,.league-group{margin-bottom:12px}
+    .month-header,.league-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:16px;cursor:pointer;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.6);color:#063b73}
+    .month-header-left,.day-header-left,.league-header-left{display:flex;align-items:center;gap:8px;min-width:0}
+    .month-arrow,.day-arrow,.league-arrow{font-size:13px;transition:transform .25s ease;opacity:.76}
+    .month-label,.league-label{font-size:15px;font-weight:1000}
+    .month-count,.day-count,.league-count{font-size:12px;color:#5d7894;font-weight:800;white-space:nowrap}
+    .month-content,.league-content{display:none}
     .day-group{margin-bottom:8px}
     .day-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;margin:8px 0 6px;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.62);color:#063b73;border:1px solid rgba(0,119,200,.12);border-left:4px solid #1565c0}
     .day-header.finished{border-left-color:#c62828}
@@ -165,18 +165,57 @@
     <div class="admin-card">
         <div class="admin-card-header">Редактировать матч</div>
         <div class="admin-subsection-title">1.4 • Редактирование ручных матчей</div>
-        {% if manual_matches %}
-            {% for m in manual_matches %}
-            <div class="admin-match-card">
-                <form method="post" action="/admin/edit_match" class="edit-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
-                    <div class="admin-match-title" style="margin-bottom: 10px;">[{{ m.id }}] {{ m.home_team }} — {{ m.away_team }}</div>
-                    <div class="edit-fields"><input type="text" name="home_team" value="{{ m.home_team }}" required><span class="score-divider">—</span><input type="text" name="away_team" value="{{ m.away_team }}" required></div>
-                    <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дата (МСК)</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div><label>Время (МСК)</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
-                    <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
-                    <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
-                </form>
-                <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
+        {% if manual_grouped %}
+            {% for league in manual_grouped %}
+            <div class="league-group">
+                <div class="league-header" onclick="toggleMonth('edit-league-{{ loop.index }}')">
+                    <div class="league-header-left">
+                        <span id="arrow-edit-league-{{ loop.index }}" class="league-arrow">▶</span>
+                        <span class="league-label">{{ league.label }}</span>
+                    </div>
+                    <span class="league-count">{{ league.total_matches }} матчей</span>
+                </div>
+                <div id="edit-league-{{ loop.index }}" class="league-content month-content">
+                    {% for month in league.months %}
+                    <div class="month-group">
+                        <div class="month-header" onclick="toggleMonth('edit-month-{{ loop.parent.index }}-{{ loop.index }}')">
+                            <div class="month-header-left">
+                                <span id="arrow-edit-month-{{ loop.parent.index }}-{{ loop.index }}" class="month-arrow">▶</span>
+                                <span class="month-label">{{ month.label }}</span>
+                            </div>
+                            <span class="month-count">{{ month.total_matches }} матчей</span>
+                        </div>
+                        <div id="edit-month-{{ loop.parent.index }}-{{ loop.index }}" class="month-content">
+                            {% for day in month.days %}
+                            <div class="day-group">
+                                <div class="day-header" onclick="toggleDay('edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')">
+                                    <div class="day-header-left">
+                                        <span id="arrow-edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span>
+                                        <span class="day-label">{{ day.date }}</span>
+                                    </div>
+                                    <span class="day-count">{{ day.matches|length }} матчей</span>
+                                </div>
+                                <div id="edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
+                                    {% for m in day.matches %}
+                                    <div class="admin-match-card">
+                                        <form method="post" action="/admin/edit_match" class="edit-form">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                            <div class="admin-match-title" style="margin-bottom: 10px;">[{{ m.id }}] {{ m.home_team }} — {{ m.away_team }}</div>
+                                            <div class="edit-fields"><input type="text" name="home_team" value="{{ m.home_team }}" required><span class="score-divider">—</span><input type="text" name="away_team" value="{{ m.away_team }}" required></div>
+                                            <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дата (МСК)</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div><label>Время (МСК)</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
+                                            <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                                            <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
+                                        </form>
+                                        <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endfor %}
         {% else %}<div class="admin-empty">Нет матчей, добавленных вручную</div>{% endif %}
