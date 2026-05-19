@@ -207,6 +207,13 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
+        cur.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_tournaments_single_active
+            ON tournaments (is_active)
+            WHERE is_active = 1;
+            """
+        )
 
         # =====================================================
         # UNIQUE CONSTRAINT

@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
+from app.services.tournament_service import get_tournament_status
 
 table_bp = Blueprint('table', __name__)
 
@@ -47,10 +48,19 @@ def table():
             break
 
         for t in tournaments:
-            if t['start_date'] != '—' and t['start_date'] > today:
-                t['status'] = 'future'
-            elif t['id'] == current_tid:
+            lifecycle = get_tournament_status(
+                {
+                    "id": t["id"],
+                    "name": t["name"],
+                    "is_active": t["is_active"],
+                    "start_date": None if t["start_date"] == "—" else t["start_date"],
+                    "end_date": None,
+                }
+            )
+            if t['id'] == current_tid:
                 t['status'] = 'current'
+            elif lifecycle == "upcoming":
+                t['status'] = 'future'
             else:
                 t['status'] = 'archive'
 
@@ -88,7 +98,6 @@ def table():
     finally:
         close_db(conn, cur)
 
-    # Canonical ranking/tie-break logic shared with profile page.
     table_data = get_tournament_ranking(tid)
 
     return render_template(
@@ -101,4 +110,3 @@ def table():
         selected_start_date=selected_start_date,
         selected_status=selected_status,
     )
-

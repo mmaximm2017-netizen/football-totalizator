@@ -18,6 +18,7 @@ from flask import (
 from markupsafe import escape
 
 from app.db import get_db, close_db
+from app.services.tournament_service import ensure_single_active_tournament
 from app.utils import translate_name, format_date_ru
 from app.config import START_DATE
 
@@ -1332,6 +1333,13 @@ def admin_new_tournament():
     cur = conn.cursor()
 
     try:
+        single_active = ensure_single_active_tournament()
+        if not single_active.get("ok"):
+            flash(
+                "Обнаружено несколько активных турниров. Сначала исправьте active-state.",
+                "error",
+            )
+            return redirect(url_for('admin.admin'))
 
         cur.execute("""
             SELECT id

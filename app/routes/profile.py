@@ -2,17 +2,18 @@
 
 from flask import (
     Blueprint,
+    flash,
+    redirect,
     render_template,
     request,
-    redirect,
+    session,
     url_for,
-    flash,
-    session
 )
 
-from app.db import get_db, close_db, get_active_tournament_id
+from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
-from app.utils import get_flag, get_club_logo
+from app.services.tournament_service import get_active_tournament_id
+from app.utils import get_club_logo, get_flag
 
 
 profile_bp = Blueprint('profile', __name__)
@@ -154,7 +155,6 @@ def profile():
             (uid,),
         )
         titles = [{'title': r[0], 'awarded_at': r[1]} for r in cur.fetchall()]
-
     finally:
         close_db(conn, cur)
 

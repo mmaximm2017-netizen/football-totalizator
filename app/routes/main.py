@@ -16,7 +16,7 @@ from flask import (
     jsonify
 )
 
-from app.db import get_db, close_db, get_active_tournament_id
+from app.db import get_db, close_db
 from app.utils import get_flag, get_club_logo, cached_to_msk, is_before_deadline, format_date_ru
 from app.config import START_DATE
 

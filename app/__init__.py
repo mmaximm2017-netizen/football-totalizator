@@ -6,6 +6,11 @@ from flask import Flask, g, session, request, abort, jsonify
 
 from app.config import SECRET_KEY
 from app.db import init_db, get_db, close_db
+from app.services.ranking_service import get_tournament_ranking
+from app.services.tournament_service import (
+    ensure_single_active_tournament,
+    get_active_tournament_id,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -111,5 +116,61 @@ def create_app():
 
         finally:
             close_db(conn, cur)
+
+    @app.get("/health")
+    def health():
+        return jsonify({"status": "ok"})
+
+    @app.get("/health/db")
+    def health_db():
+        result = {
+            "db": "fail",
+            "active_tournament": "fail",
+            "ranking": "fail",
+            "single_active": "fail",
+        }
+        http_status = 500
+
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+                result["db"] = "ok"
+
+                active_tid = get_active_tournament_id()
+                if active_tid:
+                    result["active_tournament"] = "ok"
+
+                    ranking = get_tournament_ranking(active_tid)
+                    if isinstance(ranking, list):
+                        result["ranking"] = "ok"
+
+                single = ensure_single_active_tournament()
+                if single.get("ok"):
+                    result["single_active"] = "ok"
+                else:
+                    result["single_active"] = f"warn:{single.get('active_count')}"
+            finally:
+                close_db(conn, cur)
+        except Exception:
+            pass
+
+        if (
+            result["db"] == "ok"
+            and result["active_tournament"] == "ok"
+            and result["ranking"] == "ok"
+            and str(result["single_active"]).startswith("ok")
+        ):
+            http_status = 200
+        elif (
+            result["db"] == "ok"
+            and result["active_tournament"] == "ok"
+            and result["ranking"] == "ok"
+        ):
+            http_status = 200
+
+        return jsonify(result), http_status
 
     return app
