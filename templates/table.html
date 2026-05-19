@@ -6,6 +6,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: clamp(500px, 78dvh, 700px);
+    padding-bottom: 10px;
 }
 
     .leaderboard-hero {
@@ -81,8 +83,9 @@
 .leaderboard-list {
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    padding-bottom: 6px;
+    gap: 10px;
+    min-height: clamp(320px, 48dvh, 410px);
+    padding-bottom: 10px;
 }
 
     .player-row {
@@ -93,7 +96,7 @@
         align-items: center;
         gap: 9px;
 
-        min-height: 52px;
+        min-height: 53px;
 
         border-radius: 18px;
         padding: 8px 10px;
@@ -371,10 +374,21 @@
             font-size: 20px;
         }
 
+        .leaderboard-screen {
+            min-height: clamp(460px, 76dvh, 620px);
+            padding-bottom: 8px;
+        }
+
+        .leaderboard-list {
+            min-height: clamp(300px, 46dvh, 380px);
+            gap: 9px;
+            padding-bottom: 8px;
+        }
+
         .player-row {
             grid-template-columns: 40px minmax(0, 1fr) auto;
             padding: 8px 9px;
-            min-height: 49px;
+            min-height: 50px;
             border-radius: 17px;
         }
 
