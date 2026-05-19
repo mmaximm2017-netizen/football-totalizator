@@ -3,7 +3,16 @@
 from datetime import timedelta
 
 import psycopg2
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    current_app,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.db import get_db, close_db
@@ -16,17 +25,12 @@ auth_bp = Blueprint('auth', __name__)
 def is_password_hash(value):
     if not value:
         return False
-
-    return (
-        value.startswith("pbkdf2:")
-        or value.startswith("scrypt:")
-    )
+    return value.startswith("pbkdf2:") or value.startswith("scrypt:")
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
@@ -34,12 +38,14 @@ def login():
         cur = conn.cursor()
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT id, password
                 FROM users
                 WHERE username = %s
-            """, (username,))
-
+                """,
+                (username,),
+            )
             user = cur.fetchone()
 
             if not user:
@@ -49,22 +55,20 @@ def login():
             user_id = user[0]
             stored_password = user[1]
 
-            password_ok = False
-
             if is_password_hash(stored_password):
                 password_ok = check_password_hash(stored_password, password)
             else:
                 password_ok = stored_password == password
-
                 if password_ok:
                     new_hash = generate_password_hash(password)
-
-                    cur.execute("""
+                    cur.execute(
+                        """
                         UPDATE users
                         SET password = %s
                         WHERE id = %s
-                    """, (new_hash, user_id))
-
+                        """,
+                        (new_hash, user_id),
+                    )
                     conn.commit()
 
             if not password_ok:
@@ -74,9 +78,7 @@ def login():
             session['user_id'] = user_id
             session.permanent = True
             current_app.permanent_session_lifetime = timedelta(days=7)
-
             return redirect(url_for('main.index'))
-
         finally:
             close_db(conn, cur)
 
@@ -86,7 +88,6 @@ def login():
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-
         invite_code = request.form.get('invite_code', '').strip()
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -103,29 +104,29 @@ def register():
 
         conn = get_db()
         cur = conn.cursor()
-
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO users (username, password)
                 VALUES (%s, %s)
-            """, (username, password_hash))
-
+                """,
+                (username, password_hash),
+            )
             conn.commit()
 
             flash("Регистрация успешна, теперь войдите", "success")
             return redirect(url_for('auth.login'))
-
         except psycopg2.IntegrityError:
             conn.rollback()
             flash("Такой пользователь уже существует", "error")
-
         finally:
             close_db(conn, cur)
 
     return render_template('register.html')
 
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
+    flash("Вы вышли из аккаунта", "success")
     return redirect(url_for('auth.login'))
