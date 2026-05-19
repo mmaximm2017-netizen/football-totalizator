@@ -1,10 +1,41 @@
 # app/utils.py
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo
 from functools import lru_cache
+from zoneinfo import ZoneInfo
+
 import app.models.team_data as team_data
 
 MSK = ZoneInfo("Europe/Moscow")
+
+RU_MONTHS_GENITIVE = {
+    1: "января",
+    2: "февраля",
+    3: "марта",
+    4: "апреля",
+    5: "мая",
+    6: "июня",
+    7: "июля",
+    8: "августа",
+    9: "сентября",
+    10: "октября",
+    11: "ноября",
+    12: "декабря",
+}
+
+RU_MONTHS_NOMINATIVE = {
+    "01": "Январь",
+    "02": "Февраль",
+    "03": "Март",
+    "04": "Апрель",
+    "05": "Май",
+    "06": "Июнь",
+    "07": "Июль",
+    "08": "Август",
+    "09": "Сентябрь",
+    "10": "Октябрь",
+    "11": "Ноябрь",
+    "12": "Декабрь",
+}
 
 
 def utc_now():
@@ -66,30 +97,21 @@ def cached_to_msk(utc_time_str):
     return dt_msk.strftime("%d.%m %H:%M МСК") + f" ({weekday})"
 
 
+def format_month_label(year: str, month: str) -> str:
+    month_name = RU_MONTHS_NOMINATIVE.get(str(month).zfill(2), str(month))
+    return f"{month_name} {year}"
+
+
 def format_date_ru(date_str):
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%d")
-        months = {
-            1: "января",
-            2: "февраля",
-            3: "марта",
-            4: "апреля",
-            5: "мая",
-            6: "июня",
-            7: "июля",
-            8: "августа",
-            9: "сентября",
-            10: "октября",
-            11: "ноября",
-            12: "декабря",
-        }
-        return f"{dt.day} {months[dt.month]} {dt.year} г."
+        return f"{dt.day} {RU_MONTHS_GENITIVE[dt.month]} {dt.year} г."
     except Exception:
         return date_str
 
 
 def get_flag(name):
-    """Возвращает флаг из папки /static/flags/"""
+    """Возвращает флаг из папки /static/flags/."""
     translated = team_data.TEAM_NAMES.get(name, name)
     code = team_data.TEAM_FLAGS.get(translated)
     if code:
@@ -98,7 +120,7 @@ def get_flag(name):
 
 
 def get_club_logo(name):
-    """Возвращает эмблему клуба из /static/clubs/"""
+    """Возвращает эмблему клуба из /static/clubs/."""
     logo_url = team_data.CLUB_LOGOS.get(name)
     if logo_url:
         return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{name}">'

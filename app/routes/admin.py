@@ -22,7 +22,7 @@ from app.services.tournament_service import (
     ensure_single_active_tournament,
     get_active_tournament_id,
 )
-from app.utils import translate_name, format_date_ru
+from app.utils import translate_name, format_date_ru, format_month_label
 from app.config import START_DATE
 
 
@@ -156,11 +156,13 @@ def normalize_league_key(raw_value):
     if "кубок" in lowered and "рос" in lowered:
         return "rcup"
 
-    # Replacement character usually means broken text in DB; keep safe generic bucket.
-    if "�" in s:
+    # Broken unicode / placeholder characters: route safely to generic bucket.
+    if ("�" in s) or ("?" in s):
         return "other"
 
-    return lowered
+    # Safety: do not leak unknown raw values into UI labels.
+    # Keep predictable buckets only.
+    return "other"
 
 
 def _prepare_admin_view_data(cur):
@@ -217,17 +219,10 @@ def _prepare_admin_view_data(cur):
             'count': len(finished_by_day[day_str])
         })
 
-    month_names = {
-        '01': 'Январь', '02': 'Февраль', '03': 'Март',
-        '04': 'Апрель', '05': 'Май', '06': 'Июнь',
-        '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
-        '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
-    }
-
     free_months_list = []
     for mk in sorted(free_months.keys()):
         year, month = mk.split('-')
-        month_label = f"{month_names[month]} {year}"
+        month_label = format_month_label(year, month)
         free_months_list.append({
             'key': mk,
             'label': month_label,
@@ -238,7 +233,7 @@ def _prepare_admin_view_data(cur):
     finished_months_list = []
     for mk in sorted(finished_months.keys()):
         year, month = mk.split('-')
-        month_label = f"{month_names[month]} {year}"
+        month_label = format_month_label(year, month)
         finished_months_list.append({
             'key': mk,
             'label': month_label,
@@ -318,24 +313,17 @@ def _prepare_admin_matches_data(cur):
     data = _prepare_admin_view_data(cur)
 
     manual_matches = data.get('manual_matches', [])
-    month_names = {
-        '01': 'Январь', '02': 'Февраль', '03': 'Март',
-        '04': 'Апрель', '05': 'Май', '06': 'Июнь',
-        '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
-        '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
-    }
-
     for month_block in data.get('free_months', []):
         key = month_block.get('key', '')
         if '-' in key:
             year, month = key.split('-', 1)
-            month_block['label'] = f"{month_names.get(month, month)} {year}"
+            month_block['label'] = format_month_label(year, month)
 
     for month_block in data.get('finished_months', []):
         key = month_block.get('key', '')
         if '-' in key:
             year, month = key.split('-', 1)
-            month_block['label'] = f"{month_names.get(month, month)} {year}"
+            month_block['label'] = format_month_label(year, month)
     league_names = {
         'rpl': 'РПЛ',
         'wc2026': 'ЧМ-2026',
@@ -364,7 +352,7 @@ def _prepare_admin_matches_data(cur):
         for month_key in sorted(manual_grouped_map[league_label].keys()):
             if "-" in month_key:
                 year, month = month_key.split("-", 1)
-                month_label = f"{month_names.get(month, month)} {year}"
+                month_label = format_month_label(year, month)
             else:
                 month_label = month_key
             days = []
