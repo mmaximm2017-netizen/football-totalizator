@@ -8,8 +8,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: clamp(500px, 78dvh, 700px);
-    padding: 10px 10px 12px;
+    min-height: clamp(520px, 80dvh, 720px);
+    padding: 10px 10px 14px;
     border-radius: 24px;
     background:
         radial-gradient(circle at 14% 0%, rgba(255,255,255,0.34), transparent 38%),
@@ -17,8 +17,8 @@
         linear-gradient(168deg, rgba(240,249,255,0.78), rgba(215,237,252,0.62));
     border: 1px solid rgba(0,119,200,0.14);
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.44),
-        0 14px 30px rgba(0,78,140,0.12);
+        inset 0 1px 0 rgba(255,255,255,0.48),
+        0 16px 34px rgba(0,78,140,0.14);
 }
 
 .leaderboard-screen::before {
@@ -35,7 +35,7 @@
         overflow: hidden;
 
         border-radius: 18px;
-        padding: 13px 13px 12px;
+        padding: 13px 13px 11px;
 
         background:
             radial-gradient(circle at 20% 0%, rgba(255,255,255,0.88), transparent 34%),
@@ -51,12 +51,20 @@
     .leaderboard-title {
         display: inline-flex;
         align-items: center;
-        gap: 0;
-        font-size: 22px;
+        gap: 8px;
+        font-size: 24px;
         font-weight: 1000;
-        letter-spacing: -0.35px;
+        letter-spacing: -0.45px;
         margin-bottom: 2px;
         color: #063b73;
+    }
+
+    .leaderboard-title-trophy {
+        font-size: 19px;
+        line-height: 1;
+        color: #d39a2b;
+        filter: drop-shadow(0 1px 0 rgba(255,255,255,0.45));
+        transform: translateY(-1px);
     }
 
     .leaderboard-subtitle {
@@ -104,7 +112,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: clamp(320px, 48dvh, 410px);
+    min-height: clamp(340px, 50dvh, 430px);
     padding-bottom: 10px;
     padding-top: 2px;
 }
@@ -115,19 +123,18 @@
         display: grid;
         grid-template-columns: 44px minmax(0, 1fr) auto;
         align-items: center;
-        gap: 9px;
-
-        min-height: 53px;
+        gap: 10px;
+        min-height: 58px;
 
         border-radius: 18px;
-        padding: 8px 10px;
+        padding: 9px 11px;
 
         background:
             linear-gradient(160deg, rgba(255,255,255,0.96), rgba(239,248,255,0.96));
 
         border: 1px solid rgba(0,119,200,0.10);
 
-        box-shadow: 0 8px 18px rgba(0,78,140,0.11);
+        box-shadow: 0 10px 20px rgba(0,78,140,0.12);
         transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
@@ -229,7 +236,7 @@
         color: #063b73;
         text-decoration: none;
 
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 1000;
         letter-spacing: -0.2px;
 
@@ -302,7 +309,7 @@
 .points-number {
     display: block;
     color: #0b4f86;
-    font-size: 25px;
+    font-size: 27px;
         line-height: 1;
         font-weight: 1000;
     letter-spacing: -0.3px;
@@ -325,17 +332,17 @@
 
     .top-1 .points-number {
         color: #704704;
-        font-size: 30px;
+        font-size: 31px;
     }
 
     .top-2 .points-number {
         color: #35516a;
-        font-size: 28px;
+        font-size: 29px;
     }
 
     .top-3 .points-number {
         color: #69462d;
-        font-size: 27px;
+        font-size: 28px;
     }
 
     .points-label {
@@ -392,25 +399,29 @@
 
     @media (max-width: 430px) {
         .leaderboard-title {
-            font-size: 20px;
+            font-size: 22px;
+        }
+
+        .leaderboard-title-trophy {
+            font-size: 18px;
         }
 
         .leaderboard-screen {
-            min-height: clamp(460px, 76dvh, 620px);
+            min-height: clamp(500px, 79dvh, 660px);
             padding: 8px 8px 10px;
             border-radius: 20px;
         }
 
         .leaderboard-list {
-            min-height: clamp(300px, 46dvh, 380px);
+            min-height: clamp(320px, 49dvh, 410px);
             gap: 9px;
             padding-bottom: 8px;
         }
 
         .player-row {
             grid-template-columns: 40px minmax(0, 1fr) auto;
-            padding: 8px 9px;
-            min-height: 50px;
+            padding: 9px 9px;
+            min-height: 54px;
             border-radius: 17px;
         }
 
@@ -425,11 +436,11 @@
         .top-3 .place-box { width: 34px; height: 34px; }
 
         .player-name {
-            font-size: 14px;
+            font-size: 15px;
         }
 
         .points-number {
-            font-size: 23px;
+            font-size: 24px;
         }
 
         .top-1 .points-number {
@@ -460,7 +471,7 @@
 <div class="leaderboard-screen">
 
     <section class="leaderboard-hero">
-        <div class="leaderboard-title">Турнирная таблица</div>
+        <div class="leaderboard-title"><span class="leaderboard-title-trophy">🏆</span>Турнирная таблица</div>
 
         <div class="leaderboard-subtitle">
             Рейтинг участников по очкам
