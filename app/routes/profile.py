@@ -193,6 +193,25 @@ def profile():
             for r in cur.fetchall()
         ]
 
+        # =================================================
+        # TITLES
+        # =================================================
+
+        cur.execute("""
+            SELECT title, awarded_at
+            FROM user_titles
+            WHERE user_id = %s
+            ORDER BY awarded_at DESC
+        """, (uid,))
+
+        titles = [
+            {
+                'title': r[0],
+                'awarded_at': r[1],
+            }
+            for r in cur.fetchall()
+        ]
+
     finally:
         close_db(conn, cur)
 
@@ -201,6 +220,7 @@ def profile():
         username=username,
         stats=stats,
         recent=recent,
+        titles=titles,
         current_place=current_place,
         total_players=total_players,
         get_flag=get_flag,

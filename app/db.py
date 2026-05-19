@@ -169,6 +169,17 @@ def init_db():
         );
         """)
 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_titles (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            awarded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            awarded_by INTEGER NULL,
+            UNIQUE (user_id, title)
+        );
+        """)
+
         # =====================================================
         # SAFE MIGRATIONS
         # =====================================================
@@ -195,6 +206,7 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
 
         # =====================================================
         # UNIQUE CONSTRAINT

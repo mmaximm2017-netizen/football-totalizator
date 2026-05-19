@@ -297,6 +297,23 @@
         font-weight: 700;
     }
 
+    .titles-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .title-item {
+        border-radius: 16px;
+        padding: 12px 14px;
+        background: rgba(255,255,255,0.58);
+        border: 1px solid rgba(0,119,200,0.10);
+        color: #063b73;
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+
     @media (max-width: 430px) {
 
         .profile-name {
@@ -502,6 +519,32 @@
 
         <div class="empty-box">
             Пока нет завершённых матчей
+        </div>
+
+        {% endif %}
+
+    </section>
+
+    <section class="section-card">
+
+        <div class="section-title">
+            Титулы
+        </div>
+
+        {% if titles %}
+
+        <div class="titles-list">
+            {% for t in titles %}
+            <div class="title-item">
+                {{ t.title }}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+
+        <div class="empty-box">
+            Пока без титулов
         </div>
 
         {% endif %}
