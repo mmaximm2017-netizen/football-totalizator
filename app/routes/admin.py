@@ -22,7 +22,12 @@ from app.services.tournament_service import (
     ensure_single_active_tournament,
     get_active_tournament_id,
 )
-from app.utils import translate_name, format_date_ru, format_month_label
+from app.utils import (
+    translate_name,
+    format_date_ru,
+    format_month_label,
+    parse_datetime,
+)
 from app.config import START_DATE
 
 
@@ -180,15 +185,12 @@ def _prepare_admin_view_data(cur):
     finished_by_day = defaultdict(list)
 
     for m in raw_matches:
-        kickoff = m[3]
-        if isinstance(kickoff, str):
-            kickoff = kickoff.replace('Z', '+00:00')
-            try:
-                kickoff = datetime.fromisoformat(kickoff)
-            except Exception:
-                kickoff = kickoff[:10]
+        kickoff_dt = parse_datetime(m[3])
+        if not kickoff_dt:
+            continue
 
-        day = str(kickoff)[:10]
+        kickoff_msk = kickoff_dt.astimezone(MSK)
+        day = kickoff_msk.date().isoformat()
         item = {
             'id': m[0],
             'home_team': m[1],
@@ -250,16 +252,16 @@ def _prepare_admin_view_data(cur):
     """, (start_date_str,))
     manual_matches = []
     for m in cur.fetchall():
-        kickoff = m[3]
-        deadline = m[4]
-        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
-        deadline_msk = deadline.astimezone(MSK) if deadline else None
+        kickoff_dt = parse_datetime(m[3])
+        deadline_dt = parse_datetime(m[4])
+        kickoff_msk = kickoff_dt.astimezone(MSK) if kickoff_dt else None
+        deadline_msk = deadline_dt.astimezone(MSK) if deadline_dt else None
         manual_matches.append({
             'id': m[0],
             'home_team': m[1],
             'away_team': m[2],
-            'kickoff_time': m[3],
-            'deadline': m[4],
+            'kickoff_time': kickoff_dt,
+            'deadline': deadline_dt,
             'status': m[5],
             'league': m[6] if len(m) > 6 else 'other',
             'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
@@ -335,14 +337,16 @@ def _prepare_admin_matches_data(cur):
 
     manual_grouped_map = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for m in manual_matches:
-        kickoff = m.get('kickoff_time')
-        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+        kickoff_dt = parse_datetime(m.get('kickoff_time'))
+        if not kickoff_dt:
+            continue
+        kickoff_msk = kickoff_dt.astimezone(MSK)
         league_key = normalize_league_key(m.get('league'))
         league_base = league_names.get(league_key, str(league_key).upper())
-        year = str(kickoff_msk.year) if kickoff_msk else ""
+        year = str(kickoff_msk.year)
         league_label = f"{league_base} {year}".strip()
-        month_key = kickoff_msk.strftime("%Y-%m") if kickoff_msk else "unknown"
-        day_key = kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "unknown"
+        month_key = f"{kickoff_msk.year:04d}-{kickoff_msk.month:02d}"
+        day_key = kickoff_msk.date().isoformat()
         manual_grouped_map[league_label][month_key][day_key].append(m)
 
     manual_grouped = []
