@@ -167,6 +167,7 @@
         <div class="admin-subsection-title">1.4 • Редактирование ручных матчей</div>
         {% if manual_grouped %}
             {% for league in manual_grouped %}
+            {% set league_idx = loop.index %}
             <div class="league-group">
                 <div class="league-header" onclick="toggleMonth('edit-league-{{ loop.index }}')">
                     <div class="league-header-left">
@@ -177,25 +178,28 @@
                 </div>
                 <div id="edit-league-{{ loop.index }}" class="league-content month-content">
                     {% for month in league.months %}
+                    {% set month_idx = loop.index %}
+                    {% set month_block_id = 'edit-month-' ~ league_idx ~ '-' ~ month_idx %}
                     <div class="month-group">
-                        <div class="month-header" onclick="toggleMonth('edit-month-{{ loop.parent.index }}-{{ loop.index }}')">
+                        <div class="month-header" onclick="toggleMonth('{{ month_block_id }}')">
                             <div class="month-header-left">
-                                <span id="arrow-edit-month-{{ loop.parent.index }}-{{ loop.index }}" class="month-arrow">▶</span>
+                                <span id="arrow-{{ month_block_id }}" class="month-arrow">▶</span>
                                 <span class="month-label">{{ month.label }}</span>
                             </div>
                             <span class="month-count">{{ month.total_matches }} матчей</span>
                         </div>
-                        <div id="edit-month-{{ loop.parent.index }}-{{ loop.index }}" class="month-content">
+                        <div id="{{ month_block_id }}" class="month-content">
                             {% for day in month.days %}
+                            {% set day_block_id = 'edit-day-' ~ league_idx ~ '-' ~ month_idx ~ '-' ~ (day.key|replace(' ', '_')|replace('.', '_')|replace('г', '')) %}
                             <div class="day-group">
-                                <div class="day-header" onclick="toggleDay('edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')">
+                                <div class="day-header" onclick="toggleDay('{{ day_block_id }}')">
                                     <div class="day-header-left">
-                                        <span id="arrow-edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span>
+                                        <span id="arrow-{{ day_block_id }}" class="day-arrow">▶</span>
                                         <span class="day-label">{{ day.date }}</span>
                                     </div>
                                     <span class="day-count">{{ day.matches|length }} матчей</span>
                                 </div>
-                                <div id="edit-day-{{ loop.parent.parent.index }}-{{ loop.parent.index }}-{{ day.key|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
+                                <div id="{{ day_block_id }}" class="day-content">
                                     {% for m in day.matches %}
                                     <div class="admin-match-card">
                                         <form method="post" action="/admin/edit_match" class="edit-form">
