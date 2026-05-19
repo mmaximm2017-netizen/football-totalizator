@@ -7,7 +7,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     min-height: clamp(520px, 80dvh, 720px);
     padding: 10px 10px 14px;
     border-radius: 24px;
@@ -18,7 +18,7 @@
     border: 1px solid rgba(0,119,200,0.14);
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.48),
-        0 16px 34px rgba(0,78,140,0.14);
+        0 18px 38px rgba(0,78,140,0.17);
 }
 
 .leaderboard-screen::before {
@@ -117,7 +117,7 @@
     padding-top: 2px;
 }
 
-.player-row {
+    .player-row {
         position: relative;
 
         display: grid;
@@ -135,7 +135,8 @@
         border: 1px solid rgba(0,119,200,0.10);
 
         box-shadow: 0 10px 20px rgba(0,78,140,0.12);
-        transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .player-row.top-1 {
@@ -170,7 +171,8 @@
     }
 
     .player-row:active {
-        transform: scale(0.992);
+        transform: scale(0.992) translateY(1px);
+        box-shadow: 0 8px 16px rgba(0,78,140,0.10);
     }
 
     .place-box {
@@ -303,13 +305,13 @@
     display: inline-flex;
     align-items: baseline;
     justify-content: flex-end;
-    gap: 7px;
+    gap: 6px;
 }
 
 .points-number {
     display: block;
     color: #0b4f86;
-    font-size: 30px;
+    font-size: 31px;
         line-height: 1;
         font-weight: 1000;
     letter-spacing: -0.3px;
@@ -318,7 +320,7 @@
 .points-gap {
     display: inline-block;
     min-width: 20px;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1;
     font-weight: 850;
     color: rgba(93,120,148,0.92);
@@ -420,7 +422,7 @@
 
         .player-row {
             grid-template-columns: 44px minmax(0, 1fr) auto;
-            padding: 9px 9px;
+            padding: 10px 9px;
             min-height: 60px;
             border-radius: 17px;
         }

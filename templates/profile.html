@@ -13,7 +13,7 @@
         overflow: hidden;
 
         border-radius: 28px;
-        padding: 22px 18px;
+        padding: 21px 17px;
 
         background:
             radial-gradient(circle at 18% 0%, rgba(255,255,255,0.88), transparent 35%),
@@ -49,7 +49,7 @@
         align-items: center;
         justify-content: center;
 
-        margin-top: 16px;
+        margin-top: 14px;
 
         min-height: 42px;
         padding: 0 16px;
@@ -201,6 +201,15 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .match-row:active {
+        transform: scale(0.994);
+        box-shadow:
+            0 6px 16px rgba(0,78,140,0.12),
+            inset 0 0 0 1px rgba(255,255,255,0.34);
     }
 
     .match-top {
@@ -278,6 +287,14 @@
 
         box-shadow:
             0 14px 30px rgba(0,119,200,0.22);
+        transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .back-btn:active {
+        transform: scale(0.99);
+        filter: brightness(1.02);
+        box-shadow: 0 9px 20px rgba(0,119,200,0.16);
     }
 
     .empty-box {
@@ -300,19 +317,20 @@
     .titles-list {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        margin-top: 10px;
+        gap: 7px;
+        margin-top: 9px;
     }
 
     .title-item {
-        border-radius: 13px;
-        padding: 8px 11px;
-        background: rgba(255,255,255,0.50);
-        border: 1px solid rgba(0,119,200,0.12);
+        border-radius: 12px;
+        padding: 7px 11px;
+        background: linear-gradient(160deg, rgba(255,255,255,0.64), rgba(232,246,255,0.42));
+        border: 1px solid rgba(0,119,200,0.16);
         color: #063b73;
-        font-size: 13px;
-        font-weight: 800;
+        font-size: 12px;
+        font-weight: 900;
         line-height: 1.3;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
     }
 
     .titles-inline-empty {

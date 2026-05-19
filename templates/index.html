@@ -186,7 +186,8 @@
         transition:
             transform 0.18s ease,
             border-color 0.18s ease,
-            box-shadow 0.18s ease;
+            box-shadow 0.18s ease,
+            background 0.18s ease;
 	
         animation: matchFade 0.32s ease both;
     }
@@ -216,6 +217,9 @@
     .match-card-v2.locked {
         opacity: 0.96;
         border-color: rgba(225,186,102,0.84);
+        background:
+            radial-gradient(circle at 50% -4%, rgba(42,168,255,0.16), transparent 31%),
+            linear-gradient(180deg, rgba(248,252,255,0.90), rgba(222,238,248,0.74));
     }
 
     .match-card-v2.finished {
@@ -262,6 +266,22 @@
             0 14px 34px rgba(0,78,140,0.16),
             0 0 0 2px rgba(46,125,50,0.22),
             inset 0 1px 0 rgba(255,255,255,0.70);
+        animation: savePulseSoft 0.78s ease;
+    }
+
+    @keyframes savePulseSoft {
+        0% {
+            transform: scale(0.995);
+            filter: saturate(1);
+        }
+        45% {
+            transform: scale(1.003);
+            filter: saturate(1.06);
+        }
+        100% {
+            transform: scale(1);
+            filter: saturate(1);
+        }
     }
 
     @keyframes matchFade {
@@ -422,9 +442,9 @@
     }
 
     .status-closed {
-        background: rgba(239,83,80,0.14);
-        color: #c62828;
-        border-color: rgba(239,83,80,0.18);
+        background: rgba(93,120,148,0.14);
+        color: #4a6785;
+        border-color: rgba(93,120,148,0.24);
     }
 
     .status-done {
@@ -444,7 +464,7 @@
     }
 
     .match-card-v2:not(.finished) .teams-center {
-        padding: 9px 8px 10px;
+        padding: 10px 9px 11px;
         border-radius: 18px;
         background:
             linear-gradient(162deg, rgba(255,255,255,0.52), rgba(221,241,255,0.34));
@@ -727,7 +747,7 @@
         grid-template-columns: 1fr;
         grid-template-rows: 28px 40px 28px;
         align-items: center;
-        width: 48px;
+        width: 52px;
         height: auto;
         border-radius: 12px;
         background:
@@ -737,19 +757,22 @@
             inset 0 0 0 1px rgba(255,255,255,0.50),
             0 3px 8px rgba(0,78,140,0.06);
         overflow: hidden;
+        transition: box-shadow 0.16s ease, border-color 0.16s ease;
     }
 
     .stepper-btn {
         width: 100%;
-        height: 28px;
+        height: 30px;
         border: 0;
         background: rgba(0,119,200,0.08);
         color: #0077c8;
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 1000;
         line-height: 1;
         cursor: pointer;
         transition: background 0.16s ease, transform 0.16s ease, color 0.16s ease;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .stepper-btn:active {
@@ -772,6 +795,13 @@
         border-top: 1px solid rgba(0,119,200,0.10);
     }
 
+    .score-stepper:focus-within {
+        border-color: rgba(0,119,200,0.24);
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.54),
+            0 6px 14px rgba(0,78,140,0.12);
+    }
+
     .stepper-btn:disabled {
         cursor: not-allowed;
         color: rgba(93,120,148,0.42);
@@ -784,7 +814,7 @@
         min-width: 164px;
         max-width: 240px;
         margin: 3px auto 0;
-        height: 40px;
+        height: 39px;
 
         border-radius: 14px;
         border: none;
@@ -800,6 +830,8 @@
             0 5px 10px rgba(0,119,200,0.10),
             inset 0 1px 0 rgba(255,255,255,0.18);
         transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .save-btn-v2:active {
@@ -837,7 +869,7 @@
 
     .my-prediction-v2 {
         font-size: 11px;
-        color: rgba(93,120,148,0.92);
+        color: rgba(93,120,148,0.82);
         font-weight: 700;
     }
 
@@ -894,6 +926,8 @@
 
         background: rgba(0,119,200,0.08);
         transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 
     .bets-link-v2:active {
@@ -1176,7 +1210,7 @@
         }
 
         .match-card-v2:not(.finished) .teams-center {
-            padding: 8px 7px 9px;
+            padding: 8px 8px 10px;
             border-radius: 16px;
         }
 
@@ -1260,7 +1294,7 @@
         .score-stepper {
             grid-template-columns: 1fr;
             grid-template-rows: 26px 36px 26px;
-            width: 44px;
+            width: 46px;
             height: auto;
             border-radius: 12px;
         }
