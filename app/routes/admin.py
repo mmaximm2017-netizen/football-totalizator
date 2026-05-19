@@ -108,6 +108,61 @@ def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_ti
     return kickoff_utc, deadline_utc
 
 
+def normalize_league_key(raw_value):
+    """
+    Normalize legacy/manual league values (including occasional mojibake variants)
+    into stable internal keys used by admin grouping.
+    """
+    if raw_value is None:
+        return "other"
+
+    s = str(raw_value).strip()
+    if not s:
+        return "other"
+
+    lowered = s.lower()
+
+    alias_map = {
+        "rpl": "rpl",
+        "rfpl": "rpl",
+        "рпл": "rpl",
+        "рпл 2026": "rpl",
+        "wc2026": "wc2026",
+        "wc-2026": "wc2026",
+        "чм-2026": "wc2026",
+        "чм 2026": "wc2026",
+        "rcup": "rcup",
+        "кубок россии": "rcup",
+        "other": "other",
+        "россия": "other",
+    }
+
+    if lowered in alias_map:
+        return alias_map[lowered]
+
+    # Common UTF-8/CP1251 mojibake fragments seen in legacy text fields.
+    if ("ð" in lowered) or ("р" in lowered and "џ" in lowered):
+        if "ð ðŸð›" in lowered or "ð¿ð»" in lowered:
+            return "rpl"
+        if "2026" in lowered and ("ð§ðœ" in lowered or "ñ‡ð¼" in lowered):
+            return "wc2026"
+        if "ðºñƒð±ð¾ðº" in lowered and "ñ€ð¾ñ" in lowered:
+            return "rcup"
+
+    if "2026" in lowered and ("чм" in lowered or "world cup" in lowered):
+        return "wc2026"
+    if "рпл" in lowered or "rfpl" in lowered:
+        return "rpl"
+    if "кубок" in lowered and "рос" in lowered:
+        return "rcup"
+
+    # Replacement character usually means broken text in DB; keep safe generic bucket.
+    if "�" in s:
+        return "other"
+
+    return lowered
+
+
 def _prepare_admin_view_data(cur):
     start_date_str = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -294,7 +349,7 @@ def _prepare_admin_matches_data(cur):
     for m in manual_matches:
         kickoff = m.get('kickoff_time')
         kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
-        league_key = m.get('league') or 'other'
+        league_key = normalize_league_key(m.get('league'))
         league_base = league_names.get(league_key, str(league_key).upper())
         year = str(kickoff_msk.year) if kickoff_msk else ""
         league_label = f"{league_base} {year}".strip()
