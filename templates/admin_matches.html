@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .admin-screen{display:flex;flex-direction:column;gap:14px}
+    .admin-nav{display:flex;flex-wrap:wrap;gap:8px}
+    .admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}
+    .admin-nav a.active{background:#0a6cc2;color:#fff}
+    .admin-title{font-size:24px;font-weight:1000;color:#063b73}
+    .admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}
+    .admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}
+    .admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}
+    .admin-grid{display:grid;gap:10px}
+    .admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}
+    .admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}
+    .admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}
+    .admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
+    .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .admin-empty{color:#5d7894;text-align:center;font-size:13px;font-weight:700;padding:14px 8px}
+    .month-group{margin-bottom:12px}
+    .month-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:16px;cursor:pointer;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.6);color:#063b73}
+    .month-header-left,.day-header-left{display:flex;align-items:center;gap:8px;min-width:0}
+    .month-arrow,.day-arrow{font-size:13px;transition:transform .25s ease;opacity:.76}
+    .month-label{font-size:15px;font-weight:1000}
+    .month-count,.day-count{font-size:12px;color:#5d7894;font-weight:800;white-space:nowrap}
+    .month-content{display:none}
+    .day-group{margin-bottom:8px}
+    .day-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;margin:8px 0 6px;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.62);color:#063b73;border:1px solid rgba(0,119,200,.12);border-left:4px solid #1565c0}
+    .day-header.finished{border-left-color:#c62828}
+    .day-label{font-size:14px;font-weight:900}
+    .day-content{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;max-height:0;opacity:0}
+    .day-content.open{max-height:3000px;opacity:1}
+    .admin-match-card{margin:6px 0 6px 8px;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}
+    .admin-match-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .admin-match-main{flex:1;min-width:150px}
+    .admin-match-title{font-size:14px;font-weight:1000;color:#063b73;line-height:1.25}
+    .admin-match-meta{margin-top:4px;font-size:11px;color:#5d7894;font-weight:700}
+    .score-form{display:flex;align-items:center;gap:6px;margin:0}
+    .score-input{width:52px!important;height:40px;padding:8px!important;margin:0!important;text-align:center;border-radius:12px!important;font-size:15px!important;font-weight:1000}
+    .score-divider{color:#5d7894;font-weight:1000}
+    .edit-fields{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+    .edit-fields input{margin-bottom:0!important}
+    .delete-form{margin-top:10px}
+    @media (max-width:430px){.admin-form-row{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
+</style>
+
+<div class="admin-screen">
+    <div class="admin-nav">
+        <a href="{{ url_for('admin.admin') }}">← Админка</a>
+        <a class="active" href="{{ url_for('admin.admin_matches') }}">Матчи</a>
+        <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
+        <a href="{{ url_for('admin.admin_users') }}">Пользователи</a>
+    </div>
+    <div class="admin-title">Матчи</div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Обновить матчи из API</div>
+        <div class="admin-subsection-title">1.1 • Обновление матчей</div>
+        <div class="admin-grid">
+            <form method="post" action="{{ url_for('admin.admin') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="update_matches">
+                <button type="submit" class="admin-btn">Обновить матчи из API</button>
+            </form>
+            <form method="post" action="/admin/recalc_all">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
+            </form>
+            <form method="post" action="/admin/translate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Добавить матч вручную</div>
+        <div class="admin-subsection-title">1.2 • Ручной матч</div>
+        <form method="post" action="{{ url_for('admin.admin') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="action" value="add_match">
+            <label>Команда 1</label><input type="text" name="home_team" required>
+            <label>Команда 2</label><input type="text" name="away_team" required>
+            <div class="admin-form-row">
+                <div><label>Дата матча</label><input type="date" name="match_date" required></div>
+                <div><label>Время МСК</label><input type="time" name="match_time" value="19:00" required></div>
+            </div>
+            <div class="admin-form-row">
+                <div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date"></div>
+                <div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time"></div>
+            </div>
+            <label>Турнир</label>
+            <select name="league">
+                <option value="other">Другое</option><option value="wc2026">ЧМ-2026</option><option value="rpl">РПЛ</option><option value="rcup">Кубок России</option>
+            </select>
+            <button type="submit" class="admin-btn">Добавить матч</button>
+        </form>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Внести/Исправить результат</div>
+        <div class="admin-subsection-title">1.3 • Внести результат</div>
+        {% if free_months %}
+            {% for month in free_months %}
+            <div class="month-group">
+                <div class="month-header" onclick="toggleMonth('free-month-{{ loop.index }}')"><div class="month-header-left"><span id="arrow-free-month-{{ loop.index }}" class="month-arrow">▶</span><span class="month-label">{{ month.label }}</span></div><span class="month-count">{{ month.total_matches }} матчей</span></div>
+                <div id="free-month-{{ loop.index }}" class="month-content">
+                    {% for day in month.days %}
+                    <div class="day-group">
+                        <div class="day-header" onclick="toggleDay('free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')"><div class="day-header-left"><span id="arrow-free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span><span class="day-label">{{ day.date }}</span></div><span class="day-count">{{ day.matches|length }} матчей</span></div>
+                        <div id="free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
+                            {% for m in day.matches %}
+                            <div class="admin-match-card">
+                                <div class="admin-match-row">
+                                    <div class="admin-match-main"><div class="admin-match-title">{{ m.home_team }} — {{ m.away_team }}</div><div class="admin-match-meta">ID: {{ m.id }}</div></div>
+                                    <form method="post" action="{{ url_for('admin.admin') }}" class="score-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                        <input class="score-input" type="number" name="home_score" min="0" required><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" required>
+                                        <button type="submit" class="admin-btn admin-btn-small">Завершить</button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}<div class="admin-empty">Нет матчей, ожидающих результата</div>{% endif %}
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-subsection-title">1.3 • Исправить результат</div>
+        {% if finished_months %}
+            {% for month in finished_months %}
+            <div class="month-group">
+                <div class="month-header" onclick="toggleMonth('finished-month-{{ loop.index }}')"><div class="month-header-left"><span id="arrow-finished-month-{{ loop.index }}" class="month-arrow">▶</span><span class="month-label">{{ month.label }}</span></div><span class="month-count">{{ month.total_matches }} матчей</span></div>
+                <div id="finished-month-{{ loop.index }}" class="month-content">
+                    {% for day in month.days %}
+                    <div class="day-group">
+                        <div class="day-header finished" onclick="toggleDay('finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')"><div class="day-header-left"><span id="arrow-finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span><span class="day-label">{{ day.date }}</span></div><span class="day-count">{{ day.matches|length }} матчей</span></div>
+                        <div id="finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
+                            {% for m in day.matches %}
+                            <div class="admin-match-card">
+                                <div class="admin-match-row">
+                                    <div class="admin-match-main"><div class="admin-match-title">{{ m.home_team }} — {{ m.away_team }}</div><div class="admin-match-meta">ID: {{ m.id }}</div></div>
+                                    <form method="post" action="/admin/fix_result" class="score-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                        <input class="score-input" type="number" name="home_score" min="0" required><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" required>
+                                        <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Обновить</button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}<div class="admin-empty">Нет завершённых матчей</div>{% endif %}
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Редактировать матч</div>
+        <div class="admin-subsection-title">1.4 • Редактирование ручных матчей</div>
+        {% if manual_matches %}
+            {% for m in manual_matches %}
+            <div class="admin-match-card">
+                <form method="post" action="/admin/edit_match" class="edit-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
+                    <div class="admin-match-title" style="margin-bottom: 10px;">[{{ m.id }}] {{ m.home_team }} — {{ m.away_team }}</div>
+                    <div class="edit-fields"><input type="text" name="home_team" value="{{ m.home_team }}" required><span class="score-divider">—</span><input type="text" name="away_team" value="{{ m.away_team }}" required></div>
+                    <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дата (МСК)</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div><label>Время (МСК)</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
+                    <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                    <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
+                </form>
+                <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
+            </div>
+            {% endfor %}
+        {% else %}<div class="admin-empty">Нет матчей, добавленных вручную</div>{% endif %}
+    </div>
+</div>
+
+<script>
+function toggleMonth(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.style.display==='none'||c.style.display===''){c.style.display='block';a.style.transform='rotate(90deg)'}else{c.style.display='none';a.style.transform='rotate(0deg)'}}
+function toggleDay(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.classList.contains('open')){c.classList.remove('open');a.style.transform='rotate(0deg)'}else{c.classList.add('open');a.style.transform='rotate(90deg)'}}
+document.addEventListener('DOMContentLoaded',function(){var m=document.querySelector('[id^="free-month-"]');if(m){var a=document.getElementById('arrow-'+m.id);m.style.display='block';if(a){a.style.transform='rotate(90deg)'}}var fm=document.querySelector('[id^="finished-month-"]');if(fm){var fa=document.getElementById('arrow-'+fm.id);fm.style.display='block';if(fa){fa.style.transform='rotate(90deg)'}}});
+</script>
+
+{% endblock %}

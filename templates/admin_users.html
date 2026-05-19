@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}.admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}.admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}.admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}.admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}.admin-table-wrap{overflow-x:auto}.admin-table{width:100%;border-collapse:collapse}.admin-table th,.admin-table td{padding:12px;border-bottom:1px solid rgba(0,119,200,.1)}.admin-table th{color:#063b73;background:rgba(255,255,255,.72);font-size:12px;text-transform:uppercase;letter-spacing:.5px}.admin-table td{color:#063b73;font-size:14px;font-weight:700}
+</style>
+<div class="admin-screen">
+    <div class="admin-nav">
+        <a href="{{ url_for('admin.admin') }}">← Админка</a>
+        <a href="{{ url_for('admin.admin_matches') }}">Матчи</a>
+        <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
+        <a class="active" href="{{ url_for('admin.admin_users') }}">Пользователи</a>
+    </div>
+    <div class="admin-title">Пользователи</div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Список пользователей</div>
+        <div class="admin-subsection-title">3.1 • Пользователи</div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <tr><th>ID</th><th>Имя</th></tr>
+                {% for u in users %}
+                <tr><td>{{ u.id }}</td><td>{{ u.username }}</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Выдача титулов</div>
+        <div class="admin-subsection-title">3.2 • Ручная выдача титула</div>
+        <form method="post" action="{{ url_for('admin.admin') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="award_title">
+            <label>Пользователь</label>
+            <select name="user_id" required>
+                <option value="">Выберите пользователя</option>
+                {% for u in title_users %}
+                <option value="{{ u.id }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+            <label style="margin-top:10px;">Титул</label>
+            <select name="title" required>
+                <option value="">Выберите титул</option>
+                {% for title in allowed_titles %}
+                <option value="{{ title }}">{{ title }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="admin-btn admin-btn-blue" style="margin-top:12px;">Выдать титул</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
