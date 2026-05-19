@@ -300,18 +300,26 @@
     .titles-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        margin-top: 10px;
     }
 
     .title-item {
-        border-radius: 16px;
-        padding: 12px 14px;
-        background: rgba(255,255,255,0.58);
-        border: 1px solid rgba(0,119,200,0.10);
+        border-radius: 13px;
+        padding: 8px 11px;
+        background: rgba(255,255,255,0.50);
+        border: 1px solid rgba(0,119,200,0.12);
         color: #063b73;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 800;
-        line-height: 1.35;
+        line-height: 1.3;
+    }
+
+    .titles-inline-empty {
+        margin-top: 10px;
+        color: rgba(93,120,148,0.86);
+        font-size: 12px;
+        font-weight: 700;
     }
 
     @media (max-width: 430px) {
@@ -372,6 +380,20 @@
                 {{ current_place }} место
             {% endif %}
 
+        </div>
+        {% endif %}
+
+        {% if titles %}
+        <div class="titles-list">
+            {% for t in titles %}
+            <div class="title-item">
+                {{ t.title }}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="titles-inline-empty">
+            Пока без титулов
         </div>
         {% endif %}
 
@@ -519,32 +541,6 @@
 
         <div class="empty-box">
             Пока нет завершённых матчей
-        </div>
-
-        {% endif %}
-
-    </section>
-
-    <section class="section-card">
-
-        <div class="section-title">
-            Титулы
-        </div>
-
-        {% if titles %}
-
-        <div class="titles-list">
-            {% for t in titles %}
-            <div class="title-item">
-                {{ t.title }}
-            </div>
-            {% endfor %}
-        </div>
-
-        {% else %}
-
-        <div class="empty-box">
-            Пока без титулов
         </div>
 
         {% endif %}
