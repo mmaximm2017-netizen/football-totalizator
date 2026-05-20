@@ -226,18 +226,27 @@
             inset 0 1px 0 rgba(255,255,255,0.70);
     }
 
-    .match-card-v2.locked {
+    .match-card-v2.active {
+        background:
+            radial-gradient(circle at 50% 0%, rgba(76,175,80,0.25), transparent 45%),
+            linear-gradient(160deg, rgba(232,255,232,0.95), rgba(200,240,200,0.85));
+        border-left: 4px solid #4caf50;
+    }
+
+    .match-card-v2.closed {
         opacity: 0.96;
         border-color: rgba(225,186,102,0.84);
         background:
-            radial-gradient(circle at 50% -4%, rgba(42,168,255,0.16), transparent 31%),
-            linear-gradient(180deg, rgba(248,252,255,0.90), rgba(222,238,248,0.74));
+            radial-gradient(circle at 50% 0%, rgba(42,168,255,0.22), transparent 45%),
+            linear-gradient(160deg, rgba(248,252,255,0.95), rgba(226,244,255,0.85));
+        border-left: 4px solid #2aa8ff;
     }
 
     .match-card-v2.finished {
         background:
             radial-gradient(circle at 50% 0%, rgba(118,128,144,0.18), transparent 42%),
             linear-gradient(160deg, rgba(214,224,235,0.90), rgba(192,204,218,0.80));
+        border-left: 4px solid #6c757d;
     }
 
     .match-card-v2.finished .team-logo-v2 img,
@@ -463,12 +472,12 @@
         font-size: 9px;
     }
 
-    .match-card-v2.locked .deadline-cue {
+    .match-card-v2.closed .deadline-cue {
         display: inline;
         color: rgba(93,120,148,0.86);
     }
 
-    .match-card-v2.locked .deadline-cue::before {
+    .match-card-v2.closed .deadline-cue::before {
         content: "ставки закрыты";
         font-size: 9px;
     }
@@ -891,7 +900,7 @@
         background: rgba(93,120,148,0.08);
     }
 
-    .match-card-v2.locked .score-stepper {
+    .match-card-v2.closed .score-stepper {
         border-color: rgba(93,120,148,0.18);
         box-shadow:
             inset 0 0 0 1px rgba(255,255,255,0.36),
@@ -1595,18 +1604,19 @@
                 {% for match in day.matches %}
 
                 {% set has_prediction = match.pred_home != '' %}
-                {% set card_state = '' %}
+                {% set card_state = 'active' %}
+                {% set predicted_class = '' %}
 
                 {% if match.finished %}
                     {% set card_state = 'finished' %}
                 {% elif match.deadline_passed %}
-                    {% set card_state = 'locked' %}
+                    {% set card_state = 'closed' %}
                 {% elif has_prediction %}
-                    {% set card_state = 'predicted' %}
+                    {% set predicted_class = 'predicted' %}
                 {% endif %}
 
                 <div
-                    class="match-card-v2 {{ card_state }}"
+                    class="match-card-v2 {{ card_state }} {{ predicted_class }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
@@ -2174,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!card) return;
 
         card.dataset.deadlineClosed = '1';
-        card.classList.add('locked');
+        card.classList.add('closed');
 
         const controls = card.querySelectorAll('.score-input-v2, .stepper-btn');
         controls.forEach(function (control) {
