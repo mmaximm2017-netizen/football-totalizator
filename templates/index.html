@@ -1601,12 +1601,14 @@
     <div class="topline-right">
         {% if match.finished %}
             <div class="status-pill-v2 status-done">✓ Матч завершён</div>
+        {% elif match.deadline_passed %}
+            <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
         {% else %}
             <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
                 <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
                 <span class="deadline-label">⏰ До закрытия</span>
                 <span
-                    class="deadline-timer {% if match.deadline_passed %}closed{% endif %}"
+                    class="deadline-timer"
                     data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
                 >
                     {% if match.deadline_passed %}
@@ -1621,7 +1623,7 @@
                 <span class="deadline-cue"></span>
             </div>
 
-            {% if match.deadline_passed %}
+            {% if false and match.deadline_passed %}
                 <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
             {% endif %}
         {% endif %}
@@ -2123,6 +2125,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const topLine = card.querySelector('.match-topline');
         if (!topLine) return;
         const rightColumn = topLine.querySelector('.topline-right');
+        const deadlineRow = topLine.querySelector('.deadline-row');
+
+        if (deadlineRow) {
+            deadlineRow.style.display = 'none';
+        }
 
         let statusPill = topLine.querySelector('.status-pill-v2');
 
