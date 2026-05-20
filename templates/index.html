@@ -965,6 +965,29 @@
         font-weight: 700;
     }
 
+    .match-card-v2.finished .my-prediction-v2 {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #2f5d83;
+    }
+
+    .match-card-v2.finished .my-prediction-v2 .prediction-label-finished {
+        font-size: 15px;
+        font-weight: 700;
+        color: #557492;
+        text-transform: uppercase;
+        letter-spacing: 0.25px;
+    }
+
+    .match-card-v2.finished .my-prediction-v2 .prediction-score-finished {
+        font-size: 15px;
+        font-weight: 700;
+        color: #2f5d83;
+    }
+
     .points-v2 {
         display: inline-flex;
         align-items: center;
@@ -1704,7 +1727,8 @@
                             <div class="match-bottomline">
                                 <div class="my-prediction-v2">
                                     {% if has_prediction %}
-                                        <b>{{ match.pred_home }}:{{ match.pred_away }}</b>
+                                        <span class="prediction-label-finished">Ваша ставка</span>
+                                        <span class="prediction-score-finished">{{ match.pred_home }}:{{ match.pred_away }}</span>
                                     {% else %}
                                         Ставка не сделана
                                     {% endif %}
