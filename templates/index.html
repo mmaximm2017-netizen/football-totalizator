@@ -1519,7 +1519,7 @@
             <span class="month-title">{{ month.label }}</span>
         </div>
 
-        <span class="month-count">{{ month.count }} матчей</span>
+        <span class="month-count" data-match-count="{{ month.count }}"></span>
     </div>
 
     <div id="month-content-{{ month_idx }}" class="month-content" style="display: {% if month_is_open %}block{% else %}none{% endif %};">
@@ -1541,7 +1541,7 @@
                     </div>
                 </div>
 
-                <span class="day-count">{{ day.count }} матчей</span>
+                <span class="day-count" data-match-count="{{ day.count }}"></span>
             </div>
 
             <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content {% if day_is_open %}open{% endif %}">
@@ -1918,7 +1918,31 @@
 </section>
 
 <script>
+function pluralizeMatch(count) {
+    const num = Number(count);
+    const mod10 = num % 10;
+    const mod100 = num % 100;
+
+    if (mod100 >= 11 && mod100 <= 14) {
+        return num + ' матчей';
+    }
+    if (mod10 === 1) {
+        return num + ' матч';
+    }
+    if (mod10 >= 2 && mod10 <= 4) {
+        return num + ' матча';
+    }
+    return num + ' матчей';
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-match-count]').forEach(function(el) {
+        const count = el.getAttribute('data-match-count');
+        if (count) {
+            el.textContent = pluralizeMatch(count);
+        }
+    });
+
     // One-time initial scroll to the day that is pre-opened by backend open_day.
     (function scrollToOpenedDayOnce() {
         const openedDayContent = document.querySelector('.day-content.open');
