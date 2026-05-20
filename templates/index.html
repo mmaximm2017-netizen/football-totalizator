@@ -1059,10 +1059,15 @@
         position: fixed;
         left: 0;
         right: 0;
+        top: auto;
         bottom: 0;
         z-index: 100001;
-        max-height: min(82vh, 720px);
-        padding: 8px 12px calc(18px + env(safe-area-inset-bottom));
+        height: auto;
+        max-height: min(75vh, 600px);
+        display: flex;
+        flex-direction: column;
+        padding: 8px 12px calc(18px + env(safe-area-inset-bottom) + 70px);
+        margin-bottom: 0;
         border-radius: 28px 28px 0 0;
         background:
             radial-gradient(circle at 50% 0%, rgba(255,255,255,0.92), transparent 34%),
@@ -1091,11 +1096,28 @@
     }
 
     .bets-sheet-top {
+        position: sticky;
+        top: 0;
+        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
         padding: 2px 2px 10px;
+        background: inherit;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .bets-sheet-top::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -8px;
+        height: 12px;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.96), transparent);
+        pointer-events: none;
     }
 
     .bets-sheet-title {
@@ -1117,10 +1139,27 @@
     }
 
     .bets-sheet-content {
-        max-height: calc(min(82vh, 720px) - 76px);
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
         overscroll-behavior: contain;
         padding-bottom: 6px;
+    }
+
+    .bets-sheet-content::-webkit-scrollbar {
+        width: 3px;
+    }
+
+    .bets-sheet-content::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+        border-radius: 10px;
+    }
+
+    .bets-sheet-content::-webkit-scrollbar-thumb {
+        background: rgba(0,119,200,0.30);
+        border-radius: 10px;
     }
 
     .bets-sheet-content .predictions-page {
@@ -1160,6 +1199,8 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+        max-height: none;
+        overflow: visible;
     }
 
     .bets-compact-row {
@@ -1184,7 +1225,6 @@
         color: #063b73;
         font-size: 14px;
         font-weight: 900;
-        border: 1px solid rgba(93,120,148,0.18);
     }
 
     .bets-compact-score {
@@ -1238,6 +1278,10 @@
 
     body.bets-sheet-lock {
         overflow: hidden;
+    }
+
+    body.bets-sheet-lock .bottom-nav {
+        z-index: 100000;
     }
 
     .empty-home {
