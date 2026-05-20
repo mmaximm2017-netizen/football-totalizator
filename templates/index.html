@@ -1696,8 +1696,6 @@
                     {% if match.finished %}
                         <div class="prediction-box {% if has_prediction %}saved{% endif %}">
                             <div class="prediction-title">
-                                <span class="prediction-label">Ваша ставка</span>
-
                                 {% set points_value = (match.my_points or 0)|int %}
                                 {% set points_abs = points_value|abs %}
                                 {% set mod100 = points_abs % 100 %}
