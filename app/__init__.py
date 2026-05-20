@@ -105,14 +105,30 @@ def create_app():
 
         try:
             cur.execute(
-                "SELECT is_admin FROM users WHERE id = %s",
+                "SELECT is_admin, last_seen FROM users WHERE id = %s",
                 (session['user_id'],)
             )
 
             user = cur.fetchone()
 
-            if user and user[0] == 1:
-                g.is_admin = True
+            if user:
+                if user[0] == 1:
+                    g.is_admin = True
+
+                # Throttle writes: update last_seen at most once every 10 minutes.
+                try:
+                    cur.execute(
+                        """
+                        UPDATE users
+                        SET last_seen = NOW()
+                        WHERE id = %s
+                          AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL '10 minutes')
+                        """,
+                        (session['user_id'],)
+                    )
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
         finally:
             close_db(conn, cur)

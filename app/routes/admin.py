@@ -285,7 +285,7 @@ def _prepare_admin_view_data(cur):
         })
 
     cur.execute("""
-        SELECT id, username, is_admin
+        SELECT id, username, is_admin, last_seen
         FROM users
         ORDER BY username
     """)
@@ -295,7 +295,11 @@ def _prepare_admin_view_data(cur):
         users.append({
             'id': u[0],
             'username': u[1],
-            'is_admin': u[2]
+            'is_admin': u[2],
+            'last_seen': (
+                u[3].astimezone(MSK).strftime('%d.%m.%Y %H:%M')
+                if u[3] else 'Никогда'
+            )
         })
         if u[2] == 0:
             title_users.append({'id': u[0], 'username': u[1]})

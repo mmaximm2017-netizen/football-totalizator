@@ -129,8 +129,23 @@ def init_db():
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            is_admin INTEGER DEFAULT 0
+            is_admin INTEGER DEFAULT 0,
+            last_seen TIMESTAMP WITH TIME ZONE DEFAULT NULL
         );
+        """)
+
+        cur.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='users' AND column_name='last_seen'
+            ) THEN
+                ALTER TABLE users
+                ADD COLUMN last_seen TIMESTAMP WITH TIME ZONE DEFAULT NULL;
+            END IF;
+        END $$;
         """)
 
         cur.execute("""

@@ -17,9 +17,9 @@
         <div class="admin-subsection-title">3.1 • Пользователи</div>
         <div class="admin-table-wrap">
             <table class="admin-table">
-                <tr><th>ID</th><th>Имя</th></tr>
+                <tr><th>ID</th><th>Имя</th><th>Последний визит</th></tr>
                 {% for u in users %}
-                <tr><td>{{ u.id }}</td><td>{{ u.username }}</td></tr>
+                <tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.last_seen }}</td></tr>
                 {% endfor %}
             </table>
         </div>
@@ -49,4 +49,3 @@
     </div>
 </div>
 {% endblock %}
-
