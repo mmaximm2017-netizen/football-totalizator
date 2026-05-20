@@ -1611,11 +1611,7 @@
                     class="deadline-timer"
                     data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
                 >
-                    {% if match.deadline_passed %}
-                        Ставки закрыты
-                    {% else %}
-                        —
-                    {% endif %}
+                    —
                 </span>
                 <span class="deadline-helper">
                     до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
@@ -1843,10 +1839,6 @@
                                     {% else %}
                                         Сделать ставку
                                     {% endif %}
-                                </button>
-                            {% else %}
-                                <button type="button" class="disabled-btn-v2" disabled>
-                                    Ставки закрыты
                                 </button>
                             {% endif %}
                         {% else %}
@@ -2205,13 +2197,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (card && card.dataset.deadlineClosed === '1') {
-                timer.textContent = 'Ставки закрыты';
+                timer.textContent = '🔒';
                 timer.classList.add('closed');
                 return;
             }
 
             if (remaining <= 0) {
-                timer.textContent = 'Ставки закрыты';
+                timer.textContent = '🔒';
                 timer.classList.add('closed');
                 applyDeadlineClosedState(card);
                 return;
@@ -2239,7 +2231,7 @@ document.addEventListener('DOMContentLoaded', function () {
             card.classList.remove('urgency-mid', 'urgency-hot');
 
             if (timer.classList.contains('closed')) {
-                cue.textContent = 'ставки закрыты';
+                cue.textContent = '';
                 return;
             }
 
