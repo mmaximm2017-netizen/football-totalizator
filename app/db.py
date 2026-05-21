@@ -239,6 +239,15 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
 
+        # Fix known tournament name typo.
+        cur.execute(
+            """
+            UPDATE tournaments
+            SET name = 'Кубок Матч-премьер'
+            WHERE name = 'Курбок Матч-премьер'
+            """
+        )
+
         # Remove legacy "single active tournament" restriction if present.
         # Supports both cases:
         # 1) it was created as a table constraint
