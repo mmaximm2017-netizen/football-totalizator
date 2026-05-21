@@ -830,8 +830,8 @@
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 {
-        width: clamp(88px, 24vw, 92px);
-        height: clamp(60px, 17vw, 64px);
+        width: 64px !important;
+        height: 64px !important;
         border-radius: 12px;
         padding: 4px 6px;
         display: flex;
@@ -854,13 +854,14 @@
     }
 
     /* Force WC flags to be the same circular 36x36 shape as Cup flags */
-    body.tournament-wc2026 .team-logo-v2 .flag-icon {
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-        min-height: 36px !important;
-        max-width: 36px !important;
-        max-height: 36px !important;
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2 .flag-icon,
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2 img {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        max-width: 48px !important;
+        max-height: 48px !important;
         border-radius: 50% !important;
         object-fit: cover !important;
         display: block;
@@ -1652,13 +1653,14 @@
             height: 70px !important;
         }
 
-        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon {
-            width: 36px !important;
-            height: 36px !important;
-            min-width: 36px !important;
-            min-height: 36px !important;
-            max-width: 36px !important;
-            max-height: 36px !important;
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon,
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 img {
+            width: 48px !important;
+            height: 48px !important;
+            min-width: 48px !important;
+            min-height: 48px !important;
+            max-width: 48px !important;
+            max-height: 48px !important;
             border-radius: 50% !important;
             object-fit: cover !important;
         }
