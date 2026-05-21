@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 
     <title>ТОТИШ БРАТИШЕК</title>
 
@@ -766,6 +767,61 @@ body {
                 contrast(101%);
         }
 
+        /* ============================================= */
+        /* TOURNAMENT VISUAL MODES */
+        /* ============================================= */
+
+        .tournament-cup .match-card-v2 {
+            background: linear-gradient(135deg, rgba(42,168,255,0.15), rgba(255,255,255,0.9));
+            border-left: 4px solid #2aa8ff;
+        }
+
+        .tournament-cup .save-btn-v2 {
+            background: linear-gradient(135deg, #1a5c9e, #2a7faa);
+        }
+
+        .tournament-wc2026 .match-card-v2 {
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,245,180,0.9));
+            border-left: 4px solid #ffd700;
+        }
+
+        .tournament-wc2026 .save-btn-v2 {
+            background: linear-gradient(135deg, #e6b800, #ffd700);
+            box-shadow: 0 5px 10px rgba(230,184,0,0.3);
+        }
+
+        .tournament-wc2026 .points-number {
+            color: #c9a03d !important;
+            font-weight: 800;
+        }
+
+        .tournament-wc2026 .points-v2 {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+
+        .tournament-wc2026 .month-title,
+        .tournament-wc2026 .day-title,
+        .tournament-wc2026 .team-name-v2 {
+            font-family: 'Montserrat', 'Inter', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        body.dark.tournament-wc2026 .match-card-v2 {
+            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(30,30,40,0.9));
+            border-left: 4px solid #ffd700;
+        }
+
+        body.dark.tournament-wc2026 .points-number {
+            color: #ffd700 !important;
+        }
+
+        body.dark.tournament-cup .match-card-v2 {
+            background: linear-gradient(135deg, rgba(42,168,255,0.1), rgba(30,30,40,0.9));
+            border-left: 4px solid #2aa8ff;
+        }
+
         @media (max-width: 480px) {
             body {
                 padding-bottom: calc(112px + env(safe-area-inset-bottom));
@@ -806,7 +862,7 @@ body {
 	</style>
 </head>
 
-<body>
+<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}">
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set tournament_items = active_tournaments|default(tournaments|default([])) %}
