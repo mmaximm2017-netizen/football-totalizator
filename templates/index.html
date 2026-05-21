@@ -784,6 +784,9 @@
         display: inline !important;
         opacity: 1 !important;
         visibility: visible !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        line-height: 1.15;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-timer {
@@ -1909,7 +1912,8 @@
                     —
                 </span>
                 <span class="deadline-helper">
-                    до {{ to_msk(match.deadline).split(' (')[0].replace(' МСК', '').replace(' ', ' • ', 1) }}
+                    {% set deadline_short = to_msk(match.deadline).split(' (')[0][:11] %}
+                    до {{ deadline_short.replace(' ', ' • ', 1) }}
                 </span>
                 <span class="deadline-cue"></span>
             </div>
