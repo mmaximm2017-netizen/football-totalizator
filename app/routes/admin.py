@@ -1454,6 +1454,37 @@ def archive_tournament(tid):
     return redirect(url_for('admin.admin_tournaments'))
 
 
+@admin_bp.route('/activate_tournament/<int:tid>', methods=['POST'])
+@admin_required
+def activate_tournament(tid):
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            UPDATE tournaments
+            SET is_active = 1
+            WHERE id = %s
+            """,
+            (tid,),
+        )
+
+        if cur.rowcount == 0:
+            flash("Турнир не найден", "error")
+            return redirect(url_for('admin.admin_tournaments'))
+
+        conn.commit()
+        flash(f"Турнир #{tid} активирован", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for('admin.admin_tournaments'))
+
+
 # =========================================================
 # DELETE TOURNAMENT
 # =========================================================
@@ -1466,7 +1497,7 @@ def delete_tournament():
 
     if not tid:
         flash("������ �� ������", "error")
-        return redirect(url_for('admin.admin'))
+        return redirect(url_for('admin.admin_tournaments'))
 
     conn = get_db()
     cur = conn.cursor()
@@ -1483,11 +1514,11 @@ def delete_tournament():
 
         if not row:
             flash("������ �� ������", "error")
-            return redirect(url_for('admin.admin'))
+            return redirect(url_for('admin.admin_tournaments'))
 
         if row[0] == 1:
             flash("������ ������� �������� ������", "error")
-            return redirect(url_for('admin.admin'))
+            return redirect(url_for('admin.admin_tournaments'))
 
         cur.execute("""
             DELETE FROM tournaments
@@ -1508,7 +1539,7 @@ def delete_tournament():
 
         close_db(conn, cur)
 
-    return redirect(url_for('admin.admin'))
+    return redirect(url_for('admin.admin_tournaments'))
 
 
 

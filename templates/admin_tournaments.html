@@ -53,6 +53,10 @@
                     <button type="submit" class="admin-btn admin-btn-amber admin-btn-small">📦 Архивировать</button>
                 </form>
                 {% else %}
+                <form method="post" action="{{ url_for('admin.activate_tournament', tid=t.id) }}" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">✅ Сделать активным</button>
+                </form>
                 <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="tid" value="{{ t.id }}">
@@ -65,12 +69,12 @@
     </div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Начать новый турнир / Завершить турнир</div>
+        <div class="admin-card-header">Создать новый турнир</div>
         <div class="admin-subsection-title">2.2 • Создание турнира</div>
         <form method="post" action="/admin/new_tournament">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label>Название турнира</label><input type="text" name="name" value="ЧМ-2026" required>
-            <label>Дата старта</label><input type="date" name="start_date" value="2026-06-11" required>
+            <label>Дата старта</label><input type="date" name="start_date" value="2026-06-11">
             <button type="submit" class="admin-btn admin-btn-blue">Создать новый турнир</button>
         </form>
     </div>
