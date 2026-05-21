@@ -1876,6 +1876,12 @@
                     alt="РПЛ"
                     class="tournament-logo"
                 >
+            {% elif match.league == 'rcup' %}
+                <img
+                    src="/static/clubs/Fonbet_Russian_Cup.png"
+                    alt="Кубок России"
+                    class="tournament-logo"
+                >
             {% elif match.league == 'wc2026' %}
                 <img
                     src="/static/clubs/wc2026-logo.png"
@@ -1887,6 +1893,8 @@
             <div class="league-label">
                 {% if match.league == 'wc2026' %}
                     ЧМ-2026
+{% elif match.league == 'rcup' %}
+                    Кубок России
                 {% elif match.league == 'rpl' %}
                     РПЛ
                 {% else %}
