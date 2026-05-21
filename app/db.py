@@ -238,11 +238,29 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
+
+        # Remove legacy "single active tournament" restriction if present.
+        # Supports both cases:
+        # 1) it was created as a table constraint
+        # 2) it was created as a unique index
         cur.execute(
             """
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_tournaments_single_active
-            ON tournaments (is_active)
-            WHERE is_active = 1;
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'idx_tournaments_single_active'
+                ) THEN
+                    ALTER TABLE tournaments
+                    DROP CONSTRAINT idx_tournaments_single_active;
+                END IF;
+            END $$;
+            """
+        )
+        cur.execute(
+            """
+            DROP INDEX IF EXISTS idx_tournaments_single_active;
             """
         )
 
