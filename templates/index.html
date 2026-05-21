@@ -843,8 +843,7 @@
             0 4px 10px rgba(0,0,0,0.18);
     }
 
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 img,
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon {
+    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 img:not(.flag-icon) {
         width: 100% !important;
         height: 100% !important;
         max-width: 86px;
@@ -855,12 +854,17 @@
     }
 
     /* Force WC flags to be the same circular 36x36 shape as Cup flags */
-    body.tournament-wc2026 .team-logo-v2 img,
     body.tournament-wc2026 .team-logo-v2 .flag-icon {
         width: 36px !important;
         height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
         border-radius: 50% !important;
         object-fit: cover !important;
+        display: block;
+        margin: 0 auto !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
@@ -1646,6 +1650,17 @@
         .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon {
             width: 70px !important;
             height: 70px !important;
+        }
+
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            min-height: 36px !important;
+            max-width: 36px !important;
+            max-height: 36px !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
         }
 
         .vs-badge {
