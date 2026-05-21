@@ -80,6 +80,44 @@ def ajax_success(message, data=None):
     return jsonify(payload)
 
 
+def get_default_tournament_id():
+    """
+    Returns tournament id with the nearest upcoming match.
+    Fallback: first active tournament by id.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT tournament_id
+            FROM matches
+            WHERE kickoff_time >= NOW()
+              AND tournament_id IS NOT NULL
+            GROUP BY tournament_id
+            ORDER BY MIN(kickoff_time) ASC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            return row[0]
+
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE is_active = 1
+            ORDER BY id
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        close_db(conn, cur)
+
+
 # =========================================================
 # INDEX
 # =========================================================
@@ -103,7 +141,9 @@ def index():
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if not tid:
-            tid = active_tournaments[0]["id"] if active_tournaments else get_active_tournament_id()
+            tid = get_default_tournament_id() or (
+                active_tournaments[0]["id"] if active_tournaments else get_active_tournament_id()
+            )
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 

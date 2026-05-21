@@ -12,6 +12,44 @@ from app.services.tournament_service import get_tournament_status
 table_bp = Blueprint('table', __name__)
 
 
+def get_default_tournament_id():
+    """
+    Returns tournament id with the nearest upcoming match.
+    Fallback: first active tournament by id.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT tournament_id
+            FROM matches
+            WHERE kickoff_time >= NOW()
+              AND tournament_id IS NOT NULL
+            GROUP BY tournament_id
+            ORDER BY MIN(kickoff_time) ASC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            return row[0]
+
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE is_active = 1
+            ORDER BY id
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        close_db(conn, cur)
+
+
 @table_bp.route('/table')
 def table():
     conn = get_db()
@@ -67,9 +105,9 @@ def table():
 
         tid = request.args.get('tid', type=int)
         if not tid:
-            current = next((t for t in active_tournaments if t.get('status') == 'current'), None)
-            if current:
-                tid = current['id']
+            default_tid = get_default_tournament_id()
+            if default_tid:
+                tid = default_tid
             elif active_tournaments:
                 tid = active_tournaments[0]['id']
             elif tournaments:
