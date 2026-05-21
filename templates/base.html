@@ -819,6 +819,23 @@ body {
             color: rgba(255,255,255,0.82) !important;
         }
 
+        .tournament-wc2026 .match-card-v2 .league-label,
+        .tournament-wc2026 .match-card-v2 .time-label,
+        .tournament-wc2026 .match-card-v2 .deadline-label,
+        .tournament-wc2026 .match-card-v2 .deadline-timer,
+        .tournament-wc2026 .match-card-v2 .status-pill-v2 {
+            color: #ffffff !important;
+        }
+
+        .tournament-wc2026 .match-card-v2 .deadline-timer.closed {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff !important;
+        }
+
+        .tournament-wc2026 .match-card-v2 .deadline-label::before {
+            filter: brightness(0) invert(1);
+        }
+
         .tournament-wc2026 .match-card-v2 .final-score {
             background: linear-gradient(135deg, #ffd700, #e6b800);
             color: #1a1a2e;
