@@ -106,8 +106,11 @@ def table():
 
     table_data = get_tournament_ranking(tid)
 
+    is_ajax = request.args.get('ajax') == '1'
+    template_name = 'table_content.html' if is_ajax else 'table.html'
+
     return render_template(
-        'table.html',
+        template_name,
         table=table_data,
         tournaments=tournaments,
         active_tournaments=active_tournaments,

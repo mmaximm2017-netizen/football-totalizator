@@ -1372,7 +1372,7 @@ def admin_new_tournament():
 
         flash("������� �������� �������", "error")
 
-        return redirect(url_for('admin.admin'))
+        return redirect(url_for('admin.admin_tournaments'))
 
     conn = get_db()
     cur = conn.cursor()
@@ -1390,7 +1390,7 @@ def admin_new_tournament():
 
             flash("������ � ����� ��������� ��� ����������", "error")
 
-            return redirect(url_for('admin.admin'))
+            return redirect(url_for('admin.admin_tournaments'))
 
         cur.execute("""
             INSERT INTO tournaments (
@@ -1420,7 +1420,7 @@ def admin_new_tournament():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for('admin.admin'))
+    return redirect(url_for('admin.admin_tournaments'))
 
 
 @admin_bp.route('/archive_tournament/<int:tid>', methods=['POST'])

@@ -810,6 +810,7 @@ body {
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set tournament_items = active_tournaments|default(tournaments|default([])) %}
+    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile' if request.path == '/profile' else '/') %}
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -924,7 +925,7 @@ body {
         </div>
         <div class="tournament-sheet-list">
             {% for t in tournament_items %}
-            <a href="/?tid={{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table class="tournament-item {% if current_tid == t.id %}active{% endif %}">
                 <span>{{ t.name }}</span>
                 {% if t.is_active %}<span class="active-badge">Активный</span>{% endif %}
             </a>

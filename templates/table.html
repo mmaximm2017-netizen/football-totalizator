@@ -31,82 +31,74 @@
 }
 
 .leaderboard-hero {
-        position: relative;
-        overflow: hidden;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 13px 13px 11px;
+    background:
+        radial-gradient(circle at 20% 0%, rgba(255,255,255,0.88), transparent 34%),
+        radial-gradient(circle at 92% 12%, rgba(47,170,255,0.28), transparent 38%),
+        linear-gradient(160deg, #f7fcff 0%, #dff2ff 54%, #c8e8ff 100%);
+    border: 1px solid rgba(0,119,200,0.22);
+    box-shadow:
+        0 10px 22px rgba(0,78,140,0.13),
+        0 0 0 1px rgba(0,119,200,0.08);
+}
 
-        border-radius: 18px;
-        padding: 13px 13px 11px;
+.leaderboard-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 24px;
+    font-weight: 1000;
+    letter-spacing: -0.45px;
+    margin-bottom: 2px;
+    color: #063b73;
+}
 
-        background:
-            radial-gradient(circle at 20% 0%, rgba(255,255,255,0.88), transparent 34%),
-            radial-gradient(circle at 92% 12%, rgba(47,170,255,0.28), transparent 38%),
-            linear-gradient(160deg, #f7fcff 0%, #dff2ff 54%, #c8e8ff 100%);
+.leaderboard-title-trophy {
+    font-size: 19px;
+    line-height: 1;
+    color: #d39a2b;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.45));
+    transform: translateY(-1px);
+}
 
-        border: 1px solid rgba(0,119,200,0.22);
-        box-shadow:
-            0 10px 22px rgba(0,78,140,0.13),
-            0 0 0 1px rgba(0,119,200,0.08);
-    }
+.leaderboard-subtitle {
+    font-size: 12px;
+    color: #5d7894;
+    font-weight: 750;
+    margin-bottom: 8px;
+}
 
-    .leaderboard-title {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 24px;
-        font-weight: 1000;
-        letter-spacing: -0.45px;
-        margin-bottom: 2px;
-        color: #063b73;
-    }
+.tournament-select-wrap {
+    margin-top: 4px;
+}
 
-    .leaderboard-title-trophy {
-        font-size: 19px;
-        line-height: 1;
-        color: #d39a2b;
-        filter: drop-shadow(0 1px 0 rgba(255,255,255,0.45));
-        transform: translateY(-1px);
-    }
+.tournament-select {
+    width: 100%;
+    margin: 0;
+    background: rgba(255,255,255,0.78);
+    color: #063b73;
+    border: 1px solid rgba(0,119,200,0.16);
+    border-radius: 14px;
+    padding: 9px 11px;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.58);
+}
 
-    .leaderboard-subtitle {
-        font-size: 12px;
-        color: #5d7894;
-        font-weight: 750;
-        margin-bottom: 8px;
-    }
+.tournament-select:focus-visible {
+    outline: 2px solid rgba(0,119,200,0.48);
+    outline-offset: 2px;
+}
 
-    .tournament-select-wrap {
-        margin-top: 4px;
-    }
-
-    .tournament-select {
-        width: 100%;
-        margin: 0;
-
-        background: rgba(255,255,255,0.78);
-        color: #063b73;
-
-        border: 1px solid rgba(0,119,200,0.16);
-        border-radius: 14px;
-
-        padding: 9px 11px;
-
-        font-size: 14px;
-        font-weight: 800;
-
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.58);
-    }
-
-    .tournament-select:focus-visible {
-        outline: 2px solid rgba(0,119,200,0.48);
-        outline-offset: 2px;
-    }
-
-    .archive-note {
-        margin-top: 10px;
-        font-size: 12px;
-        color: #5d7894;
-        font-weight: 700;
-    }
+.archive-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #5d7894;
+    font-weight: 700;
+}
 
 .leaderboard-list {
     display: flex;
@@ -117,203 +109,175 @@
     padding-top: 2px;
 }
 
-    .player-row {
-        position: relative;
+.player-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    border-radius: 18px;
+    padding: 9px 11px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(239,248,255,0.96));
+    border: 1px solid rgba(0,119,200,0.10);
+    box-shadow: 0 10px 20px rgba(0,78,140,0.12);
+    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+    -webkit-tap-highlight-color: transparent;
+}
 
-        display: grid;
-        grid-template-columns: 48px minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 10px;
-        min-height: 64px;
+.player-row.top-1 {
+    background:
+        linear-gradient(90deg, rgba(243,194,79,0.86), transparent 8px),
+        linear-gradient(162deg, rgba(255,250,236,1), rgba(246,251,255,1));
+    border-color: rgba(214,162,52,0.92);
+    min-height: 76px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+    box-shadow:
+        0 16px 30px rgba(0,78,140,0.22),
+        0 0 0 2px rgba(243,194,79,0.44);
+    transform: translateY(-1px);
+}
 
-        border-radius: 18px;
-        padding: 9px 11px;
+.player-row.top-2 {
+    background:
+        linear-gradient(90deg, rgba(181,202,224,0.82), transparent 8px),
+        linear-gradient(160deg, rgba(250,254,255,1), rgba(240,248,255,1));
+    border-color: rgba(128,154,181,0.86);
+    min-height: 72px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    box-shadow:
+        0 14px 26px rgba(0,78,140,0.18),
+        0 0 0 2px rgba(181,202,224,0.34);
+}
 
-        background:
-            linear-gradient(160deg, rgba(255,255,255,0.96), rgba(239,248,255,0.96));
+.player-row.top-3 {
+    background:
+        linear-gradient(90deg, rgba(165,128,96,0.60), transparent 7px),
+        linear-gradient(160deg, rgba(250,252,255,0.99), rgba(241,248,255,0.99));
+    border-color: rgba(149,116,86,0.68);
+    min-height: 68px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    box-shadow:
+        0 12px 24px rgba(0,78,140,0.15),
+        0 0 0 1px rgba(165,128,96,0.30);
+}
 
-        border: 1px solid rgba(0,119,200,0.10);
+.player-row:active {
+    transform: scale(0.992) translateY(1px);
+    box-shadow: 0 8px 16px rgba(0,78,140,0.10);
+}
 
-        box-shadow: 0 10px 20px rgba(0,78,140,0.12);
-        transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
-        -webkit-tap-highlight-color: transparent;
-    }
+.place-box {
+    width: 39px;
+    height: 39px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: #e0f2ff;
+    color: #0077c8;
+    font-size: 17px;
+    font-weight: 1000;
+    border: 1px solid rgba(0,119,200,0.14);
+}
 
-    .player-row.top-1 {
-        background:
-            linear-gradient(90deg, rgba(243,194,79,0.86), transparent 8px),
-            linear-gradient(162deg, rgba(255,250,236,1), rgba(246,251,255,1));
-        border-color: rgba(214,162,52,0.92);
-        min-height: 76px;
-        padding-top: 18px;
-        padding-bottom: 18px;
-        box-shadow:
-            0 16px 30px rgba(0,78,140,0.22),
-            0 0 0 2px rgba(243,194,79,0.44);
-        transform: translateY(-1px);
-    }
+.top-1 .place-box {
+    width: 42px;
+    height: 42px;
+    font-size: 28px;
+    background: rgba(243,194,79,0.44);
+    color: #754b03;
+    border-color: rgba(214,162,52,0.84);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.34), 0 6px 12px rgba(214,162,52,0.30);
+}
 
-    .player-row.top-2 {
-        background:
-            linear-gradient(90deg, rgba(181,202,224,0.82), transparent 8px),
-            linear-gradient(160deg, rgba(250,254,255,1), rgba(240,248,255,1));
-        border-color: rgba(128,154,181,0.86);
-        min-height: 72px;
-        padding-top: 16px;
-        padding-bottom: 16px;
-        box-shadow:
-            0 14px 26px rgba(0,78,140,0.18),
-            0 0 0 2px rgba(181,202,224,0.34);
-    }
+.top-2 .place-box {
+    width: 41px;
+    height: 41px;
+    font-size: 24px;
+    background: rgba(181,202,224,0.40);
+    color: #35516a;
+    border-color: rgba(128,154,181,0.74);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), 0 4px 10px rgba(128,154,181,0.20);
+}
 
-    .player-row.top-3 {
-        background:
-            linear-gradient(90deg, rgba(165,128,96,0.60), transparent 7px),
-            linear-gradient(160deg, rgba(250,252,255,0.99), rgba(241,248,255,0.99));
-        border-color: rgba(149,116,86,0.68);
-        min-height: 68px;
-        padding-top: 14px;
-        padding-bottom: 14px;
-        box-shadow:
-            0 12px 24px rgba(0,78,140,0.15),
-            0 0 0 1px rgba(165,128,96,0.30);
-    }
+.top-3 .place-box {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    background: rgba(165,128,96,0.30);
+    color: #69462d;
+    border-color: rgba(149,116,86,0.58);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 3px 8px rgba(149,116,86,0.16);
+}
 
-    .player-row:active {
-        transform: scale(0.992) translateY(1px);
-        box-shadow: 0 8px 16px rgba(0,78,140,0.10);
-    }
+.player-main {
+    min-width: 0;
+}
 
-    .place-box {
-        width: 39px;
-        height: 39px;
+.player-name {
+    display: block;
+    color: #063b73;
+    text-decoration: none;
+    font-size: 17px;
+    font-weight: 1000;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
+.player-row .player-name {
+    font-weight: 500;
+}
 
-        border-radius: 11px;
+.player-name:active {
+    color: #0077c8;
+}
 
-        background: #e0f2ff;
+.player-row:focus-within {
+    border-color: rgba(0,119,200,0.22);
+    box-shadow: 0 12px 24px rgba(0,78,140,0.15);
+}
 
-        color: #0077c8;
+.player-name:focus-visible {
+    outline: 2px solid rgba(0,119,200,0.48);
+    outline-offset: 3px;
+    border-radius: 8px;
+}
 
-        font-size: 17px;
-        font-weight: 1000;
+.player-meta {
+    margin-top: 2px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 10px;
+    color: #6d86a0;
+    font-weight: 800;
+}
 
-        border: 1px solid rgba(0,119,200,0.14);
-    }
+.leader-pill {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(245,185,66,0.18);
+    color: #9a6a00;
+    border: 1px solid rgba(245,185,66,0.26);
+    font-size: 9px;
+    font-weight: 1000;
+}
 
-    .top-1 .place-box {
-        width: 42px;
-        height: 42px;
-        font-size: 28px;
-        background: rgba(243,194,79,0.44);
-        color: #754b03;
-        border-color: rgba(214,162,52,0.84);
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.34),
-            0 6px 12px rgba(214,162,52,0.30);
-    }
-
-    .top-2 .place-box {
-        width: 41px;
-        height: 41px;
-        font-size: 24px;
-        background: rgba(181,202,224,0.40);
-        color: #35516a;
-        border-color: rgba(128,154,181,0.74);
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.32),
-            0 4px 10px rgba(128,154,181,0.20);
-    }
-
-    .top-3 .place-box {
-        width: 40px;
-        height: 40px;
-        font-size: 22px;
-        background: rgba(165,128,96,0.30);
-        color: #69462d;
-        border-color: rgba(149,116,86,0.58);
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.28),
-            0 3px 8px rgba(149,116,86,0.16);
-    }
-
-    .player-main {
-        min-width: 0;
-    }
-
-    .player-name {
-        display: block;
-
-        color: #063b73;
-        text-decoration: none;
-
-        font-size: 17px;
-        font-weight: 1000;
-        letter-spacing: -0.2px;
-
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .player-row .player-name {
-        font-weight: 500;
-    }
-
-    .player-name:active {
-        color: #0077c8;
-    }
-
-    .player-row:focus-within {
-        border-color: rgba(0,119,200,0.22);
-        box-shadow: 0 12px 24px rgba(0,78,140,0.15);
-    }
-
-    .player-name:focus-visible {
-        outline: 2px solid rgba(0,119,200,0.48);
-        outline-offset: 3px;
-        border-radius: 8px;
-    }
-
-    .player-meta {
-        margin-top: 2px;
-
-        display: flex;
-        gap: 5px;
-        align-items: center;
-        flex-wrap: wrap;
-
-        font-size: 10px;
-        color: #6d86a0;
-        font-weight: 800;
-    }
-
-    .leader-pill {
-        padding: 2px 6px;
-        border-radius: 999px;
-
-        background: rgba(245,185,66,0.18);
-        color: #9a6a00;
-
-        border: 1px solid rgba(245,185,66,0.26);
-
-        font-size: 9px;
-        font-weight: 1000;
-    }
-
-    .shared-pill {
-        padding: 2px 6px;
-        border-radius: 999px;
-
-        background: rgba(29,161,242,0.10);
-        color: #0077c8;
-
-        font-size: 9px;
-        font-weight: 900;
-    }
+.shared-pill {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(29,161,242,0.10);
+    color: #0077c8;
+    font-size: 9px;
+    font-weight: 900;
+}
 
 .points-box {
     min-width: 46px;
@@ -333,8 +297,8 @@
     display: block;
     color: #0b4f86;
     font-size: 31px;
-        line-height: 1;
-        font-weight: 1000;
+    line-height: 1;
+    font-weight: 1000;
     letter-spacing: -0.3px;
 }
 
@@ -355,9 +319,7 @@
 
 .player-row.race-hot {
     border-color: rgba(46,125,50,0.28);
-    box-shadow:
-        0 12px 24px rgba(0,78,140,0.14),
-        0 0 0 1px rgba(46,125,50,0.12);
+    box-shadow: 0 12px 24px rgba(0,78,140,0.14), 0 0 0 1px rgba(46,125,50,0.12);
 }
 
 .points-gap.gap-near {
@@ -373,256 +335,239 @@
     color: rgba(93,120,148,0.65);
 }
 
-    .top-1 .player-name {
-        font-size: 18px;
-        font-weight: 800;
-    }
+.top-1 .player-name {
+    font-size: 18px;
+    font-weight: 800;
+}
 
-    .top-2 .player-name {
-        font-size: 16px;
-        font-weight: 700;
-    }
+.top-2 .player-name {
+    font-size: 16px;
+    font-weight: 700;
+}
 
-    .top-3 .player-name {
-        font-size: 15px;
-        font-weight: 700;
-    }
+.top-3 .player-name {
+    font-size: 15px;
+    font-weight: 700;
+}
 
-    .top-1 .points-number {
-        color: #c9a03d;
+.top-1 .points-number {
+    color: #c9a03d;
+    font-size: 22px;
+}
+
+.top-2 .points-number {
+    color: #8a8a8a !important;
+    font-size: 19px;
+}
+
+.top-3 .points-number {
+    color: #cd7f32;
+    font-size: 17px;
+}
+
+.points-label {
+    display: none;
+}
+
+.tournament-info-card {
+    display: none;
+}
+
+.empty-leaderboard {
+    text-align: center;
+    padding: 42px 20px;
+    border-radius: 26px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(239,248,255,0.96));
+    border: 1px solid rgba(0,119,200,0.10);
+    box-shadow: 0 14px 32px rgba(0,78,140,0.14);
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 1000;
+    margin-bottom: 6px;
+    color: #063b73;
+}
+
+.empty-text {
+    color: #5d7894;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+body:not(.dark) .leaderboard-hero,
+body:not(.dark) .player-row,
+body:not(.dark) .empty-leaderboard {
+    color: #063b73;
+}
+
+body:not(.dark) .tournament-info-card {
+    color: #5d7894;
+    background: rgba(255,255,255,0.88);
+}
+
+@media (max-width: 430px) {
+    .leaderboard-title {
         font-size: 22px;
     }
 
+    .leaderboard-title-trophy {
+        font-size: 18px;
+    }
+
+    .leaderboard-screen {
+        min-height: clamp(496px, 78dvh, 640px);
+        padding: 8px 8px 10px;
+        border-radius: 20px;
+    }
+
+    .leaderboard-list {
+        min-height: clamp(312px, 47dvh, 390px);
+        gap: 9px;
+        padding-bottom: 8px;
+    }
+
+    .player-row {
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        padding: 10px 9px;
+        min-height: 60px;
+        border-radius: 17px;
+    }
+
+    .place-box {
+        width: 37px;
+        height: 37px;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+
+    .top-1 .place-box { width: 39px; height: 39px; }
+    .top-2 .place-box { width: 38px; height: 38px; }
+    .top-3 .place-box { width: 37px; height: 37px; }
+
+    .player-name {
+        font-size: 16px;
+    }
+
+    .points-number {
+        font-size: 27px;
+    }
+
+    .top-1 .points-number {
+        font-size: 30px;
+    }
+
     .top-2 .points-number {
-        color: #8a8a8a !important;
-        font-size: 19px;
+        font-size: 28px;
     }
 
     .top-3 .points-number {
-        color: #cd7f32;
-        font-size: 17px;
+        font-size: 27px;
     }
 
-    .points-label {
-        display: none;
+    .points-box {
+        min-width: 44px;
+        padding: 0;
+        gap: 6px;
     }
 
-    .tournament-info-card {
-        display: none;
+    .points-gap {
+        min-width: 18px;
+        font-size: 11px;
     }
-
-    .empty-leaderboard {
-        text-align: center;
-
-        padding: 42px 20px;
-
-        border-radius: 26px;
-
-        background:
-            linear-gradient(160deg, rgba(255,255,255,0.96), rgba(239,248,255,0.96));
-
-        border: 1px solid rgba(0,119,200,0.10);
-
-        box-shadow: 0 14px 32px rgba(0,78,140,0.14);
-    }
-
-    .empty-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
-    }
-
-    .empty-title {
-        font-size: 18px;
-        font-weight: 1000;
-        margin-bottom: 6px;
-        color: #063b73;
-    }
-
-    .empty-text {
-        color: #5d7894;
-        font-size: 13px;
-        font-weight: 700;
-    }
-
-    body:not(.dark) .leaderboard-hero,
-    body:not(.dark) .player-row,
-    body:not(.dark) .empty-leaderboard {
-        color: #063b73;
-    }
-
-    body:not(.dark) .tournament-info-card {
-        color: #5d7894;
-        background: rgba(255,255,255,0.88);
-    }
-
-    @media (max-width: 430px) {
-        .leaderboard-title {
-            font-size: 22px;
-        }
-
-        .leaderboard-title-trophy {
-            font-size: 18px;
-        }
-
-        .leaderboard-screen {
-            min-height: clamp(496px, 78dvh, 640px);
-            padding: 8px 8px 10px;
-            border-radius: 20px;
-        }
-
-        .leaderboard-list {
-            min-height: clamp(312px, 47dvh, 390px);
-            gap: 9px;
-            padding-bottom: 8px;
-        }
-
-        .player-row {
-            grid-template-columns: 44px minmax(0, 1fr) auto;
-            padding: 10px 9px;
-            min-height: 60px;
-            border-radius: 17px;
-        }
-
-        .place-box {
-            width: 37px;
-            height: 37px;
-            border-radius: 12px;
-            font-size: 16px;
-        }
-
-        .top-1 .place-box { width: 39px; height: 39px; }
-        .top-2 .place-box { width: 38px; height: 38px; }
-        .top-3 .place-box { width: 37px; height: 37px; }
-
-        .player-name {
-            font-size: 16px;
-        }
-
-        .points-number {
-            font-size: 27px;
-        }
-
-        .top-1 .points-number {
-            font-size: 30px;
-        }
-
-        .top-2 .points-number {
-            font-size: 28px;
-        }
-
-        .top-3 .points-number {
-            font-size: 27px;
-        }
-
-        .points-box {
-            min-width: 44px;
-            padding: 0;
-            gap: 6px;
-        }
-
-        .points-gap {
-            min-width: 18px;
-            font-size: 11px;
-        }
-    }
+}
 </style>
 
 <div class="leaderboard-screen">
-
     <section class="leaderboard-hero">
         <div class="leaderboard-title"><span class="leaderboard-title-trophy">🏆</span>Турнирная таблица</div>
-
-        <div class="leaderboard-subtitle">
-            Рейтинг участников по очкам
-        </div>
+        <div class="leaderboard-subtitle">Рейтинг участников по очкам</div>
 
         <div class="tournament-select-wrap">
-            <select
-                id="tournament-select"
-                class="tournament-select"
-                onchange="location.href='/table?tid=' + this.value"
-            >
+            <select id="tournament-select" class="tournament-select">
                 {% for t in tournaments %}
                 <option value="{{ t.id }}" {% if selected_tid == t.id %}selected{% endif %}>
                     {{ t.name }}
-                    {% if t.status == 'future' %}
-                        · будущий
-                    {% elif t.status == 'archive' %}
-                        · архив
-                    {% endif %}
+                    {% if t.status == 'future' %} · будущий{% elif t.status == 'archive' %} · архив{% endif %}
                 </option>
                 {% endfor %}
             </select>
         </div>
 
         {% if selected_status == 'future' %}
-        <div class="archive-note">
-            Будущий турнир. Ставки уже доступны на матчи после даты старта.
-        </div>
+        <div class="archive-note">Будущий турнир. Ставки уже доступны на матчи после даты старта.</div>
         {% elif selected_status == 'archive' %}
-        <div class="archive-note">
-            Архивный турнир, только просмотр
-        </div>
+        <div class="archive-note">Архивный турнир, только просмотр</div>
         {% endif %}
     </section>
 
-    {% if table %}
-    <section class="leaderboard-list">
-        {% set leader_points = table[0].points if table else 0 %}
-        {% for row in table %}
-
-        {% set gap = leader_points - row.points %}
-        <div class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %} {% if row.place != 1 and gap <= 1 %}race-hot{% elif row.place != 1 and gap <= 3 %}race-near{% endif %}">
-            <div class="place-box">
-                {% if row.place == 1 %}
-                    1
-                {% elif row.place == 2 %}
-                    2
-                {% elif row.place == 3 %}
-                    3
-                {% else %}
-                    {{ row.place }}
-                {% endif %}
-            </div>
-
-            <div class="player-main">
-                <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">
-                    {{ row.username }}
-                </a>
-
-                <div class="player-meta">
-                    {% if row.shared %}
-                    <span class="shared-pill">делят</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="points-box">
-                <span class="points-number">{{ row.points }}</span>
-                <span class="points-gap {% if row.place != 1 and gap <= 1 %}gap-hot{% elif row.place != 1 and gap <= 3 %}gap-near{% endif %}">
-                    {% if row.place == 1 %}
-                        —
-                    {% else %}
-                        -{{ gap }}
-                    {% endif %}
-                </span>
-            </div>
-        </div>
-
-        {% endfor %}
-    </section>
-
-    {% else %}
-    <section class="empty-leaderboard">
-        <div class="empty-icon">🏟️</div>
-        <div class="empty-title">Таблица пока пуста</div>
-        <div class="empty-text">
-            Как только появятся результаты, здесь будет рейтинг участников.
-        </div>
-    </section>
-    {% endif %}
-
+    <div class="table-container">
+        {% include "table_content.html" %}
+    </div>
 </div>
 
-{% endblock %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname !== '/table') return;
 
+    const tableContainer = document.querySelector('.table-container');
+    const tournamentSelect = document.getElementById('tournament-select');
+
+    async function loadTableByTid(tid) {
+        if (!tableContainer || !tid) return;
+
+        tableContainer.innerHTML = '<div style="text-align:center;padding:28px;color:#5d7894;font-weight:700;">Загрузка...</div>';
+
+        try {
+            const response = await fetch('/table?tid=' + encodeURIComponent(tid) + '&ajax=1', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const html = await response.text();
+            tableContainer.innerHTML = html;
+            history.pushState({ tid: tid }, '', '/table?tid=' + encodeURIComponent(tid));
+
+            document.querySelectorAll('.tournament-item').forEach(function(item) {
+                const href = item.getAttribute('href') || '';
+                item.classList.toggle('active', href.includes('tid=' + tid));
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки таблицы:', error);
+            tableContainer.innerHTML = '<div style="text-align:center;padding:28px;color:#c62828;font-weight:700;">Ошибка загрузки. Обновите страницу.</div>';
+        }
+    }
+
+    if (tournamentSelect) {
+        tournamentSelect.addEventListener('change', function() {
+            loadTableByTid(this.value);
+        });
+    }
+
+    document.querySelectorAll('[data-ajax-table]').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            const href = link.getAttribute('href') || '';
+            if (!href.includes('/table?tid=')) return;
+            e.preventDefault();
+
+            const parsed = new URL(href, window.location.origin);
+            const tid = parsed.searchParams.get('tid');
+            if (tournamentSelect && tid) tournamentSelect.value = tid;
+            loadTableByTid(tid);
+
+            const overlay = document.querySelector('[data-tournament-sheet-overlay]');
+            const panel = document.querySelector('[data-tournament-sheet-panel]');
+            if (overlay) overlay.classList.remove('open');
+            if (panel) {
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}
