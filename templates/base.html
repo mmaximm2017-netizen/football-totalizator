@@ -787,8 +787,13 @@ body {
         }
 
         .tournament-cup .match-card-v2 {
-            background: linear-gradient(135deg, rgba(42,168,255,0.15), rgba(255,255,255,0.9));
+            background:
+                radial-gradient(circle at 18% 8%, rgba(42,168,255,0.24), transparent 36%),
+                linear-gradient(140deg, rgba(230,245,255,0.96), rgba(212,236,255,0.90));
             border-left: 4px solid #2aa8ff;
+            box-shadow:
+                0 12px 26px rgba(18,98,152,0.18),
+                inset 0 1px 0 rgba(255,255,255,0.56);
         }
 
         .tournament-cup .save-btn-v2 {
@@ -796,8 +801,13 @@ body {
         }
 
         .tournament-wc2026 .match-card-v2 {
-            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,245,180,0.9));
-            border-left: 4px solid #ffd700;
+            background:
+                radial-gradient(circle at 20% 6%, rgba(255,215,0,0.30), transparent 34%),
+                linear-gradient(140deg, rgba(255,242,184,0.98), rgba(237,213,124,0.90));
+            border-left: 4px solid #c9a03d;
+            box-shadow:
+                0 12px 28px rgba(119,86,18,0.22),
+                inset 0 1px 0 rgba(255,251,223,0.72);
         }
 
         .tournament-wc2026 .save-btn-v2 {
@@ -821,6 +831,50 @@ body {
             font-family: 'Montserrat', 'Inter', sans-serif;
             font-weight: 800;
             letter-spacing: -0.3px;
+        }
+
+        /* Accordion visual identity per tournament */
+        .tournament-cup .month-header,
+        .tournament-cup .day-header {
+            background:
+                linear-gradient(135deg, rgba(7,119,200,0.12), rgba(42,168,255,0.08)),
+                rgba(255,255,255,0.82);
+            border: 1px solid rgba(0,119,200,0.22);
+            box-shadow: 0 8px 16px rgba(0,78,140,0.10);
+        }
+
+        .tournament-cup .month-title,
+        .tournament-cup .day-title {
+            color: #0a4f8a;
+        }
+
+        .tournament-cup .month-count,
+        .tournament-cup .day-count {
+            color: #16679f;
+        }
+
+        .tournament-wc2026 .month-header,
+        .tournament-wc2026 .day-header {
+            background:
+                linear-gradient(135deg, rgba(255,215,0,0.22), rgba(201,160,61,0.10)),
+                rgba(255,250,226,0.90);
+            border: 1px solid rgba(201,160,61,0.40);
+            box-shadow: 0 10px 18px rgba(92,67,13,0.16);
+        }
+
+        .tournament-wc2026 .month-title,
+        .tournament-wc2026 .day-title {
+            color: #56410f;
+        }
+
+        .tournament-wc2026 .month-count,
+        .tournament-wc2026 .day-count {
+            color: #7b5a12;
+        }
+
+        .tournament-wc2026 .month-header .toggle-icon,
+        .tournament-wc2026 .day-header .toggle-icon {
+            color: #c9a03d;
         }
 
         body.dark.tournament-wc2026 .match-card-v2 {
