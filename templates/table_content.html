@@ -1,34 +1,183 @@
+<style>
+    .table-shell {
+        overflow-x: auto;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-top: 16px;
+        background: #fff;
+    }
+
+    .standings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        background: #fff;
+    }
+
+    .standings-table thead tr {
+        background: #263238;
+        color: #fff;
+    }
+
+    .standings-table th {
+        padding: 12px 8px;
+    }
+
+    .standings-table th:first-child {
+        text-align: center;
+        width: 50px;
+        border-radius: 12px 0 0 0;
+    }
+
+    .standings-table th:nth-child(2) {
+        text-align: left;
+    }
+
+    .standings-table th:last-child {
+        text-align: center;
+        width: 80px;
+        border-radius: 0 12px 0 0;
+    }
+
+    .player-row {
+        border-bottom: 1px solid #eee;
+    }
+
+    .player-row td:first-child {
+        text-align: center;
+        padding: 14px 8px;
+    }
+
+    .player-row td:nth-child(2) {
+        padding: 14px 8px;
+    }
+
+    .player-row td:last-child {
+        text-align: center;
+        padding: 14px 8px;
+    }
+
+    .place-box {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    .player-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .points-number {
+        color: #2e7d32;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .top-1 {
+        background: linear-gradient(135deg, #fff9c4, #fff176);
+    }
+
+    .top-1 .points-number {
+        color: #c9a03d !important;
+        font-weight: 800;
+        font-size: 20px;
+    }
+
+    .top-1 .player-name {
+        font-weight: 800;
+        font-size: 18px;
+    }
+
+    .top-1 .place-box {
+        font-size: 28px;
+    }
+
+    .top-2 {
+        background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    }
+
+    .top-2 .points-number {
+        color: #8a8a8a !important;
+        font-weight: 700;
+        font-size: 18px;
+    }
+
+    .top-2 .player-name {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .top-2 .place-box {
+        font-size: 24px;
+    }
+
+    .top-3 {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    }
+
+    .top-3 .points-number {
+        color: #cd7f32 !important;
+        font-weight: 700;
+        font-size: 17px;
+    }
+
+    .top-3 .player-name {
+        font-weight: 700;
+        font-size: 15px;
+    }
+
+    .top-3 .place-box {
+        font-size: 22px;
+    }
+
+    .leader-badge {
+        background: linear-gradient(135deg, #ffd700, #ffb300);
+        color: #1a1a2e;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 800;
+        margin-left: 8px;
+    }
+
+    .shared-place {
+        font-size: 9px;
+        color: #888;
+        display: block;
+    }
+</style>
+
 {% if table %}
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 14px;">
+<div class="table-shell">
+    <table class="standings-table">
         <thead>
-            <tr style="background: #263238; color: white;">
-                <th style="padding: 12px 8px; text-align: center; width: 50px; border-radius: 12px 0 0 0;">#</th>
-                <th style="padding: 12px 8px; text-align: left;">Игрок</th>
-                <th style="padding: 12px 8px; text-align: center; width: 80px; border-radius: 0 12px 0 0;">Очки</th>
+            <tr>
+                <th>#</th>
+                <th>Игрок</th>
+                <th>Очки</th>
             </tr>
         </thead>
         <tbody>
             {% for row in table %}
-            <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}" style="border-bottom: 1px solid #eee;">
-                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 16px;">
+            <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
+                <td>
                     <div class="place-box">
                         {% if row.place == 1 %}🥇
                         {% elif row.place == 2 %}🥈
                         {% elif row.place == 3 %}🥉
-                        {% else %}{{ row.place }}
-                        {% endif %}
+                        {% else %}{{ row.place }}{% endif %}
                     </div>
-                    {% if row.shared %}
-                    <span class="shared-place" style="font-size: 10px; display: block;">(делят место)</span>
-                    {% endif %}
+                    {% if row.shared %}<span class="shared-place">делят место</span>{% endif %}
                 </td>
-                <td style="padding: 14px 8px;">
-                    <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name" style="text-decoration: none; color: inherit;">{{ row.username }}</a>
-                    {% if row.place == 1 %}<span class="leader-badge" style="font-size: 11px; margin-left: 6px;">ЛИДЕР</span>{% endif %}
+                <td>
+                    <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
+                    {% if row.place == 1 %}<span class="leader-badge">ЛИДЕР</span>{% endif %}
                 </td>
-                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 18px;" class="points-number">
-                    {{ row.points }}
+                <td>
+                    <span class="points-number">{{ row.points }}</span>
                 </td>
             </tr>
             {% endfor %}
