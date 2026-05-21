@@ -762,9 +762,9 @@
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
 
-    body.tournament-wc2026 .match-card-v2:not(.finished) .tournament-logo {
-        width: 32px !important;
-        height: 32px !important;
+    body.tournament-wc2026 .match-card-v2 .tournament-logo {
+        width: 44px !important;
+        height: 44px !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .league-label,
@@ -777,6 +777,10 @@
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-helper,
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-cue {
         color: rgba(217,198,155,0.86);
+    }
+
+    body.tournament-wc2026 .deadline-helper {
+        color: #d8b45a !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-timer {
@@ -1876,7 +1880,12 @@
         </div>
 
         <div class="time-label start-time-label">
-            Начало: {{ to_msk(match.kickoff_time) }}
+            {% if match.league == 'wc2026' %}
+                {% set wc_kickoff = to_msk(match.kickoff_time).split(' (')[0].replace(' МСК', '') %}
+                Начало: {{ wc_kickoff }}
+            {% else %}
+                Начало: {{ to_msk(match.kickoff_time) }}
+            {% endif %}
         </div>
 
     </div>
