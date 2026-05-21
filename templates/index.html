@@ -781,6 +781,9 @@
 
     body.tournament-wc2026 .deadline-helper {
         color: #d8b45a !important;
+        display: inline !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-timer {
@@ -1906,14 +1909,7 @@
                     —
                 </span>
                 <span class="deadline-helper">
-                    {% if match.league == 'wc2026' %}
-                        {% set wc_deadline = to_msk(match.deadline).split(' (')[0] %}
-                        {% set wc_date = wc_deadline.split(' ')[0] %}
-                        {% set wc_time = wc_deadline.split(' ')[1] %}
-                        до {{ wc_date[0:5] }} • {{ wc_time[0:5] }}
-                    {% else %}
-                        до {{ to_msk(match.deadline).split(' (')[0].replace(' ', ' • ', 1) }}
-                    {% endif %}
+                    до {{ to_msk(match.deadline).split(' (')[0].replace(' МСК', '').replace(' ', ' • ', 1) }}
                 </span>
                 <span class="deadline-cue"></span>
             </div>
