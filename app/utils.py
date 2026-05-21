@@ -115,7 +115,7 @@ def get_flag(name):
     translated = team_data.TEAM_NAMES.get(name, name)
     code = team_data.TEAM_FLAGS.get(translated)
     if code:
-        return f'<img src="/static/flags/{code}.svg" class="flag-icon" alt="{translated}">'
+        return f'<img src="/static/flags/{code}.svg" width="36" height="24" style="border-radius: 2px;" alt="{translated}">'
     return ""
 
 
