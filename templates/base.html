@@ -983,12 +983,19 @@ body {
             }
         }
     .flag-icon {
-    width: 36px;
-    height: 24px;
-    object-fit: contain;
-    border-radius: 2px;
     display: block;
 }
+
+    /* WC-2026 flags: circular, fixed size */
+    body.tournament-wc2026 .flag-icon,
+    body.tournament-wc2026 .team-logo-v2 img,
+    body.tournament-wc2026 .team-logo-v2 .flag-icon {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
 	</style>
 </head>
 
