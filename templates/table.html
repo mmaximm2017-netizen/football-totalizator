@@ -1,110 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-<style>
-.leaderboard-screen {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-height: clamp(520px, 80dvh, 700px);
-    padding: 10px 10px 14px;
-    border-radius: 24px;
-    background:
-        radial-gradient(circle at 14% 0%, rgba(255,255,255,0.34), transparent 38%),
-        radial-gradient(circle at 88% 12%, rgba(42,168,255,0.18), transparent 42%),
-        linear-gradient(168deg, rgba(240,249,255,0.78), rgba(215,237,252,0.62));
-    border: 1px solid rgba(0,119,200,0.14);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.48),
-        0 18px 38px rgba(0,78,140,0.17);
-}
+<div style="text-align: center; margin-bottom: 16px;">
+    <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
+</div>
 
-.leaderboard-screen::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.24);
-}
-
-.leaderboard-hero {
-    position: relative;
-    overflow: hidden;
-    border-radius: 18px;
-    padding: 13px 13px 11px;
-    background:
-        radial-gradient(circle at 20% 0%, rgba(255,255,255,0.88), transparent 34%),
-        radial-gradient(circle at 92% 12%, rgba(47,170,255,0.28), transparent 38%),
-        linear-gradient(160deg, #f7fcff 0%, #dff2ff 54%, #c8e8ff 100%);
-    border: 1px solid rgba(0,119,200,0.22);
-    box-shadow:
-        0 10px 22px rgba(0,78,140,0.13),
-        0 0 0 1px rgba(0,119,200,0.08);
-}
-
-.leaderboard-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 24px;
-    font-weight: 1000;
-    letter-spacing: -0.45px;
-    margin-bottom: 2px;
-    color: #063b73;
-}
-
-.leaderboard-title-trophy {
-    font-size: 19px;
-    line-height: 1;
-    color: #d39a2b;
-    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.45));
-    transform: translateY(-1px);
-}
-
-.leaderboard-subtitle {
-    font-size: 12px;
-    color: #5d7894;
-    font-weight: 750;
-    margin-bottom: 8px;
-}
-
-.archive-note {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #5d7894;
-    font-weight: 700;
-}
-
-@media (max-width: 430px) {
-    .leaderboard-title { font-size: 22px; }
-    .leaderboard-title-trophy { font-size: 18px; }
-    .leaderboard-screen {
-        min-height: clamp(496px, 78dvh, 640px);
-        padding: 8px 8px 10px;
-        border-radius: 20px;
-    }
-}
-</style>
-
-<div class="leaderboard-screen">
-    <section class="leaderboard-hero">
-        <div class="leaderboard-title"><span class="leaderboard-title-trophy">🏆</span>Турнирная таблица</div>
-        <div class="leaderboard-subtitle">Рейтинг участников по очкам</div>
-        <div class="archive-note">Турнир: {{ current_tournament_name }}</div>
-
-        {% if selected_status == 'future' %}
-        <div class="archive-note">Будущий турнир. Ставки уже доступны на матчи после даты старта.</div>
-        {% elif selected_status == 'archive' %}
-        <div class="archive-note">Архивный турнир, только просмотр</div>
-        {% endif %}
-    </section>
-
-    <div class="table-container">
-        {% include "table_content.html" %}
-    </div>
+<div class="table-container">
+    {% include "table_content.html" %}
 </div>
 
 <script>

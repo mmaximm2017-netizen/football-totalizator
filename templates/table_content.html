@@ -1,44 +1,44 @@
 {% if table %}
-<section class="leaderboard-list">
-    {% for row in table %}
-    <div class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
-        <div class="place-box">
-            {% if row.place == 1 %}
-                1
-            {% elif row.place == 2 %}
-                2
-            {% elif row.place == 3 %}
-                3
-            {% else %}
-                {{ row.place }}
-            {% endif %}
-        </div>
-
-        <div class="player-main">
-            <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">
-                {{ row.username }}
-            </a>
-
-            <div class="player-meta">
-                {% if row.shared %}
-                <span class="shared-pill">делят</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="points-box">
-            <span class="points-number">{{ row.points }}</span>
-        </div>
-    </div>
-
-    {% endfor %}
-</section>
+<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 16px;">
+    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 14px;">
+        <thead>
+            <tr style="background: #263238; color: white;">
+                <th style="padding: 12px 8px; text-align: center; width: 50px; border-radius: 12px 0 0 0;">#</th>
+                <th style="padding: 12px 8px; text-align: left;">Игрок</th>
+                <th style="padding: 12px 8px; text-align: center; width: 80px; border-radius: 0 12px 0 0;">Очки</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+            <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}" style="border-bottom: 1px solid #eee;">
+                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 16px;">
+                    <div class="place-box">
+                        {% if row.place == 1 %}🥇
+                        {% elif row.place == 2 %}🥈
+                        {% elif row.place == 3 %}🥉
+                        {% else %}{{ row.place }}
+                        {% endif %}
+                    </div>
+                    {% if row.shared %}
+                    <span class="shared-place" style="font-size: 10px; display: block;">(делят место)</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 14px 8px;">
+                    <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name" style="text-decoration: none; color: inherit;">{{ row.username }}</a>
+                    {% if row.place == 1 %}<span class="leader-badge" style="font-size: 11px; margin-left: 6px;">ЛИДЕР</span>{% endif %}
+                </td>
+                <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 18px;" class="points-number">
+                    {{ row.points }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
-<section class="empty-leaderboard">
-    <div class="empty-icon">🏟️</div>
-    <div class="empty-title">Таблица пока пуста</div>
-    <div class="empty-text">
-        Как только появятся результаты, здесь будет рейтинг участников.
-    </div>
-</section>
+<div class="card" style="text-align: center; padding: 40px;">
+    <p>🏟️</p>
+    <p style="font-size: 18px; font-weight: 600;">Таблица пока пуста</p>
+    <p style="color: #888;">Как только появятся результаты — здесь будет турнирная таблица</p>
+</div>
 {% endif %}
