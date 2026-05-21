@@ -767,6 +767,11 @@
         height: 44px !important;
     }
 
+    body:not(.tournament-wc2026) .match-card-v2 .tournament-logo {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
     body.tournament-wc2026 .match-card-v2:not(.finished) .league-label,
     body.tournament-wc2026 .match-card-v2:not(.finished) .time-label,
     body.tournament-wc2026 .match-card-v2:not(.finished) .deadline-label {
@@ -1891,12 +1896,7 @@
         </div>
 
         <div class="time-label start-time-label">
-            {% if match.league == 'wc2026' %}
-                {% set wc_kickoff = to_msk(match.kickoff_time).split(' (')[0].replace(' МСК', '') %}
-                Начало: {{ wc_kickoff }}
-            {% else %}
-                Начало: {{ to_msk(match.kickoff_time) }}
-            {% endif %}
+            Начало: {{ to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] }}
         </div>
 
     </div>
