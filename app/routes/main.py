@@ -100,8 +100,10 @@ def index():
 
         league = request.args.get('league', 'all')
         tid = request.args.get('tid', type=int)
+        all_tournaments = get_all_tournaments()
+        active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if not tid:
-            tid = get_active_tournament_id()
+            tid = active_tournaments[0]["id"] if active_tournaments else get_active_tournament_id()
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -416,7 +418,8 @@ WHERE id = %s
     finally:
         close_db(conn, cur)
 
-    tournaments = get_all_tournaments()
+    tournaments = all_tournaments
+    active_tournaments = [t for t in tournaments if t.get("is_active")]
     selected_tournament = get_tournament_by_id(tid) if tid else None
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
@@ -429,6 +432,7 @@ WHERE id = %s
         to_msk=cached_to_msk,
         current_filter=league,
         tournaments=tournaments,
+        active_tournaments=active_tournaments,
         current_tournament_id=tid,
         current_tournament_name=current_tournament_name,
     )

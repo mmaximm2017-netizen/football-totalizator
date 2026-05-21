@@ -1,7 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-.admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}.admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}.admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}.admin-match-card{margin:6px 0;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}.admin-match-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.admin-match-main{flex:1;min-width:150px}.admin-match-title{font-size:14px;font-weight:1000;color:#063b73}.admin-match-meta{margin-top:4px;font-size:11px;color:#5d7894;font-weight:700}.admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}.admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}.admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}.admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
+.admin-screen{display:flex;flex-direction:column;gap:14px}
+.admin-nav{display:flex;flex-wrap:wrap;gap:8px}
+.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}
+.admin-nav a.active{background:#0a6cc2;color:#fff}
+.admin-title{font-size:24px;font-weight:1000;color:#063b73}
+.admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}
+.admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}
+.admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}
+.admin-match-card{margin:6px 0;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}
+.admin-match-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-match-main{flex:1;min-width:150px}
+.admin-match-title{font-size:14px;font-weight:1000;color:#063b73}
+.admin-match-meta{margin-top:4px;font-size:11px;color:#5d7894;font-weight:700}
+.admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}
+.admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}
+.admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}
+.admin-btn-amber{background:linear-gradient(135deg,#a97100,#d89a12)}
+.admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
 </style>
 <div class="admin-screen">
     <div class="admin-nav">
@@ -13,18 +30,32 @@
     <div class="admin-title">Турниры</div>
 
     <div class="admin-card">
-        <div class="admin-card-header">Турниры</div>
+        <div class="admin-card-header">Управление турнирами</div>
         <div class="admin-subsection-title">2.1 • Список турниров</div>
         {% for t in tournaments %}
         <div class="admin-match-card">
             <div class="admin-match-row">
                 <div class="admin-match-main">
-                    <div class="admin-match-title">{{ t.name }} {% if t.is_active %}<span style="color:#7CFF8A;">●</span>{% endif %}</div>
+                    <div class="admin-match-title">
+                        {{ t.name }}
+                        {% if t.is_active %}
+                        <span style="color:#2e7d32;">● Активный</span>
+                        {% else %}
+                        <span style="color:#6b7f92;">📦 Архив</span>
+                        {% endif %}
+                    </div>
                     <div class="admin-match-meta">Старт: {{ t.start_date or '—' }}</div>
                 </div>
-                {% if not t.is_active %}
+
+                {% if t.is_active %}
+                <form method="post" action="{{ url_for('admin.archive_tournament', tid=t.id) }}" onsubmit="return confirm('Архивировать турнир {{ t.name }}?')" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="admin-btn admin-btn-amber admin-btn-small">📦 Архивировать</button>
+                </form>
+                {% else %}
                 <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="tid" value="{{ t.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="tid" value="{{ t.id }}">
                     <button type="submit" class="admin-btn admin-btn-red admin-btn-small">Удалить</button>
                 </form>
                 {% endif %}
@@ -36,7 +67,7 @@
     <div class="admin-card">
         <div class="admin-card-header">Начать новый турнир / Завершить турнир</div>
         <div class="admin-subsection-title">2.2 • Создание турнира</div>
-        <form method="post" action="/admin/new_tournament" onsubmit="return confirm('Создать новый турнир? Текущая таблица уйдёт в архив, очки обнулятся.')">
+        <form method="post" action="/admin/new_tournament">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label>Название турнира</label><input type="text" name="name" value="ЧМ-2026" required>
             <label>Дата старта</label><input type="date" name="start_date" value="2026-06-11" required>
@@ -45,4 +76,3 @@
     </div>
 </div>
 {% endblock %}
-

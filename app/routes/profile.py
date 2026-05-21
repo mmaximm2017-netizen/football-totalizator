@@ -65,7 +65,12 @@ def profile():
                 return redirect(url_for('auth.login'))
             username = row[0]
 
-        tournament_id = request.args.get('tid', type=int) or get_active_tournament_id()
+        all_tournaments = get_all_tournaments()
+        active_tournaments = [t for t in all_tournaments if t.get("is_active")]
+
+        tournament_id = request.args.get('tid', type=int)
+        if not tournament_id:
+            tournament_id = active_tournaments[0]["id"] if active_tournaments else get_active_tournament_id()
         if not tournament_id:
             flash("Активный турнир не найден", "error")
             return redirect(url_for('table.table'))
@@ -162,7 +167,7 @@ def profile():
     finally:
         close_db(conn, cur)
 
-    tournaments = get_all_tournaments()
+    tournaments = all_tournaments
     selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
@@ -177,6 +182,7 @@ def profile():
         get_flag=get_flag,
         get_club_logo=get_club_logo,
         tournaments=tournaments,
+        active_tournaments=active_tournaments,
         current_tournament_id=tournament_id,
         current_tournament_name=current_tournament_name,
     )

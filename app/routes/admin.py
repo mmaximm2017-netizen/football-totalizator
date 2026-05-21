@@ -19,7 +19,6 @@ from markupsafe import escape
 
 from app.db import get_db, close_db
 from app.services.tournament_service import (
-    ensure_single_active_tournament,
     get_active_tournament_id,
 )
 from app.utils import (
@@ -1379,14 +1378,6 @@ def admin_new_tournament():
     cur = conn.cursor()
 
     try:
-        single_active = ensure_single_active_tournament()
-        if not single_active.get("ok"):
-            flash(
-                "���������� ��������� �������� ��������. ������� ��������� active-state.",
-                "error",
-            )
-            return redirect(url_for('admin.admin'))
-
         cur.execute("""
             SELECT id
             FROM tournaments
@@ -1407,7 +1398,7 @@ def admin_new_tournament():
                 is_active,
                 start_date
             )
-            VALUES (%s, 0, %s)
+            VALUES (%s, 1, %s)
         """, (
             name,
             start_date
@@ -1430,6 +1421,37 @@ def admin_new_tournament():
         close_db(conn, cur)
 
     return redirect(url_for('admin.admin'))
+
+
+@admin_bp.route('/archive_tournament/<int:tid>', methods=['POST'])
+@admin_required
+def archive_tournament(tid):
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            UPDATE tournaments
+            SET is_active = 0
+            WHERE id = %s
+            """,
+            (tid,),
+        )
+
+        if cur.rowcount == 0:
+            flash("Турнир не найден", "error")
+            return redirect(url_for('admin.admin_tournaments'))
+
+        conn.commit()
+        flash(f"Турнир #{tid} отправлен в архив", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for('admin.admin_tournaments'))
 
 
 # =========================================================

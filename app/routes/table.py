@@ -35,6 +35,7 @@ def table():
             }
             for r in cur.fetchall()
         ]
+        active_tournaments = [t for t in tournaments if t['is_active']]
 
         today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
 
@@ -66,9 +67,11 @@ def table():
 
         tid = request.args.get('tid', type=int)
         if not tid:
-            current = next((t for t in tournaments if t['status'] == 'current'), None)
+            current = next((t for t in active_tournaments if t.get('status') == 'current'), None)
             if current:
                 tid = current['id']
+            elif active_tournaments:
+                tid = active_tournaments[0]['id']
             elif tournaments:
                 tid = tournaments[0]['id']
             else:
@@ -76,6 +79,7 @@ def table():
                     'table.html',
                     table=[],
                     tournaments=[],
+                    active_tournaments=[],
                     selected_tid=None,
                     selected_name="Нет турниров",
                     selected_is_active=False,
@@ -106,6 +110,7 @@ def table():
         'table.html',
         table=table_data,
         tournaments=tournaments,
+        active_tournaments=active_tournaments,
         selected_tid=tid,
         selected_name=selected_name,
         selected_is_active=selected_is_active,

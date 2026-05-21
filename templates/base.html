@@ -809,7 +809,7 @@ body {
 <body>
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
-    {% set tournament_items = tournaments|default([]) %}
+    {% set tournament_items = active_tournaments|default(tournaments|default([])) %}
 
     <div id="app-splash">
         <div class="splash-inner">
