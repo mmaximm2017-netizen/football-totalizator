@@ -56,7 +56,40 @@ def parse_optional_int(value):
 def get_tournament_id_by_name(cur, name):
     cur.execute("SELECT id FROM tournaments WHERE name = %s ORDER BY id DESC LIMIT 1", (name,))
     row = cur.fetchone()
-    return row[0] if row else None
+    if row:
+        return row[0]
+
+    # Fallback for legacy mojibake/default names in old DB snapshots.
+    if name == "ЧМ-2026":
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE name ILIKE '%2026%'
+            ORDER BY is_active DESC, id DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+
+    if name == "Кубок Матч-премьер":
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE name <> 'ЧМ-2026'
+            ORDER BY
+                CASE WHEN name ILIKE '%матч%' THEN 0 ELSE 1 END,
+                is_active DESC,
+                id DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+
+    return None
 
 def create_match_from_understat(match, prefix, league_tag):
     goals = match.get('goals', {}) or {}

@@ -295,6 +295,49 @@ def init_db():
             """)
 
         # =====================================================
+        # BACKFILL MATCH TOURNAMENT LINKS
+        # =====================================================
+
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE name = 'Кубок Матч-премьер'
+               OR (name <> 'ЧМ-2026' AND name IS NOT NULL)
+            ORDER BY
+                CASE WHEN name = 'Кубок Матч-премьер' THEN 0 ELSE 1 END,
+                is_active DESC,
+                id DESC
+            LIMIT 1
+            """
+        )
+        cup_row = cur.fetchone()
+        cur.execute("SELECT id FROM tournaments WHERE name = 'ЧМ-2026' ORDER BY id DESC LIMIT 1")
+        wc_row = cur.fetchone()
+
+        if cup_row:
+            cur.execute(
+                """
+                UPDATE matches
+                SET tournament_id = %s
+                WHERE tournament_id IS NULL
+                  AND (league != 'wc2026' OR league IS NULL)
+                """,
+                (cup_row[0],),
+            )
+
+        if wc_row:
+            cur.execute(
+                """
+                UPDATE matches
+                SET tournament_id = %s
+                WHERE tournament_id IS NULL
+                  AND league = 'wc2026'
+                """,
+                (wc_row[0],),
+            )
+
+        # =====================================================
         # ADMIN USER
         # =====================================================
 

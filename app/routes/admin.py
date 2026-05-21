@@ -282,6 +282,7 @@ def _prepare_admin_view_data(cur):
             'is_active': t[2],
             'start_date': t[3]
         })
+    active_tournaments = [t for t in tournaments if t.get('is_active')]
 
     cur.execute("""
         SELECT id, username, is_admin, last_seen
@@ -310,7 +311,8 @@ def _prepare_admin_view_data(cur):
         'users': users,
         'title_users': title_users,
         'allowed_titles': ALLOWED_TITLES,
-        'tournaments': tournaments
+        'tournaments': tournaments,
+        'active_tournaments': active_tournaments,
     }
 
 
@@ -437,6 +439,7 @@ def admin():
                     home = request.form['home_team'].strip()
                     away = request.form['away_team'].strip()
                     league = request.form.get('league', 'other').strip()
+                    tournament_id = request.form.get('tournament_id', type=int)
 
                     match_date = request.form['match_date']
                     match_time = request.form['match_time']
@@ -468,6 +471,10 @@ def admin():
                         flash("����� ���� ��� ����������", "error")
                         return redirect(url_for('admin.admin'))
 
+                    if not tournament_id:
+                        flash("Выберите турнир для матча", "error")
+                        return redirect(url_for('admin.admin_matches'))
+
                     cur.execute("""
                         INSERT INTO matches (
                             home_team,
@@ -475,15 +482,17 @@ def admin():
                             kickoff_time,
                             deadline,
                             status,
-                            league
+                            league,
+                            tournament_id
                         )
-                        VALUES (%s, %s, %s, %s, 'SCHEDULED', %s)
+                        VALUES (%s, %s, %s, %s, 'SCHEDULED', %s, %s)
                     """, (
                         home,
                         away,
                         kickoff_utc,
                         deadline_utc,
-                        league
+                        league,
+                        tournament_id
                     ))
 
                     conn.commit()

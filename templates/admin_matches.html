@@ -89,7 +89,14 @@
                 <div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date"></div>
                 <div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time"></div>
             </div>
-            <label>Турнир</label>
+            <label>Турнир (для очков/таблицы)</label>
+            <select name="tournament_id" required>
+                <option value="">-- Выберите турнир --</option>
+                {% for t in active_tournaments %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+            <label>Лига/источник матча</label>
             <select name="league">
                 <option value="other">Другое</option><option value="wc2026">ЧМ-2026</option><option value="rpl">РПЛ</option><option value="rcup">Кубок России</option>
             </select>
