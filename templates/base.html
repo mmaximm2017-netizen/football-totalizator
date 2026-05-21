@@ -807,7 +807,7 @@ body {
 </head>
 
 <body>
-    {% set current_tid = current_tournament_id|default(selected_tid|default(request.args.get('tid', type=int))) %}
+    {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set tournament_items = tournaments|default([]) %}
 

@@ -79,6 +79,8 @@ def table():
                     selected_tid=None,
                     selected_name="Нет турниров",
                     selected_is_active=False,
+                    current_tournament_id=None,
+                    current_tournament_name="Нет турниров",
                 )
 
         cur.execute(
@@ -109,4 +111,6 @@ def table():
         selected_is_active=selected_is_active,
         selected_start_date=selected_start_date,
         selected_status=selected_status,
+        current_tournament_id=tid,
+        current_tournament_name=selected_name,
     )
