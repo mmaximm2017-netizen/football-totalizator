@@ -213,7 +213,8 @@ body {
         .header-inner {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            gap: 10px;
         }
 
         .app-title {
@@ -239,6 +240,26 @@ body {
             margin-top: 6px;
             color: #0077c8;
             font-weight: 800;
+        }
+
+        .tournament-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,119,200,0.18);
+            background: rgba(255,255,255,0.72);
+            color: #063b73;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tournament-trigger:focus-visible {
+            outline: 2px solid rgba(0,119,200,0.44);
+            outline-offset: 2px;
         }
 
         .container {
@@ -566,6 +587,108 @@ body {
     stroke-width: 2.2;
 }
 
+        .tournament-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: rgba(6,59,115,0.28);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+        }
+
+        .tournament-sheet-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tournament-sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100001;
+            background: rgba(255,255,255,0.96);
+            border-radius: 20px 20px 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+            box-shadow: 0 -16px 34px rgba(0,78,140,0.16);
+        }
+
+        .tournament-sheet.open {
+            transform: translateY(0);
+        }
+
+        .tournament-sheet-handle {
+            width: 42px;
+            height: 5px;
+            border-radius: 999px;
+            margin: 0 auto 10px;
+            background: rgba(0,119,200,0.22);
+        }
+
+        .tournament-sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #063b73;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .tournament-sheet-close {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(0,119,200,0.10);
+            color: #0077c8;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .tournament-sheet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: min(52vh, 420px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tournament-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,119,200,0.10);
+            background: rgba(255,255,255,0.84);
+            text-decoration: none;
+            color: #063b73;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .tournament-item.active {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-color: rgba(21,101,192,0.24);
+        }
+
+        .active-badge {
+            font-size: 10px;
+            background: #4caf50;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
         /* TYPOGRAPHY SYSTEM: MONTSERRAT */
         h1, h2, h3, .card-header, .month-header span, .btn {
             font-weight: 700;
@@ -684,6 +807,9 @@ body {
 </head>
 
 <body>
+    {% set current_tid = current_tournament_id|default(selected_tid|default(request.args.get('tid', type=int))) %}
+    {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
+    {% set tournament_items = tournaments|default([]) %}
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -715,6 +841,12 @@ body {
                     </div>
                     {% endif %}
                 </div>
+
+                {% if tournament_items %}
+                <button type="button" class="tournament-trigger" data-tournament-sheet-open>
+                    🏆 {{ current_t_name }} ▼
+                </button>
+                {% endif %}
             </div>
         </header>
 
@@ -738,7 +870,7 @@ body {
     <nav class="bottom-nav">
 
         <a
-            href="/"
+            href="/{% if current_tid %}?tid={{ current_tid }}{% endif %}"
             class="{% if request.path == '/' %}active{% endif %}"
         >
             <img src="/static/icons/matches.svg" class="nav-icon">
@@ -746,7 +878,7 @@ body {
         </a>
 
         <a
-            href="/table"
+            href="/table{% if current_tid %}?tid={{ current_tid }}{% endif %}"
             class="{% if request.path == '/table' %}active{% endif %}"
         >
             <img src="/static/icons/table.svg" class="nav-icon">
@@ -763,7 +895,7 @@ body {
         </a>
         {% else %}
         <a
-            href="/profile"
+            href="/profile{% if current_tid %}?tid={{ current_tid }}{% endif %}"
             class="{% if request.path == '/profile' %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
@@ -780,6 +912,25 @@ body {
         </form>
 
     </nav>
+    {% endif %}
+
+    {% if tournament_items %}
+    <div class="tournament-sheet-overlay" data-tournament-sheet-overlay></div>
+    <div class="tournament-sheet" data-tournament-sheet-panel aria-hidden="true">
+        <div class="tournament-sheet-handle"></div>
+        <div class="tournament-sheet-header">
+            <span>Выбрать турнир</span>
+            <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="Закрыть выбор турнира">✕</button>
+        </div>
+        <div class="tournament-sheet-list">
+            {% for t in tournament_items %}
+            <a href="/?tid={{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+                <span>{{ t.name }}</span>
+                {% if t.is_active %}<span class="active-badge">Активный</span>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
     {% endif %}
 
     <script>
@@ -812,6 +963,38 @@ body {
 
         attachCsrfToPostForms();
         window.addEventListener('load', hideSplash);
+
+        const tournamentTrigger = document.querySelector('[data-tournament-sheet-open]');
+        const tournamentOverlay = document.querySelector('[data-tournament-sheet-overlay]');
+        const tournamentPanel = document.querySelector('[data-tournament-sheet-panel]');
+        const tournamentClose = document.querySelector('[data-tournament-sheet-close]');
+
+        function openTournamentSheet() {
+            if (!tournamentOverlay || !tournamentPanel) return;
+            tournamentOverlay.classList.add('open');
+            tournamentPanel.classList.add('open');
+            tournamentPanel.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeTournamentSheet() {
+            if (!tournamentOverlay || !tournamentPanel) return;
+            tournamentOverlay.classList.remove('open');
+            tournamentPanel.classList.remove('open');
+            tournamentPanel.setAttribute('aria-hidden', 'true');
+        }
+
+        if (tournamentTrigger) {
+            tournamentTrigger.addEventListener('click', openTournamentSheet);
+        }
+        if (tournamentClose) {
+            tournamentClose.addEventListener('click', closeTournamentSheet);
+        }
+        if (tournamentOverlay) {
+            tournamentOverlay.addEventListener('click', closeTournamentSheet);
+        }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') closeTournamentSheet();
+        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {

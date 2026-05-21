@@ -601,7 +601,7 @@
 
     </section>
 
-    <a href="/" class="back-btn">
+    <a href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}" class="back-btn">
         ← Вернуться к матчам
     </a>
 

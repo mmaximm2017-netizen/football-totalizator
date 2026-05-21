@@ -52,6 +52,12 @@ def parse_optional_int(value):
     except (TypeError, ValueError):
         return None
 
+
+def get_tournament_id_by_name(cur, name):
+    cur.execute("SELECT id FROM tournaments WHERE name = %s ORDER BY id DESC LIMIT 1", (name,))
+    row = cur.fetchone()
+    return row[0] if row else None
+
 def create_match_from_understat(match, prefix, league_tag):
     goals = match.get('goals', {}) or {}
     home_goal = parse_optional_int(goals.get('h'))
@@ -156,6 +162,9 @@ def update_matches():
     if not matches_data: return
     conn = get_db(); cur = conn.cursor()
     try:
+        cup_tournament_id = get_tournament_id_by_name(cur, "Кубок Матч-премьер")
+        wc_tournament_id = get_tournament_id_by_name(cur, "ЧМ-2026")
+
         for match in matches_data:
             api_id = match['id']
             raw_home = match.get('homeTeam', {}).get('name') or match.get('home_team', 'Unknown')
@@ -163,6 +172,7 @@ def update_matches():
             home_team = translate_name(raw_home); away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', '')).replace('Z', '')
             status = match.get('status', 'SCHEDULED'); league = match.get('league', 'other')
+            tournament_id = wc_tournament_id if league == 'wc2026' else cup_tournament_id
             home_score = away_score = None
             if status == 'FINISHED':
                 score = match.get('score', {}); ft = score.get('fullTime') or score.get('extraTime') or {}
@@ -188,9 +198,9 @@ def update_matches():
             
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
             if not cur.fetchone():
-                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
-                    kickoff_utc, deadline_utc, status, home_score, away_score, league))
+                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
+                    kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id))
             else:
                 cur.execute("SELECT status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
                 existing_match = cur.fetchone()
@@ -223,11 +233,11 @@ def update_matches():
                     continue
                 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
-                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
-                        (status, home_score, away_score, kickoff_utc, deadline_utc, league, str(api_id)))
+                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
+                        (status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
                 else:
-                    cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s WHERE api_match_id=%s""",
-                        (status, kickoff_utc, deadline_utc, league, str(api_id)))
+                    cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
+                        (status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
         conn.commit()
     except Exception:
         conn.rollback()

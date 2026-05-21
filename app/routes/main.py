@@ -26,6 +26,11 @@ from app.utils import (
     format_month_label,
 )
 from app.config import START_DATE
+from app.services.tournament_service import (
+    get_active_tournament_id,
+    get_all_tournaments,
+    get_tournament_by_id,
+)
 
 main_bp = Blueprint('main', __name__)
 
@@ -94,6 +99,9 @@ def index():
     try:
 
         league = request.args.get('league', 'all')
+        tid = request.args.get('tid', type=int)
+        if not tid:
+            tid = get_active_tournament_id()
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -142,12 +150,15 @@ SELECT
     kickoff_time,
     deadline,
     status,
-    (
-        SELECT t.id
-        FROM tournaments t
-        WHERE t.start_date::date <= DATE(matches.kickoff_time)
-        ORDER BY t.start_date DESC, t.id DESC
-        LIMIT 1
+    COALESCE(
+        tournament_id,
+        (
+            SELECT t.id
+            FROM tournaments t
+            WHERE t.start_date::date <= DATE(matches.kickoff_time)
+            ORDER BY t.start_date DESC, t.id DESC
+            LIMIT 1
+        )
     ) AS tournament_id
 FROM matches
 WHERE id = %s
@@ -162,7 +173,12 @@ WHERE id = %s
                 flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
 
-            tid = match[6]
+            match_tid = match[6] or tid
+            if not match_tid:
+                if is_ajax_request():
+                    return ajax_error("Турнир для матча не определён", 400)
+                flash("Турнир для матча не определён", "error")
+                return redirect(url_for('main.index', league=league, tid=tid))
 
             if not is_before_deadline({
                 "deadline": match[4]
@@ -179,7 +195,7 @@ WHERE id = %s
             """, (
                 session['user_id'],
                 match_id,
-                tid
+                match_tid
             ))
 
             exists = cur.fetchone()
@@ -194,22 +210,22 @@ WHERE id = %s
                     a,
                     session['user_id'],
                     match_id,
-                    tid
+                    match_tid
                 ))
             else:
                 cur.execute("""
                     INSERT INTO predictions (
                         user_id, match_id, tournament_id,
-                        home_goals, away_goals
-                    )
-                    VALUES (%s,%s,%s,%s,%s)
-                """, (
-                    session['user_id'],
-                    match_id,
-                    tid,
-                    h,
-                    a
-                ))
+                    home_goals, away_goals
+                )
+                VALUES (%s,%s,%s,%s,%s)
+            """, (
+                session['user_id'],
+                match_id,
+                match_tid,
+                h,
+                a
+            ))
 
             conn.commit()
 
@@ -225,7 +241,7 @@ WHERE id = %s
 
             flash("Ставка сохранена", "success")
 
-            return redirect(url_for('main.index', league=league))
+            return redirect(url_for('main.index', league=league, tid=tid))
 
         # =================================================
         # LOAD MATCHES
@@ -234,13 +250,14 @@ WHERE id = %s
         cur.execute("""
             SELECT id, home_team, away_team,
                    kickoff_time, deadline,
-                   status, league,
+                   status, league, tournament_id,
                    home_score, away_score
             FROM matches
             WHERE status IN ('SCHEDULED','TIMED','FINISHED')
             AND kickoff_time >= %s
+            AND (%s IS NULL OR tournament_id = %s OR tournament_id IS NULL)
             ORDER BY kickoff_time
-        """, (start,))
+        """, (start, tid, tid))
 
         rows = cur.fetchall()
 
@@ -256,8 +273,9 @@ WHERE id = %s
                 "deadline": m[4],
                 "status": m[5],
                 "league": m[6],
-                "home_score": m[7],
-                "away_score": m[8],
+                "tournament_id": m[7],
+                "home_score": m[8],
+                "away_score": m[9],
             })
 
         # =================================================
@@ -280,9 +298,11 @@ WHERE id = %s
                 FROM predictions p
                 WHERE p.user_id = %s
                   AND p.match_id = ANY(%s)
+                  AND p.tournament_id = %s
             """, (
                 session['user_id'],
-                match_ids
+                match_ids,
+                tid
             ))
 
             for r in cur.fetchall():
@@ -396,6 +416,10 @@ WHERE id = %s
     finally:
         close_db(conn, cur)
 
+    tournaments = get_all_tournaments()
+    selected_tournament = get_tournament_by_id(tid) if tid else None
+    current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+
     return render_template(
         "index.html",
         months=grouped_months,
@@ -404,6 +428,9 @@ WHERE id = %s
         get_club_logo=get_club_logo,
         to_msk=cached_to_msk,
         current_filter=league,
+        tournaments=tournaments,
+        current_tournament_id=tid,
+        current_tournament_name=current_tournament_name,
     )
 
 

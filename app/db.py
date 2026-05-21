@@ -169,8 +169,23 @@ def init_db():
             status TEXT DEFAULT 'SCHEDULED',
             home_score INTEGER,
             away_score INTEGER,
-            league TEXT DEFAULT 'other'
+            league TEXT DEFAULT 'other',
+            tournament_id INTEGER REFERENCES tournaments(id)
         );
+        """)
+
+        cur.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='tournament_id'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id);
+            END IF;
+        END $$;
         """)
 
         cur.execute("""
@@ -218,6 +233,7 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_kickoff ON matches(kickoff_time);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_league ON matches(league);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")

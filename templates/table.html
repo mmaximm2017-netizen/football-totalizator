@@ -586,7 +586,7 @@
             </div>
 
             <div class="player-main">
-                <a href="/profile?username={{ row.username }}" class="player-name">
+                <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">
                     {{ row.username }}
                 </a>
 
