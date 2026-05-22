@@ -150,6 +150,232 @@
         color: #888;
         display: block;
     }
+
+    /* WC-2026 premium table */
+    body.tournament-wc2026 .table-shell {
+        background: rgba(10, 20, 40, 0.6);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(216, 180, 90, 0.3);
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    body.tournament-wc2026 .standings-table {
+        background: rgba(10, 20, 40, 0.6);
+    }
+
+    body.tournament-wc2026 .standings-table thead tr {
+        background: #0d1f3a;
+        border-bottom: 2px solid #b89a3e;
+    }
+
+    body.tournament-wc2026 .standings-table th {
+        color: #d8b45a !important;
+        background: #0d1f3a !important;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 16px 12px;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr {
+        border-bottom: 1px solid rgba(216, 180, 90, 0.2);
+        transition: background 0.2s ease;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr:hover {
+        background: rgba(216, 180, 90, 0.1);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 {
+        background: linear-gradient(135deg, rgba(216, 180, 90, 0.25), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #d8b45a;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 {
+        background: linear-gradient(135deg, rgba(192, 192, 192, 0.2), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #c0c0c0;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 {
+        background: linear-gradient(135deg, rgba(205, 127, 50, 0.2), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #cd7f32;
+    }
+
+    body.tournament-wc2026 .standings-table td {
+        padding: 14px 12px;
+        color: #ffffff;
+        font-size: 15px;
+    }
+
+    body.tournament-wc2026 .standings-table td.place-cell {
+        font-weight: 700;
+        font-size: 18px;
+        width: 60px;
+        text-align: center;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell {
+        font-weight: 600;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell a {
+        color: #ffffff;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell a:hover {
+        color: #d8b45a;
+    }
+
+    body.tournament-wc2026 .standings-table td.points-cell {
+        font-weight: 800;
+        font-size: 22px;
+        text-align: center;
+        width: 80px;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-1 td.points-cell {
+        color: #d8b45a;
+        text-shadow: 0 0 6px rgba(216, 180, 90, 0.4);
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-2 td.points-cell {
+        color: #c0c0c0;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-3 td.points-cell {
+        color: #cd7f32;
+    }
+
+    body.tournament-wc2026 .standings-table .place-emoji {
+        font-size: 24px;
+        display: inline-block;
+    }
+
+    body.tournament-wc2026 .empty-table {
+        background: rgba(10, 20, 40, 0.6);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        color: #ffffff;
+        border: 1px solid rgba(216, 180, 90, 0.24);
+    }
+
+    /* Cup premium light table */
+    body.tournament-cup .table-shell {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(42, 168, 255, 0.3);
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    body.tournament-cup .standings-table {
+        background: rgba(255, 255, 255, 0.7);
+    }
+
+    body.tournament-cup .standings-table thead tr {
+        background: #263238;
+    }
+
+    body.tournament-cup .standings-table th {
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 16px 12px;
+    }
+
+    body.tournament-cup .standings-table tbody tr {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        transition: background 0.2s ease;
+    }
+
+    body.tournament-cup .standings-table tbody tr:hover {
+        background: rgba(42, 168, 255, 0.08);
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-1 {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #ffd700;
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-2 {
+        background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #c0c0c0;
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-3 {
+        background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #cd7f32;
+    }
+
+    body.tournament-cup .standings-table td {
+        padding: 14px 12px;
+        color: #1a1a1a;
+        font-size: 15px;
+    }
+
+    body.tournament-cup .standings-table td.place-cell {
+        font-weight: 700;
+        font-size: 18px;
+        width: 60px;
+        text-align: center;
+    }
+
+    body.tournament-cup .standings-table td.player-cell {
+        font-weight: 600;
+    }
+
+    body.tournament-cup .standings-table td.player-cell a {
+        color: #1a1a1a;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    body.tournament-cup .standings-table td.player-cell a:hover {
+        color: #2aa8ff;
+    }
+
+    body.tournament-cup .standings-table td.points-cell {
+        font-weight: 800;
+        font-size: 22px;
+        text-align: center;
+        width: 80px;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.points-cell {
+        color: #c9a03d;
+    }
+
+    body.tournament-cup .standings-table tr.top-2 td.points-cell {
+        color: #8a8a8a;
+    }
+
+    body.tournament-cup .standings-table tr.top-3 td.points-cell {
+        color: #cd7f32;
+    }
+
+    body.tournament-cup .standings-table .place-emoji {
+        font-size: 24px;
+        display: inline-block;
+    }
+
+    body.tournament-cup .empty-table {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        color: #1a1a1a;
+    }
 </style>
 
 {% if table %}
@@ -165,20 +391,20 @@
         <tbody>
             {% for row in table %}
             <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
-                <td>
+                <td class="place-cell">
                     <div class="place-box">
-                        {% if row.place == 1 %}🥇
-                        {% elif row.place == 2 %}🥈
-                        {% elif row.place == 3 %}🥉
+                        {% if row.place == 1 %}<span class="place-emoji">🥇</span>
+                        {% elif row.place == 2 %}<span class="place-emoji">🥈</span>
+                        {% elif row.place == 3 %}<span class="place-emoji">🥉</span>
                         {% else %}{{ row.place }}{% endif %}
                     </div>
                     {% if row.shared %}<span class="shared-place">делят место</span>{% endif %}
                 </td>
-                <td>
+                <td class="player-cell">
                     <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
                     {% if row.place == 1 %}<span class="leader-badge">ЛИДЕР</span>{% endif %}
                 </td>
-                <td>
+                <td class="points-cell">
                     <span class="points-number">{{ row.points }}</span>
                 </td>
             </tr>
@@ -187,7 +413,7 @@
     </table>
 </div>
 {% else %}
-<div class="card" style="text-align: center; padding: 40px;">
+<div class="card empty-table" style="text-align: center; padding: 40px;">
     <p>🏟️</p>
     <p style="font-size: 18px; font-weight: 600;">Таблица пока пуста</p>
     <p style="color: #888;">Как только появятся результаты — здесь будет турнирная таблица</p>
