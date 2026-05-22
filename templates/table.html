@@ -11,9 +11,10 @@
 </div>
 {% else %}
 <div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
-    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="MatchTV">
+    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.9;" alt="MatchTV">
     <div style="text-align: left;">
-        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица кубка Матч-Премьер</div>
+        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица</div>
+        <div style="font-size: 16px; font-weight: 600; color: #1a1a2e;">кубка Матч-Премьер</div>
     </div>
 </div>
 {% endif %}
@@ -75,9 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (wcHeader) {
                     wcHeader.outerHTML = `
 <div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
-    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="MatchTV">
+    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.9;" alt="MatchTV">
     <div style="text-align: left;">
-        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица кубка Матч-Премьер</div>
+        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица</div>
+        <div style="font-size: 16px; font-weight: 600; color: #1a1a2e;">кубка Матч-Премьер</div>
     </div>
 </div>`;
                 }
