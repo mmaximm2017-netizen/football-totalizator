@@ -24,13 +24,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/table?tid=' + encodeURIComponent(tid) + '&ajax=1', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-            const html = await response.text();
-            tableContainer.innerHTML = html;
-            history.pushState({ tid: tid }, '', '/table?tid=' + encodeURIComponent(tid));
+
+            const data = await response.json();
+            tableContainer.innerHTML = data.html || '';
+
+            const body = document.body;
+            if (body) {
+                if (data.tournament_key === 'wc2026') {
+                    body.classList.remove('tournament-cup');
+                    body.classList.add('tournament-wc2026');
+                } else {
+                    body.classList.remove('tournament-wc2026');
+                    body.classList.add('tournament-cup');
+                }
+            }
+
+            const trigger = document.querySelector('.tournament-trigger');
+            if (trigger && data.tournament_name) {
+                trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
+            }
+
+            const nextTid = data.tid || tid;
+            history.pushState({ tid: nextTid }, '', '/table?tid=' + encodeURIComponent(nextTid));
 
             document.querySelectorAll('.tournament-item').forEach(function(item) {
                 const href = item.getAttribute('href') || '';
-                item.classList.toggle('active', href.includes('tid=' + tid));
+                item.classList.toggle('active', href.includes('tid=' + nextTid));
             });
         } catch (error) {
             console.error('Ошибка загрузки таблицы:', error);

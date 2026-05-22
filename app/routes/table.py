@@ -3,7 +3,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, jsonify, render_template, request
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
@@ -145,10 +145,33 @@ def table():
     table_data = get_tournament_ranking(tid)
 
     is_ajax = request.args.get('ajax') == '1'
-    template_name = 'table_content.html' if is_ajax else 'table.html'
+
+    if is_ajax:
+        html = render_template(
+            'table_content.html',
+            table=table_data,
+            tournaments=tournaments,
+            active_tournaments=active_tournaments,
+            selected_tid=tid,
+            selected_name=selected_name,
+            selected_is_active=selected_is_active,
+            selected_start_date=selected_start_date,
+            selected_status=selected_status,
+            current_tournament_id=tid,
+            current_tournament_name=selected_name,
+        )
+        tournament_key = 'wc2026' if selected_name == 'ЧМ-2026' else 'cup'
+        return jsonify(
+            {
+                'html': html,
+                'tournament_key': tournament_key,
+                'tournament_name': selected_name,
+                'tid': tid,
+            }
+        )
 
     return render_template(
-        template_name,
+        'table.html',
         table=table_data,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
