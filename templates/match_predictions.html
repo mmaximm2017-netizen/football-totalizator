@@ -242,6 +242,11 @@
         font-weight: 1000;
     }
 
+    .points-pill.zero {
+        background: rgba(93,120,148,0.12);
+        color: #5d7894;
+    }
+
     .back-link {
         display: inline-flex;
         align-items: center;
@@ -408,7 +413,7 @@
 
         {% for p in predictions %}
 
-        <div class="prediction-row">
+        <div class="prediction-row" data-points="{{ p.points or 0 }}">
 
             <div class="prediction-user">
                 <div class="prediction-name">
