@@ -1794,6 +1794,29 @@
             padding-bottom: 0;
         }
     }
+
+    /* ПРИНУДИТЕЛЬНЫЕ стили для Кубка мира в ЧМ-2026 — НЕ УДАЛЯТЬ! */
+    body.tournament-wc2026 .match-card-v2 .wc-trophy-bg {
+        width: 95% !important;
+        height: 95% !important;
+        top: 53% !important;
+        left: 50% !important;
+        transform: translate(-50%, -53%) !important;
+        opacity: 0.21 !important;
+        background-image: url('/static/clubs/pngegg.png') !important;
+        background-size: contain !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        position: absolute !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .save-btn-v2,
+    body.tournament-wc2026 .match-card-v2 .score-input-row {
+        position: relative !important;
+        z-index: 3 !important;
+    }
 </style>
 
 <script>
