@@ -3,13 +3,10 @@
 
 {% if current_tournament_name == 'ЧМ-2026' %}
 <div style="text-align: center; margin-bottom: 16px;">
-    <div style="color: #d8b45a; font-size: 20px; font-weight: 700;">Турнирная таблица</div>
-    <div style="color: #d8b45a; font-size: 16px; font-weight: 600;">чемпионата мира</div>
+    <div id="standings-title" style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица Чемпионата мира 2026</div>
 </div>
 {% else %}
-<div style="text-align: center; margin-bottom: 16px;">
-    <div style="font-size: 22px; font-weight: 700; color: #1a1a2e;">Турнирная таблица</div>
-</div>
+<h2 id="standings-title" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>
 {% endif %}
 
 <div class="table-container">
@@ -51,14 +48,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
             }
 
-            const titleBlock = document.querySelector('h2');
+            const titleBlock = document.getElementById('standings-title');
             if (titleBlock) {
                 if (data.tournament_key === 'wc2026') {
-                    titleBlock.textContent = '🏆 Турнирная таблица чемпионата мира';
-                    titleBlock.style.color = '#d8b45a';
+                    titleBlock.textContent = 'Турнирная таблица Чемпионата мира 2026';
+                    titleBlock.style.color = '#ffffff';
+                    titleBlock.style.fontSize = '20px';
+                    titleBlock.style.fontWeight = '700';
+                    titleBlock.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
                 } else {
                     titleBlock.textContent = '🏆 Турнирная таблица';
                     titleBlock.style.color = '';
+                    titleBlock.style.fontSize = '';
+                    titleBlock.style.fontWeight = '';
+                    titleBlock.style.textShadow = '';
                 }
             }
 
