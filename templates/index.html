@@ -745,8 +745,14 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 40%;
-        background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08), transparent);
+        bottom: 0;
+        background:
+            radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08), transparent 52%),
+            url('/static/clubs/pngegg.png');
+        background-repeat: no-repeat, no-repeat;
+        background-position: top center, center;
+        background-size: 100% 52%, contain;
+        opacity: 0.42;
         pointer-events: none;
         border-radius: inherit;
         z-index: 0;
@@ -2321,9 +2327,10 @@ document.addEventListener('DOMContentLoaded', function () {
         sheetContent.innerHTML = '<div class="bets-sheet-loading">Загружаем ставки...</div>';
     }
 
-    function compactPointsText(rawText) {
+    function compactPointsText(rawText, fallbackValue) {
+        const fallback = Number(fallbackValue);
         const match = String(rawText || '').match(/-?\d+/);
-        const points = match ? Number(match[0]) : 0;
+        const points = match ? Number(match[0]) : (Number.isFinite(fallback) ? fallback : 0);
 
         return points > 0 ? '+' + points : '0';
     }
@@ -2362,7 +2369,10 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(function (row) {
             const name = row.querySelector('.prediction-name')?.textContent.trim() || 'Игрок';
             const prediction = row.querySelector('.prediction-score')?.textContent.trim() || '—';
-            const points = compactPointsText(row.querySelector('.points-pill')?.textContent || '');
+            const points = compactPointsText(
+                row.querySelector('.points-pill')?.textContent || '',
+                row.getAttribute('data-points')
+            );
             const item = document.createElement('div');
             const nameNode = document.createElement('div');
             const scoreNode = document.createElement('div');

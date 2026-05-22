@@ -21,16 +21,11 @@ def match_predictions(match_id):
 
     try:
 
-        tournament_id = get_active_tournament_id()
-
-        if not tournament_id:
-            flash("Активный турнир не найден", "error")
-            return redirect(url_for('main.index'))
-
         cur.execute("""
             SELECT id, home_team, away_team,
                    kickoff_time, deadline,
-                   status, home_score, away_score
+                   status, home_score, away_score,
+                   tournament_id
             FROM matches
             WHERE id = %s
         """, (match_id,))
@@ -50,7 +45,12 @@ def match_predictions(match_id):
             'status': m[5],
             'home_score': m[6],
             'away_score': m[7],
+            'tournament_id': m[8],
         }
+
+        tournament_id = match['tournament_id']
+        if tournament_id is None:
+            tournament_id = get_active_tournament_id()
 
         # ������ �����: ������� ������� � deadline
         deadline_passed = not is_before_deadline({
