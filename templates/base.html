@@ -1149,8 +1149,8 @@ body.tournament-wc2026 .bottom-nav a.active {
         </div>
         <div class="tournament-sheet-list">
             {% for t in tournament_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table class="tournament-item {% if current_tid == t.id %}active{% endif %}">
-                <span>{{ t.name }}</span>
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+                <span class="tournament-name">{{ t.name }}</span>
                 {% if t.is_active %}<span class="active-badge">Активный</span>{% endif %}
             </a>
             {% endfor %}
@@ -1220,6 +1220,50 @@ body.tournament-wc2026 .bottom-nav a.active {
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') closeTournamentSheet();
         });
+
+        (function persistTournamentSelection() {
+            const tournamentPages = new Set(['/', '/table', '/profile']);
+            const path = window.location.pathname;
+            if (!tournamentPages.has(path)) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const currentTid = params.get('tid');
+            const savedTid = localStorage.getItem('selected_tid');
+
+            // Restore selected tournament when URL has no tid.
+            if (!currentTid && savedTid) {
+                params.set('tid', savedTid);
+                const query = params.toString();
+                const newUrl = path + (query ? ('?' + query) : '') + (window.location.hash || '');
+                window.location.replace(newUrl);
+                return;
+            }
+
+            if (currentTid) {
+                localStorage.setItem('selected_tid', currentTid);
+
+                const activeItem = document.querySelector('.tournament-item.active .tournament-name');
+                const triggerText = (document.querySelector('.tournament-trigger')?.textContent || '')
+                    .replace('🏆', '')
+                    .replace('▼', '')
+                    .trim();
+                const name = (activeItem?.textContent || triggerText || '').trim();
+                if (name) {
+                    localStorage.setItem('selected_tournament_name', name);
+                }
+            }
+
+            document.querySelectorAll('.tournament-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    const tid = item.getAttribute('data-tid')
+                        || new URL(item.href, window.location.origin).searchParams.get('tid');
+                    const name = item.querySelector('.tournament-name')?.textContent?.trim()
+                        || item.textContent.trim();
+                    if (tid) localStorage.setItem('selected_tid', tid);
+                    if (name) localStorage.setItem('selected_tournament_name', name);
+                });
+            });
+        })();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {

@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const data = await response.json();
             tableContainer.innerHTML = data.html || '';
+            if (data.tid) {
+                localStorage.setItem('selected_tid', String(data.tid));
+            }
+            if (data.tournament_name) {
+                localStorage.setItem('selected_tournament_name', data.tournament_name);
+            }
 
             const body = document.body;
             if (body) {
