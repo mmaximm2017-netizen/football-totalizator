@@ -746,16 +746,25 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background:
-            radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08), transparent 52%),
-            url('/static/clubs/pngegg.png');
-        background-repeat: no-repeat, no-repeat;
-        background-position: top center, center;
-        background-size: 100% 52%, contain;
-        opacity: 0.42;
+        background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08), transparent 52%);
         pointer-events: none;
         border-radius: inherit;
         z-index: 0;
+    }
+
+    body.tournament-wc2026 .match-card-v2:not(.finished) .wc-trophy-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('/static/clubs/pngegg.png');
+        background-size: 50%;
+        background-repeat: no-repeat;
+        background-position: 85% 50%;
+        opacity: 0.2;
+        pointer-events: none;
+        z-index: 1;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished)::after {
@@ -858,6 +867,8 @@
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center {
+        position: relative;
+        z-index: 2;
         background: rgba(10,20,40,0.7) !important;
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
@@ -932,12 +943,20 @@
     }
 
     body.tournament-wc2026 .save-btn-v2 {
+        position: relative;
+        z-index: 3;
         border: 1px solid #a8842a !important;
         box-shadow:
             0 0 8px rgba(168,132,42,0.3),
             0 5px 10px rgba(0,0,0,0.3) !important;
         background: linear-gradient(135deg, #1a2a4a, #2a3a5a) !important;
         color: #f3d98b !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-input-row,
+    body.tournament-wc2026 .match-card-v2 .disabled-btn-v2 {
+        position: relative;
+        z-index: 3;
     }
 
     body.tournament-wc2026 .score-stepper {
@@ -1879,6 +1898,9 @@
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
+{% if match.league == 'wc2026' and not match.finished %}
+<div class="wc-trophy-bg"></div>
+{% endif %}
 <div class="match-topline">
     <div class="match-meta-v2">
 
