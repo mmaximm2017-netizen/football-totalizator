@@ -1871,7 +1871,13 @@
     <div class="match-meta-v2">
 
         <div class="league-row">
-            {% if match.league == 'rpl' %}
+            {% if match.home_team == 'Россия' or match.away_team == 'Россия' %}
+                <img
+                    src="/static/clubs/Russian_Football_Union_Logo.svg"
+                    alt="Сборная России"
+                    class="tournament-logo"
+                >
+            {% elif match.league == 'rpl' %}
                 <img
                     src="/static/clubs/russian-premier-league-footballlogos-org.png"
                     alt="РПЛ"
@@ -1892,7 +1898,9 @@
             {% endif %}
 
             <div class="league-label">
-                {% if match.league == 'wc2026' %}
+                {% if match.home_team == 'Россия' or match.away_team == 'Россия' %}
+                    Сборная России
+                {% elif match.league == 'wc2026' %}
                     ЧМ-2026
 {% elif match.league == 'rcup' %}
                     Кубок России
