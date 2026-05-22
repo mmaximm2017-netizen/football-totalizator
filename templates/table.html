@@ -3,10 +3,11 @@
 
 {% if current_tournament_name == 'ЧМ-2026' %}
 <div style="text-align: center; margin-bottom: 16px;">
-    <div id="standings-title" style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица Чемпионата мира 2026</div>
+    <div id="standings-title-main" style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
+    <div id="standings-title-sub" style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">чемпионата мира 2026</div>
 </div>
 {% else %}
-<h2 id="standings-title" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>
+<h2 id="standings-title-main" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>
 {% endif %}
 
 <div class="table-container">
@@ -48,20 +49,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
             }
 
-            const titleBlock = document.getElementById('standings-title');
-            if (titleBlock) {
+            const titleMain = document.getElementById('standings-title-main');
+            const titleSub = document.getElementById('standings-title-sub');
+
+            if (titleMain) {
                 if (data.tournament_key === 'wc2026') {
-                    titleBlock.textContent = 'Турнирная таблица Чемпионата мира 2026';
-                    titleBlock.style.color = '#ffffff';
-                    titleBlock.style.fontSize = '20px';
-                    titleBlock.style.fontWeight = '700';
-                    titleBlock.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
+                    titleMain.textContent = 'Турнирная таблица';
+                    titleMain.style.color = '#ffffff';
+                    titleMain.style.fontSize = '20px';
+                    titleMain.style.fontWeight = '700';
+                    titleMain.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
+                    titleMain.style.marginBottom = '';
+
+                    if (titleSub) {
+                        titleSub.textContent = 'чемпионата мира 2026';
+                        titleSub.style.display = '';
+                        titleSub.style.color = '#ffffff';
+                        titleSub.style.fontSize = '16px';
+                        titleSub.style.fontWeight = '600';
+                        titleSub.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
+                    }
                 } else {
-                    titleBlock.textContent = '🏆 Турнирная таблица';
-                    titleBlock.style.color = '';
-                    titleBlock.style.fontSize = '';
-                    titleBlock.style.fontWeight = '';
-                    titleBlock.style.textShadow = '';
+                    titleMain.textContent = '🏆 Турнирная таблица';
+                    titleMain.style.color = '';
+                    titleMain.style.fontSize = '';
+                    titleMain.style.fontWeight = '';
+                    titleMain.style.textShadow = '';
+                    titleMain.style.marginBottom = '16px';
+
+                    if (titleSub) {
+                        titleSub.style.display = 'none';
+                    }
                 }
             }
 
