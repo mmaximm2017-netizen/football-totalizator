@@ -10,7 +10,12 @@
     </div>
 </div>
 {% else %}
-<h2 id="standings-title-main" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>
+<div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="MatchTV">
+    <div style="text-align: left;">
+        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица кубка Матч-Премьер</div>
+    </div>
+</div>
 {% endif %}
 
 <div class="table-container">
@@ -52,12 +57,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
             }
 
-            const oldHeader = document.getElementById('wc-standings-header');
-            const classicTitle = document.getElementById('standings-title-main');
+            const wcHeader = document.getElementById('wc-standings-header');
+            const cupHeader = document.getElementById('cup-standings-header');
 
             if (data.tournament_key === 'wc2026') {
-                if (classicTitle) {
-                    classicTitle.outerHTML = `
+                if (cupHeader) {
+                    cupHeader.outerHTML = `
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
     <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
     <div style="text-align: left;">
@@ -67,12 +72,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>`;
                 }
             } else {
-                if (oldHeader) {
-                    oldHeader.outerHTML = '<h2 id="standings-title-main" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>';
-                } else if (classicTitle) {
-                    classicTitle.textContent = '🏆 Турнирная таблица';
-                    classicTitle.style.textAlign = 'center';
-                    classicTitle.style.marginBottom = '16px';
+                if (wcHeader) {
+                    wcHeader.outerHTML = `
+<div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="MatchTV">
+    <div style="text-align: left;">
+        <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Турнирная таблица кубка Матч-Премьер</div>
+    </div>
+</div>`;
                 }
             }
 
