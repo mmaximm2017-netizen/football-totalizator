@@ -1,42 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 
-<style>
-    body.tournament-wc2026 .wc-trophy-table-bg {
-        position: fixed;
-        top: 60%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 50%;
-        height: auto;
-        background-image: url('/static/clubs/WorldCup.png');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        opacity: 0.18;
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    body.tournament-wc2026 .table-container {
-        position: relative;
-        z-index: 1;
-    }
-
-    body.tournament-wc2026 .standings-table {
-        position: relative;
-        z-index: 1;
-    }
-</style>
-
 {% if current_tournament_name == 'ЧМ-2026' %}
-<div class="wc-trophy-table-bg"></div>
-{% endif %}
-
-{% if current_tournament_name == 'ЧМ-2026' %}
-<div style="text-align: center; margin-bottom: 16px;">
-    <div id="standings-title-main" style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
-    <div id="standings-title-sub" style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">чемпионата мира 2026</div>
+<div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
+    <div style="text-align: left;">
+        <div style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
+        <div style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">чемпионата мира 2026</div>
+    </div>
 </div>
 {% else %}
 <h2 id="standings-title-main" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>
@@ -81,37 +52,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
             }
 
-            const titleMain = document.getElementById('standings-title-main');
-            const titleSub = document.getElementById('standings-title-sub');
+            const oldHeader = document.getElementById('wc-standings-header');
+            const classicTitle = document.getElementById('standings-title-main');
 
-            if (titleMain) {
-                if (data.tournament_key === 'wc2026') {
-                    titleMain.textContent = 'Турнирная таблица';
-                    titleMain.style.color = '#ffffff';
-                    titleMain.style.fontSize = '20px';
-                    titleMain.style.fontWeight = '700';
-                    titleMain.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
-                    titleMain.style.marginBottom = '';
-
-                    if (titleSub) {
-                        titleSub.textContent = 'чемпионата мира 2026';
-                        titleSub.style.display = '';
-                        titleSub.style.color = '#ffffff';
-                        titleSub.style.fontSize = '16px';
-                        titleSub.style.fontWeight = '600';
-                        titleSub.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
-                    }
-                } else {
-                    titleMain.textContent = '🏆 Турнирная таблица';
-                    titleMain.style.color = '';
-                    titleMain.style.fontSize = '';
-                    titleMain.style.fontWeight = '';
-                    titleMain.style.textShadow = '';
-                    titleMain.style.marginBottom = '16px';
-
-                    if (titleSub) {
-                        titleSub.style.display = 'none';
-                    }
+            if (data.tournament_key === 'wc2026') {
+                if (classicTitle) {
+                    classicTitle.outerHTML = `
+<div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
+    <div style="text-align: left;">
+        <div style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
+        <div style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">чемпионата мира 2026</div>
+    </div>
+</div>`;
+                }
+            } else {
+                if (oldHeader) {
+                    oldHeader.outerHTML = '<h2 id="standings-title-main" style="text-align: center; margin-bottom: 16px;">🏆 Турнирная таблица</h2>';
+                } else if (classicTitle) {
+                    classicTitle.textContent = '🏆 Турнирная таблица';
+                    classicTitle.style.textAlign = 'center';
+                    classicTitle.style.marginBottom = '16px';
                 }
             }
 
