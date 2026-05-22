@@ -2,7 +2,11 @@
 {% block content %}
 
 <div style="text-align: center; margin-bottom: 16px;">
-    <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
+    {% if current_tournament_name == 'ЧМ-2026' %}
+        <h2 style="margin: 0; font-size: 22px; color: #d8b45a;">🏆 Турнирная таблица чемпионата мира</h2>
+    {% else %}
+        <h2 style="margin: 0; font-size: 22px;">🏆 Турнирная таблица</h2>
+    {% endif %}
 </div>
 
 <div class="table-container">
@@ -42,6 +46,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const trigger = document.querySelector('.tournament-trigger');
             if (trigger && data.tournament_name) {
                 trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
+            }
+
+            const titleBlock = document.querySelector('h2');
+            if (titleBlock) {
+                if (data.tournament_key === 'wc2026') {
+                    titleBlock.textContent = '🏆 Турнирная таблица чемпионата мира';
+                    titleBlock.style.color = '#d8b45a';
+                } else {
+                    titleBlock.textContent = '🏆 Турнирная таблица';
+                    titleBlock.style.color = '';
+                }
             }
 
             const nextTid = data.tid || tid;
