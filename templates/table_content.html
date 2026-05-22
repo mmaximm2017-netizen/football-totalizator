@@ -302,6 +302,8 @@
 
     body.tournament-cup .standings-table {
         background: rgba(255, 255, 255, 0.7);
+        width: 100% !important;
+        min-height: 65vh !important;
     }
 
     body.tournament-cup .standings-table thead tr {
@@ -342,12 +344,15 @@
     }
 
     body.tournament-cup .standings-table td {
+        padding-top: 18px !important;
+        padding-bottom: 18px !important;
         padding: 14px 12px;
         color: #1a1a1a;
         font-size: 15px;
     }
 
     body.tournament-cup .standings-table td.place-cell {
+        font-size: 22px !important;
         font-weight: 700;
         font-size: 18px;
         width: 60px;
@@ -355,7 +360,15 @@
     }
 
     body.tournament-cup .standings-table td.player-cell {
-        font-weight: 600;
+        font-size: 20px !important;
+        font-weight: 600 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.player-cell,
+    body.tournament-cup .standings-table tr.top-2 td.player-cell,
+    body.tournament-cup .standings-table tr.top-3 td.player-cell {
+        font-size: 24px !important;
+        font-weight: 700 !important;
     }
 
     body.tournament-cup .standings-table td.player-cell a {
@@ -369,25 +382,32 @@
     }
 
     body.tournament-cup .standings-table td.points-cell {
-        font-weight: 800;
-        font-size: 22px;
+        font-size: 28px !important;
+        font-weight: 800 !important;
         text-align: center;
         width: 80px;
     }
 
     body.tournament-cup .standings-table tr.top-1 td.points-cell {
         color: #c9a03d;
+        font-size: 34px !important;
+        font-weight: 800 !important;
     }
 
     body.tournament-cup .standings-table tr.top-2 td.points-cell {
         color: #8a8a8a;
+        font-size: 34px !important;
+        font-weight: 800 !important;
     }
 
     body.tournament-cup .standings-table tr.top-3 td.points-cell {
         color: #cd7f32;
+        font-size: 34px !important;
+        font-weight: 800 !important;
     }
 
     body.tournament-cup .standings-table .place-emoji {
+        font-size: 28px !important;
         font-size: 24px;
         display: inline-block;
     }
