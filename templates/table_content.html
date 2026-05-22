@@ -445,6 +445,75 @@
         text-align: center;
         color: #1a1a1a;
     }
+
+    /* ========== FINAL UNIFIED TABLE SIZING (CUP + WC) ========== */
+    body.tournament-cup .standings-table td,
+    body.tournament-wc2026 .standings-table td {
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+    }
+
+    body.tournament-cup .standings-table,
+    body.tournament-wc2026 .standings-table {
+        min-height: 85vh !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell,
+    body.tournament-cup .standings-table td.points-cell,
+    body.tournament-wc2026 .standings-table td.player-cell,
+    body.tournament-wc2026 .standings-table td.points-cell {
+        font-size: 40px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-3 td.player-cell,
+    body.tournament-cup .standings-table tr.top-3 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-3 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-3 td.points-cell {
+        font-size: 44px !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-2 td.player-cell,
+    body.tournament-cup .standings-table tr.top-2 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-2 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-2 td.points-cell {
+        font-size: 48px !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.player-cell,
+    body.tournament-cup .standings-table tr.top-1 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-1 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-1 td.points-cell {
+        font-size: 52px !important;
+    }
+
+    body.tournament-cup .standings-table td.place-cell,
+    body.tournament-wc2026 .standings-table td.place-cell {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-cup .standings-table .place-emoji,
+    body.tournament-wc2026 .standings-table .place-emoji {
+        font-size: 36px !important;
+    }
+
+    body.tournament-cup .leader-badge,
+    body.tournament-wc2026 .leader-badge {
+        display: inline-block !important;
+        white-space: nowrap !important;
+        margin-left: 8px !important;
+        font-size: 16px !important;
+        padding: 4px 8px !important;
+        border-radius: 16px !important;
+        vertical-align: middle !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell,
+    body.tournament-wc2026 .standings-table td.player-cell {
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
 </style>
 
 {% if table %}
