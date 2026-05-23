@@ -24,16 +24,27 @@ The existing manual sync form still posts to `POST /admin/` with `action=update_
 
 The existing add-match and set-result forms still post to `POST /admin/` with action values, so the shared dispatcher remains in `admin.py` and delegates to the extracted helpers.
 
+### Tournament Management And Admin Utilities
+
+- `POST /admin/new_tournament` now lives in `app/routes/admin_tournaments.py` on `admin_tournaments_bp`.
+- `POST /admin/delete_tournament` now lives in `app/routes/admin_tournaments.py`.
+- Tournament archive/activate DB operations now live in `handle_archive_tournament()` and `handle_activate_tournament()`.
+- `POST /admin/recalc_all` now lives in `app/routes/admin_tournaments.py`.
+- `POST /admin/translate` now lives in `app/routes/admin_tournaments.py`.
+- `POST /admin/debug_match` now lives in `app/routes/admin_tournaments.py`.
+
+The existing tournament template calls `url_for('admin.archive_tournament')` and `url_for('admin.activate_tournament')`, so those endpoint wrappers remain in `admin.py` and delegate to the extracted helpers. This preserves templates and endpoint names.
+
 ## Still In `admin.py`
 
 - Main admin dispatcher and page rendering.
-- Match grouping and match admin helpers.
-- Scoring recalculation admin routes.
+- Match/admin page data grouping.
 - Users and title admin actions.
-- Tournament admin routes.
-- Team translation admin route.
-- Debug match route.
+- `GET /admin/tournaments` and `GET /admin/users` page routes.
+- Archive/activate tournament endpoint wrappers for backwards-compatible `url_for('admin...')` names.
+
+Current `app/routes/admin.py` size: 512 lines.
 
 ## Next Step
 
-Extract one isolated area at a time. The safest next candidate is tournament routes and tournament-only helpers, because they have clear URL boundaries and do not share the main `POST /admin/` dispatcher as heavily.
+Extract admin users/title management next. The `award_title` action still lives inside the shared `POST /admin/` dispatcher, so use the same pattern as sync/add-match: keep the dispatcher action in `admin.py`, but move execution into a focused helper first.

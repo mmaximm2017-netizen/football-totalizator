@@ -60,6 +60,7 @@ def create_app():
     from app.routes.admin import admin_bp
     from app.routes.admin_sync import admin_sync_bp
     from app.routes.admin_matches import admin_matches_bp
+    from app.routes.admin_tournaments import admin_tournaments_bp
     from app.routes.profile import profile_bp
     from app.routes.table import table_bp
     from app.routes.predictions import predictions_bp
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(admin_sync_bp)
     app.register_blueprint(admin_matches_bp)
+    app.register_blueprint(admin_tournaments_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(table_bp)
     app.register_blueprint(predictions_bp)
