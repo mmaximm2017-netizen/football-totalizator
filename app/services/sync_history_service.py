@@ -14,6 +14,27 @@ HEALTHY_SYNC_STATUSES = ("success", "partial_success")
 PROBLEM_SYNC_STATUSES = ("failed", "lock_error", "abandoned")
 
 
+def _ensure_sync_runs_table(cur):
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sync_runs (
+            id SERIAL PRIMARY KEY,
+            started_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            finished_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+            status TEXT NOT NULL,
+            matches_inserted INTEGER DEFAULT 0,
+            matches_updated INTEGER DEFAULT 0,
+            matches_finished INTEGER DEFAULT 0,
+            predictions_recalculated INTEGER DEFAULT 0,
+            errors_count INTEGER DEFAULT 0,
+            summary_json TEXT
+        );
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_started ON sync_runs(started_at);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_status ON sync_runs(status);")
+
+
 def _utc_now():
     return datetime.now(timezone.utc)
 
@@ -70,6 +91,7 @@ def create_sync_run(summary=None):
     try:
         conn = get_db()
         cur = conn.cursor()
+        _ensure_sync_runs_table(cur)
         payload = _history_payload(summary)
         cur.execute(
             """
@@ -97,11 +119,12 @@ def create_sync_run(summary=None):
         )
         sync_run_id = cur.fetchone()[0]
         conn.commit()
+        logger.info("Created sync history run id=%s", sync_run_id)
         return sync_run_id
     except Exception as e:
         if conn:
             conn.rollback()
-        logger.warning("Failed to create sync history run: %s", e)
+        logger.exception("Failed to create sync history run: %s", e)
         return None
     finally:
         close_db(conn, cur)
@@ -113,6 +136,8 @@ def recover_stale_syncs(timeout_minutes=STALE_SYNC_TIMEOUT_MINUTES):
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        _ensure_sync_runs_table(cur)
+        conn.commit()
         cur.execute(
             """
             SELECT id, started_at, summary_json
@@ -177,7 +202,7 @@ def recover_stale_syncs(timeout_minutes=STALE_SYNC_TIMEOUT_MINUTES):
     except Exception as e:
         if conn:
             conn.rollback()
-        logger.warning("Failed to recover stale sync history runs: %s", e)
+        logger.exception("Failed to recover stale sync history runs: %s", e)
         return []
     finally:
         close_db(conn, cur)
@@ -191,6 +216,7 @@ def finish_sync_run(sync_run_id, status, summary=None):
     try:
         conn = get_db()
         cur = conn.cursor()
+        _ensure_sync_runs_table(cur)
         payload = _history_payload(summary)
         cur.execute(
             """
@@ -217,12 +243,18 @@ def finish_sync_run(sync_run_id, status, summary=None):
                 sync_run_id,
             ),
         )
+        updated = cur.rowcount
         conn.commit()
-        return True
+        if updated:
+            logger.info("Finished sync history run id=%s status=%s", sync_run_id, status)
+            return True
+
+        logger.warning("Sync history run id=%s was not found while finishing status=%s", sync_run_id, status)
+        return False
     except Exception as e:
         if conn:
             conn.rollback()
-        logger.warning("Failed to finish sync history run %s: %s", sync_run_id, e)
+        logger.exception("Failed to finish sync history run %s: %s", sync_run_id, e)
         return False
     finally:
         close_db(conn, cur)
@@ -233,6 +265,8 @@ def get_last_sync():
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        _ensure_sync_runs_table(cur)
+        conn.commit()
         cur.execute(
             """
             SELECT *
@@ -244,7 +278,9 @@ def get_last_sync():
         row = cur.fetchone()
         return dict(row) if row else None
     except Exception as e:
-        logger.warning("Failed to load last sync history run: %s", e)
+        if conn:
+            conn.rollback()
+        logger.exception("Failed to load last sync history run: %s", e)
         return None
     finally:
         close_db(conn, cur)
@@ -256,6 +292,8 @@ def get_sync_health(max_age_hours=SYNC_HEALTH_MAX_AGE_HOURS):
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        _ensure_sync_runs_table(cur)
+        conn.commit()
         cur.execute(
             """
             SELECT *
@@ -338,7 +376,9 @@ def get_sync_health(max_age_hours=SYNC_HEALTH_MAX_AGE_HOURS):
 
         return health
     except Exception as e:
-        logger.warning("Failed to load sync health: %s", e)
+        if conn:
+            conn.rollback()
+        logger.exception("Failed to load sync health: %s", e)
         return {
             "last_sync_id": None,
             "last_status": None,
