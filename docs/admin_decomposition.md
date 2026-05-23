@@ -35,16 +35,28 @@ The existing add-match and set-result forms still post to `POST /admin/` with ac
 
 The existing tournament template calls `url_for('admin.archive_tournament')` and `url_for('admin.activate_tournament')`, so those endpoint wrappers remain in `admin.py` and delegate to the extracted helpers. This preserves templates and endpoint names.
 
+### Shared `POST /admin/` Actions
+
+- Action dispatch now lives in `app/routes/admin_actions.py`.
+- `ACTION_HANDLERS` maps action names to thin execution functions.
+- `dispatch_admin_action()` handles unknown actions and keeps the existing redirect/flash behavior.
+- Connected actions:
+  - `update_matches`
+  - `add_match`
+  - `set_result`
+  - `award_title`
+
+`POST /admin/`, `request.form["action"]`, forms, templates, and redirects are unchanged. `admin.py` now only reads the action and calls the dispatcher.
+
 ## Still In `admin.py`
 
-- Main admin dispatcher and page rendering.
+- Main admin route, page rendering, and one-line POST action dispatch call.
 - Match/admin page data grouping.
-- Users and title admin actions.
 - `GET /admin/tournaments` and `GET /admin/users` page routes.
 - Archive/activate tournament endpoint wrappers for backwards-compatible `url_for('admin...')` names.
 
-Current `app/routes/admin.py` size: 512 lines.
+Current `app/routes/admin.py` size: 427 lines.
 
 ## Next Step
 
-Extract admin users/title management next. The `award_title` action still lives inside the shared `POST /admin/` dispatcher, so use the same pattern as sync/add-match: keep the dispatcher action in `admin.py`, but move execution into a focused helper first.
+Extract page-data builders next. `_prepare_admin_view_data()` and `_prepare_admin_matches_data()` still make `admin.py` carry match, tournament, and user query shaping even though route execution has been split.

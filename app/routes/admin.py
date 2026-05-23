@@ -23,12 +23,8 @@ from app.utils import (
 from app.config import START_DATE
 from app.routes.admin_sync import (
     build_sync_panel_context,
-    handle_manual_sync_update,
 )
-from app.routes.admin_matches import (
-    handle_add_match,
-    handle_set_result,
-)
+from app.routes.admin_actions import ALLOWED_TITLES, dispatch_admin_action
 from app.routes.admin_tournaments import (
     handle_activate_tournament,
     handle_archive_tournament,
@@ -42,10 +38,6 @@ from app.routes.admin_tournaments import (
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 MSK = ZoneInfo("Europe/Moscow")
-ALLOWED_TITLES = (
-    "Обладатель Кубка Матч-Премьер",
-    "Чемпион Мира 2026",
-)
 
 
 # =========================================================
@@ -376,84 +368,7 @@ def admin():
         if request.method == 'POST':
 
             action = request.form.get('action')
-
-            # =============================================
-            # UPDATE MATCHES
-            # =============================================
-
-            if action == 'update_matches':
-                return handle_manual_sync_update()
-
-            # =============================================
-            # ADD MATCH
-            # =============================================
-
-            elif action == 'add_match':
-                return handle_add_match(conn, cur)
-
-            # =============================================
-            # SET RESULT
-            # =============================================
-
-            elif action == 'set_result':
-                return handle_set_result(conn, cur)
-
-            # =============================================
-            # AWARD TITLE
-            # =============================================
-
-            elif action == 'award_title':
-
-                user_id = request.form.get('user_id', type=int)
-                title = (request.form.get('title') or '').strip()
-
-                if not user_id or not title:
-                    flash("������� ������������ � �����", "error")
-                    return redirect(url_for('admin.admin'))
-
-                if title not in ALLOWED_TITLES:
-                    flash("������������ �����", "error")
-                    return redirect(url_for('admin.admin'))
-
-                try:
-                    cur.execute("""
-                        SELECT is_admin
-                        FROM users
-                        WHERE id = %s
-                    """, (user_id,))
-                    row = cur.fetchone()
-
-                    if not row:
-                        flash("������������ �� ������", "error")
-                        return redirect(url_for('admin.admin'))
-
-                    if row[0] == 1:
-                        flash("������ �������� ����� ��������������", "error")
-                        return redirect(url_for('admin.admin'))
-
-                    cur.execute("""
-                        INSERT INTO user_titles (user_id, title, awarded_by)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (user_id, title) DO NOTHING
-                    """, (user_id, title, session.get('user_id')))
-
-                    if cur.rowcount == 0:
-                        conn.rollback()
-                        flash("� ������������ ��� ���� ���� �����", "error")
-                        return redirect(url_for('admin.admin'))
-
-                    conn.commit()
-                    flash("����� �����", "success")
-
-                except Exception as e:
-                    conn.rollback()
-                    flash(f"������ ������ ������: {e}", "error")
-
-                return redirect(url_for('admin.admin'))
-
-            else:
-                flash("����������� ��������", "error")
-                return redirect(url_for('admin.admin'))
+            return dispatch_admin_action(action, conn, cur)
 
         return render_template('admin.html')
     finally:
