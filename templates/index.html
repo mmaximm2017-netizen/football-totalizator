@@ -2275,27 +2275,7 @@
 
 </div>
 
-<div class="bets-sheet-overlay" data-bets-sheet-overlay></div>
-
-<section class="bets-sheet" data-bets-sheet-panel aria-hidden="true">
-    <div class="bets-sheet-handle"></div>
-
-    <div class="bets-sheet-top">
-        <div class="bets-sheet-title">
-            Ставки игроков
-        </div>
-
-        <button type="button" class="bets-sheet-close" data-bets-sheet-close aria-label="Закрыть ставки">
-            ×
-        </button>
-    </div>
-
-    <div class="bets-sheet-content" data-bets-sheet-content>
-        <div class="bets-sheet-loading">
-            Загружаем ставки...
-        </div>
-    </div>
-</section>
+{% include 'partials/home/_bets_sheet.html' %}
 
 <script>
 function pluralizeMatch(count) {
