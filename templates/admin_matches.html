@@ -15,6 +15,17 @@
     .admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}
     .admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}
     .admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
+    .sync-status-block{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.72);border:1px solid rgba(0,119,200,.12)}
+    .sync-status-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+    .sync-status-title{font-size:13px;font-weight:1000;color:#063b73}
+    .sync-status-pill{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:1000}
+    .sync-status-good{background:#e4f7e9;color:#176b2c;border:1px solid rgba(23,107,44,.18)}
+    .sync-status-warning{background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.2)}
+    .sync-status-bad{background:#fde8e8;color:#9f1d1d;border:1px solid rgba(159,29,29,.18)}
+    .sync-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px}
+    .sync-status-item{font-size:12px;color:#5d7894;font-weight:800;min-width:0}
+    .sync-status-item strong{display:block;color:#063b73;font-size:13px;overflow-wrap:anywhere}
+    .sync-status-link{display:inline-block;margin-top:9px;font-size:12px;font-weight:900;color:#0a6cc2;text-decoration:none}
     .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .admin-empty{color:#5d7894;text-align:center;font-size:13px;font-weight:700;padding:14px 8px}
     .month-group,.league-group{margin-bottom:12px}
@@ -41,7 +52,7 @@
     .edit-fields{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
     .edit-fields input{margin-bottom:0!important}
     .delete-form{margin-top:10px}
-    @media (max-width:430px){.admin-form-row{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
+    @media (max-width:430px){.admin-form-row,.sync-status-grid{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
 </style>
 
 <div class="admin-screen">
@@ -70,6 +81,21 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
             </form>
+        </div>
+        <div class="sync-status-block">
+            <div class="sync-status-top">
+                <div class="sync-status-title">Last sync status</div>
+                <span class="sync-status-pill {{ sync_status_class }}">{{ sync_health.last_status or 'no_sync_runs' }}</span>
+            </div>
+            <div class="sync-status-grid">
+                <div class="sync-status-item">Sync run id<strong>{{ sync_health.last_sync_id or 'n/a' }}</strong></div>
+                <div class="sync-status-item">Health reason<strong>{{ sync_health.health_reason or 'unknown' }}</strong></div>
+                <div class="sync-status-item">Last started<strong>{{ sync_health.last_started_at or 'n/a' }}</strong></div>
+                <div class="sync-status-item">Last finished<strong>{{ sync_health.last_finished_at or 'n/a' }}</strong></div>
+                <div class="sync-status-item">Minutes since last sync<strong>{{ sync_health.minutes_since_last_finished if sync_health.minutes_since_last_finished is not none else 'n/a' }}</strong></div>
+                <div class="sync-status-item">Errors count<strong>{{ sync_health.errors_count }}</strong></div>
+            </div>
+            <a class="sync-status-link" href="{{ url_for('admin.sync_health') }}">JSON endpoint: /admin/sync-health</a>
         </div>
     </div>
 

@@ -8,6 +8,10 @@ Sync health is a small JSON health layer over the existing `sync_runs` table. It
 
 The endpoint is protected with the existing admin check and returns `get_sync_health()` as JSON.
 
+## Admin View
+
+The admin matches page shows a compact sync status block next to the manual sync controls. It displays the latest status, timestamps, minutes since the last finished sync, error count, health reason, sync run id, and a link to `/admin/sync-health`.
+
 ## Response Fields
 
 - `last_sync_id`: id of the newest `sync_runs` row.

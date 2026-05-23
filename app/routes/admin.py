@@ -34,7 +34,7 @@ from app.utils import (
     parse_datetime,
 )
 from app.config import START_DATE
-from app.services.sync_history_service import get_sync_health
+from app.services.sync_history_service import get_last_sync, get_sync_health
 
 
 # =========================================================
@@ -646,6 +646,20 @@ def admin_matches():
     cur = conn.cursor()
     try:
         data = _prepare_admin_matches_data(cur)
+        sync_health_data = get_sync_health()
+        last_sync = get_last_sync()
+        last_status = sync_health_data.get("last_status")
+
+        if not sync_health_data.get("is_healthy"):
+            sync_status_class = "sync-status-bad"
+        elif last_status == "skipped_already_running":
+            sync_status_class = "sync-status-warning"
+        else:
+            sync_status_class = "sync-status-good"
+
+        data["sync_health"] = sync_health_data
+        data["last_sync"] = last_sync
+        data["sync_status_class"] = sync_status_class
     finally:
         close_db(conn, cur)
     return render_template('admin_matches.html', **data)
