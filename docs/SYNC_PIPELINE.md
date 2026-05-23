@@ -112,10 +112,14 @@ Admin action и `scripts/sync_once.py` используют один и тот �
 
 Exit codes:
 
-- `0` при `status: "completed"`;
-- `0` при `status: "skipped_already_running"`;
-- `1` при `status: "lock_error"`;
-- `1` при других незавершённых статусах или исключениях.
+- `0` при worker status `success`;
+- `0` при worker status `partial_success`;
+- `0` при worker status `skipped_already_running`;
+- `1` при worker status `failed`;
+- `1` при worker status `lock_error`;
+- `1` при unexpected status или unhandled worker exception.
+
+`scripts/sync_once.py` пишет operational logs в stderr и финальный machine-readable JSON в stdout.
 
 ## Где логируются ошибки
 

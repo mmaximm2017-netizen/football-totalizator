@@ -447,6 +447,7 @@ def run_sync_with_lock(strict_lock=False):
     sync_run_id = None
     summary = {
         "status": "started",
+        "sync_run_id": None,
         "strict_lock": strict_lock,
         "lock_acquired": False,
         "lock_error": None,
@@ -462,6 +463,7 @@ def run_sync_with_lock(strict_lock=False):
     logger.info("sync start")
     recover_stale_syncs()
     sync_run_id = create_sync_run(summary)
+    summary["sync_run_id"] = sync_run_id
 
     try:
         lock_conn, lock_cur, acquired, lock_error = try_acquire_sync_lock()
