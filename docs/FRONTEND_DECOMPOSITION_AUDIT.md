@@ -314,3 +314,59 @@ Why this is the next safest move:
 - It has no JS behavior.
 
 Important condition: keep the extraction attached to the existing Jinja `{% for month in months %}{% else %}` behavior, so empty-state rendering remains equivalent.
+
+## Completed decomposition step 1.2
+
+Completed Step 1.2: empty home state markup was extracted from `templates/index.html` into `templates/partials/home/_empty_home.html`.
+
+What changed:
+
+- `templates/index.html` keeps the existing `{% for month in months %}{% else %}{% endfor %}` behavior.
+- The empty state branch now renders via `{% include 'partials/home/_empty_home.html' %}`.
+- `templates/partials/home/_empty_home.html` contains only the previous empty-state HTML markup:
+  - `.empty-home`
+  - football icon paragraph
+  - "Нет доступных матчей" text
+  - "Скоро появятся новые игры" text
+
+Not changed:
+
+- Month loop behavior.
+- Day loop behavior.
+- Accordion logic.
+- Match rendering.
+- CSS.
+- JS.
+- Match cards.
+- Empty-state class, inline styles, text and nesting.
+
+## Current partial structure after step 1.2
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+
+The rest of `templates/index.html` is still intentionally monolithic:
+
+- month/day accordion wrappers;
+- match cards;
+- prediction form and steppers;
+- finished match state;
+- deadline/timer markup;
+- inline CSS;
+- inline JS.
+
+## Next recommended step after step 1.2
+
+Next low-risk step: extract the tournament/league badge inside the match card top line into `templates/partials/home/_match_league.html`.
+
+Why this is the next safest move:
+
+- It is a small visual sub-block.
+- It does not own form state.
+- It does not own stepper behavior.
+- It does not own deadline timer behavior.
+- It does not move the `.match-card-v2` root.
+
+Important condition: preserve the exact Russia/RPL/Russian Cup/WC-2026 conditional logic, asset paths, `class="tournament-logo"`, and `.league-label` output.

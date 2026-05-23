@@ -2266,11 +2266,7 @@
 </div>
 
 {% else %}
-<div class="empty-home">
-    <p style="font-size: 48px; margin-bottom: 12px;">⚽</p>
-    <p style="font-size: 18px; font-weight: 1000;">Нет доступных матчей</p>
-    <p style="color: #5d7894; margin-top: 6px;">Скоро появятся новые игры</p>
-</div>
+{% include 'partials/home/_empty_home.html' %}
 {% endfor %}
 
 </div>
