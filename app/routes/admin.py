@@ -1,6 +1,7 @@
 ﻿# app/routes/admin.py
 
 from datetime import datetime, timezone
+import logging
 from collections import defaultdict
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -39,6 +40,7 @@ from app.config import START_DATE
 # =========================================================
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 ALLOWED_TITLES = (
@@ -423,6 +425,7 @@ def admin():
 
                 try:
                     sync_result = run_sync_with_lock()
+                    logger.info("admin sync summary: %s", sync_result)
                     if sync_result.get("status") == "completed":
                         flash("����� � ���� ���������", "success")
                     else:

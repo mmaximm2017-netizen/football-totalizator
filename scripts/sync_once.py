@@ -14,22 +14,30 @@ def main():
     app = create_app()
 
     with app.app_context():
-        result = run_sync_with_lock()
+        result = run_sync_with_lock(strict_lock=True)
         print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
 
         if result.get("status") == "completed":
             print("matches updated")
             print("points calculated")
-        else:
-            print(f"sync not completed: {result.get('status')}")
-            return
+            print("sync done")
+            return 0
 
-    print("sync done")
+        if result.get("status") == "skipped_already_running":
+            print("sync already running")
+            return 0
+
+        if result.get("status") == "lock_error":
+            print("sync lock error")
+            return 1
+
+        print(f"sync not completed: {result.get('status')}")
+        return 1
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except Exception:
         logging.exception("sync failed")
         sys.exit(1)

@@ -326,7 +326,7 @@ def try_acquire_sync_lock(lock_key=SYNC_LOCK_KEY):
         acquired = bool(row and row[0])
         return conn, cur, acquired, None
     except Exception as e:
-        logger.warning("Sync lock unavailable, continuing without lock: %s", e)
+        logger.warning("Sync lock unavailable: %s", e)
         close_db(conn, cur)
         return None, None, True, str(e)
 
@@ -340,10 +340,11 @@ def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
     finally:
         close_db(conn, cur)
 
-def run_sync_with_lock():
+def run_sync_with_lock(strict_lock=False):
     lock_conn = lock_cur = None
     summary = {
         "status": "started",
+        "strict_lock": strict_lock,
         "lock_acquired": False,
         "lock_error": None,
         "sync": _empty_sync_summary(),
@@ -358,16 +359,21 @@ def run_sync_with_lock():
 
     try:
         lock_conn, lock_cur, acquired, lock_error = try_acquire_sync_lock()
-        summary["lock_acquired"] = acquired
+        summary["lock_acquired"] = acquired and not lock_error
         summary["lock_error"] = lock_error
 
         if not acquired:
-            summary["status"] = "skipped"
+            summary["status"] = "skipped_already_running"
             logger.info("sync lock skipped: already running")
             return summary
 
         if lock_error:
-            logger.warning("sync lock unavailable; continuing without lock")
+            summary["status"] = "lock_error"
+            summary["errors"].append(lock_error)
+            if strict_lock:
+                logger.error("sync lock unavailable; strict mode stops sync: %s", lock_error)
+                return summary
+            logger.warning("sync lock unavailable; continuing without lock in admin/manual mode")
         else:
             logger.info("sync lock acquired")
 
