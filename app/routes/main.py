@@ -26,8 +26,8 @@ from app.utils import (
     format_month_label,
 )
 from app.config import START_DATE
+from app.services.tournament_context_service import get_requested_or_current_tournament_id
 from app.services.tournament_service import (
-    get_active_tournament_id,
     get_all_tournaments,
     get_tournament_by_id,
 )
@@ -80,44 +80,6 @@ def ajax_success(message, data=None):
     return jsonify(payload)
 
 
-def get_default_tournament_id():
-    """
-    Returns tournament id with the nearest upcoming match.
-    Fallback: first active tournament by id.
-    """
-    conn = get_db()
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            """
-            SELECT tournament_id
-            FROM matches
-            WHERE kickoff_time >= NOW()
-              AND tournament_id IS NOT NULL
-            GROUP BY tournament_id
-            ORDER BY MIN(kickoff_time) ASC
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
-        if row and row[0]:
-            return row[0]
-
-        cur.execute(
-            """
-            SELECT id
-            FROM tournaments
-            WHERE is_active = 1
-            ORDER BY id
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
-        return row[0] if row else None
-    finally:
-        close_db(conn, cur)
-
-
 # =========================================================
 # INDEX
 # =========================================================
@@ -140,10 +102,7 @@ def index():
         tid = request.args.get('tid', type=int)
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
-        if not tid:
-            tid = get_default_tournament_id() or (
-                active_tournaments[0]["id"] if active_tournaments else get_active_tournament_id()
-            )
+        tid = get_requested_or_current_tournament_id(tid)
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 

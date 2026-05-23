@@ -21,6 +21,10 @@ from app.db import get_db, close_db
 from app.services.tournament_service import (
     get_active_tournament_id,
 )
+from app.services.scoring_recalculation_service import (
+    recalc_match_points,
+    recalc_tournament_points,
+)
 from app.utils import (
     translate_name,
     format_date_ru,
@@ -545,39 +549,7 @@ def admin():
                         flash("���� �� ������", "error")
                         return redirect(url_for('admin.admin'))
 
-                    from app.models.scoring import calculate_points
-
-                    cur.execute("""
-                        SELECT user_id, home_goals, away_goals, tournament_id
-                        FROM predictions
-                        WHERE match_id = %s
-                    """, (
-                        match_id,
-                    ))
-
-                    predictions = cur.fetchall()
-
-                    for p in predictions:
-
-                        pts = calculate_points(
-                            home_score,
-                            away_score,
-                            p[1],
-                            p[2]
-                        )
-
-                        cur.execute("""
-                            UPDATE predictions
-                            SET points = %s
-                            WHERE user_id = %s
-                            AND match_id = %s
-                            AND tournament_id = %s
-                        """, (
-                            pts,
-                            p[0],
-                            match_id,
-                            p[3]
-                        ))
+                    recalc_match_points(match_id, conn=conn, cur=cur)
 
                     conn.commit()
 
@@ -711,8 +683,6 @@ def debug_match():
 
     try:
 
-        from app.models.scoring import calculate_points
-
         cur.execute("""
             SELECT id,
                    home_score,
@@ -726,45 +696,8 @@ def debug_match():
         if not match:
             return "���� �� ������", 404
 
-        cur.execute("""
-            UPDATE predictions
-            SET points = 0
-            WHERE match_id = %s
-        """, (match_id,))
-
-        cur.execute("""
-            SELECT user_id,
-                   home_goals,
-                   away_goals
-            FROM predictions
-            WHERE match_id = %s
-        """, (match_id,))
-
-        preds = cur.fetchall()
-
-        updated = 0
-
-        for p in preds:
-
-            pts = calculate_points(
-                match[1],
-                match[2],
-                p[1],
-                p[2]
-            )
-
-            cur.execute("""
-                UPDATE predictions
-                SET points = %s
-                WHERE user_id = %s
-                AND match_id = %s
-            """, (
-                pts,
-                p[0],
-                match_id
-            ))
-
-            updated += 1
+        summary = recalc_match_points(match_id, conn=conn, cur=cur)
+        updated = summary.get("updated", 0)
 
         conn.commit()
 
@@ -831,79 +764,14 @@ def recalc_all():
 
     try:
 
-        from app.models.scoring import calculate_points
-
         tournament_id = get_active_tournament_id()
 
         if not tournament_id:
             flash("�������� ������ �� ������", "error")
             return redirect(url_for('admin.admin'))
 
-        cur.execute("""
-            SELECT id,
-                   home_score,
-                   away_score
-            FROM matches
-            WHERE status = 'FINISHED'
-        """)
-
-        matches = cur.fetchall()
-
-        total_updated = 0
-
-        for match in matches:
-
-            match_id = match[0]
-            home_score = match[1]
-            away_score = match[2]
-
-            cur.execute("""
-                UPDATE predictions
-                SET points = 0
-                WHERE match_id = %s
-                AND tournament_id = %s
-            """, (
-                match_id,
-                tournament_id
-            ))
-
-            cur.execute("""
-                SELECT user_id,
-                       home_goals,
-                       away_goals
-                FROM predictions
-                WHERE match_id = %s
-                AND tournament_id = %s
-            """, (
-                match_id,
-                tournament_id
-            ))
-
-            predictions = cur.fetchall()
-
-            for p in predictions:
-
-                pts = calculate_points(
-                    home_score,
-                    away_score,
-                    p[1],
-                    p[2]
-                )
-
-                cur.execute("""
-                    UPDATE predictions
-                    SET points = %s
-                    WHERE user_id = %s
-                    AND match_id = %s
-                    AND tournament_id = %s
-                """, (
-                    pts,
-                    p[0],
-                    match_id,
-                    tournament_id
-                ))
-
-                total_updated += 1
+        summary = recalc_tournament_points(tournament_id, conn=conn, cur=cur)
+        total_updated = summary.get("updated", 0)
 
         conn.commit()
 
@@ -949,8 +817,6 @@ def force_finish():
             flash("���� �� ����� ���� �������������", "error")
             return redirect(url_for('admin.admin'))
 
-        from app.models.scoring import calculate_points
-
         tournament_id = get_active_tournament_id()
 
         if not tournament_id:
@@ -973,51 +839,12 @@ def force_finish():
             flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
-        cur.execute("""
-            UPDATE predictions
-            SET points = 0
-            WHERE match_id = %s
-            AND tournament_id = %s
-        """, (
+        recalc_match_points(
             match_id,
-            tournament_id
-        ))
-
-        cur.execute("""
-            SELECT user_id,
-                   home_goals,
-                   away_goals
-            FROM predictions
-            WHERE match_id = %s
-            AND tournament_id = %s
-        """, (
-            match_id,
-            tournament_id
-        ))
-
-        predictions = cur.fetchall()
-
-        for p in predictions:
-
-            pts = calculate_points(
-                h,
-                a,
-                p[1],
-                p[2]
-            )
-
-            cur.execute("""
-                UPDATE predictions
-                SET points = %s
-                WHERE user_id = %s
-                AND match_id = %s
-                AND tournament_id = %s
-            """, (
-                pts,
-                p[0],
-                match_id,
-                tournament_id
-            ))
+            tournament_id=tournament_id,
+            conn=conn,
+            cur=cur,
+        )
 
         conn.commit()
 
@@ -1149,43 +976,12 @@ def admin_fix_result():
             flash("���� �� ������", "error")
             return redirect(url_for('admin.admin'))
 
-        from app.models.scoring import calculate_points
-
-        cur.execute("""
-            SELECT user_id,
-                   home_goals,
-                   away_goals
-            FROM predictions
-            WHERE match_id = %s
-            AND tournament_id = %s
-        """, (
+        recalc_match_points(
             match_id,
-            tournament_id
-        ))
-
-        predictions = cur.fetchall()
-
-        for p in predictions:
-
-            pts = calculate_points(
-                home_score,
-                away_score,
-                p[1],
-                p[2]
-            )
-
-            cur.execute("""
-                UPDATE predictions
-                SET points = %s
-                WHERE user_id = %s
-                AND match_id = %s
-                AND tournament_id = %s
-            """, (
-                pts,
-                p[0],
-                match_id,
-                tournament_id
-            ))
+            tournament_id=tournament_id,
+            conn=conn,
+            cur=cur,
+        )
 
         conn.commit()
 

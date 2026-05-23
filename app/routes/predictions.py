@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, session
 
 from app.db import get_db, close_db
-from app.services.tournament_service import get_active_tournament_id
+from app.services.tournament_context_service import get_active_context_tournament_id
 from app.utils import cached_to_msk, is_before_deadline, utc_now
 
 predictions_bp = Blueprint('predictions', __name__)
@@ -50,7 +50,7 @@ def match_predictions(match_id):
 
         tournament_id = match['tournament_id']
         if tournament_id is None:
-            tournament_id = get_active_tournament_id()
+            tournament_id = get_active_context_tournament_id()
 
         # ������ �����: ������� ������� � deadline
         deadline_passed = not is_before_deadline({
@@ -110,7 +110,7 @@ def my_predictions():
     try:
 
         uid = session['user_id']
-        tournament_id = get_active_tournament_id()
+        tournament_id = get_active_context_tournament_id()
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")
