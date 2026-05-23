@@ -1,6 +1,6 @@
 # Sync Health
 
-Sync health is a small JSON health layer over the existing `sync_runs` table. It does not run sync, schedule sync, or change the admin UI.
+Sync health is a small JSON health layer over the existing `sync_runs` table. It does not run sync, schedule sync, or change the sync pipeline.
 
 ## Endpoint
 
@@ -10,7 +10,20 @@ The endpoint is protected with the existing admin check and returns `get_sync_he
 
 ## Admin View
 
-The admin matches page shows Admin Sync Panel V2 next to the manual sync controls. It displays a large health state (`success`, `warning`, or `failed`), latest run id, timestamps, minutes since the last finished sync, match counters, recalculated prediction count, error count, health reason, a link to `/admin/sync-health`, and the five most recent sync runs.
+The admin matches page shows a simplified Sync Panel next to the existing admin buttons. The main view is intentionally human-readable and has only three states:
+
+- `Автообновление работает`
+- `Сейчас идёт обновление`
+- `Есть проблема с автообновлением`
+
+Under the status, the panel shows only:
+
+- `Последнее обновление: X минут назад`
+- `Обновлено матчей: N`
+
+If history is empty or a value is unavailable, the UI shows plain text such as `данных пока нет` instead of `n/a`, `null`, raw ids, or raw timestamps.
+
+Technical data is hidden behind `Показать технические детали`. Expanding it reveals the latest sync id, machine status, timestamps, counters, error count, health reason, and the recent sync runs list. This keeps the default panel readable while preserving debugging context for admins.
 
 ## Response Fields
 
