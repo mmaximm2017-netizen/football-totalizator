@@ -1,9 +1,8 @@
-from functools import wraps
-
-from flask import Blueprint, flash, redirect, request, session, url_for
+from flask import Blueprint, flash, redirect, request, url_for
 from markupsafe import escape
 
 from app.db import close_db, get_db
+from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import (
     recalc_match_points,
     recalc_tournament_points,
@@ -13,34 +12,6 @@ from app.utils import translate_name
 
 
 admin_tournaments_bp = Blueprint("admin_tournaments", __name__, url_prefix="/admin")
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("auth.login"))
-
-        conn = get_db()
-        cur = conn.cursor()
-
-        try:
-            cur.execute(
-                "SELECT is_admin FROM users WHERE id = %s",
-                (session["user_id"],),
-            )
-            user = cur.fetchone()
-
-            if not user or user[0] != 1:
-                flash("������ ��������", "error")
-                return redirect(url_for("main.index"))
-
-        finally:
-            close_db(conn, cur)
-
-        return f(*args, **kwargs)
-
-    return decorated
 
 
 @admin_tournaments_bp.route("/debug_match", methods=["POST"])

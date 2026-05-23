@@ -48,15 +48,45 @@ The existing tournament template calls `url_for('admin.archive_tournament')` and
 
 `POST /admin/`, `request.form["action"]`, forms, templates, and redirects are unchanged. `admin.py` now only reads the action and calls the dispatcher.
 
+### Admin View Preparation
+
+- Admin page data preparation now lives in `app/services/admin_view_service.py`.
+- Moved functions:
+  - `prepare_admin_view_data()`
+  - `prepare_admin_matches_data()`
+  - `normalize_league_key()`
+- Match grouping, tournament/user lists, active tournament selection for forms, and template context assembly were moved without changing SQL queries or template keys.
+
+### Shared Admin Infrastructure
+
+- Shared admin infrastructure now lives in `app/routes/admin_common.py`.
+- `admin_required` is imported from `admin_common.py` by:
+  - `app/routes/admin.py`
+  - `app/routes/admin_sync.py`
+  - `app/routes/admin_matches.py`
+  - `app/routes/admin_tournaments.py`
+- The decorator behavior is unchanged: it checks `session["user_id"]`, queries `users.is_admin`, flashes the same access error, and redirects to the existing auth/main endpoints.
+
+## Current Structure
+
+- `admin.py`: main admin page routes, GET rendering orchestration, compatibility wrappers.
+- `admin_actions.py`: shared `POST /admin/` action registry and dispatch.
+- `admin_sync.py`: sync health route, sync panel context, manual sync execution.
+- `admin_matches.py`: manual match management routes and helpers.
+- `admin_tournaments.py`: tournament routes and simple admin utility actions.
+- `admin_common.py`: shared admin route infrastructure.
+- `admin_view_service.py`: admin template context preparation.
+
 ## Still In `admin.py`
 
 - Main admin route, page rendering, and one-line POST action dispatch call.
-- Match/admin page data grouping.
 - `GET /admin/tournaments` and `GET /admin/users` page routes.
 - Archive/activate tournament endpoint wrappers for backwards-compatible `url_for('admin...')` names.
 
-Current `app/routes/admin.py` size: 427 lines.
+Current `app/routes/admin.py` size: 104 lines.
 
-## Next Step
+## Remaining Technical Debt
 
-Extract page-data builders next. `_prepare_admin_view_data()` and `_prepare_admin_matches_data()` still make `admin.py` carry match, tournament, and user query shaping even though route execution has been split.
+- Some compatibility wrappers remain in `admin.py` because templates call `url_for('admin.archive_tournament')` and `url_for('admin.activate_tournament')`.
+- GET page routes still live together in `admin.py`; they are now thin, but could be split later if template endpoint names are preserved.
+- `admin_view_service.py` still prepares broad shared context for several pages; a later cleanup could split page-specific context builders after behavior is covered by tests.

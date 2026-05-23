@@ -1,44 +1,16 @@
 from datetime import datetime, timezone
-from functools import wraps
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, redirect, request, session, url_for
+from flask import Blueprint, flash, redirect, request, url_for
 
 from app.db import close_db, get_db
+from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import recalc_match_points
 from app.services.tournament_service import get_active_tournament_id
 
 
 admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
 MSK = ZoneInfo("Europe/Moscow")
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("auth.login"))
-
-        conn = get_db()
-        cur = conn.cursor()
-
-        try:
-            cur.execute(
-                "SELECT is_admin FROM users WHERE id = %s",
-                (session["user_id"],),
-            )
-            user = cur.fetchone()
-
-            if not user or user[0] != 1:
-                flash("������ ��������", "error")
-                return redirect(url_for("main.index"))
-
-        finally:
-            close_db(conn, cur)
-
-        return f(*args, **kwargs)
-
-    return decorated
 
 
 def validate_score(home_score, away_score):
