@@ -1,0 +1,497 @@
+from datetime import datetime, timezone
+from functools import wraps
+from zoneinfo import ZoneInfo
+
+from flask import Blueprint, flash, redirect, request, session, url_for
+
+from app.db import close_db, get_db
+from app.services.scoring_recalculation_service import recalc_match_points
+from app.services.tournament_service import get_active_tournament_id
+
+
+admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
+MSK = ZoneInfo("Europe/Moscow")
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("auth.login"))
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        try:
+            cur.execute(
+                "SELECT is_admin FROM users WHERE id = %s",
+                (session["user_id"],),
+            )
+            user = cur.fetchone()
+
+            if not user or user[0] != 1:
+                flash("������ ��������", "error")
+                return redirect(url_for("main.index"))
+
+        finally:
+            close_db(conn, cur)
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+def validate_score(home_score, away_score):
+    try:
+        home_score = int(home_score)
+        away_score = int(away_score)
+
+        if home_score < 0 or away_score < 0:
+            return None, None
+
+        return home_score, away_score
+
+    except ValueError:
+        return None, None
+
+
+def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_time):
+    dt_msk = datetime.strptime(
+        f"{match_date} {match_time}",
+        "%Y-%m-%d %H:%M",
+    ).replace(tzinfo=MSK)
+
+    kickoff_utc = dt_msk.astimezone(timezone.utc)
+
+    if deadline_date or deadline_time:
+        if not deadline_date or not deadline_time:
+            raise ValueError("������� � ����, � ����� ��������")
+
+        deadline_msk = datetime.strptime(
+            f"{deadline_date} {deadline_time}",
+            "%Y-%m-%d %H:%M",
+        ).replace(tzinfo=MSK)
+    else:
+        deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+
+    deadline_utc = deadline_msk.astimezone(timezone.utc)
+    return kickoff_utc, deadline_utc
+
+
+def handle_add_match(conn, cur):
+    try:
+        home = request.form["home_team"].strip()
+        away = request.form["away_team"].strip()
+        league = request.form.get("league", "other").strip()
+        tournament_id = request.form.get("tournament_id", type=int)
+
+        match_date = request.form["match_date"]
+        match_time = request.form["match_time"]
+        deadline_date = request.form.get("deadline_date", "").strip()
+        deadline_time = request.form.get("deadline_time", "").strip()
+
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            match_date,
+            match_time,
+            deadline_date,
+            deadline_time,
+        )
+
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE home_team = %s
+            AND away_team = %s
+            AND kickoff_time = %s
+            """,
+            (
+                home,
+                away,
+                kickoff_utc,
+            ),
+        )
+
+        existing = cur.fetchone()
+
+        if existing:
+            flash("����� ���� ��� ����������", "error")
+            return redirect(url_for("admin.admin"))
+
+        if not tournament_id:
+            flash("Выберите турнир для матча", "error")
+            return redirect(url_for("admin.admin_matches"))
+
+        cur.execute(
+            """
+            INSERT INTO matches (
+                home_team,
+                away_team,
+                kickoff_time,
+                deadline,
+                status,
+                league,
+                tournament_id
+            )
+            VALUES (%s, %s, %s, %s, 'SCHEDULED', %s, %s)
+            """,
+            (
+                home,
+                away,
+                kickoff_utc,
+                deadline_utc,
+                league,
+                tournament_id,
+            ),
+        )
+
+        conn.commit()
+
+        flash(
+            f"���� {home} � {away} ��������",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������: {e}", "error")
+
+    return redirect(url_for("admin.admin"))
+
+
+def handle_set_result(conn, cur):
+    match_id = request.form.get("match_id")
+
+    home_score, away_score = validate_score(
+        request.form.get("home_score"),
+        request.form.get("away_score"),
+    )
+
+    if home_score is None:
+        flash("������������ ����", "error")
+        return redirect(url_for("admin.admin"))
+
+    try:
+        cur.execute(
+            """
+            UPDATE matches
+            SET status = 'FINISHED',
+                home_score = %s,
+                away_score = %s
+            WHERE id = %s
+            """,
+            (
+                home_score,
+                away_score,
+                match_id,
+            ),
+        )
+
+        if cur.rowcount == 0:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        recalc_match_points(match_id, conn=conn, cur=cur)
+
+        conn.commit()
+
+        flash(
+            "��������� �����, ���� �����������",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������: {e}", "error")
+
+    return redirect(url_for("admin.admin"))
+
+
+@admin_matches_bp.route("/force_finish", methods=["POST"])
+@admin_required
+def force_finish():
+    match_id = request.form.get("match_id", type=int)
+    h = request.form.get("home_score", type=int)
+    a = request.form.get("away_score", type=int)
+
+    if match_id is None or h is None or a is None:
+        flash("������������ ������ �����", "error")
+        return redirect(url_for("admin.admin"))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        if h < 0 or a < 0:
+            flash("���� �� ����� ���� �������������", "error")
+            return redirect(url_for("admin.admin"))
+
+        tournament_id = get_active_tournament_id()
+
+        if not tournament_id:
+            flash("�������� ������ �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET status = 'FINISHED',
+                home_score = %s,
+                away_score = %s
+            WHERE id = %s
+            """,
+            (
+                h,
+                a,
+                match_id,
+            ),
+        )
+
+        if cur.rowcount == 0:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        recalc_match_points(
+            match_id,
+            tournament_id=tournament_id,
+            conn=conn,
+            cur=cur,
+        )
+
+        conn.commit()
+
+        flash(
+            f"���� #{match_id} ��������: {h}:{a}",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������: {e}", "error")
+
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for("admin.admin"))
+
+
+@admin_matches_bp.route("/fix_result", methods=["POST"])
+@admin_required
+def admin_fix_result():
+    match_id = request.form.get("match_id")
+
+    home_score, away_score = validate_score(
+        request.form.get("home_score"),
+        request.form.get("away_score"),
+    )
+
+    if home_score is None:
+        flash("������������ ����", "error")
+        return redirect(url_for("admin.admin"))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        tournament_id = get_active_tournament_id()
+
+        if not tournament_id:
+            flash("�������� ������ �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET home_score = %s,
+                away_score = %s
+            WHERE id = %s
+            """,
+            (
+                home_score,
+                away_score,
+                match_id,
+            ),
+        )
+
+        if cur.rowcount == 0:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        recalc_match_points(
+            match_id,
+            tournament_id=tournament_id,
+            conn=conn,
+            cur=cur,
+        )
+
+        conn.commit()
+
+        flash(
+            f"��������� �������: {home_score}:{away_score}",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������: {e}", "error")
+
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for("admin.admin"))
+
+
+@admin_matches_bp.route("/edit_match", methods=["POST"])
+@admin_required
+def admin_edit_match():
+    match_id = request.form.get("match_id")
+    home_team = request.form.get("home_team", "").strip()
+    away_team = request.form.get("away_team", "").strip()
+    match_date = request.form.get("match_date", "").strip()
+    match_time = request.form.get("match_time", "").strip()
+    deadline_date = request.form.get("deadline_date", "").strip()
+    deadline_time = request.form.get("deadline_time", "").strip()
+
+    if not match_id or not home_team or not away_team or not match_date or not match_time:
+        flash("��������� ��� ����", "error")
+        return redirect(url_for("admin.admin"))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT status
+            FROM matches
+            WHERE id = %s
+            """,
+            (match_id,),
+        )
+
+        row = cur.fetchone()
+
+        if not row:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        status = row[0]
+
+        try:
+            kickoff_utc, deadline_utc = build_manual_deadline_utc(
+                match_date,
+                match_time,
+                deadline_date,
+                deadline_time,
+            )
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for("admin.admin"))
+        except Exception:
+            flash("������������ ���� ��� �����", "error")
+            return redirect(url_for("admin.admin"))
+
+        if status == "FINISHED":
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_team = %s,
+                    away_team = %s
+                WHERE id = %s
+                """,
+                (
+                    home_team,
+                    away_team,
+                    match_id,
+                ),
+            )
+
+            flash("��� FINISHED ����� ��������� kickoff/deadline ��������� ��� ������������", "error")
+        else:
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_team = %s,
+                    away_team = %s,
+                    kickoff_time = %s,
+                    deadline = %s
+                WHERE id = %s
+                """,
+                (
+                    home_team,
+                    away_team,
+                    kickoff_utc,
+                    deadline_utc,
+                    match_id,
+                ),
+            )
+
+        if cur.rowcount == 0:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        conn.commit()
+
+        flash(
+            f"���� #{match_id} �������",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������: {e}", "error")
+
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for("admin.admin"))
+
+
+@admin_matches_bp.route("/delete_match", methods=["POST"])
+@admin_required
+def admin_delete_match():
+    match_id = request.form.get("match_id")
+
+    if not match_id:
+        flash("�� ������ match_id", "error")
+        return redirect(url_for("admin.admin"))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            DELETE FROM predictions
+            WHERE match_id = %s
+            """,
+            (match_id,),
+        )
+
+        cur.execute(
+            """
+            DELETE FROM matches
+            WHERE id = %s
+            """,
+            (match_id,),
+        )
+
+        if cur.rowcount == 0:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
+
+        conn.commit()
+
+        flash(
+            f"���� #{match_id} �����",
+            "success",
+        )
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"������ ��������: {e}", "error")
+
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for("admin.admin"))
