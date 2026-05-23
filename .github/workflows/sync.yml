@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 25
 
     env:
+      PYTHONPATH: .
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -43,4 +44,5 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run sync
+        working-directory: .
         run: python scripts/sync_once.py
