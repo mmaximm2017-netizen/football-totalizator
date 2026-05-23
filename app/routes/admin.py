@@ -422,8 +422,8 @@ def admin():
                 from app.services.match_service import run_sync_with_lock
 
                 try:
-                    completed = run_sync_with_lock()
-                    if completed:
+                    sync_result = run_sync_with_lock()
+                    if sync_result.get("status") == "completed":
                         flash("����� � ���� ���������", "success")
                     else:
                         flash("���������� ��� �����������", "error")

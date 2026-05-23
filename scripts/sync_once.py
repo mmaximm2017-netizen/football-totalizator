@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 
@@ -13,12 +14,14 @@ def main():
     app = create_app()
 
     with app.app_context():
-        completed = run_sync_with_lock()
-        if completed:
+        result = run_sync_with_lock()
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+
+        if result.get("status") == "completed":
             print("matches updated")
             print("points calculated")
         else:
-            print("sync already running")
+            print(f"sync not completed: {result.get('status')}")
             return
 
     print("sync done")

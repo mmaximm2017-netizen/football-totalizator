@@ -26,7 +26,19 @@ except ImportError:
 _last_update_time = 0
 _cache_duration = 60  # секунд (1 минута)
 
-def fetch_matches():
+def _empty_sync_summary():
+    return {
+        "football_data_matches": 0,
+        "understat_matches": 0,
+        "matches_inserted": 0,
+        "matches_updated": 0,
+        "matches_skipped_finished": 0,
+        "matches_became_finished": [],
+        "errors": [],
+    }
+
+
+def fetch_matches(errors=None):
     headers = {'X-Auth-Token': API_KEY}
     all_matches = []
     for league_id in LEAGUE_IDS:
@@ -37,7 +49,16 @@ def fetch_matches():
             if resp.status_code == 200:
                 for m in resp.json().get('matches', []):
                     m['league'] = 'wc2026'; all_matches.append(m)
-        except Exception as e: logger.error(f"API error: {e}")
+            else:
+                msg = f"football-data {league_id} returned status {resp.status_code}"
+                logger.warning(msg)
+                if errors is not None:
+                    errors.append(msg)
+        except Exception as e:
+            msg = f"football-data {league_id} API error: {e}"
+            logger.error(msg)
+            if errors is not None:
+                errors.append(msg)
     return all_matches
 
 def parse_optional_int(value):
@@ -182,17 +203,28 @@ def should_update():
         if last:
             last_update = parse_utc_time(last)
             if last_update and utc_now() - last_update <= timedelta(minutes=55): return False
-    except: pass
+    except Exception as e:
+        logger.warning("Failed to check whether match sync is needed: %s", e)
     finally: close_db(conn, cur)
     return True
 
 def update_matches():
-    matches_data = fetch_matches()
+    summary = _empty_sync_summary()
+
+    matches_data = fetch_matches(summary["errors"])
+    summary["football_data_matches"] = len(matches_data)
+
     try:
         rpl_matches = fetch_rpl_matches()
+        summary["understat_matches"] = len(rpl_matches)
         if rpl_matches: matches_data.extend(rpl_matches)
-    except: pass
-    if not matches_data: return
+    except Exception as e:
+        msg = f"Understat sync failed during update_matches: {e}"
+        logger.warning(msg)
+        summary["errors"].append(msg)
+    if not matches_data:
+        logger.warning("Match sync received no matches from external sources")
+        return summary
     conn = get_db(); cur = conn.cursor()
     try:
         cup_tournament_id = get_tournament_id_by_name(cur, "Кубок Матч-премьер")
@@ -234,12 +266,14 @@ def update_matches():
                 cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
                     kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id))
+                summary["matches_inserted"] += 1
             else:
-                cur.execute("SELECT status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
+                cur.execute("SELECT id, status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
                 existing_match = cur.fetchone()
-                existing_status = existing_match[0] if existing_match else None
-                existing_home = existing_match[1] if existing_match else None
-                existing_away = existing_match[2] if existing_match else None
+                match_id = existing_match[0] if existing_match else None
+                existing_status = existing_match[1] if existing_match else None
+                existing_home = existing_match[2] if existing_match else None
+                existing_away = existing_match[3] if existing_match else None
                 
                 is_locked_completed = (
                     existing_status == 'FINISHED'
@@ -263,15 +297,20 @@ def update_matches():
                 # Keep completed matches immutable on sync:
                 # do not overwrite status/kickoff/deadline/league once both scores are known.
                 if is_locked_completed:
+                    summary["matches_skipped_finished"] += 1
                     continue
                 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
                     cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
                         (status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                    if existing_status != 'FINISHED' and match_id is not None:
+                        summary["matches_became_finished"].append(match_id)
                 else:
                     cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
                         (status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                summary["matches_updated"] += 1
         conn.commit()
+        return summary
     except Exception:
         conn.rollback()
         raise
@@ -285,11 +324,11 @@ def try_acquire_sync_lock(lock_key=SYNC_LOCK_KEY):
         cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
         row = cur.fetchone()
         acquired = bool(row and row[0])
-        return conn, cur, acquired
+        return conn, cur, acquired, None
     except Exception as e:
         logger.warning("Sync lock unavailable, continuing without lock: %s", e)
         close_db(conn, cur)
-        return None, None, True
+        return None, None, True, str(e)
 
 def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
     if not conn or not cur:
@@ -303,16 +342,54 @@ def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
 
 def run_sync_with_lock():
     lock_conn = lock_cur = None
-    try:
-        lock_conn, lock_cur, acquired = try_acquire_sync_lock()
-        if not acquired:
-            logger.info("sync already running")
-            return False
+    summary = {
+        "status": "started",
+        "lock_acquired": False,
+        "lock_error": None,
+        "sync": _empty_sync_summary(),
+        "scoring": {
+            "matches_recalculated": 0,
+            "predictions_recalculated": 0,
+        },
+        "errors": [],
+    }
 
-        update_matches()
+    logger.info("sync start")
+
+    try:
+        lock_conn, lock_cur, acquired, lock_error = try_acquire_sync_lock()
+        summary["lock_acquired"] = acquired
+        summary["lock_error"] = lock_error
+
+        if not acquired:
+            summary["status"] = "skipped"
+            logger.info("sync lock skipped: already running")
+            return summary
+
+        if lock_error:
+            logger.warning("sync lock unavailable; continuing without lock")
+        else:
+            logger.info("sync lock acquired")
+
+        sync_summary = update_matches()
+        summary["sync"] = sync_summary
+
         from app.services import point_service
-        point_service.calculate_all_points()
-        return True
+        scoring_summary = point_service.calculate_all_points()
+        summary["scoring"] = {
+            "matches_recalculated": scoring_summary.get("matches", 0),
+            "predictions_recalculated": scoring_summary.get("updated", 0),
+        }
+        logger.info("sync scoring summary: %s", summary["scoring"])
+
+        summary["status"] = "completed"
+        logger.info("sync end: %s", summary)
+        return summary
+    except Exception as e:
+        summary["status"] = "error"
+        summary["errors"].append(str(e))
+        logger.exception("sync failed: %s", summary)
+        raise
     finally:
         release_sync_lock(lock_conn, lock_cur)
 
@@ -320,9 +397,13 @@ def update_matches_safe():
     global _last_update_time
     if not should_update():
         logger.info("Обновление не требуется")
-        return
+        summary = _empty_sync_summary()
+        summary["skipped"] = "not_needed"
+        return summary
     if time.time() - _last_update_time < _cache_duration:
         logger.info("Обновление не требуется (кеш)")
-        return
+        summary = _empty_sync_summary()
+        summary["skipped"] = "cache"
+        return summary
     _last_update_time = time.time()
-    run_sync_with_lock()
+    return run_sync_with_lock()
