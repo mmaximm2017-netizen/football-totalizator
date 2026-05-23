@@ -370,3 +370,66 @@ Why this is the next safest move:
 - It does not move the `.match-card-v2` root.
 
 Important condition: preserve the exact Russia/RPL/Russian Cup/WC-2026 conditional logic, asset paths, `class="tournament-logo"`, and `.league-label` output.
+
+## Completed decomposition step 1.3
+
+Completed Step 1.3: the league/tournament badge inside the match card top line was extracted from `templates/index.html` into `templates/partials/home/_match_league.html`.
+
+What changed:
+
+- `templates/index.html` keeps the existing `.league-row` wrapper inside `.match-topline`.
+- The league badge branch now renders via `{% include 'partials/home/_match_league.html' %}`.
+- `templates/partials/home/_match_league.html` contains only the previous league badge markup:
+  - Russia national team special case;
+  - RPL logo and label;
+  - Russian Cup logo and label;
+  - WC-2026 logo and label;
+  - fallback "Матч" label;
+  - `class="tournament-logo"`;
+  - `.league-label`.
+
+Not changed:
+
+- Match card root.
+- Top line structure outside `.league-row`.
+- Deadline/status right side.
+- Prediction form.
+- Steppers.
+- Finished state.
+- CSS.
+- JS.
+- Asset paths.
+- Tournament conditional logic.
+
+## Current partial structure after step 1.3
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+
+The rest of `templates/index.html` is still intentionally monolithic:
+
+- month/day accordion wrappers;
+- match card root and state classes;
+- deadline/timer markup;
+- team blocks;
+- prediction form and steppers;
+- finished match state;
+- inline CSS;
+- inline JS.
+
+## Next recommended step after step 1.3
+
+Next low-risk step: extract the repeated team logo/name block into `templates/partials/home/_team_v2.html`.
+
+Why this is the next safest move:
+
+- The same team visual structure appears multiple times.
+- It is still smaller than the whole match card.
+- It does not own prediction form state.
+- It does not own steppers.
+- It does not own deadlines.
+
+Important condition: preserve `get_flag(team)|safe` before `get_club_logo(team)|safe`, `.team-v2`, `.team-logo-v2`, `.team-name-v2`, and the current finished/non-finished parent layout.
