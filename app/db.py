@@ -210,6 +210,21 @@ def init_db():
         );
         """)
 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS sync_runs (
+            id SERIAL PRIMARY KEY,
+            started_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            finished_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+            status TEXT NOT NULL,
+            matches_inserted INTEGER DEFAULT 0,
+            matches_updated INTEGER DEFAULT 0,
+            matches_finished INTEGER DEFAULT 0,
+            predictions_recalculated INTEGER DEFAULT 0,
+            errors_count INTEGER DEFAULT 0,
+            summary_json TEXT
+        );
+        """)
+
         # =====================================================
         # SAFE MIGRATIONS
         # =====================================================
@@ -238,6 +253,8 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_predictions_tournament ON predictions(tournament_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_started ON sync_runs(started_at);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_status ON sync_runs(status);")
 
         # Fix known tournament name typo.
         cur.execute(

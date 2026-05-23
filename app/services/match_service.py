@@ -7,6 +7,11 @@ from zoneinfo import ZoneInfo
 import requests
 from app.config import API_KEY, LEAGUE_IDS
 from app.db import get_db, close_db
+from app.services.sync_history_service import (
+    create_sync_run,
+    finish_sync_run,
+    recover_stale_syncs,
+)
 from app.utils import translate_name, parse_utc_time, utc_now
 
 logger = logging.getLogger(__name__)
@@ -34,8 +39,18 @@ def _empty_sync_summary():
         "matches_updated": 0,
         "matches_skipped_finished": 0,
         "matches_became_finished": [],
+        "changed_finished_match_ids": [],
+        "changed_finished_matches_count": 0,
         "errors": [],
     }
+
+
+def _add_changed_finished_match(summary, match_id):
+    if match_id is None:
+        return
+    if match_id not in summary["changed_finished_match_ids"]:
+        summary["changed_finished_match_ids"].append(match_id)
+        summary["changed_finished_matches_count"] = len(summary["changed_finished_match_ids"])
 
 
 def fetch_matches(errors=None):
@@ -262,11 +277,17 @@ def update_matches():
             deadline_utc = deadline_msk.astimezone(timezone.utc)
             
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
-            if not cur.fetchone():
+            existing_row = cur.fetchone()
+            if not existing_row:
                 cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (str(api_id), home_team, away_team,
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    RETURNING id""", (str(api_id), home_team, away_team,
                     kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id))
+                match_id = cur.fetchone()[0]
                 summary["matches_inserted"] += 1
+                if status == 'FINISHED' and home_score is not None and away_score is not None:
+                    summary["matches_became_finished"].append(match_id)
+                    _add_changed_finished_match(summary, match_id)
             else:
                 cur.execute("SELECT id, status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
                 existing_match = cur.fetchone()
@@ -280,8 +301,15 @@ def update_matches():
                     and existing_home is not None
                     and existing_away is not None
                 )
+                finished_score_changed = (
+                    is_locked_completed
+                    and status == 'FINISHED'
+                    and home_score is not None
+                    and away_score is not None
+                    and (existing_home != home_score or existing_away != away_score)
+                )
 
-                if is_locked_completed:
+                if is_locked_completed and not finished_score_changed:
                     home_score = existing_home
                     away_score = existing_away
 
@@ -296,8 +324,15 @@ def update_matches():
 
                 # Keep completed matches immutable on sync:
                 # do not overwrite status/kickoff/deadline/league once both scores are known.
-                if is_locked_completed:
+                if is_locked_completed and not finished_score_changed:
                     summary["matches_skipped_finished"] += 1
+                    continue
+
+                if finished_score_changed:
+                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s WHERE api_match_id=%s""",
+                        (status, home_score, away_score, str(api_id)))
+                    _add_changed_finished_match(summary, match_id)
+                    summary["matches_updated"] += 1
                     continue
                 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
@@ -305,6 +340,7 @@ def update_matches():
                         (status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
                     if existing_status != 'FINISHED' and match_id is not None:
                         summary["matches_became_finished"].append(match_id)
+                        _add_changed_finished_match(summary, match_id)
                 else:
                     cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
                         (status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
@@ -340,8 +376,75 @@ def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
     finally:
         close_db(conn, cur)
 
+
+def _sync_history_status(summary):
+    if summary.get("lock_error"):
+        return "lock_error"
+    if summary.get("errors") or (summary.get("sync") or {}).get("errors"):
+        return "partial_success"
+    return "success"
+
+
+def _recalculate_points_after_sync(sync_summary):
+    if not isinstance(sync_summary, dict):
+        logger.warning("sync summary is unavailable; using broad scoring fallback")
+        from app.services.scoring_recalculation_service import recalc_all_points
+        scoring_summary = recalc_all_points()
+        return {
+            "scoring_mode": "broad_fallback",
+            "matches_recalculated": scoring_summary.get("matches", 0),
+            "predictions_recalculated": scoring_summary.get("updated", 0),
+        }
+
+    if "changed_finished_match_ids" not in sync_summary:
+        logger.warning("sync summary has no changed_finished_match_ids; using broad scoring fallback")
+        from app.services.scoring_recalculation_service import recalc_all_points
+        scoring_summary = recalc_all_points()
+        return {
+            "scoring_mode": "broad_fallback",
+            "matches_recalculated": scoring_summary.get("matches", 0),
+            "predictions_recalculated": scoring_summary.get("updated", 0),
+        }
+
+    changed_match_ids = sync_summary.get("changed_finished_match_ids")
+    if not isinstance(changed_match_ids, list):
+        logger.warning("sync summary changed_finished_match_ids is invalid; using broad scoring fallback")
+        from app.services.scoring_recalculation_service import recalc_all_points
+        scoring_summary = recalc_all_points()
+        return {
+            "scoring_mode": "broad_fallback",
+            "matches_recalculated": scoring_summary.get("matches", 0),
+            "predictions_recalculated": scoring_summary.get("updated", 0),
+        }
+
+    if not changed_match_ids:
+        return {
+            "scoring_mode": "skipped_no_finished_changes",
+            "matches_recalculated": 0,
+            "predictions_recalculated": 0,
+        }
+
+    from app.services.scoring_recalculation_service import recalc_match_points
+    total_updated = 0
+    unique_match_ids = []
+    for match_id in changed_match_ids:
+        if match_id not in unique_match_ids:
+            unique_match_ids.append(match_id)
+
+    for match_id in unique_match_ids:
+        result = recalc_match_points(match_id)
+        total_updated += result.get("updated", 0)
+
+    return {
+        "scoring_mode": "changed_matches",
+        "matches_recalculated": len(unique_match_ids),
+        "predictions_recalculated": total_updated,
+    }
+
+
 def run_sync_with_lock(strict_lock=False):
     lock_conn = lock_cur = None
+    sync_run_id = None
     summary = {
         "status": "started",
         "strict_lock": strict_lock,
@@ -349,6 +452,7 @@ def run_sync_with_lock(strict_lock=False):
         "lock_error": None,
         "sync": _empty_sync_summary(),
         "scoring": {
+            "scoring_mode": None,
             "matches_recalculated": 0,
             "predictions_recalculated": 0,
         },
@@ -356,6 +460,8 @@ def run_sync_with_lock(strict_lock=False):
     }
 
     logger.info("sync start")
+    recover_stale_syncs()
+    sync_run_id = create_sync_run(summary)
 
     try:
         lock_conn, lock_cur, acquired, lock_error = try_acquire_sync_lock()
@@ -365,6 +471,7 @@ def run_sync_with_lock(strict_lock=False):
         if not acquired:
             summary["status"] = "skipped_already_running"
             logger.info("sync lock skipped: already running")
+            finish_sync_run(sync_run_id, "skipped_already_running", summary)
             return summary
 
         if lock_error:
@@ -372,6 +479,7 @@ def run_sync_with_lock(strict_lock=False):
             summary["errors"].append(lock_error)
             if strict_lock:
                 logger.error("sync lock unavailable; strict mode stops sync: %s", lock_error)
+                finish_sync_run(sync_run_id, "lock_error", summary)
                 return summary
             logger.warning("sync lock unavailable; continuing without lock in admin/manual mode")
         else:
@@ -380,21 +488,18 @@ def run_sync_with_lock(strict_lock=False):
         sync_summary = update_matches()
         summary["sync"] = sync_summary
 
-        from app.services import point_service
-        scoring_summary = point_service.calculate_all_points()
-        summary["scoring"] = {
-            "matches_recalculated": scoring_summary.get("matches", 0),
-            "predictions_recalculated": scoring_summary.get("updated", 0),
-        }
+        summary["scoring"] = _recalculate_points_after_sync(sync_summary)
         logger.info("sync scoring summary: %s", summary["scoring"])
 
         summary["status"] = "completed"
         logger.info("sync end: %s", summary)
+        finish_sync_run(sync_run_id, _sync_history_status(summary), summary)
         return summary
     except Exception as e:
         summary["status"] = "error"
         summary["errors"].append(str(e))
         logger.exception("sync failed: %s", summary)
+        finish_sync_run(sync_run_id, "failed", summary)
         raise
     finally:
         release_sync_lock(lock_conn, lock_cur)

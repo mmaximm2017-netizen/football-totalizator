@@ -13,7 +13,8 @@ from flask import (
     redirect,
     url_for,
     flash,
-    session
+    session,
+    jsonify,
 )
 
 from markupsafe import escape
@@ -33,6 +34,7 @@ from app.utils import (
     parse_datetime,
 )
 from app.config import START_DATE
+from app.services.sync_history_service import get_sync_health
 
 
 # =========================================================
@@ -629,6 +631,12 @@ def admin():
         return render_template('admin.html')
     finally:
         close_db(conn, cur)
+
+
+@admin_bp.route('/sync-health', methods=['GET'])
+@admin_required
+def sync_health():
+    return jsonify(get_sync_health())
 
 
 @admin_bp.route('/matches', methods=['GET'])
