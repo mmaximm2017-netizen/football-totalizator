@@ -10,7 +10,7 @@ The endpoint is protected with the existing admin check and returns `get_sync_he
 
 ## Admin View
 
-The admin matches page shows a compact sync status block next to the manual sync controls. It displays the latest status, timestamps, minutes since the last finished sync, error count, health reason, sync run id, and a link to `/admin/sync-health`.
+The admin matches page shows Admin Sync Panel V2 next to the manual sync controls. It displays a large health state (`success`, `warning`, or `failed`), latest run id, timestamps, minutes since the last finished sync, match counters, recalculated prediction count, error count, health reason, a link to `/admin/sync-health`, and the five most recent sync runs.
 
 ## Response Fields
 

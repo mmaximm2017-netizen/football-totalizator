@@ -286,6 +286,42 @@ def get_last_sync():
         close_db(conn, cur)
 
 
+def get_recent_sync_runs(limit=5):
+    conn = cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        _ensure_sync_runs_table(cur)
+        conn.commit()
+        cur.execute(
+            """
+            SELECT
+                id,
+                started_at,
+                finished_at,
+                status,
+                matches_inserted,
+                matches_updated,
+                matches_finished,
+                predictions_recalculated,
+                errors_count,
+                summary_json
+            FROM sync_runs
+            ORDER BY started_at DESC, id DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.exception("Failed to load recent sync history runs: %s", e)
+        return []
+    finally:
+        close_db(conn, cur)
+
+
 def get_sync_health(max_age_hours=SYNC_HEALTH_MAX_AGE_HOURS):
     conn = cur = None
     max_age_minutes = max_age_hours * 60
