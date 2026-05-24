@@ -351,11 +351,11 @@
             <div class="admin-card-header">Обслуживание данных</div>
             <div class="admin-subsection-title">1.5 • Массовые действия</div>
             <div class="admin-service-grid">
-                <form method="post" action="/admin/recalc_all">
+                <form method="post" action="/admin/recalc_all" onsubmit="return confirm('Пересчитать очки? Это массово обновит результаты по завершённым матчам.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
                 </form>
-                <form method="post" action="/admin/translate">
+                <form method="post" action="/admin/translate" onsubmit="return confirm('Перевести названия команд? Это массово обновит названия в матчах.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
                 </form>
