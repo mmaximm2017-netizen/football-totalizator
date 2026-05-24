@@ -177,3 +177,43 @@
 - Browser text shaping and translated country names can still wrap slightly differently across devices.
 - The 360px layout remains dense because the card must fit two teams, two steppers, a divider and status content in one row.
 - The requested FIFA guideline PDF and prior chat screenshots were not present as local project files during this pass, so this fix follows the already-approved WC2026 V2 CSS language documented above.
+
+## WC2026 V2 mobile UI recovery pass
+
+### Real selectors reviewed
+
+- Home card layout is not built by `_match_card_v2.html` in the current tree; the existing partials are `_match_active.html`, `_match_finished.html`, and `_team_v2.html`.
+- The active prediction layout is composed by `.teams-center`, `.team-v2`, `.team-logo-v2`, `.team-name-v2`, `.center-score`, `.score-input-row`, `.score-stepper`, `.stepper-btn`, `.score-input-v2`, and `.save-btn-v2`.
+- The mobile breakpoints that materially affect the card are `480px`, `430px`, and `380px`.
+
+### Composition recovery
+
+- Replaced the late emergency WC layer with a cleaner mobile-first reset scoped to `body.tournament-wc2026`.
+- `.teams-center` is now a strict three-column grid: flexible team, fixed score zone, flexible team.
+- Team blocks use fixed rows for flag and name, so the two sides share height, baseline, and rhythm.
+- The score zone keeps a stable center width and the steppers use fixed flex-basis values, preventing names from pushing into the controls.
+
+### Team names and flags
+
+- WC team names are clamped to two lines with WC-only font-size and line-height tuning.
+- Long names are constrained by max-width, `min-width: 0`, and controlled wrapping so they stay under the flag and outside the score zone.
+- Flag shells and images have stable sizes across default, `430px`, and `380px` breakpoints.
+
+### Cleaner visual language
+
+- Match cards moved back toward a light event-card surface: white, pale cyan, and restrained electric-blue depth.
+- Heavy glass/gloss layers were reduced by removing backdrop blur from the home card surface and team panel.
+- Background blobs were made secondary with lower opacity and smaller visual dominance, especially the red and purple shapes.
+- The score stepper now reads as a lighter segmented control integrated into the card instead of a heavy glowing widget.
+- The lime CTA remains bright but loses the heavier glow and gets a cleaner shadow.
+
+### Preserved contracts
+
+- No backend, JS, form logic, `data-*`, or HTML structure changes.
+- RPL/Cup styling remains untouched because the recovery layer is scoped to `body.tournament-wc2026`.
+- Existing score-stepper controls and touch-target structure are preserved.
+
+### Remaining risks
+
+- Real browser/device visual smoke is still recommended at 360px, 390px, and 430px because this CSS file contains several older WC layers with `!important`.
+- The FIFA guideline PDF and prior chat screenshots were not present as local project files during this pass.
