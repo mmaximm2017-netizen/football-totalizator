@@ -569,7 +569,7 @@
         width: 82px !important;
         padding: 13px 12px 13px 8px !important;
         vertical-align: middle;
-        text-align: right;
+        text-align: center;
     }
 
     .place-box {
@@ -617,8 +617,8 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 54px;
-        min-height: 34px;
+        width: 54px;
+        height: 34px;
         padding: 6px 10px;
         border-radius: 14px;
         background: rgba(46,125,50,0.12);
@@ -660,7 +660,6 @@
     }
 
     .standings-table tbody tr.top-1 .points-number {
-        min-width: 60px;
         background: rgba(255,215,0,0.18);
         color: #9a6a00 !important;
         border-color: rgba(201,160,61,0.24);
@@ -787,6 +786,19 @@
         border: 1px solid rgba(216,180,90,0.26);
     }
 
+    .standings-table tbody tr.top-1 .place-box,
+    .standings-table tbody tr.top-2 .place-box,
+    .standings-table tbody tr.top-3 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-1 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-2 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-3 .place-box {
+        min-width: auto;
+        width: auto;
+        height: auto;
+        background: transparent;
+        box-shadow: none;
+    }
+
     .empty-table {
         border-radius: 24px !important;
         padding: 38px 18px !important;
@@ -837,8 +849,8 @@
         }
 
         .points-number {
-            min-width: 48px;
-            min-height: 31px;
+            width: 48px;
+            height: 31px;
             padding: 5px 8px;
             border-radius: 12px;
             font-size: 16px !important;
