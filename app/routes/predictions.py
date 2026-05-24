@@ -3,8 +3,11 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash, session
 
 from app.db import get_db, close_db
-from app.services.tournament_context_service import get_selected_tournament_id
-from app.services.tournament_service import get_tournament_by_id
+from app.services.tournament_context_service import (
+    get_selected_tournament_id,
+    get_tournament_state_flags,
+)
+from app.services.tournament_service import get_all_tournaments, get_tournament_by_id
 from app.utils import cached_to_msk, is_before_deadline, utc_now
 
 predictions_bp = Blueprint('predictions', __name__)
@@ -111,6 +114,9 @@ def my_predictions():
     try:
 
         uid = session['user_id']
+        tournaments = get_all_tournaments()
+        active_tournaments = [t for t in tournaments if t.get("is_active")]
+        tournament_state = get_tournament_state_flags(tournaments)
         tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
 
         if not tournament_id:
@@ -248,6 +254,9 @@ def my_predictions():
         finished=finished,
         cancelled=cancelled,
         to_msk=cached_to_msk,
+        tournaments=tournaments,
+        active_tournaments=active_tournaments,
+        **tournament_state,
         current_tournament_id=tournament_id,
         current_tournament_name=current_tournament_name,
     )

@@ -115,6 +115,18 @@ def get_selected_tournament_id(requested_tid):
     )
 
 
+def get_tournament_state_flags(tournaments):
+    tournaments = tournaments or []
+    has_any_tournament = bool(tournaments)
+    has_active_tournament = any(t.get("is_active") for t in tournaments)
+
+    return {
+        "has_any_tournament": has_any_tournament,
+        "has_active_tournament": has_active_tournament,
+        "is_offseason": has_any_tournament and not has_active_tournament,
+    }
+
+
 def get_requested_or_current_tournament_id(requested_id):
     return requested_id or get_current_tournament_id()
 

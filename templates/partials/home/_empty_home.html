@@ -1,5 +1,16 @@
 <div class="empty-home">
+    {% if is_offseason %}
+    <p style="font-size: 48px; margin-bottom: 12px;">🏁</p>
+    <p style="font-size: 18px; font-weight: 1000;">Сезон завершён</p>
+    <p style="color: #5d7894; margin-top: 6px;">Новый турнир скоро появится</p>
+    <p style="color: #5d7894; margin-top: 6px;">Таблица последнего турнира доступна</p>
+    {% elif not has_any_tournament %}
+    <p style="font-size: 48px; margin-bottom: 12px;">🏆</p>
+    <p style="font-size: 18px; font-weight: 1000;">Турниры ещё не созданы</p>
+    <p style="color: #5d7894; margin-top: 6px;">Матчи появятся после создания турнира</p>
+    {% else %}
     <p style="font-size: 48px; margin-bottom: 12px;">⚽</p>
     <p style="font-size: 18px; font-weight: 1000;">Нет доступных матчей</p>
     <p style="color: #5d7894; margin-top: 6px;">Скоро появятся новые игры</p>
+    {% endif %}
 </div>

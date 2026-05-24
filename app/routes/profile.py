@@ -12,7 +12,10 @@ from flask import (
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
-from app.services.tournament_context_service import get_selected_tournament_id
+from app.services.tournament_context_service import (
+    get_selected_tournament_id,
+    get_tournament_state_flags,
+)
 from app.services.tournament_service import (
     get_all_tournaments,
     get_tournament_by_id,
@@ -67,6 +70,7 @@ def profile():
 
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
+        tournament_state = get_tournament_state_flags(all_tournaments)
 
         tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
         if not tournament_id:
@@ -179,6 +183,7 @@ def profile():
         get_club_logo=get_club_logo,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
+        **tournament_state,
         current_tournament_id=tournament_id,
         current_tournament_name=current_tournament_name,
     )

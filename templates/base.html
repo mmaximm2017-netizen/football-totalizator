@@ -1054,8 +1054,10 @@ body.tournament-wc2026 .bottom-nav a.active {
 <body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
-    {% set tournament_items = active_tournaments|default(tournaments|default([])) %}
-    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile' if request.path == '/profile' else '/') %}
+    {% set active_items = active_tournaments|default([]) %}
+    {% set all_items = tournaments|default([]) %}
+    {% set tournament_items = active_items if active_items else all_items %}
+    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/')) %}
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -1244,7 +1246,7 @@ body.tournament-wc2026 .bottom-nav a.active {
         });
 
         (function persistTournamentSelection() {
-            const tournamentPages = new Set(['/', '/table', '/profile']);
+            const tournamentPages = new Set(['/', '/table', '/profile', '/my-predictions']);
             const path = window.location.pathname;
             if (!tournamentPages.has(path)) return;
 

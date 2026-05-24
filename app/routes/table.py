@@ -7,7 +7,10 @@ from flask import Blueprint, jsonify, render_template, request
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
-from app.services.tournament_context_service import get_selected_tournament_id
+from app.services.tournament_context_service import (
+    get_selected_tournament_id,
+    get_tournament_state_flags,
+)
 from app.services.tournament_service import get_tournament_status
 
 table_bp = Blueprint('table', __name__)
@@ -37,6 +40,7 @@ def table():
             for r in cur.fetchall()
         ]
         active_tournaments = [t for t in tournaments if t['is_active']]
+        tournament_state = get_tournament_state_flags(tournaments)
 
         today = datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat()
 
@@ -78,6 +82,7 @@ def table():
                 selected_is_active=False,
                 current_tournament_id=None,
                 current_tournament_name="Нет турниров",
+                **tournament_state,
             )
 
         cur.execute(
@@ -107,6 +112,7 @@ def table():
             table=table_data,
             tournaments=tournaments,
             active_tournaments=active_tournaments,
+            **tournament_state,
             selected_tid=tid,
             selected_name=selected_name,
             selected_is_active=selected_is_active,
@@ -130,6 +136,7 @@ def table():
         table=table_data,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
+        **tournament_state,
         selected_tid=tid,
         selected_name=selected_name,
         selected_is_active=selected_is_active,
