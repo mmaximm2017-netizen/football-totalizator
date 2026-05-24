@@ -923,6 +923,10 @@
         object-fit: cover !important;
         display: block;
         margin: 0 auto !important;
+        box-shadow:
+            0 0 0 1px rgba(216,180,90,0.26),
+            0 0 10px rgba(216,180,90,0.18),
+            0 3px 8px rgba(0,0,0,0.18) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
