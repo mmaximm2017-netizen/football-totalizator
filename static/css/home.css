@@ -2368,3 +2368,35 @@
         justify-content: center !important;
         min-height: 150px !important;
     }
+
+    /* WC dark card text contrast. */
+    body.tournament-wc2026 .match-card-v2 {
+        border-left: 4px solid #2aa8ff !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2,
+    body.tournament-wc2026 .match-card-v2 .team-name-v2,
+    body.tournament-wc2026 .match-card-v2 .match-info,
+    body.tournament-wc2026 .match-card-v2 .league-label,
+    body.tournament-wc2026 .match-card-v2 .time-label,
+    body.tournament-wc2026 .match-card-v2 .deadline-label,
+    body.tournament-wc2026 .match-card-v2 .deadline-timer,
+    body.tournament-wc2026 .match-card-v2 .deadline-helper,
+    body.tournament-wc2026 .match-card-v2 .deadline-cue,
+    body.tournament-wc2026 .match-card-v2 .prediction-label,
+    body.tournament-wc2026 .match-card-v2 .my-prediction-v2,
+    body.tournament-wc2026 .match-card-v2 .match-bottomline,
+    body.tournament-wc2026 .match-card-v2 .center-sub {
+        color: #ffffff !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .team-name-v2 {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-input-v2,
+    body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
+        color: #ffffff !important;
+        background: rgba(255,255,255,0.10) !important;
+    }
