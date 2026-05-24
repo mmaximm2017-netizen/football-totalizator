@@ -876,6 +876,188 @@
             font-size: 8px !important;
         }
     }
+
+    /* WC2026 V2 table rollout: scoped, keeps ranking/AJAX/links intact. */
+    body.tournament-wc2026 .table-container {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-wc2026 .table-container::before,
+    body.tournament-wc2026 .table-container::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        filter: none;
+    }
+
+    body.tournament-wc2026 .table-container::before {
+        width: min(430px, 82vw);
+        height: min(430px, 82vw);
+        right: -25%;
+        top: 92px;
+        border-radius: 50%;
+        background:
+            radial-gradient(circle at 40% 35%, #ff5f50 0 26%, transparent 26.5%),
+            radial-gradient(circle at 78% 70%, #d8ff22 0 20%, transparent 20.5%),
+            radial-gradient(circle at 18% 76%, #1fe7ff 0 18%, transparent 18.5%);
+        opacity: 0.68;
+    }
+
+    body.tournament-wc2026 .table-container::after {
+        width: min(380px, 74vw);
+        height: min(380px, 74vw);
+        left: -31%;
+        bottom: 56px;
+        border-radius: 54% 46% 48% 52%;
+        background:
+            radial-gradient(circle at 72% 20%, #b832ff 0 26%, transparent 26.5%),
+            radial-gradient(circle at 26% 62%, #0614c8 0 30%, transparent 30.5%),
+            radial-gradient(circle at 68% 82%, #d8ff22 0 18%, transparent 18.5%);
+        opacity: 0.56;
+    }
+
+    body.tournament-wc2026 .table-shell {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 96% 4%, #ff5f50 0 9%, transparent 9.5%),
+            radial-gradient(circle at 6% 28%, rgba(216,255,34,0.74) 0 7%, transparent 7.5%),
+            radial-gradient(circle at 58% 0%, rgba(31,231,255,0.30) 0 18%, transparent 18.5%),
+            linear-gradient(150deg, rgba(0,23,216,0.94), rgba(0,8,84,0.92)) !important;
+        border-color: rgba(31,231,255,0.34) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 18px 38px rgba(0,5,70,0.38) !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    body.tournament-wc2026 .standings-table {
+        background: transparent !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr {
+        background: rgba(1,8,68,0.42) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr:nth-child(even) {
+        background: rgba(2,13,110,0.40) !important;
+    }
+
+    body.tournament-wc2026 .player-row + .player-row td {
+        border-top-color: rgba(31,231,255,0.14) !important;
+    }
+
+    body.tournament-wc2026 .place-box,
+    body.tournament-wc2026 .points-number,
+    body.tournament-wc2026 .leader-badge {
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        letter-spacing: 0;
+    }
+
+    body.tournament-wc2026 .player-name {
+        color: #ffffff !important;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.24);
+    }
+
+    body.tournament-wc2026 .place-box {
+        background: rgba(255,255,255,0.12) !important;
+        color: #d8ff22 !important;
+        border: 1px solid rgba(216,255,34,0.18);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 8px 16px rgba(0,4,42,0.20);
+    }
+
+    body.tournament-wc2026 .points-number {
+        background:
+            linear-gradient(135deg, rgba(216,255,34,0.20), rgba(38,240,200,0.12)) !important;
+        color: #d8ff22 !important;
+        border-color: rgba(216,255,34,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            0 0 18px rgba(216,255,34,0.12);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(216,255,34,0.30) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(0,23,216,0.54)) !important;
+        box-shadow:
+            inset 4px 0 0 #d8ff22,
+            inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(31,231,255,0.24) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(31,231,255,0.16), rgba(0,13,148,0.50)) !important;
+        box-shadow:
+            inset 4px 0 0 #1fe7ff,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(255,95,80,0.22) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(255,95,80,0.14), rgba(0,13,148,0.48)) !important;
+        box-shadow:
+            inset 4px 0 0 #ff5f50,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 .points-number {
+        background: linear-gradient(135deg, #d8ff22, #26f0c8) !important;
+        color: #06102d !important;
+        border-color: rgba(255,255,255,0.42) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 .points-number {
+        background: linear-gradient(135deg, #1fe7ff, #26f0c8) !important;
+        color: #06102d !important;
+        border-color: rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 .points-number {
+        background: linear-gradient(135deg, #ff5f50, #b832ff) !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.30) !important;
+    }
+
+    body.tournament-wc2026 .leader-badge {
+        background: linear-gradient(135deg, #d8ff22, #26f0c8) !important;
+        color: #06102d !important;
+        border: 1px solid rgba(255,255,255,0.38) !important;
+        box-shadow: 0 0 16px rgba(216,255,34,0.16);
+    }
+
+    body.tournament-wc2026 .shared-place {
+        color: rgba(255,255,255,0.66) !important;
+    }
+
+    body.tournament-wc2026 .empty-table {
+        background:
+            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.30) 0 14%, transparent 14.5%),
+            linear-gradient(145deg, rgba(0,23,216,0.88), rgba(0,8,78,0.84)) !important;
+        border-color: rgba(31,231,255,0.24) !important;
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-wc2026 .player-name {
+            font-size: 16px !important;
+        }
+
+        body.tournament-wc2026 .points-number {
+            font-size: 16px !important;
+        }
+    }
 </style>
 
 {% if table %}
