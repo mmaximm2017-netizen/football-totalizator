@@ -252,11 +252,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    document.querySelectorAll('[data-bets-sheet]').forEach(function (link) {
+    function attachBetsSheetLink(link) {
+        if (!link || link.dataset.betsSheetBound === '1') return;
+
+        link.dataset.betsSheetBound = '1';
         link.addEventListener('click', function (event) {
             event.preventDefault();
             loadBetsIntoSheet(link.href);
         });
+    }
+
+    document.querySelectorAll('[data-bets-sheet]').forEach(function (link) {
+        attachBetsSheetLink(link);
     });
 
     if (sheetOverlay) {
@@ -315,6 +322,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         statusPill.className = 'status-pill-v2 status-closed';
         statusPill.textContent = '⏰ Закрыто';
+    }
+
+    function shouldShowBetsLink(card) {
+        if (!card) return false;
+
+        return card.dataset.finished === '1' || card.dataset.deadlineClosed === '1';
     }
 
     function formatDeadlineRemaining(ms) {
@@ -546,14 +559,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 let betsLink = box.querySelector('.bets-link-v2');
+                const canShowBetsLink = shouldShowBetsLink(card);
 
-                if (!betsLink && data.match_id) {
+                if (!canShowBetsLink && betsLink) {
+                    betsLink.remove();
+                    betsLink = null;
+                }
+
+                if (canShowBetsLink && !betsLink && data.match_id) {
                     if (bottomLine) {
                         betsLink = document.createElement('a');
                         betsLink.className = 'bets-link-v2';
                         betsLink.href = '/match/' + data.match_id + '/predictions';
+                        betsLink.setAttribute('data-bets-sheet', '');
                         betsLink.textContent = 'Ставки братишек';
                         bottomLine.appendChild(betsLink);
+                        attachBetsSheetLink(betsLink);
                     }
                 }
 
