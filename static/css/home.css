@@ -1920,6 +1920,27 @@
         letter-spacing: 0;
     }
 
+    /* Center WC team flag and name. */
+    body.tournament-wc2026 .match-card-v2 .team-v2 {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: center;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-name-v2 {
+        text-align: center;
+        width: 100%;
+    }
+
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
     body.tournament-wc2026 .match-card-v2 .teams-center {
         display: grid;
@@ -1942,13 +1963,12 @@
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2,
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:first-child,
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:last-child {
-        display: grid;
-        grid-template-rows: 52px 34px;
+        display: flex;
+        flex-direction: column;
         align-self: center;
-        align-content: center;
-        align-items: start;
+        align-items: center;
+        justify-content: flex-start;
         justify-self: stretch;
-        justify-items: center;
         width: 100%;
         min-width: 0;
         min-height: 86px;
@@ -1958,7 +1978,7 @@
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 {
-        align-self: start;
+        align-self: center;
         justify-self: center;
         width: 50px !important;
         height: 50px !important;
@@ -1996,7 +2016,7 @@
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
-        align-self: start;
+        align-self: center;
         justify-self: center;
         display: -webkit-box;
         -webkit-box-orient: vertical;
