@@ -5,26 +5,26 @@
     .profile-screen {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 14px;
+        min-width: 0;
     }
 
     .profile-hero {
         position: relative;
         overflow: hidden;
 
-        border-radius: 28px;
-        padding: 21px 17px;
+        border-radius: 24px;
+        padding: 19px 16px;
 
         background:
-            radial-gradient(circle at 18% 0%, rgba(255,255,255,0.88), transparent 35%),
-            radial-gradient(circle at 100% 0%, rgba(42,168,255,0.24), transparent 36%),
-            linear-gradient(160deg, rgba(255,255,255,0.88), rgba(221,242,255,0.78));
+            radial-gradient(circle at 12% 0%, rgba(255,255,255,0.58), transparent 32%),
+            linear-gradient(160deg, rgba(255,255,255,0.90), rgba(232,246,255,0.78));
 
-        border: 1px solid rgba(255,255,255,0.64);
+        border: 1px solid rgba(255,255,255,0.66);
 
         box-shadow:
-            0 16px 42px rgba(0,78,140,0.16),
-            inset 0 0 0 1px rgba(255,255,255,0.42);
+            0 14px 34px rgba(0,78,140,0.13),
+            inset 0 1px 0 rgba(255,255,255,0.54);
 
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -33,9 +33,11 @@
     .profile-name {
         font-size: 28px;
         font-weight: 1000;
-        letter-spacing: -0.6px;
+        letter-spacing: 0;
         margin-bottom: 10px;
         color: #063b73;
+        line-height: 1.08;
+        overflow-wrap: anywhere;
     }
 
     .profile-subtitle {
@@ -73,32 +75,35 @@
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        gap: 9px;
+        min-width: 0;
     }
 
     .stat-card {
-        border-radius: 22px;
-        padding: 16px 12px;
+        min-width: 0;
+        border-radius: 20px;
+        padding: 15px 10px;
 
         background:
-            linear-gradient(160deg, rgba(255,255,255,0.90), rgba(232,246,255,0.78));
+            linear-gradient(160deg, rgba(255,255,255,0.84), rgba(232,246,255,0.62));
 
-        border: 1px solid rgba(255,255,255,0.62);
+        border: 1px solid rgba(255,255,255,0.58);
 
         text-align: center;
 
         box-shadow:
-            0 12px 28px rgba(0,78,140,0.13),
-            inset 0 0 0 1px rgba(255,255,255,0.40);
+            0 10px 24px rgba(0,78,140,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.48);
     }
 
     .stat-value {
         font-size: 30px;
         line-height: 1;
         font-weight: 1000;
-        letter-spacing: -0.8px;
+        letter-spacing: 0;
         margin-bottom: 8px;
         color: #0077c8;
+        overflow-wrap: anywhere;
     }
 
     .stat-label {
@@ -109,17 +114,17 @@
     }
 
     .section-card {
-        border-radius: 26px;
-        padding: 18px;
+        border-radius: 24px;
+        padding: 17px;
 
         background:
-            linear-gradient(160deg, rgba(255,255,255,0.90), rgba(232,246,255,0.78));
+            linear-gradient(160deg, rgba(255,255,255,0.86), rgba(232,246,255,0.66));
 
-        border: 1px solid rgba(255,255,255,0.62);
+        border: 1px solid rgba(255,255,255,0.58);
 
         box-shadow:
-            0 14px 34px rgba(0,78,140,0.14),
-            inset 0 0 0 1px rgba(255,255,255,0.38);
+            0 12px 30px rgba(0,78,140,0.11),
+            inset 0 1px 0 rgba(255,255,255,0.48);
     }
 
     .section-title {
@@ -133,14 +138,16 @@
     .accuracy-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 9px;
+        min-width: 0;
     }
 
     .accuracy-item {
-        border-radius: 18px;
-        padding: 14px;
+        min-width: 0;
+        border-radius: 16px;
+        padding: 13px 12px;
 
-        background: rgba(255,255,255,0.58);
+        background: rgba(255,255,255,0.50);
 
         border: 1px solid rgba(0,119,200,0.10);
 
@@ -183,20 +190,22 @@
     .matches-list {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 9px;
+        min-width: 0;
     }
 
     .match-row {
-        border-radius: 20px;
-        padding: 14px;
+        min-width: 0;
+        border-radius: 18px;
+        padding: 13px;
 
-        background: rgba(255,255,255,0.58);
+        background: rgba(255,255,255,0.50);
 
         border: 1px solid rgba(0,119,200,0.10);
 
         box-shadow:
-            0 8px 20px rgba(0,78,140,0.10),
-            inset 0 0 0 1px rgba(255,255,255,0.34);
+            0 8px 18px rgba(0,78,140,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.40);
 
         display: flex;
         flex-direction: column;
@@ -217,13 +226,16 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
+        min-width: 0;
     }
 
     .match-teams {
+        min-width: 0;
         font-size: 14px;
         font-weight: 900;
         color: #063b73;
         line-height: 1.3;
+        overflow-wrap: anywhere;
     }
 
     .match-points {
@@ -238,6 +250,7 @@
 
         font-size: 14px;
         font-weight: 1000;
+        flex-shrink: 0;
     }
 
     .points-good {
@@ -264,6 +277,14 @@
 
         font-size: 12px;
         font-weight: 700;
+        gap: 10px;
+        line-height: 1.25;
+        min-width: 0;
+    }
+
+    .match-bottom div {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .back-btn {
@@ -302,9 +323,9 @@
 
         padding: 36px 20px;
 
-        border-radius: 22px;
+        border-radius: 20px;
 
-        background: rgba(255,255,255,0.58);
+        background: rgba(255,255,255,0.50);
 
         border: 1px solid rgba(0,119,200,0.10);
 
@@ -319,6 +340,7 @@
         flex-direction: column;
         gap: 7px;
         margin-top: 9px;
+        min-width: 0;
     }
 
     .profile-race-cue {
@@ -332,7 +354,7 @@
     .title-item {
         border-radius: 12px;
         padding: 7px 11px;
-        background: linear-gradient(160deg, rgba(255,255,255,0.64), rgba(232,246,255,0.42));
+        background: linear-gradient(160deg, rgba(255,255,255,0.58), rgba(232,246,255,0.36));
         border: 1px solid rgba(0,119,200,0.16);
         color: #063b73;
         font-size: 12px;
@@ -359,13 +381,22 @@
             font-size: 24px;
         }
 
+        .profile-screen {
+            gap: 12px;
+        }
+
+        .profile-hero {
+            border-radius: 22px;
+            padding: 17px 14px;
+        }
+
         .stats-grid {
-            gap: 8px;
+            gap: 7px;
         }
 
         .stat-card {
-            padding: 14px 10px;
-            border-radius: 18px;
+            padding: 13px 8px;
+            border-radius: 17px;
         }
 
         .stat-value {
@@ -373,11 +404,11 @@
         }
 
         .accuracy-grid {
-            gap: 8px;
+            gap: 7px;
         }
 
         .accuracy-item {
-            padding: 12px;
+            padding: 12px 10px;
         }
 
         .accuracy-value {
@@ -396,6 +427,27 @@
         .back-btn {
             height: 52px;
             border-radius: 16px;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .profile-name {
+            font-size: 22px;
+        }
+
+        .stat-value {
+            font-size: 23px;
+        }
+
+        .stat-label,
+        .accuracy-label {
+            font-size: 10px;
+        }
+
+        .match-bottom {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 5px;
         }
     }
 </style>
