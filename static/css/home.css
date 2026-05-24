@@ -2400,3 +2400,10 @@
         color: #ffffff !important;
         background: rgba(255,255,255,0.10) !important;
     }
+
+    /* WC team names: force readable white text on dark cards. */
+    body.tournament-wc2026 .match-card-v2 .team-name-v2,
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-name-v2 {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
