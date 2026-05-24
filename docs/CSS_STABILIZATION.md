@@ -31,3 +31,44 @@ This pass keeps the existing home-screen CSS inline in `templates/index.html` an
 ## Risk notes
 
 The variables are direct aliases for existing values, so computed styles should remain equivalent. The remaining risk is limited to browser support for CSS custom properties, which is acceptable for modern browsers already needed by the app UI.
+
+## First extraction step
+
+The home-screen CSS was extracted from the inline `<style>` block in `templates/index.html` into `static/css/home.css`.
+
+What moved:
+
+- Home/month/day accordion styles.
+- Match card V2 styles.
+- Deadline/timer styles.
+- Finished and active match state styles.
+- WC-2026 and tournament override blocks.
+- Bottom sheet and compact bets styles.
+- Mobile `@media (max-width: 430px)` rules.
+- Existing comments, selector names, selector order, media query order, and WC override order.
+
+What changed in `templates/index.html`:
+
+- The transferred `<style>` block was replaced with `<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">`.
+
+## What intentionally remains inline
+
+- Accordion JavaScript.
+- Prediction save JavaScript.
+- Deadline/timer JavaScript.
+- Bets bottom sheet JavaScript.
+- Jinja match/month/day rendering logic.
+- Dynamic Jinja-generated `style` attributes used for accordion initial state and arrow rotation.
+
+## Next recommended cleanup step
+
+Do a rendered UI verification pass before moving any more code:
+
+- desktop and mobile home screen;
+- active, closed, and finished cards;
+- WC-2026 active card background;
+- stepper controls;
+- save button states;
+- bottom sheet open/close and compact bets rendering.
+
+After visual verification, the next cleanup should be either adding a cache-busting/static asset convention for `home.css` if needed by deployment, or extracting the remaining inline JavaScript into a separate file in a similarly mechanical pass.
