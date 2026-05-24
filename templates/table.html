@@ -29,6 +29,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const tableContainer = document.querySelector('.table-container');
 
+    function setTidOnLink(link, selectedTid) {
+        if (!link || !selectedTid) return;
+
+        const url = new URL(link.getAttribute('href') || '', window.location.origin);
+        const syncedPaths = new Set(['/', '/table', '/profile']);
+
+        if (!syncedPaths.has(url.pathname)) return;
+
+        url.searchParams.set('tid', selectedTid);
+        link.setAttribute('href', url.pathname + '?' + url.searchParams.toString() + url.hash);
+    }
+
+    function updateTournamentLinks(selectedTid) {
+        if (!selectedTid) return;
+
+        document.querySelectorAll('.bottom-nav a[href]').forEach(function(link) {
+            setTidOnLink(link, selectedTid);
+        });
+    }
+
     async function loadTableByTid(tid) {
         if (!tableContainer || !tid) return;
 
@@ -93,10 +113,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const nextTid = data.tid || tid;
             history.pushState({ tid: nextTid }, '', '/table?tid=' + encodeURIComponent(nextTid));
+            updateTournamentLinks(String(nextTid));
 
             document.querySelectorAll('.tournament-item').forEach(function(item) {
-                const href = item.getAttribute('href') || '';
-                item.classList.toggle('active', href.includes('tid=' + nextTid));
+                const itemTid = item.getAttribute('data-tid')
+                    || new URL(item.href, window.location.origin).searchParams.get('tid');
+                item.classList.toggle('active', String(itemTid) === String(nextTid));
             });
         } catch (error) {
             console.error('Ошибка загрузки таблицы:', error);

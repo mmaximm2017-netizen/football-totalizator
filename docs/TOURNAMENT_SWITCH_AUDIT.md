@@ -246,3 +246,27 @@ AJAX-переключение таблицы работает только на 
 - `/match/<id>/predictions` по-прежнему в первую очередь доверяет `match.tournament_id`; общий selected state используется только как fallback для матчей без `tournament_id`
 - `localStorage` всё ещё синхронизирует URL только на `/`, `/table`, `/profile`; `/my-predictions` теперь понимает `?tid=`, но клиентский restore туда не добавлялся, чтобы не менять JS behavior
 - старые helper-ы в `tournament_context_service.py` оставлены для совместимости и могут быть удалены отдельной cleanup-задачей после проверки всех вызовов
+
+## Implemented table AJAX nav sync fix
+
+После первого safe fix остался отдельный клиентский разъезд на странице таблицы: AJAX-переключение турнира обновляло только table content, body class, trigger text, `localStorage` и URL через `history.pushState`. Ссылки bottom nav при этом оставались теми, которые сервер отрендерил при первом открытии `/table`, поэтому переход на главную или профиль мог уносить старый `tid`.
+
+Добавлен маленький helper в `templates/table.html`:
+
+- `setTidOnLink(link, selectedTid)`
+- `updateTournamentLinks(selectedTid)`
+
+После успешного AJAX-ответа таблицы теперь синхронизируются:
+
+- `localStorage.selected_tid`
+- `localStorage.selected_tournament_name`
+- текущий URL `/table?tid=...`
+- bottom nav links на `/`, `/table`, `/profile`
+- active state в tournament sheet
+
+Визуальный UI, bottom sheet UX, AJAX table flow, backend fallback, routes главной/профиля и ключи `localStorage` не менялись.
+
+Что осталось на потом:
+
+- если появятся другие cross-page ссылки вне bottom nav, которым нужен текущий `tid`, их нужно будет явно добавить в sync helper или пометить отдельным data-атрибутом
+- `/my-predictions` по-прежнему не участвует в `base.html` localStorage restore list, потому что это потребует отдельного изменения общего JS behavior
