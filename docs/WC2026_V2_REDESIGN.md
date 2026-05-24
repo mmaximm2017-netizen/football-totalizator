@@ -260,3 +260,36 @@
 
 - Real device smoke at 360px, 390px and 430px is still useful because country-name wrapping can vary by browser and locale.
 - Earlier shared mobile rules still exist by design; future WC edits should be made only inside the final layer to avoid rebuilding cascade drift.
+
+## WC2026 V2 home-card alignment polish
+
+### Team / score / team alignment
+
+- Refined only the existing `WC2026 V2 FINAL HOME CARD LAYER` in `static/css/home.css`.
+- `.teams-center` now uses a symmetric `1fr / fixed score / 1fr` grid so the left and right team zones have equal available width and the score column stays on the card centerline.
+- The `430px` and `380px` breakpoints keep the same grid model with fixed center columns, avoiding the previous drift from padded side zones.
+- `.team-v2`, `.team-logo-v2`, `.team-name-v2`, `.center-score`, `.score-input-row` and `.score-stepper` keep fixed row/control sizing so flags sit on one horizontal line and names remain directly below them.
+
+### Removed white islands
+
+- Removed the separate white `.teams-center` panel by making its background, border and shadow transparent inside the final WC layer.
+- Removed the separate white `.match-topline` panel so the top/deadline area reads as part of the card surface.
+- Softened the score-stepper shell from a white capsule to a pale-cyan integrated control while preserving the existing button/input dimensions and hooks.
+- The prediction box keeps only a very light translucent tint, not the former strong white island.
+
+### Deadline readability
+
+- Deadline text colors remain dark blue on the light event-card surface.
+- The timer keeps a compact cyan-tinted pill, lighter shadow and stable padding so it remains readable without turning the whole top row into a panel.
+- Deadline row spacing is still controlled through gap and reset margins for even vertical rhythm.
+
+### Preserved contracts
+
+- No backend, JS, HTML, form hooks or `data-*` changes.
+- RPL/Cup styles remain untouched because every selector changed is scoped through `body.tournament-wc2026`.
+- Long team-name clamp, mobile 360/390/430 constraints, stepper touch structure, CTA and finished-card accents were preserved.
+
+### Risks
+
+- The center score column is intentionally fixed, so extremely narrow browser/device text rendering can still make the team-name columns feel dense at 360px.
+- With fewer white panels, card shape accents have more visual responsibility; a real-device smoke pass is still the best final check.
