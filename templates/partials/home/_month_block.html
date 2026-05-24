@@ -1,0 +1,20 @@
+<div class="month-block">
+    <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}')">
+        <div class="month-left">
+            <span id="arrow-month-{{ month_idx }}" class="month-arrow" {% if month_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
+            <span class="month-title">{{ month.label }}</span>
+        </div>
+
+        <span class="month-count" data-match-count="{{ month.count }}"></span>
+    </div>
+
+    <div id="month-content-{{ month_idx }}" class="month-content" style="display: {% if month_is_open %}block{% else %}none{% endif %};">
+        {% for day in month.days %}
+        {% set day_idx = loop.index %}
+        {% set day_is_open = day.key == open_day %}
+
+        {% include 'partials/home/_day_block.html' %}
+
+        {% endfor %}
+    </div>
+</div>

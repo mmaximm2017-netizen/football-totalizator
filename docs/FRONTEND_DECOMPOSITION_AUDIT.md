@@ -561,3 +561,75 @@ Why this is the next logical step:
 - It can preserve the existing month loop contract if `month_idx` and `month_is_open` stay explicit.
 
 Important condition: preserve `id="month-content-{{ month_idx }}"`, `id="arrow-month-{{ month_idx }}"`, `onclick="toggleMonth('{{ month_idx }}')"`, `month_is_open`, and the nested day include exactly.
+
+## Completed decomposition step 1.6
+
+Completed Step 1.6: the month wrapper was extracted from `templates/index.html` into `templates/partials/home/_month_block.html`.
+
+What changed:
+
+- `templates/index.html` still owns the outer `{% for month in months %}` loop.
+- `templates/index.html` still sets:
+  - `month_idx = loop.index`
+  - `month_is_open = month.days | selectattr('key', 'equalto', open_day) | list | length > 0`
+- The month loop body now renders via `{% include 'partials/home/_month_block.html' %}`.
+- `templates/partials/home/_month_block.html` contains:
+  - `.month-block`
+  - `.month-header-v2`
+  - `onclick="toggleMonth('{{ month_idx }}')"`
+  - `id="arrow-month-{{ month_idx }}"`
+  - `.month-count[data-match-count]`
+  - `id="month-content-{{ month_idx }}"`
+  - `month_is_open` display logic
+  - the existing loop over `month.days`
+  - the nested `{% include 'partials/home/_day_block.html' %}`
+
+Not changed:
+
+- Home screen root.
+- Outer month loop.
+- Month IDs.
+- Month `onclick`.
+- `data-match-count`.
+- Day loop contract.
+- Day accordion IDs and handlers.
+- Match card root.
+- Prediction form.
+- Steppers.
+- Deadline logic.
+- CSS.
+- JS.
+
+## Current partial structure after step 1.6
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+- `templates/partials/home/_team_v2.html` - reusable team logo/name block.
+- `templates/partials/home/_day_block.html` - day accordion wrapper and existing per-day match loop.
+- `templates/partials/home/_month_block.html` - month accordion wrapper and existing per-month day loop.
+
+`templates/index.html` still owns:
+
+- inline CSS;
+- accordion JS;
+- home screen root;
+- outer month loop and empty-state branch;
+- `month_idx` / `month_is_open`;
+- bottom sheet include.
+
+## Next recommended step after step 1.6
+
+Next safe step: stop structural wrapper extraction and do a rendered UI verification pass before extracting match-state partials.
+
+Recommended verification:
+
+- desktop and mobile screenshots of the home page;
+- month accordion open/close;
+- day accordion open/close inside a month;
+- initially opened month/day from `open_day`;
+- at least one active card, closed card and finished card if test data allows.
+
+After that, the next code candidate is `templates/partials/home/_match_finished.html`, but it should be treated as a higher-risk step because finished state includes score, points, prediction summary and bottom-sheet link behavior.
