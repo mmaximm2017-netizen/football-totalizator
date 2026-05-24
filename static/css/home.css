@@ -923,10 +923,16 @@
         object-fit: cover !important;
         display: block;
         margin: 0 auto !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2 .flag-icon {
+        border-radius: 50% !important;
+        overflow: hidden;
         box-shadow:
-            0 0 0 1px rgba(216,180,90,0.26),
-            0 0 10px rgba(216,180,90,0.18),
-            0 3px 8px rgba(0,0,0,0.18) !important;
+            0 0 0 1px rgba(216,180,90,0.42),
+            0 0 0 3px rgba(216,180,90,0.10),
+            0 0 14px rgba(216,180,90,0.24),
+            0 4px 10px rgba(0,0,0,0.20) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
