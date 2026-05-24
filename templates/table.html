@@ -1,6 +1,87 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+    #cup-standings-header,
+    #wc-standings-header {
+        min-height: 72px;
+        padding: 12px 14px;
+        border-radius: 22px;
+        margin-bottom: 12px !important;
+        border: 1px solid rgba(255,255,255,0.58);
+        box-shadow:
+            0 12px 30px rgba(0,78,140,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.44);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+
+    #cup-standings-header {
+        background:
+            linear-gradient(160deg, rgba(255,255,255,0.84), rgba(232,246,255,0.72));
+    }
+
+    #wc-standings-header {
+        background:
+            radial-gradient(circle at 50% 0%, rgba(216,180,90,0.14), transparent 48%),
+            linear-gradient(160deg, rgba(10,20,40,0.86), rgba(13,31,58,0.78));
+        border-color: rgba(216,180,90,0.24);
+        box-shadow:
+            0 14px 32px rgba(0,0,0,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    #cup-standings-header img,
+    #wc-standings-header img {
+        width: 44px !important;
+        height: 44px !important;
+        flex-shrink: 0;
+    }
+
+    #cup-standings-header div,
+    #wc-standings-header div {
+        min-width: 0;
+    }
+
+    #cup-standings-header div div:first-child,
+    #wc-standings-header div div:first-child {
+        font-size: 18px !important;
+        font-weight: 1000 !important;
+        line-height: 1.1;
+        letter-spacing: 0 !important;
+    }
+
+    #cup-standings-header div div:last-child,
+    #wc-standings-header div div:last-child {
+        margin-top: 3px;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        line-height: 1.15;
+        color: rgba(93,120,148,0.86) !important;
+    }
+
+    #wc-standings-header div div:last-child {
+        color: rgba(255,255,255,0.76) !important;
+    }
+
+    @media (max-width: 430px) {
+        #cup-standings-header,
+        #wc-standings-header {
+            justify-content: flex-start !important;
+            min-height: 68px;
+            gap: 10px !important;
+            padding: 11px 12px;
+            border-radius: 20px;
+        }
+
+        #cup-standings-header img,
+        #wc-standings-header img {
+            width: 40px !important;
+            height: 40px !important;
+        }
+    }
+</style>
+
 {% if current_tournament_name == 'ЧМ-2026' %}
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
     <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
