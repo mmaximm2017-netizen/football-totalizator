@@ -575,6 +575,10 @@
         line-height: 1;
     }
 
+    .standings-table tbody td {
+        vertical-align: middle;
+    }
+
     .place-box {
         display: inline-flex;
         align-items: center;
@@ -591,8 +595,12 @@
     }
 
     .place-emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 23px !important;
         line-height: 1;
+        vertical-align: middle;
     }
 
     .shared-place {
@@ -632,6 +640,7 @@
         line-height: 1;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
         vertical-align: middle;
+        transform: translateY(-1px);
     }
 
     .leader-badge {
