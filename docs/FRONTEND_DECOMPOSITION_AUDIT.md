@@ -633,3 +633,74 @@ Recommended verification:
 - at least one active card, closed card and finished card if test data allows.
 
 After that, the next code candidate is `templates/partials/home/_match_finished.html`, but it should be treated as a higher-risk step because finished state includes score, points, prediction summary and bottom-sheet link behavior.
+
+## Completed decomposition step 1.7
+
+Completed Step 1.7: the finished match state was extracted from `templates/partials/home/_day_block.html` into `templates/partials/home/_match_finished.html`.
+
+What changed:
+
+- `templates/partials/home/_day_block.html` still owns the match card root and the `if match.finished / else` split.
+- The finished branch now renders via `{% include 'partials/home/_match_finished.html' %}`.
+- `templates/partials/home/_match_finished.html` contains only finished-state content:
+  - finished `.teams-center`;
+  - home and away `_team_v2.html` includes;
+  - `.final-score`;
+  - `.center-sub`;
+  - `.prediction-box`;
+  - points plural/class logic;
+  - `.points-v2`;
+  - `.match-bottomline`;
+  - `.my-prediction-v2`;
+  - prediction summary with/without user prediction;
+  - `.bets-link-v2[data-bets-sheet]`.
+
+Not changed:
+
+- Match card root.
+- Top line and deadline/status logic.
+- WC trophy background.
+- Active/non-finished branch.
+- Prediction form.
+- Score controls.
+- Steppers.
+- Bottom sheet behavior.
+- CSS.
+- JS.
+- Class names.
+- `data-*` attributes.
+
+## Current partial structure after step 1.7
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+- `templates/partials/home/_team_v2.html` - reusable team logo/name block.
+- `templates/partials/home/_day_block.html` - day accordion wrapper and per-day match loop.
+- `templates/partials/home/_month_block.html` - month accordion wrapper and per-month day loop.
+- `templates/partials/home/_match_finished.html` - finished match state content.
+
+`templates/index.html` still owns:
+
+- inline CSS;
+- accordion JS;
+- home screen root;
+- outer month loop and empty-state branch;
+- bottom sheet include.
+
+## Next recommended step after step 1.7
+
+Next safe step: do a rendered UI verification pass before extracting any non-finished prediction controls.
+
+Recommended verification:
+
+- finished card with prediction;
+- finished card without prediction;
+- finished card with 0 points;
+- finished card with positive points;
+- bets link opens the same bottom sheet;
+- mobile finished card layout.
+
+After that, the next candidate is a very small `_match_prediction_summary.html` or a larger `_match_non_finished.html`, but the latter is higher risk because it contains forms, external submit buttons, steppers and deadline-closed states.

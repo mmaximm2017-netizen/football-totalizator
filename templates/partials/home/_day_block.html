@@ -81,71 +81,7 @@
 </div>
 
                     {% if match.finished %}
-                    <div class="teams-center">
-                        {% set team = match.home_team %}
-                        {% include 'partials/home/_team_v2.html' %}
-
-                        <div class="center-score">
-                            <div class="final-score">
-                                {{ match.home_score }}:{{ match.away_score }}
-                            </div>
-
-                            <div class="center-sub">ИТОГ</div>
-                        </div>
-
-                        {% set team = match.away_team %}
-                        {% include 'partials/home/_team_v2.html' %}
-                    </div>
-                    {% endif %}
-
-                    {% if match.finished %}
-                        <div class="prediction-box {% if has_prediction %}saved{% endif %}">
-                            <div class="prediction-title">
-                                {% set points_value = (match.my_points or 0)|int %}
-                                {% set points_abs = points_value|abs %}
-                                {% set mod100 = points_abs % 100 %}
-                                {% set mod10 = points_abs % 10 %}
-                                {% if mod100 >= 11 and mod100 <= 14 %}
-                                    {% set points_word = 'очков' %}
-                                {% elif mod10 == 1 %}
-                                    {% set points_word = 'очко' %}
-                                {% elif mod10 >= 2 and mod10 <= 4 %}
-                                    {% set points_word = 'очка' %}
-                                {% else %}
-                                    {% set points_word = 'очков' %}
-                                {% endif %}
-                                {% if points_value >= 3 %}
-                                    {% set points_class = 'points-emerald' %}
-                                {% elif points_value > 0 %}
-                                    {% set points_class = 'points-cyan' %}
-                                {% else %}
-                                    {% set points_class = 'points-zero' %}
-                                {% endif %}
-
-                                <span class="points-v2 {{ points_class }}">
-                                    {% if points_value > 0 %}+{% endif %}{{ points_value }} {{ points_word }}
-                                </span>
-                            </div>
-
-                            <div class="match-bottomline">
-                                <div class="my-prediction-v2">
-                                    {% if has_prediction %}
-                                        <span class="prediction-label-finished">Ваша ставка</span>
-                                        <span class="prediction-score-finished">{{ match.pred_home }}:{{ match.pred_away }}</span>
-                                    {% else %}
-                                        Ставка не сделана
-                                    {% endif %}
-                                </div>
-
-                                <a
-                                    href="/match/{{ match.id }}/predictions"
-                                    class="bets-link-v2"
-                                    data-bets-sheet
-                                >
-                                    Ставки братишек
-                                </a>
-                            </div>
-                        </div>
+                        {% include 'partials/home/_match_finished.html' %}
                     {% else %}
                         {% if not g.is_admin %}
                             <form method="post" class="predict-form-v2 predict-form-inline" id="predict-form-{{ match.id }}">
