@@ -970,11 +970,16 @@
     body.tournament-wc2026 .score-stepper {
         background: rgba(10,20,40,0.8) !important;
         border: 1px solid rgba(200,168,78,0.5) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.06),
+            inset 0 -1px 0 rgba(0,0,0,0.24),
+            0 5px 12px rgba(0,0,0,0.28) !important;
     }
 
     body.tournament-wc2026 .stepper-btn {
-        background: rgba(200,168,78,0.15) !important;
+        background: rgba(200,168,78,0.14) !important;
         color: #d8b45a !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05) !important;
     }
 
     body.tournament-wc2026 .stepper-btn:active {
@@ -983,7 +988,18 @@
 
     body.tournament-wc2026 .score-input-v2 {
         color: #ffffff !important;
-        background: rgba(0, 0, 0, 0.2) !important;
+        background: rgba(200,168,78,0.10) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.04),
+            inset 0 -1px 0 rgba(0,0,0,0.18) !important;
+    }
+
+    body.tournament-wc2026 .score-stepper .stepper-btn[data-step="1"] {
+        border-bottom-color: rgba(200,168,78,0.28);
+    }
+
+    body.tournament-wc2026 .score-stepper .stepper-btn[data-step="-1"] {
+        border-top-color: rgba(200,168,78,0.28);
     }
 
     body.tournament-wc2026 .score-divider {
