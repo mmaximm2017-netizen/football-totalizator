@@ -704,3 +704,87 @@ Recommended verification:
 - mobile finished card layout.
 
 After that, the next candidate is a very small `_match_prediction_summary.html` or a larger `_match_non_finished.html`, but the latter is higher risk because it contains forms, external submit buttons, steppers and deadline-closed states.
+
+## Completed decomposition step 1.8
+
+Completed Step 1.8: the active/non-finished match state was extracted from `templates/partials/home/_day_block.html` into `templates/partials/home/_match_active.html`.
+
+What changed:
+
+- `templates/partials/home/_day_block.html` still owns the match card root, WC trophy background, match top line, and the `if match.finished / else` split.
+- The non-finished branch now renders via `{% include 'partials/home/_match_active.html' %}`.
+- `templates/partials/home/_match_active.html` contains only active/non-finished match content:
+  - hidden prediction form;
+  - active `.teams-center`;
+  - home and away `_team_v2.html` includes;
+  - closed prediction center state;
+  - score input row;
+  - both `.score-stepper[data-stepper]` blocks;
+  - `.score-input-v2` inputs;
+  - `.stepper-btn` buttons;
+  - `.save-btn-v2` submit button;
+  - closed-state bets link;
+  - admin disabled button;
+  - current prediction bottom line.
+
+Not changed:
+
+- Match card root.
+- `.match-topline`.
+- Deadline/timer markup and logic.
+- WC trophy logic.
+- Finished branch.
+- CSS.
+- JS.
+- Form id, form attributes, input names, input ids/classes, button classes, `data-*` attributes and stepper structure.
+
+Contract checks for this step:
+
+- `_day_block.html` contains exactly one include of `_match_active.html`.
+- `_match_active.html` contains `predict-form-v2`.
+- `_match_active.html` contains `score-stepper`.
+- `_match_active.html` contains `save-btn-v2`.
+- `_match_active.html` does not contain `match-card-v2`.
+- `_match_active.html` does not contain `match-topline`.
+- `_match_active.html` does not contain `deadline-timer`.
+- `_match_active.html` does not contain `wc-trophy-bg`.
+
+## Current partial structure after step 1.8
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+- `templates/partials/home/_team_v2.html` - reusable team logo/name block.
+- `templates/partials/home/_day_block.html` - day accordion wrapper and per-day match loop.
+- `templates/partials/home/_month_block.html` - month accordion wrapper and per-month day loop.
+- `templates/partials/home/_match_finished.html` - finished match state content.
+- `templates/partials/home/_match_active.html` - active/non-finished match state content.
+
+`templates/index.html` still owns:
+
+- inline CSS;
+- accordion JS;
+- home screen root;
+- outer month loop and empty-state branch;
+- bottom sheet include.
+
+## Next recommended step after step 1.8
+
+Next recommended step: do a rendered UI verification pass before extracting any more match-card pieces.
+
+Recommended verification:
+
+- active card without prediction;
+- active card with existing prediction;
+- closed non-finished card with prediction;
+- closed non-finished card without prediction;
+- admin view;
+- save flow;
+- score stepper flow;
+- deadline close flow;
+- WC-2026 active card background;
+- mobile active card layout.
+
+After that, the next decomposition candidate is a small match-card wrapper partial, but only if the rendered UI and save/deadline behavior are verified first.
