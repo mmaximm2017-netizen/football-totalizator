@@ -6,20 +6,38 @@
 .admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}
 .admin-nav a.active{background:#0a6cc2;color:#fff}
 .admin-title{font-size:24px;font-weight:1000;color:#063b73}
+.admin-zone{display:flex;flex-direction:column;gap:12px}
+.admin-zone + .admin-zone{margin-top:6px;padding-top:16px;border-top:1px solid rgba(255,255,255,.44)}
+.admin-zone-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 2px}
+.admin-zone-title{font-size:18px;font-weight:1000;color:#063b73;line-height:1.2}
+.admin-zone-note{font-size:12px;font-weight:800;color:#5d7894;line-height:1.35}
 .admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}
 .admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}
 .admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}
-.admin-match-card{margin:6px 0;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}
-.admin-match-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-tournament-list{display:grid;gap:10px}
+.admin-match-card{margin:0;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}
+.admin-match-row{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
 .admin-match-main{flex:1;min-width:150px}
 .admin-match-title{font-size:14px;font-weight:1000;color:#063b73}
 .admin-match-meta{margin-top:4px;font-size:11px;color:#5d7894;font-weight:700}
+.admin-status-pill{display:inline-flex;align-items:center;margin-left:6px;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:1000;white-space:nowrap}
+.admin-status-active{background:rgba(46,125,50,.12);color:#2e7d32;border:1px solid rgba(46,125,50,.18)}
+.admin-status-archive{background:rgba(93,120,148,.12);color:#5d7894;border:1px solid rgba(93,120,148,.18)}
+.admin-actions{display:flex;flex-direction:column;gap:8px;min-width:170px}
+.admin-status-action{padding:10px;border-radius:14px;background:rgba(232,246,255,.58);border:1px solid rgba(0,119,200,.10)}
+.admin-danger-zone{padding:10px;border-radius:14px;background:rgba(183,28,28,.08);border:1px solid rgba(183,28,28,.18)}
+.admin-danger-label{margin-bottom:8px;font-size:11px;font-weight:1000;letter-spacing:.35px;text-transform:uppercase;color:#9f1d1d}
+.admin-empty{color:#5d7894;text-align:center;font-size:13px;font-weight:700;padding:14px 8px}
+.admin-create-form{display:grid;gap:2px}
+.admin-create-form label{margin-top:2px}
 .admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}
 .admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}
 .admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}
 .admin-btn-amber{background:linear-gradient(135deg,#a97100,#d89a12)}
 .admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
+@media (max-width:520px){.admin-zone-heading{align-items:flex-start;flex-direction:column}.admin-match-row{flex-direction:column}.admin-match-main,.admin-actions{width:100%;min-width:0}.admin-actions{gap:10px}.admin-status-pill{margin:6px 0 0 0}}
 </style>
+
 <div class="admin-screen">
     <div class="admin-nav">
         <a href="{{ url_for('admin.admin') }}">← Админка</a>
@@ -29,54 +47,114 @@
     </div>
     <div class="admin-title">Турниры</div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">Управление турнирами</div>
-        <div class="admin-subsection-title">2.1 • Список турниров</div>
-        {% for t in tournaments %}
-        <div class="admin-match-card">
-            <div class="admin-match-row">
-                <div class="admin-match-main">
-                    <div class="admin-match-title">
-                        {{ t.name }}
-                        {% if t.is_active %}
-                        <span style="color:#2e7d32;">● Активный</span>
-                        {% else %}
-                        <span style="color:#6b7f92;">📦 Архив</span>
-                        {% endif %}
-                    </div>
-                    <div class="admin-match-meta">Старт: {{ t.start_date or '—' }}</div>
-                </div>
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Активные турниры</div>
+            <div class="admin-zone-note">Управление текущими турнирами</div>
+        </div>
 
+        <div class="admin-card">
+            <div class="admin-card-header">Управление статусом</div>
+            <div class="admin-subsection-title">2.1 • Активные турниры</div>
+            <div class="admin-tournament-list">
+                {% set active_count = namespace(value=0) %}
+                {% for t in tournaments %}
                 {% if t.is_active %}
-                <form method="post" action="{{ url_for('admin.archive_tournament', tid=t.id) }}" onsubmit="return confirm('Архивировать турнир {{ t.name }}?')" style="margin:0;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit" class="admin-btn admin-btn-amber admin-btn-small">📦 Архивировать</button>
-                </form>
-                {% else %}
-                <form method="post" action="{{ url_for('admin.activate_tournament', tid=t.id) }}" style="margin:0;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">✅ Сделать активным</button>
-                </form>
-                <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <input type="hidden" name="tid" value="{{ t.id }}">
-                    <button type="submit" class="admin-btn admin-btn-red admin-btn-small">Удалить</button>
-                </form>
+                {% set active_count.value = active_count.value + 1 %}
+                <div class="admin-match-card">
+                    <div class="admin-match-row">
+                        <div class="admin-match-main">
+                            <div class="admin-match-title">
+                                {{ t.name }}
+                                <span class="admin-status-pill admin-status-active">Активный</span>
+                            </div>
+                            <div class="admin-match-meta">Старт: {{ t.start_date or '-' }}</div>
+                        </div>
+                        <div class="admin-actions">
+                            <div class="admin-status-action">
+                                <form method="post" action="{{ url_for('admin.archive_tournament', tid=t.id) }}" onsubmit="return confirm('Архивировать турнир {{ t.name }}?')" style="margin:0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="admin-btn admin-btn-amber admin-btn-small">Архивировать</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% if active_count.value == 0 %}
+                <div class="admin-empty">Активных турниров пока нет</div>
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
-    </div>
+    </section>
 
-    <div class="admin-card">
-        <div class="admin-card-header">Создать новый турнир</div>
-        <div class="admin-subsection-title">2.2 • Создание турнира</div>
-        <form method="post" action="/admin/new_tournament">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label>Название турнира</label><input type="text" name="name" value="ЧМ-2026" required>
-            <label>Дата старта</label><input type="date" name="start_date" value="2026-06-11">
-            <button type="submit" class="admin-btn admin-btn-blue">Создать новый турнир</button>
-        </form>
-    </div>
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Архивные турниры</div>
+            <div class="admin-zone-note">Можно вернуть в активные или удалить отдельно</div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header">Архив</div>
+            <div class="admin-subsection-title">2.2 • Архивные турниры</div>
+            <div class="admin-tournament-list">
+                {% set archive_count = namespace(value=0) %}
+                {% for t in tournaments %}
+                {% if not t.is_active %}
+                {% set archive_count.value = archive_count.value + 1 %}
+                <div class="admin-match-card">
+                    <div class="admin-match-row">
+                        <div class="admin-match-main">
+                            <div class="admin-match-title">
+                                {{ t.name }}
+                                <span class="admin-status-pill admin-status-archive">Архив</span>
+                            </div>
+                            <div class="admin-match-meta">Старт: {{ t.start_date or '-' }}</div>
+                        </div>
+                        <div class="admin-actions">
+                            <div class="admin-status-action">
+                                <form method="post" action="{{ url_for('admin.activate_tournament', tid=t.id) }}" style="margin:0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Сделать активным</button>
+                                </form>
+                            </div>
+                            <div class="admin-danger-zone">
+                                <div class="admin-danger-label">Опасное действие</div>
+                                <form method="post" action="/admin/delete_tournament" onsubmit="return confirm('Удалить турнир {{ t.name }}?')" style="margin:0;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="tid" value="{{ t.id }}">
+                                    <button type="submit" class="admin-btn admin-btn-red admin-btn-small">Удалить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% if archive_count.value == 0 %}
+                <div class="admin-empty">Архивных турниров пока нет</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Создание нового турнира</div>
+            <div class="admin-zone-note">Название и дата старта</div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header">Создать новый турнир</div>
+            <div class="admin-subsection-title">2.3 • Создание турнира</div>
+            <form method="post" action="/admin/new_tournament" class="admin-create-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label>Название турнира</label><input type="text" name="name" value="ЧМ-2026" required>
+                <label>Дата старта</label><input type="date" name="start_date" value="2026-06-11">
+                <button type="submit" class="admin-btn admin-btn-blue">Создать новый турнир</button>
+            </form>
+        </div>
+    </section>
 </div>
 {% endblock %}
