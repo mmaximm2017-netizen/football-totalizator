@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, render_template, request
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
-from app.services.tournament_context_service import get_table_tournament_id
+from app.services.tournament_context_service import get_selected_tournament_id
 from app.services.tournament_service import get_tournament_status
 
 table_bp = Blueprint('table', __name__)
@@ -66,21 +66,19 @@ def table():
             else:
                 t['status'] = 'archive'
 
-        tid = request.args.get('tid', type=int)
+        tid = get_selected_tournament_id(request.args.get('tid', type=int))
         if not tid:
-            tid = get_table_tournament_id(tid)
-            if not tid:
-                return render_template(
-                    'table.html',
-                    table=[],
-                    tournaments=[],
-                    active_tournaments=[],
-                    selected_tid=None,
-                    selected_name="Нет турниров",
-                    selected_is_active=False,
-                    current_tournament_id=None,
-                    current_tournament_name="Нет турниров",
-                )
+            return render_template(
+                'table.html',
+                table=[],
+                tournaments=[],
+                active_tournaments=[],
+                selected_tid=None,
+                selected_name="Нет турниров",
+                selected_is_active=False,
+                current_tournament_id=None,
+                current_tournament_name="Нет турниров",
+            )
 
         cur.execute(
             """

@@ -98,6 +98,23 @@ def get_current_tournament():
     return get_tournament_by_id(tournament_id) if tournament_id else None
 
 
+def get_selected_tournament_id(requested_tid):
+    """
+    Unified selected tournament state for user-facing pages.
+
+    The explicit ?tid= query param is the primary state. If it is missing
+    or points to a missing tournament, use the shared fallback order.
+    """
+    if requested_tid and get_tournament_by_id(requested_tid):
+        return requested_tid
+
+    return (
+        get_nearest_upcoming_tournament_id()
+        or get_first_active_tournament_id()
+        or get_latest_tournament_id()
+    )
+
+
 def get_requested_or_current_tournament_id(requested_id):
     return requested_id or get_current_tournament_id()
 

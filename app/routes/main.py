@@ -26,7 +26,7 @@ from app.utils import (
     format_month_label,
 )
 from app.config import START_DATE
-from app.services.tournament_context_service import get_requested_or_current_tournament_id
+from app.services.tournament_context_service import get_selected_tournament_id
 from app.services.tournament_service import (
     get_all_tournaments,
     get_tournament_by_id,
@@ -102,7 +102,7 @@ def index():
         tid = request.args.get('tid', type=int)
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
-        tid = get_requested_or_current_tournament_id(tid)
+        tid = get_selected_tournament_id(tid)
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 

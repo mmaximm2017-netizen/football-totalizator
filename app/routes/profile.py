@@ -12,7 +12,7 @@ from flask import (
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
-from app.services.tournament_context_service import get_profile_tournament_id
+from app.services.tournament_context_service import get_selected_tournament_id
 from app.services.tournament_service import (
     get_all_tournaments,
     get_tournament_by_id,
@@ -68,8 +68,7 @@ def profile():
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
 
-        tournament_id = request.args.get('tid', type=int)
-        tournament_id = get_profile_tournament_id(tournament_id, active_tournaments)
+        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
         if not tournament_id:
             flash("Активный турнир не найден", "error")
             return redirect(url_for('table.table'))

@@ -1,9 +1,10 @@
 ﻿# app/routes/predictions.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash, session
+from flask import Blueprint, render_template, redirect, request, url_for, flash, session
 
 from app.db import get_db, close_db
-from app.services.tournament_context_service import get_active_context_tournament_id
+from app.services.tournament_context_service import get_selected_tournament_id
+from app.services.tournament_service import get_tournament_by_id
 from app.utils import cached_to_msk, is_before_deadline, utc_now
 
 predictions_bp = Blueprint('predictions', __name__)
@@ -50,7 +51,7 @@ def match_predictions(match_id):
 
         tournament_id = match['tournament_id']
         if tournament_id is None:
-            tournament_id = get_active_context_tournament_id()
+            tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
 
         # ������ �����: ������� ������� � deadline
         deadline_passed = not is_before_deadline({
@@ -110,7 +111,7 @@ def my_predictions():
     try:
 
         uid = session['user_id']
-        tournament_id = get_active_context_tournament_id()
+        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")
@@ -237,13 +238,18 @@ def my_predictions():
     finally:
         close_db(conn, cur)
 
+    selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
+    current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+
     return render_template(
         'my_predictions.html',
         pending=pending,
         awaiting=awaiting,
         finished=finished,
         cancelled=cancelled,
-        to_msk=cached_to_msk
+        to_msk=cached_to_msk,
+        current_tournament_id=tournament_id,
+        current_tournament_name=current_tournament_name,
     )
 
 
