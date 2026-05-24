@@ -2302,3 +2302,21 @@
             gap: 4px;
         }
     }
+
+    /* WC flags: large and centered above team names. */
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 .flag-icon,
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 img {
+        width: 88px !important;
+        height: 88px !important;
+        min-width: 88px !important;
+        min-height: 88px !important;
+        max-width: 88px !important;
+        max-height: 88px !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 {
+        margin-bottom: 16px !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
