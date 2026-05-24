@@ -104,9 +104,10 @@ def profile():
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
             WHERE p.user_id = %s
+              AND p.tournament_id = %s
               AND m.status = 'FINISHED'
             """,
-            (uid,),
+            (uid, tournament_id),
         )
 
         row = cur.fetchone() or (0, 0, 0, 0, 0, 0, 0, 0)
@@ -134,11 +135,12 @@ def profile():
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
             WHERE p.user_id = %s
+              AND p.tournament_id = %s
               AND m.status = 'FINISHED'
             ORDER BY m.kickoff_time DESC
             LIMIT 10
             """,
-            (uid,),
+            (uid, tournament_id),
         )
 
         recent = [
