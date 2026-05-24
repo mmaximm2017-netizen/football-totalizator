@@ -216,6 +216,14 @@ body {
             align-items: center;
             justify-content: space-between;
             gap: 10px;
+            min-width: 0;
+        }
+
+        .app-title-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 0;
         }
 
         .app-title {
@@ -227,6 +235,7 @@ body {
             align-items: center;
             justify-content: center;
             gap: 8px;
+            min-width: 0;
         }
 
         .app-title-icon {
@@ -241,6 +250,9 @@ body {
             margin-top: 6px;
             color: #0077c8;
             font-weight: 800;
+            line-height: 1.15;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .tournament-trigger {
@@ -1007,6 +1019,10 @@ body.tournament-wc2026 .bottom-nav a.active {
                 font-size: 18px;
             }
 
+            body.admin-user .admin-label {
+                display: none;
+            }
+
             .bottom-nav {
                 left: 10px;
                 right: 10px;
@@ -1030,7 +1046,7 @@ body.tournament-wc2026 .bottom-nav a.active {
 	</style>
 </head>
 
-<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}">
+<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set tournament_items = active_tournaments|default(tournaments|default([])) %}
@@ -1056,10 +1072,11 @@ body.tournament-wc2026 .bottom-nav a.active {
 
         <header class="header">
             <div class="header-inner">
-                <div class="app-title">
-                    <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
-                    ТОТИШ БРАТИШЕК
-
+                <div class="app-title-stack">
+                    <div class="app-title">
+                        <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
+                        ТОТИШ БРАТИШЕК
+                    </div>
                     {% if g.is_admin %}
                     <div class="admin-label">
                         ⚙️ СТРАНИЦА АДМИНИСТРАТОРА
