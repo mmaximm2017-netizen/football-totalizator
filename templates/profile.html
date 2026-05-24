@@ -375,6 +375,128 @@
         word-break: break-word;
     }
 
+    body.tournament-wc2026 .profile-hero,
+    body.tournament-wc2026 .stat-card,
+    body.tournament-wc2026 .section-card {
+        background:
+            radial-gradient(circle at 30% 0%, rgba(216,180,90,0.12), transparent 70%),
+            linear-gradient(135deg, #0a1428, #0d1f3a);
+        background-blend-mode: overlay;
+        border: 1px solid rgba(184,154,62,0.68);
+        box-shadow:
+            0 20px 35px -10px rgba(0,0,0,0.38),
+            inset 0 0 0 1px rgba(200,168,78,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    body.tournament-wc2026 .profile-hero {
+        border-width: 2px;
+    }
+
+    body.tournament-wc2026 .profile-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08), transparent 52%);
+        pointer-events: none;
+    }
+
+    body.tournament-wc2026 .profile-hero > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-wc2026 .profile-name,
+    body.tournament-wc2026 .section-title,
+    body.tournament-wc2026 .match-teams {
+        color: #ffffff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.30);
+    }
+
+    body.tournament-wc2026 .profile-subtitle,
+    body.tournament-wc2026 .stat-label,
+    body.tournament-wc2026 .accuracy-label,
+    body.tournament-wc2026 .match-bottom,
+    body.tournament-wc2026 .profile-race-cue,
+    body.tournament-wc2026 .titles-inline-empty,
+    body.tournament-wc2026 .empty-box {
+        color: rgba(226,210,171,0.90);
+    }
+
+    body.tournament-wc2026 .place-pill,
+    body.tournament-wc2026 .title-item,
+    body.tournament-wc2026 .accuracy-item,
+    body.tournament-wc2026 .match-row,
+    body.tournament-wc2026 .empty-box {
+        background: linear-gradient(160deg, rgba(8,18,38,0.58), rgba(12,24,46,0.38));
+        border-color: rgba(200,168,78,0.28);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.04),
+            0 8px 18px rgba(0,0,0,0.18);
+    }
+
+    body.tournament-wc2026 .place-pill,
+    body.tournament-wc2026 .title-item {
+        color: #f3d98b;
+    }
+
+    body.tournament-wc2026 .stat-value,
+    body.tournament-wc2026 .stat-value.blue,
+    body.tournament-wc2026 .accuracy-value.blue {
+        color: #d8b45a;
+        text-shadow: 0 0 6px rgba(216,180,90,0.22);
+    }
+
+    body.tournament-wc2026 .stat-value.gray {
+        color: rgba(226,210,171,0.88);
+    }
+
+    body.tournament-wc2026 .green {
+        color: #77d38a;
+    }
+
+    body.tournament-wc2026 .orange {
+        color: #f3d98b;
+    }
+
+    body.tournament-wc2026 .red {
+        color: #ffb0a8;
+    }
+
+    body.tournament-wc2026 .points-good {
+        background: rgba(46,125,50,0.24);
+        color: #8de09d;
+        border: 1px solid rgba(141,224,157,0.20);
+    }
+
+    body.tournament-wc2026 .points-mid {
+        background: rgba(216,180,90,0.18);
+        color: #f3d98b;
+        border: 1px solid rgba(216,180,90,0.28);
+    }
+
+    body.tournament-wc2026 .points-bad {
+        background: rgba(226,210,171,0.10);
+        color: rgba(226,210,171,0.82);
+        border: 1px solid rgba(226,210,171,0.16);
+    }
+
+    body.tournament-wc2026 .back-btn {
+        background: linear-gradient(135deg, #1a2a4a, #2a3a5a);
+        color: #f3d98b;
+        border: 1px solid #a8842a;
+        box-shadow:
+            0 0 8px rgba(168,132,42,0.22),
+            0 12px 24px rgba(0,0,0,0.30);
+    }
+
+    body.tournament-wc2026 .back-btn:active {
+        box-shadow:
+            0 0 6px rgba(168,132,42,0.20),
+            0 8px 18px rgba(0,0,0,0.26);
+    }
+
     @media (max-width: 430px) {
 
         .profile-name {
