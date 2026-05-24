@@ -138,3 +138,42 @@
 
 - Long names are constrained to two lines and balanced wrapping for cases such as Netherlands, Bosnia and Herzegovina, Saudi Arabia, Trinidad and Tobago, and Equatorial Guinea.
 - Residual risk: exact flag SVG proportions and browser text shaping can still vary slightly, so a real-device smoke pass at 360px is useful before release.
+
+## WC2026 V2 critical home composition fix
+
+### Team / score / team grid
+
+- Added a late `body.tournament-wc2026` corrective layer in `static/css/home.css` for non-finished home match cards.
+- Restored the card center to a stable three-column grid: left team, fixed score/stepper zone, right team.
+- Left and right team blocks now stretch symmetrically inside their columns instead of inheriting the earlier start/end `justify-self` behavior.
+- The center score area is pinned to the middle and keeps the existing two segmented steppers plus divider without changing form markup or JS hooks.
+
+### Flags and team names
+
+- Team blocks now use fixed WC-only rows: one row for the flag shell and one fixed two-line row for the name.
+- Flag shells and flag images have stable WC-only sizes at default, `430px`, and `380px` breakpoints.
+- Team names are centered directly under flags, clamped to two lines, and kept inside a fixed-height text zone so baselines do not drift between the left and right team.
+
+### Long team names
+
+- WC-only max-width and font-size tuning was tightened for narrow screens.
+- Long names such as Netherlands, Bosnia and Herzegovina, Saudi Arabia, Trinidad and Tobago, and Equatorial Guinea are protected by two-line clamp, smaller mobile type, stable line-height, and fixed team rows.
+- The score column keeps its own width, so long team names cannot push into or displace the stepper zone.
+
+### Secondary polish
+
+- Reduced the glossy card overlay and softened the large WC background blobs.
+- Kept the approved light event-card surface and segmented score-stepper language.
+
+### Intentionally preserved
+
+- Backend, routes, scoring, tournament logic, JS behavior, form logic and `data-*` hooks.
+- Existing HTML structure and home partials.
+- RPL/Cup styling, because all new CSS is scoped through `body.tournament-wc2026`.
+- Existing score-stepper interaction model and touch target dimensions.
+
+### Risks
+
+- Browser text shaping and translated country names can still wrap slightly differently across devices.
+- The 360px layout remains dense because the card must fit two teams, two steppers, a divider and status content in one row.
+- The requested FIFA guideline PDF and prior chat screenshots were not present as local project files during this pass, so this fix follows the already-approved WC2026 V2 CSS language documented above.
