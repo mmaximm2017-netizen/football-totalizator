@@ -217,3 +217,46 @@
 
 - Real browser/device visual smoke is still recommended at 360px, 390px, and 430px because this CSS file contains several older WC layers with `!important`.
 - The FIFA guideline PDF and prior chat screenshots were not present as local project files during this pass.
+
+## WC2026 V2 home-card cascade cleanup
+
+### Cascade map before cleanup
+
+- Early shared home-card rules defined the normal RPL/Cup card, team grid, score controls, deadline row and mobile breakpoints.
+- The first WC-specific block was the old `WC-2026 premium night skin`; it forced a dark/gold card, dark glass team panel, gold text, gold flag rings and global WC stepper colors.
+- A later WC V2 home-screen block repainted the card as dark electric blue and also redefined `.match-card-v2`, `.teams-center`, `.team-logo-v2`, `.team-name-v2`, `.score-stepper`, `.stepper-btn`, `.score-input-v2`, `.match-topline`, deadline states and finished-card accents.
+- A corrective WC block then changed the background blobs, deadline rhythm and score stepper weight.
+- An approved light event-card block then moved the card toward white / pale cyan / electric blue and added a stricter team / score / team grid.
+- The final old `WC2026 mobile-first reset` block came after the approved light block and won the cascade for the real card surface, team grid, flag sizes, team-name widths and stepper sizing.
+
+### Conflicts removed or neutralized
+
+- Removed the old dark/gold premium WC card overrides near the first match-card section.
+- Removed the late forced trophy / z-index helper rules that sat before the V2 passes.
+- Replaced the stacked late V2 passes with one authoritative final layer instead of keeping `visual redesign`, `corrective pass`, `approved home match card` and `mobile-first reset` as competing blocks.
+- Kept the ordinary RPL/Cup styles and shared mobile rules intact; remaining earlier WC mobile flag tweaks are above the final layer and are intentionally overridden there.
+
+### Authoritative layer
+
+- The single final WC home-card layer now starts at `/* WC2026 V2 FINAL HOME CARD LAYER */` near the end of `static/css/home.css`.
+- Nothing below that block can override the WC home card because it is the last block in the file.
+- The layer owns the WC body/home background, event-card surface, trophy texture, topline, deadline row, team grid, flags, names, center score, score steppers, CTA, empty state and finished-card accents.
+
+### Visual result targeted
+
+- Card surface is light, clean and event-like: white, pale cyan and electric blue with restrained FIFA26 shapes.
+- `.teams-center` is a strict three-column grid: left team, fixed center score zone, right team.
+- Flag and name rows are fixed for active cards, keeping both teams on one axis.
+- Team names are clamped to two lines and sized for long country names such as Netherlands, Bosnia and Herzegovina, Saudi Arabia, Trinidad and Tobago and Equatorial Guinea.
+- The stepper remains the existing touch/control structure, but now reads as a clean segmented control integrated into the card.
+- Background blobs are still energetic but lower-opacity so they do not compete with the card.
+
+### Preserved contracts
+
+- No backend, routes, scoring, tournament logic, JS behavior, form logic, `data-*` hooks or HTML structure were changed.
+- RPL/Cup styling remains governed by the shared rules because the new authority is scoped to `body.tournament-wc2026`.
+
+### Residual risks
+
+- Real device smoke at 360px, 390px and 430px is still useful because country-name wrapping can vary by browser and locale.
+- Earlier shared mobile rules still exist by design; future WC edits should be made only inside the final layer to avoid rebuilding cascade drift.
