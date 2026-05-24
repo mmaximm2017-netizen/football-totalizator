@@ -7,22 +7,28 @@
     .admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}
     .admin-nav a.active{background:#0a6cc2;color:#fff}
     .admin-title{font-size:24px;font-weight:1000;color:#063b73}
+    .admin-zone{display:flex;flex-direction:column;gap:12px}
+    .admin-zone + .admin-zone{margin-top:6px;padding-top:16px;border-top:1px solid rgba(255,255,255,.44)}
+    .admin-zone-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 2px}
+    .admin-zone-title{font-size:18px;font-weight:1000;color:#063b73;line-height:1.2}
+    .admin-zone-note{font-size:12px;font-weight:800;color:#5d7894;line-height:1.35}
     .admin-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(232,246,255,.78));border:1px solid rgba(255,255,255,.62);box-shadow:0 12px 30px rgba(0,78,140,.14)}
     .admin-card-header{font-size:16px;font-weight:1000;color:#063b73;margin-bottom:10px}
     .admin-subsection-title{font-size:12px;color:#5d7894;font-weight:900;text-transform:uppercase;letter-spacing:.35px;margin-bottom:6px}
     .admin-grid{display:grid;gap:10px}
+    .admin-service-grid{display:grid;gap:10px;padding:12px;border-radius:16px;background:rgba(255,255,255,.58);border:1px solid rgba(0,119,200,.10)}
     .admin-btn{width:100%;min-height:46px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#0077c8,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}
     .admin-btn-blue{background:linear-gradient(135deg,#1565c0,#1e88e5)}
     .admin-btn-red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}
     .admin-btn-small{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px;white-space:nowrap}
-    .sync-status-block{margin-top:12px;padding:18px;border-radius:16px;background:rgba(255,255,255,.82);border:1px solid rgba(0,119,200,.12)}
+    .sync-status-block{margin-top:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.82);border:1px solid rgba(0,119,200,.12)}
     .sync-status-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .sync-status-title{font-size:13px;font-weight:900;color:#5d7894}
     .sync-status-pill{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:1000}
     .sync-status-good{background:#e4f7e9;color:#176b2c;border:1px solid rgba(23,107,44,.18)}
     .sync-status-warning{background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.2)}
     .sync-status-bad{background:#fde8e8;color:#9f1d1d;border:1px solid rgba(159,29,29,.18)}
-    .sync-health-large{font-size:24px;font-weight:1000;line-height:1.15;margin:12px 0 12px;color:#063b73}
+    .sync-health-large{font-size:21px;font-weight:1000;line-height:1.15;margin:10px 0 10px;color:#063b73}
     .sync-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
     .sync-summary-item{padding:10px 12px;border-radius:12px;background:rgba(232,246,255,.62);font-size:12px;color:#5d7894;font-weight:800}
     .sync-summary-item strong{display:block;margin-top:3px;color:#063b73;font-size:15px;overflow-wrap:anywhere}
@@ -30,6 +36,8 @@
     .sync-details summary{cursor:pointer;width:max-content;max-width:100%;color:#0a6cc2;font-size:12px;font-weight:900;list-style:none}
     .sync-details summary::-webkit-details-marker{display:none}
     .sync-details summary:focus-visible{outline:2px solid #0a6cc2;outline-offset:3px;border-radius:6px}
+    .sync-diagnostics{margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(232,246,255,.54);border:1px solid rgba(0,119,200,.10)}
+    .sync-diagnostics summary{color:#5d7894}
     .sync-technical-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,119,200,.12)}
     .sync-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
     .sync-status-item{font-size:11px;color:#5d7894;font-weight:800;min-width:0}
@@ -64,9 +72,13 @@
     .score-divider{color:#5d7894;font-weight:1000}
     .edit-fields{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
     .edit-fields input{margin-bottom:0!important}
-    .delete-form{margin-top:10px}
+    .edit-form{margin-bottom:0}
+    .delete-form{margin:0}
+    .admin-danger-zone{margin-top:14px;padding:12px;border-radius:14px;background:rgba(183,28,28,.08);border:1px solid rgba(183,28,28,.18)}
+    .admin-danger-label{margin-bottom:8px;font-size:11px;font-weight:1000;letter-spacing:.35px;text-transform:uppercase;color:#9f1d1d}
+    .admin-danger-zone .admin-btn{min-height:42px}
     @media (max-width:640px){.sync-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sync-recent-meta{grid-template-columns:1fr 1fr}}
-    @media (max-width:430px){.admin-form-row,.sync-summary,.sync-status-grid,.sync-recent-row,.sync-recent-meta{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
+    @media (max-width:430px){.admin-zone-heading{align-items:flex-start;flex-direction:column}.admin-form-row,.sync-summary,.sync-status-grid,.sync-recent-row,.sync-recent-meta{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
 </style>
 
 <div class="admin-screen">
@@ -78,6 +90,12 @@
     </div>
     <div class="admin-title">Матчи</div>
 
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Ежедневная работа</div>
+            <div class="admin-zone-note">Обновление и быстрый статус синка</div>
+        </div>
+
     <div class="admin-card">
         <div class="admin-card-header">Обновить матчи из API</div>
         <div class="admin-subsection-title">1.1 • Обновление матчей</div>
@@ -86,14 +104,6 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="action" value="update_matches">
                 <button type="submit" class="admin-btn">Обновить матчи из API</button>
-            </form>
-            <form method="post" action="/admin/recalc_all">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
-            </form>
-            <form method="post" action="/admin/translate">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
             </form>
         </div>
         <div class="sync-status-block">
@@ -109,8 +119,10 @@
                 <div class="sync-summary-item">Обновлено матчей<strong>{{ sync_panel.matches_updated_text }}</strong></div>
             </div>
             <details class="sync-details">
-                <summary>Показать технические детали</summary>
-                <div class="sync-technical-block">
+                <summary>Детали для диагностики</summary>
+                <details class="sync-diagnostics">
+                    <summary>Показать технические поля и последние sync runs</summary>
+                    <div class="sync-technical-block">
                     <div class="sync-status-grid">
                         <div class="sync-status-item">Sync run id<strong>{{ sync_health.last_sync_id or 'нет данных' }}</strong></div>
                         <div class="sync-status-item">Status<strong>{{ sync_health.last_status or 'нет данных' }}</strong></div>
@@ -153,10 +165,18 @@
                             <div class="admin-empty">Истории обновлений пока нет</div>
                         {% endif %}
                         </div>
-                </div>
+                    </div>
+                </details>
             </details>
         </div>
     </div>
+    </section>
+
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Матчи</div>
+            <div class="admin-zone-note">Добавление, результаты и ручные правки</div>
+        </div>
 
     <div class="admin-card">
         <div class="admin-card-header">Добавить матч вручную</div>
@@ -302,7 +322,10 @@
                                             <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
                                             <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
                                         </form>
-                                        <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
+                                        <div class="admin-danger-zone">
+                                            <div class="admin-danger-label">Опасное действие</div>
+                                            <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
+                                        </div>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -316,6 +339,29 @@
             {% endfor %}
         {% else %}<div class="admin-empty">Нет матчей, добавленных вручную</div>{% endif %}
     </div>
+    </section>
+
+    <section class="admin-zone">
+        <div class="admin-zone-heading">
+            <div class="admin-zone-title">Техническое обслуживание</div>
+            <div class="admin-zone-note">Редкие массовые операции</div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header">Обслуживание данных</div>
+            <div class="admin-subsection-title">1.5 • Массовые действия</div>
+            <div class="admin-service-grid">
+                <form method="post" action="/admin/recalc_all">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
+                </form>
+                <form method="post" action="/admin/translate">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="admin-btn admin-btn-blue">Перевести названия команд</button>
+                </form>
+            </div>
+        </div>
+    </section>
 </div>
 
 <script>
