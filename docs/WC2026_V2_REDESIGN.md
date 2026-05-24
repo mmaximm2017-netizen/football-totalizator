@@ -78,3 +78,31 @@
 - Table CSS has several older late sizing overrides, so future table changes should be checked at 360-380px with long usernames.
 - Profile stat cards can still feel tight if numbers become unusually large.
 - AJAX table switching should be manually smoke-tested because header HTML is replaced client-side while styling relies on stable IDs.
+
+## WC2026 V2 home match-card readability pass
+
+### Long team names
+
+- WC home team names now use a tighter two-line layout in `body.tournament-wc2026`.
+- Active WC card grid columns were adjusted so long names do not collide with the central score/stepper.
+- Team names keep a readable two-line clamp with smaller WC-only font-size, tighter line-height, stable max-width and careful hyphenation.
+- Finished WC team names received matching safer typography without changing the shared team partial.
+
+### Match card background
+
+- WC match-card background was brightened from dark/night premium toward the approved V2 home reference.
+- The card now uses brighter electric blue surfaces with cyan, lime, coral and magenta graphic accents.
+- Trophy opacity was reduced slightly so the brighter card surface stays readable.
+- Topline, teams panel and prediction box were lightened together to keep one event-like card surface.
+
+### Intentionally preserved
+
+- Backend, JS, forms, `data-*`, match logic and scoring.
+- HTML structure and `templates/partials/home/_team_v2.html`.
+- RPL/Cup styles.
+- Existing flag/logo sizing and score stepper touch targets.
+
+### Risks
+
+- Very long multi-word country names still need manual visual smoke at 360px because the card has fixed central input controls.
+- The brighter card surface increases visual energy; CTA and score controls should be checked against active, predicted and finished WC cards.
