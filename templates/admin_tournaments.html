@@ -72,7 +72,7 @@
                         </div>
                         <div class="admin-actions">
                             <div class="admin-status-action">
-                                <form method="post" action="{{ url_for('admin.archive_tournament', tid=t.id) }}" onsubmit="return confirm('Архивировать турнир {{ t.name }}?')" style="margin:0;">
+                                <form method="post" action="{{ url_for('admin.archive_tournament', tid=t.id) }}" onsubmit="return confirm('Архивировать турнир? Он исчезнет из активного сезона.')" style="margin:0;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <button type="submit" class="admin-btn admin-btn-amber admin-btn-small">Архивировать</button>
                                 </form>
