@@ -2391,3 +2391,134 @@
             font-size: 14px;
         }
     }
+
+    /* WC2026 V2 corrective pass: crisper graphic forms, stronger score controls, even deadline rhythm. */
+    body.tournament-wc2026 {
+        background:
+            radial-gradient(circle at 88% 8%, #ff5f50 0 12%, transparent 12.4%),
+            radial-gradient(circle at 95% 33%, #d8ff22 0 8%, transparent 8.4%),
+            radial-gradient(circle at 4% 72%, #b832ff 0 14%, transparent 14.4%),
+            radial-gradient(circle at 70% 90%, #d8ff22 0 9%, transparent 9.4%),
+            radial-gradient(circle at 14% 20%, rgba(31,231,255,0.58) 0 13%, transparent 13.5%),
+            linear-gradient(165deg, #020b98 0%, #061ad8 42%, #00106d 100%) !important;
+        background-attachment: fixed;
+    }
+
+    body.tournament-wc2026 .home-screen::before,
+    body.tournament-wc2026 .home-screen::after {
+        filter: none;
+    }
+
+    body.tournament-wc2026 .home-screen::before {
+        right: -24%;
+        top: 72px;
+        border-radius: 48% 52% 54% 46%;
+        background:
+            radial-gradient(circle at 38% 32%, #ff5f50 0 28%, transparent 28.5%),
+            radial-gradient(circle at 78% 68%, #d8ff22 0 23%, transparent 23.5%),
+            radial-gradient(circle at 19% 82%, #1fe7ff 0 20%, transparent 20.5%);
+        opacity: 0.88;
+    }
+
+    body.tournament-wc2026 .home-screen::after {
+        left: -29%;
+        bottom: 22px;
+        border-radius: 56% 44% 48% 52%;
+        background:
+            radial-gradient(circle at 72% 20%, #b832ff 0 27%, transparent 27.5%),
+            radial-gradient(circle at 26% 62%, #0614c8 0 31%, transparent 31.5%),
+            radial-gradient(circle at 66% 82%, #d8ff22 0 21%, transparent 21.5%);
+        opacity: 0.82;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-row {
+        gap: 5px !important;
+        align-items: flex-end;
+        justify-content: flex-start;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-label,
+    body.tournament-wc2026 .match-card-v2 .deadline-timer,
+    body.tournament-wc2026 .match-card-v2 .deadline-helper,
+    body.tournament-wc2026 .match-card-v2 .deadline-cue {
+        margin: 0 !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-label {
+        line-height: 1;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-timer {
+        min-height: 30px;
+        padding: 6px 12px;
+        line-height: 1;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-helper,
+    body.tournament-wc2026 .match-card-v2 .deadline-cue {
+        line-height: 1.1;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper {
+        border: 2px solid rgba(255,255,255,0.36) !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0.07)) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            inset 0 -1px 0 rgba(0,5,54,0.34),
+            0 0 0 2px rgba(31,231,255,0.12),
+            0 12px 20px rgba(0,4,42,0.36),
+            0 0 22px rgba(31,231,255,0.16) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper:focus-within {
+        border-color: rgba(216,255,34,0.58) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.30),
+            inset 0 -1px 0 rgba(0,5,54,0.34),
+            0 0 0 3px rgba(216,255,34,0.16),
+            0 13px 22px rgba(0,4,42,0.38),
+            0 0 24px rgba(216,255,34,0.18) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .stepper-btn {
+        background:
+            linear-gradient(180deg, rgba(12,31,176,0.76), rgba(4,12,98,0.74)) !important;
+        color: #eaffff !important;
+        text-shadow: 0 1px 7px rgba(31,231,255,0.36);
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
+        border-bottom: 1px solid rgba(216,255,34,0.26) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
+        border-top: 1px solid rgba(31,231,255,0.28) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-input-v2 {
+        background:
+            linear-gradient(180deg, rgba(1,8,68,0.84), rgba(0,6,48,0.72)) !important;
+        color: #ffffff !important;
+        font-size: 21px !important;
+        font-weight: 700;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            inset 0 0 0 1px rgba(31,231,255,0.10),
+            inset 0 -1px 0 rgba(0,0,0,0.34) !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-wc2026 .match-card-v2 .deadline-row {
+            gap: 4px !important;
+        }
+
+        body.tournament-wc2026 .match-card-v2 .deadline-timer {
+            min-height: 28px;
+            padding: 5px 10px;
+        }
+
+        body.tournament-wc2026 .match-card-v2 .score-input-v2 {
+            font-size: 19px !important;
+        }
+    }
