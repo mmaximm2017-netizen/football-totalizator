@@ -493,3 +493,71 @@ Next safe step: pause broad decomposition and verify rendered UI manually or wit
 After that verification, the next candidate is `templates/partials/home/_match_finished.html`, but it should only be extracted if there is a clear snapshot baseline because finished state combines team blocks, final score, points text, prediction summary and the bets link.
 
 Important condition: do not extract prediction controls, deadline logic, or the `.match-card-v2` root until finished-state extraction has been separately verified.
+
+## Completed decomposition step 1.5
+
+Completed Step 1.5: the day wrapper was extracted from `templates/index.html` into `templates/partials/home/_day_block.html`.
+
+What changed:
+
+- `templates/index.html` still owns the month loop and the day loop.
+- `templates/index.html` still sets:
+  - `day_idx = loop.index`
+  - `day_is_open = day.key == open_day`
+- The day loop body now renders via `{% include 'partials/home/_day_block.html' %}`.
+- `templates/partials/home/_day_block.html` contains:
+  - `.day-block`
+  - `.day-header-v2 {{ day.type }}`
+  - `onclick="toggleDay('{{ month_idx }}_{{ day_idx }}')"`
+  - `id="arrow-day-{{ month_idx }}_{{ day_idx }}"`
+  - `.day-count[data-match-count]`
+  - `id="day-content-{{ month_idx }}_{{ day_idx }}"`
+  - `.day-content {% if day_is_open %}open{% endif %}`
+  - the existing loop over `day.matches`
+
+Not changed:
+
+- Month wrapper.
+- Month/day accordion JS.
+- Day IDs.
+- Day `onclick`.
+- `data-match-count`.
+- `day.type` classes.
+- Match card root.
+- Prediction form.
+- Steppers.
+- Deadline logic.
+- CSS.
+- JS.
+
+## Current partial structure after step 1.5
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+- `templates/partials/home/_team_v2.html` - reusable team logo/name block.
+- `templates/partials/home/_day_block.html` - day accordion wrapper and existing per-day match loop.
+
+`templates/index.html` still owns:
+
+- inline CSS;
+- accordion JS;
+- home screen root;
+- month loop and month wrapper;
+- `month_idx` / `month_is_open`;
+- day loop and `day_idx` / `day_is_open`;
+- bottom sheet include.
+
+## Next recommended step after step 1.5
+
+Next safe step: extract the month wrapper into `templates/partials/home/_month_block.html`, but only after confirming the day accordion still works visually.
+
+Why this is the next logical step:
+
+- The day wrapper is already isolated.
+- The month wrapper is the remaining outer accordion structure.
+- It can preserve the existing month loop contract if `month_idx` and `month_is_open` stay explicit.
+
+Important condition: preserve `id="month-content-{{ month_idx }}"`, `id="arrow-month-{{ month_idx }}"`, `onclick="toggleMonth('{{ month_idx }}')"`, `month_is_open`, and the nested day include exactly.
