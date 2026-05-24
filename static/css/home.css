@@ -1133,15 +1133,22 @@
         font-weight: 1000;
         line-height: 1;
         cursor: pointer;
-        transition: background 0.16s ease, transform 0.16s ease, color 0.16s ease;
+        transition:
+            background 0.14s ease,
+            box-shadow 0.14s ease,
+            color 0.14s ease,
+            transform 0.14s ease;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
     }
 
-    .stepper-btn:active {
-        transform: scale(0.94);
-        background: rgba(0,119,200,0.18);
+    .stepper-btn:not(:disabled):active {
+        transform: scale(0.965);
+        background: rgba(0,119,200,0.16);
         color: #005f9f;
+        box-shadow:
+            inset 0 2px 5px rgba(0,78,140,0.16),
+            inset 0 0 0 1px rgba(0,119,200,0.10);
     }
 
     .score-stepper .stepper-btn[data-step="1"] {
@@ -1197,15 +1204,20 @@
         font-weight: 900;
 
         box-shadow: 0 5px 10px rgba(27,140,94,0.25);
-        transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+        transition:
+            box-shadow 0.14s ease,
+            filter 0.14s ease,
+            transform 0.14s ease;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
     }
 
     .save-btn-v2:active {
-        transform: scale(0.98);
-        filter: brightness(1.03);
-        box-shadow: 0 6px 14px rgba(0,119,200,0.14);
+        transform: translateY(1px) scale(0.985);
+        filter: brightness(1.02);
+        box-shadow:
+            0 3px 7px rgba(27,140,94,0.22),
+            inset 0 1px 0 rgba(255,255,255,0.18);
     }
 
     .save-btn-v2:disabled {
@@ -1366,6 +1378,11 @@
     .bets-link-v2:focus-visible {
         outline: 2px solid rgba(0,119,200,0.48);
         outline-offset: 2px;
+    }
+
+    .stepper-btn:focus-visible,
+    .save-btn-v2:focus-visible {
+        outline-color: rgba(0,119,200,0.42);
     }
 
     .bets-sheet-close:focus-visible {
