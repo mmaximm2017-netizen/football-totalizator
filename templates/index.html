@@ -1969,21 +1969,8 @@
 
                     {% if match.finished %}
                     <div class="teams-center">
-                        <div class="team-v2">
-                            <div class="team-logo-v2">
-                                {% set home_flag = get_flag(match.home_team) %}
-
-                                {% if home_flag %}
-                                    {{ home_flag|safe }}
-                                {% else %}
-                                    {{ get_club_logo(match.home_team)|safe }}
-                                {% endif %}
-                            </div>
-
-                            <div class="team-name-v2">
-                                {{ match.home_team }}
-                            </div>
-                        </div>
+                        {% set team = match.home_team %}
+                        {% include 'partials/home/_team_v2.html' %}
 
                         <div class="center-score">
                             <div class="final-score">
@@ -1993,21 +1980,8 @@
                             <div class="center-sub">ИТОГ</div>
                         </div>
 
-                        <div class="team-v2">
-                            <div class="team-logo-v2">
-                                {% set away_flag = get_flag(match.away_team) %}
-
-                                {% if away_flag %}
-                                    {{ away_flag|safe }}
-                                {% else %}
-                                    {{ get_club_logo(match.away_team)|safe }}
-                                {% endif %}
-                            </div>
-
-                            <div class="team-name-v2">
-                                {{ match.away_team }}
-                            </div>
-                        </div>
+                        {% set team = match.away_team %}
+                        {% include 'partials/home/_team_v2.html' %}
                     </div>
                     {% endif %}
 
@@ -2068,21 +2042,8 @@
                         {% endif %}
 
                         <div class="teams-center">
-                            <div class="team-v2">
-                                <div class="team-logo-v2">
-                                    {% set home_flag = get_flag(match.home_team) %}
-
-                                    {% if home_flag %}
-                                        {{ home_flag|safe }}
-                                    {% else %}
-                                        {{ get_club_logo(match.home_team)|safe }}
-                                    {% endif %}
-                                </div>
-
-                                <div class="team-name-v2">
-                                    {{ match.home_team }}
-                                </div>
-                            </div>
+                            {% set team = match.home_team %}
+                            {% include 'partials/home/_team_v2.html' %}
 
                             <div class="center-score">
                                 {% if not g.is_admin %}
@@ -2163,21 +2124,8 @@
                                 {% endif %}
                             </div>
 
-                            <div class="team-v2">
-                                <div class="team-logo-v2">
-                                    {% set away_flag = get_flag(match.away_team) %}
-
-                                    {% if away_flag %}
-                                        {{ away_flag|safe }}
-                                    {% else %}
-                                        {{ get_club_logo(match.away_team)|safe }}
-                                    {% endif %}
-                                </div>
-
-                                <div class="team-name-v2">
-                                    {{ match.away_team }}
-                                </div>
-                            </div>
+                            {% set team = match.away_team %}
+                            {% include 'partials/home/_team_v2.html' %}
                         </div>
 
                         {% if not g.is_admin %}

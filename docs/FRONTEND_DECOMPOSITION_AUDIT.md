@@ -433,3 +433,63 @@ Why this is the next safest move:
 - It does not own deadlines.
 
 Important condition: preserve `get_flag(team)|safe` before `get_club_logo(team)|safe`, `.team-v2`, `.team-logo-v2`, `.team-name-v2`, and the current finished/non-finished parent layout.
+
+## Completed decomposition step 1.4
+
+Completed Step 1.4: the repeated team logo/name block was extracted from `templates/index.html` into `templates/partials/home/_team_v2.html`.
+
+What changed:
+
+- `templates/partials/home/_team_v2.html` now contains only the team visual block:
+  - `.team-v2`
+  - `.team-logo-v2`
+  - `get_flag(team)` lookup
+  - fallback `get_club_logo(team)|safe`
+  - `.team-name-v2`
+- `templates/index.html` sets `team` explicitly before each include:
+  - finished home team;
+  - finished away team;
+  - non-finished home team;
+  - non-finished away team.
+
+Not changed:
+
+- Match card root.
+- `.teams-center` structure.
+- Center score / VS area.
+- Finished final score.
+- Prediction form.
+- Score controls.
+- Steppers.
+- Deadline logic.
+- CSS.
+- JS.
+- Mobile layout rules.
+
+## Current partial structure after step 1.4
+
+Current frontend partials for the home page:
+
+- `templates/partials/home/_bets_sheet.html` - player bets bottom sheet markup.
+- `templates/partials/home/_empty_home.html` - empty home state markup.
+- `templates/partials/home/_match_league.html` - match card league/tournament badge markup.
+- `templates/partials/home/_team_v2.html` - reusable team logo/name block.
+
+The rest of `templates/index.html` is still intentionally monolithic:
+
+- month/day accordion wrappers;
+- match card root and state classes;
+- deadline/timer markup;
+- center score and score controls;
+- prediction form and steppers;
+- finished match points/prediction state;
+- inline CSS;
+- inline JS.
+
+## Next recommended step after step 1.4
+
+Next safe step: pause broad decomposition and verify rendered UI manually or with browser screenshots before extracting larger match-state partials.
+
+After that verification, the next candidate is `templates/partials/home/_match_finished.html`, but it should only be extracted if there is a clear snapshot baseline because finished state combines team blocks, final score, points text, prediction summary and the bets link.
+
+Important condition: do not extract prediction controls, deadline logic, or the `.match-card-v2` root until finished-state extraction has been separately verified.

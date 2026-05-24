@@ -1,0 +1,15 @@
+<div class="team-v2">
+    <div class="team-logo-v2">
+        {% set team_flag = get_flag(team) %}
+
+        {% if team_flag %}
+            {{ team_flag|safe }}
+        {% else %}
+            {{ get_club_logo(team)|safe }}
+        {% endif %}
+    </div>
+
+    <div class="team-name-v2">
+        {{ team }}
+    </div>
+</div>
