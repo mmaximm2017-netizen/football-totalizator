@@ -2303,20 +2303,30 @@
         }
     }
 
-    /* WC flags: large and centered above team names. */
-    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 .flag-icon,
-    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 img {
+    /* Force WC flags to 88x88 after all final-layer mobile sizing. */
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2 .flag-icon,
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2 img,
+    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon,
+    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 img {
         width: 88px !important;
         height: 88px !important;
         min-width: 88px !important;
         min-height: 88px !important;
         max-width: 88px !important;
         max-height: 88px !important;
+        object-fit: contain !important;
     }
 
-    body.tournament-wc2026 .match-card-v2 .team-v2 .team-logo-v2 {
+    body.tournament-wc2026 .match-card-v2 .team-logo-v2,
+    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 {
         margin-bottom: 16px !important;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        width: auto !important;
+        height: auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        max-height: none !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
