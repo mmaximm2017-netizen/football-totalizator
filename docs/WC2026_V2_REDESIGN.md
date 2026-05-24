@@ -106,3 +106,35 @@
 
 - Very long multi-word country names still need manual visual smoke at 360px because the card has fixed central input controls.
 - The brighter card surface increases visual energy; CTA and score controls should be checked against active, predicted and finished WC cards.
+
+## WC2026 V2 approved home match-card correction
+
+### Light event-card surface
+
+- Replaced the late WC home match-card override with a light white / pale-cyan / electric-blue event-card surface.
+- Kept FIFA26-style shape accents, but moved them into crisp cyan, lime, coral and violet radial forms instead of the previous dark/night base.
+- Kept the trophy layer, with lower opacity, brighter filtering and multiply blending so it reads as background texture and does not fight team names or controls.
+- Topline, teams panel and prediction panel now share a translucent light surface with blue borders and soft blue shadowing.
+
+### Team and score composition
+
+- Active WC team/score grid now uses three stable zones: flexible team column, fixed central score column, flexible team column.
+- The central score column is wider, so the two steppers and divider sit together without competing with the flags.
+- Team columns use fixed flag rows and clamped two-line names, which keeps flags steady and keeps long names under their flags.
+- Mobile breakpoints keep the central score column wide enough at 360-380px while reducing only the team text and flag shell.
+
+### Score steppers
+
+- WC score steppers now read as segmented blue blocks with a light center input.
+- The plus/minus segments keep the existing button dimensions and data hooks, but get stronger blue fills and clearer white symbols.
+- The score input remains the same form control, with a brighter white/cyan center and stronger number weight.
+
+### Contracts preserved
+
+- No backend, JS, HTML structure, form logic or `data-*` changes.
+- RPL/Cup styles remain untouched because the changes are scoped under `body.tournament-wc2026`.
+
+### Mobile cases checked by CSS constraints
+
+- Long names are constrained to two lines and balanced wrapping for cases such as Netherlands, Bosnia and Herzegovina, Saudi Arabia, Trinidad and Tobago, and Equatorial Guinea.
+- Residual risk: exact flag SVG proportions and browser text shaping can still vary slightly, so a real-device smoke pass at 360px is useful before release.
