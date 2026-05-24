@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
 
     <title>ТОТИШ БРАТИШЕК</title>
 
@@ -1047,6 +1048,107 @@ body.tournament-wc2026 .bottom-nav a.active {
         border-radius: 50% !important;
         object-fit: cover !important;
         background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* WC2026 V2 shell skin: scoped visual layer only */
+    body.tournament-wc2026 {
+        --wc26-display: 'IBM Plex Sans Condensed', 'Inter', sans-serif;
+        --wc26-blue: #0614c8;
+        --wc26-blue-deep: #000b78;
+        --wc26-cyan: #1fe7ff;
+        --wc26-aqua: #26f0c8;
+        --wc26-lime: #d8ff22;
+        --wc26-coral: #ff5f50;
+        --wc26-magenta: #b832ff;
+        --wc26-gold: #f4c84a;
+        --wc26-ink: #07112c;
+
+        background:
+            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.92) 0 13%, transparent 28%),
+            radial-gradient(circle at 94% 36%, rgba(216,255,34,0.92) 0 10%, transparent 25%),
+            radial-gradient(circle at 4% 74%, rgba(184,50,255,0.86) 0 15%, transparent 34%),
+            radial-gradient(circle at 70% 88%, rgba(216,255,34,0.86) 0 10%, transparent 28%),
+            radial-gradient(circle at 16% 22%, rgba(31,231,255,0.44), transparent 30%),
+            linear-gradient(165deg, #020b98 0%, #061ad8 42%, #00106d 100%) !important;
+        background-attachment: fixed;
+        color: #ffffff;
+    }
+
+    body.tournament-wc2026 .header {
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 86% -30%, rgba(255,95,80,0.72), transparent 42%),
+            radial-gradient(circle at 18% 120%, rgba(31,231,255,0.28), transparent 38%),
+            linear-gradient(135deg, rgba(2,12,135,0.94), rgba(1,14,103,0.86)) !important;
+        border-bottom: 1px solid rgba(31,231,255,0.24) !important;
+        box-shadow: 0 14px 34px rgba(0,5,66,0.36) !important;
+        color: #ffffff !important;
+    }
+
+    body.tournament-wc2026 .app-title,
+    body.tournament-wc2026 .tournament-trigger,
+    body.tournament-wc2026 .month-title,
+    body.tournament-wc2026 .day-title,
+    body.tournament-wc2026 .team-name-v2,
+    body.tournament-wc2026 .save-btn-v2,
+    body.tournament-wc2026 .score-input-v2,
+    body.tournament-wc2026 .deadline-timer,
+    body.tournament-wc2026 .final-score,
+    body.tournament-wc2026 .points-v2 {
+        font-family: var(--wc26-display);
+        letter-spacing: 0;
+    }
+
+    body.tournament-wc2026 .app-title {
+        color: #ffffff !important;
+        font-weight: 700;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.28);
+    }
+
+    body.tournament-wc2026 .tournament-trigger {
+        background: linear-gradient(135deg, rgba(8,17,135,0.92), rgba(1,11,92,0.86)) !important;
+        border: 1px solid rgba(31,231,255,0.28) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 10px 24px rgba(0,8,83,0.30) !important;
+        color: #ffffff !important;
+        font-weight: 700;
+    }
+
+    body.tournament-wc2026 .bottom-nav {
+        background:
+            radial-gradient(circle at 14% 10%, rgba(216,255,34,0.18), transparent 34%),
+            radial-gradient(circle at 88% 80%, rgba(31,231,255,0.14), transparent 38%),
+            linear-gradient(155deg, rgba(2,9,24,0.94), rgba(8,17,44,0.92)) !important;
+        border: 1px solid rgba(31,231,255,0.18) !important;
+        box-shadow:
+            0 18px 40px rgba(0,5,35,0.52),
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-wc2026 .bottom-nav a,
+    body.tournament-wc2026 .bottom-nav .nav-logout-btn {
+        color: rgba(255,255,255,0.70) !important;
+    }
+
+    body.tournament-wc2026 .bottom-nav a .nav-icon,
+    body.tournament-wc2026 .bottom-nav .nav-logout-btn .nav-icon {
+        filter: brightness(0) invert(1) opacity(0.78) !important;
+    }
+
+    body.tournament-wc2026 .bottom-nav a.active {
+        background:
+            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(38,240,200,0.10)) !important;
+        border: 1px solid rgba(216,255,34,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 0 24px rgba(216,255,34,0.12) !important;
+        color: #d8ff22 !important;
+        text-shadow: none !important;
+    }
+
+    body.tournament-wc2026 .bottom-nav a.active .nav-icon {
+        filter: brightness(0) saturate(100%) invert(92%) sepia(84%) saturate(990%) hue-rotate(16deg) brightness(105%) contrast(103%) !important;
     }
 	</style>
 </head>
