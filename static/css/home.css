@@ -1790,21 +1790,8 @@
     }
 
     body.tournament-wc2026 .match-card-v2::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image: repeating-linear-gradient(
-            45deg,
-            rgba(0,80,180,0.04) 0,
-            rgba(0,80,180,0.04) 3px,
-            transparent 3px,
-            transparent 18px
-        ) !important;
-        pointer-events: none;
-        z-index: 0;
+        content: none !important;
+        display: none !important;
     }
 
     body.tournament-wc2026 .match-card-v2::after {
@@ -2356,21 +2343,21 @@
 
     body.tournament-wc2026 .match-card-v2 .team-name-v2,
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
-        display: -webkit-box !important;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
+        display: block !important;
+        -webkit-line-clamp: unset !important;
+        line-clamp: unset !important;
+        white-space: normal !important;
         width: 100% !important;
-        max-width: 130px !important;
+        max-width: 140px !important;
         min-height: 48px !important;
         max-height: none !important;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: break-word !important;
         word-break: break-word !important;
         text-align: center !important;
-        font-size: 18px !important;
+        font-size: 16px !important;
         font-weight: 600 !important;
-        line-height: 1.3 !important;
+        line-height: 1.25 !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .center-score {
