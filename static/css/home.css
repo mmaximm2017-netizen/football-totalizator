@@ -1880,7 +1880,7 @@
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
     body.tournament-wc2026 .match-card-v2 .teams-center {
         display: grid;
-        grid-template-columns: minmax(82px, 0.78fr) minmax(148px, 174px) minmax(82px, 0.78fr);
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center !important;
         justify-items: center;
         gap: 8px;
@@ -1918,7 +1918,7 @@
         min-height: 88px;
         max-width: 88px;
         max-height: 88px;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 0 !important;
         display: flex !important;
         align-items: center !important;
@@ -1975,7 +1975,7 @@
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 0 16px;
+        margin: 0 12px 16px;
     }
 
     body.tournament-wc2026 .match-card-v2 .score-input-row {
@@ -2210,7 +2210,7 @@
 
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
-            grid-template-columns: minmax(74px, 0.72fr) minmax(138px, 158px) minmax(74px, 0.72fr);
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 5px;
             margin-top: 10px;
         }
@@ -2271,7 +2271,7 @@
     @media (max-width: 390px) {
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
-            grid-template-columns: minmax(68px, 0.68fr) minmax(132px, 150px) minmax(68px, 0.68fr);
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 4px;
         }
 
@@ -2295,7 +2295,7 @@
     @media (max-width: 360px) {
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
-            grid-template-columns: minmax(62px, 0.62fr) minmax(124px, 142px) minmax(62px, 0.62fr);
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 3px;
         }
 
