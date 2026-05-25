@@ -1730,17 +1730,22 @@
     body.tournament-wc2026 .match-card-v2 {
         padding: 13px;
         border-radius: 24px;
-        color: #ffffff !important;
-        background: rgba(0, 10, 30, 0.85) !important;
-        background-color: rgba(0, 10, 30, 0.85) !important;
+        color: #1a1a2e !important;
+        background:
+            radial-gradient(circle at 20% 30%, rgba(0, 229, 255, 0.12), transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(174, 234, 0, 0.10), transparent 45%),
+            radial-gradient(circle at 40% 80%, rgba(255, 110, 74, 0.10), transparent 50%),
+            radial-gradient(circle at 90% 20%, rgba(213, 0, 249, 0.10), transparent 35%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(240, 248, 255, 0.92)) !important;
+        background-color: transparent !important;
         border: 1px solid rgba(31, 231, 255, 0.20) !important;
         border-left: 1px solid rgba(31, 231, 255, 0.20) !important;
         box-shadow:
             0 14px 30px rgba(0,5,66,0.20) !important;
         position: relative;
         overflow: hidden;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
     }
 
     body.tournament-wc2026 .match-card-v2::before,
@@ -1811,7 +1816,7 @@
     body.tournament-wc2026 .match-card-v2 .my-prediction-v2,
     body.tournament-wc2026 .match-card-v2 .match-bottomline,
     body.tournament-wc2026 .match-card-v2 .center-sub {
-        color: #ffffff !important;
+        color: #1a1a2e !important;
         text-shadow: none;
     }
 
@@ -1821,7 +1826,7 @@
         line-height: 1;
         background: linear-gradient(135deg, rgba(223,249,255,0.72), rgba(183,239,255,0.52)) !important;
         border-color: rgba(0,118,255,0.20) !important;
-        color: #ffffff !important;
+        color: #1a1a2e !important;
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.58),
             0 5px 12px rgba(0,118,255,0.10) !important;
@@ -2096,12 +2101,11 @@
     body.tournament-wc2026 .match-card-v2 .deadline-timer,
     body.tournament-wc2026 .match-card-v2 .deadline-helper,
     body.tournament-wc2026 .match-card-v2 .deadline-cue,
-    body.tournament-wc2026 .match-card-v2 .score-input-v2,
     body.tournament-wc2026 .match-card-v2 .score-divider,
     body.tournament-wc2026 .match-card-v2 .my-prediction-v2,
     body.tournament-wc2026 .match-card-v2 .match-bottomline,
     body.tournament-wc2026 .match-card-v2 .center-sub {
-        color: #ffffff !important;
+        color: #1a1a2e !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2 {
