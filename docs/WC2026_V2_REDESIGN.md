@@ -293,3 +293,72 @@
 
 - The center score column is intentionally fixed, so extremely narrow browser/device text rendering can still make the team-name columns feel dense at 360px.
 - With fewer white panels, card shape accents have more visual responsibility; a real-device smoke pass is still the best final check.
+
+## WC2026 V2 compact mobile score composition
+
+### Source analysis
+
+- Active cards are still rendered through `templates/partials/home/_match_active.html`.
+- Team blocks are still rendered through `templates/partials/home/_team_v2.html`.
+- The JavaScript contract remains the existing `data-stepper`, `.stepper-btn`, `.score-input-v2`, `name="home_goals"`, `name="away_goals"` and `.predict-form-v2` form flow.
+- The authoritative CSS remains the single `/* WC2026 V2 FINAL HOME CARD LAYER */` block in `static/css/home.css`; no new WC layer was added.
+
+### Score layout
+
+- Rebuilt the active prediction center inside the final layer as a compact score zone: `team | vertical home stepper - vertical away stepper | team`.
+- `.score-stepper` is forced back to a vertical segmented control with rows for plus, score input and minus.
+- The HTML order is unchanged, but CSS row placement keeps `data-step="1"` on top, the score in the middle and `data-step="-1"` at the bottom.
+- `.score-input-row` is no longer a wide horizontal spread; it is a compact rounded score capsule centered between teams.
+
+### Flag alignment
+
+- `.teams-center` now uses tighter three-column sizing so teams sit closer to the score zone.
+- `.team-logo-v2`, `.center-score`, `.score-input-row` and `.score-stepper` share controlled heights at each mobile size.
+- The visual center of the flag and the vertical midpoint of the score zone are aligned through grid/flex alignment, not transform offsets.
+
+### Mobile breakpoints
+
+- `max-width: 430px`: reduces flag size to 82px and score zone to 82px.
+- `max-width: 390px`: tightens the center column and score gaps.
+- `max-width: 360px`: reduces flags to 78px and stepper controls to maintain touchable but compact spacing.
+
+### Team names
+
+- `.team-name-v2` keeps a two-line clamp.
+- Widths and font sizes are constrained for long names such as Bosnia and Herzegovina, Saudi Arabia, and Trinidad and Tobago.
+
+### Preserved contracts
+
+- No backend, routes, AJAX flow, form fields or `data-*` hooks changed.
+- RPL/Cup styles remain governed by shared rules; this pass is scoped to `body.tournament-wc2026`.
+- Finished cards retain their existing finished-card rendering path.
+
+### Risks
+
+- Exact country-name wrapping can vary by browser font metrics, so 360px, 390px and 430px real-device smoke checks remain recommended.
+- The score capsule is intentionally compact; adding larger button labels or non-numeric content could require another width pass.
+
+## WC2026 V2 event-card surface cleanup
+
+### White surfaces removed
+
+- Removed the visible light circular/square backing from `.team-logo-v2` by making its background transparent and keeping only a subtle circular rim/glow.
+- Removed the external capsule surface from `.score-input-row`; it now acts as a layout wrapper only, so the vertical steppers read as the actual controls.
+- Replaced the pale milk card fill on `.match-card-v2` with a cleaner cyan/electric-blue event-card surface and lower white inset.
+- Removed the light translucent fill from `.prediction-box` so the footer area belongs to the same card surface.
+
+### Selectors responsible
+
+- Flag backing: `body.tournament-wc2026 .team-logo-v2`.
+- Stepper backing: `body.tournament-wc2026 .match-card-v2 .score-input-row` and `body.tournament-wc2026 .match-card-v2 .score-stepper`.
+- Card milk overlay: `body.tournament-wc2026 .match-card-v2`.
+- Footer island: `body.tournament-wc2026 .match-card-v2 .prediction-box`.
+
+### Preserved
+
+- No HTML, JS, backend, form logic, `data-*` hooks or RPL/Cup styles changed.
+- Vertical `+ / score / -` stepper layout, team/score/team composition, two-line team names, CTA, deadline rhythm and finished-card path were kept.
+
+### Risks
+
+- Real-device checks at 360px, 390px and 430px are still recommended because perceived contrast depends on phone brightness and browser color rendering.
