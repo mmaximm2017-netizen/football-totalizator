@@ -1730,7 +1730,7 @@
     body.tournament-wc2026 .match-card-v2 {
         padding: 13px;
         border-radius: 24px;
-        color: #1a1a2e !important;
+        color: #ffffff !important;
         background:
             radial-gradient(circle at 20% 30%, rgba(0, 229, 255, 0.15), transparent 35%),
             radial-gradient(circle at 80% 70%, rgba(174, 234, 0, 0.12), transparent 40%),
@@ -1738,14 +1738,30 @@
             radial-gradient(circle at 90% 20%, rgba(213, 0, 249, 0.12), transparent 30%) !important;
         background-color: transparent !important;
         background-blend-mode: normal;
-        border: 1px solid rgba(31, 231, 255, 0.20) !important;
-        border-left: 1px solid rgba(31, 231, 255, 0.20) !important;
+        border: 3px solid #00e5ff !important;
+        border-left: 3px solid #00e5ff !important;
         box-shadow:
             0 14px 30px rgba(0,5,66,0.20) !important;
         position: relative;
         overflow: hidden;
         backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(2px);
+    }
+
+    body.tournament-wc2026 .match-card-v2:nth-child(4n+1) {
+        border-color: #00e5ff !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2:nth-child(4n+2) {
+        border-color: #aeea00 !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2:nth-child(4n+3) {
+        border-color: #ff6e4a !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2:nth-child(4n+4) {
+        border-color: #d500f9 !important;
     }
 
     body.tournament-wc2026 .match-card-v2::before,
@@ -1802,7 +1818,7 @@
 
     body.tournament-wc2026 .match-card-v2 .league-label,
     body.tournament-wc2026 .match-card-v2 .deadline-label {
-        color: #002fd6 !important;
+        color: #ffffff !important;
         font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
         font-weight: 700;
         text-transform: uppercase;
@@ -1816,7 +1832,7 @@
     body.tournament-wc2026 .match-card-v2 .my-prediction-v2,
     body.tournament-wc2026 .match-card-v2 .match-bottomline,
     body.tournament-wc2026 .match-card-v2 .center-sub {
-        color: #1a1a2e !important;
+        color: #ffffff !important;
         text-shadow: none;
     }
 
@@ -1826,7 +1842,7 @@
         line-height: 1;
         background: linear-gradient(135deg, rgba(223,249,255,0.72), rgba(183,239,255,0.52)) !important;
         border-color: rgba(0,118,255,0.20) !important;
-        color: #1a1a2e !important;
+        color: #ffffff !important;
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.58),
             0 5px 12px rgba(0,118,255,0.10) !important;
@@ -1985,8 +2001,8 @@
         align-items: center;
         overflow: hidden;
         border-radius: 15px;
-        background: rgba(5,56,198,0.16) !important;
-        border: 1px solid currentColor !important;
+        background: transparent !important;
+        border: 2px solid currentColor !important;
         color: #00e5ff;
         box-shadow:
             0 5px 12px rgba(0,68,150,0.10),
@@ -2003,22 +2019,27 @@
     }
 
     body.tournament-wc2026 .score-stepper {
+        background: transparent !important;
         border-color: currentColor !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+1) .score-stepper {
+        color: #00e5ff;
         border-color: #00e5ff !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+2) .score-stepper {
+        color: #aeea00;
         border-color: #aeea00 !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+3) .score-stepper {
+        color: #ff6e4a;
         border-color: #ff6e4a !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+4) .score-stepper {
+        color: #d500f9;
         border-color: #d500f9 !important;
     }
 
@@ -2029,8 +2050,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #0838cf !important;
-        color: #ffffff !important;
+        background: transparent !important;
+        color: currentColor;
         font-size: 16px;
         font-weight: 800;
         line-height: 1;
@@ -2059,7 +2080,7 @@
         height: 34px;
         width: 54px !important;
         padding: 0 !important;
-        background: rgba(0, 0, 0, 0.30) !important;
+        background: transparent !important;
         color: #ffffff !important;
         font-size: 19px !important;
         font-weight: 800 !important;
@@ -2105,7 +2126,7 @@
     body.tournament-wc2026 .match-card-v2 .my-prediction-v2,
     body.tournament-wc2026 .match-card-v2 .match-bottomline,
     body.tournament-wc2026 .match-card-v2 .center-sub {
-        color: #1a1a2e !important;
+        color: #ffffff !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2 {
