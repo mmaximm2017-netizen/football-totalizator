@@ -286,12 +286,12 @@ document.addEventListener('DOMContentLoaded', function () {
         card.dataset.deadlineClosed = '1';
         card.classList.add('closed');
 
-        const controls = card.querySelectorAll('.score-input-v2, .stepper-btn');
+        const controls = card.querySelectorAll('.score-input-v2, .stepper-btn, .wc-stepper-input, .wc-stepper-btn');
         controls.forEach(function (control) {
             control.disabled = true;
         });
 
-        const form = card.querySelector('.predict-form-v2');
+        const form = card.querySelector('.predict-form-v2, .wc-predict-form');
         const submitButton = form
             ? (form.querySelector('button[type="submit"]') || card.querySelector('button[type="submit"][form="' + form.id + '"]'))
             : null;
@@ -301,6 +301,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (card.dataset.finished === '1') {
+            return;
+        }
+
+        if (card.classList.contains('wc-match-card')) {
+            const deadline = card.querySelector('.wc-deadline');
+            const header = card.querySelector('.wc-card-header');
+            let status = card.querySelector('.wc-status');
+
+            if (deadline) {
+                deadline.style.display = 'none';
+            }
+
+            if (!status) {
+                status = document.createElement('div');
+                status.className = 'wc-status';
+                if (header) {
+                    header.appendChild(status);
+                }
+            }
+
+            status.textContent = 'Закрыто';
             return;
         }
 
@@ -352,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll('[data-deadline]').forEach(function (timer) {
             const rawDeadline = timer.dataset.deadline;
-            const card = timer.closest('.match-card-v2');
+            const card = timer.closest('.match-card-v2, .wc-match-card');
             const cue = card ? card.querySelector('.deadline-cue') : null;
 
             if (!rawDeadline) return;
@@ -396,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateDeadlineAtmosphere() {
         document.querySelectorAll('[data-deadline]').forEach(function (timer) {
-            const card = timer.closest('.match-card-v2');
+            const card = timer.closest('.match-card-v2, .wc-match-card');
             const cue = card ? card.querySelector('.deadline-cue') : null;
             if (!card || !cue) return;
 
@@ -429,8 +450,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const steppers = document.querySelectorAll('[data-stepper]');
 
     steppers.forEach(function (stepper) {
-        const input = stepper.querySelector('.score-input-v2');
-        const buttons = stepper.querySelectorAll('.stepper-btn');
+        const input = stepper.querySelector('.score-input-v2, .wc-stepper-input');
+        const buttons = stepper.querySelectorAll('.stepper-btn, .wc-stepper-btn');
 
         if (!input || input.disabled) return;
 
@@ -448,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    const forms = document.querySelectorAll('.predict-form-v2');
+    const forms = document.querySelectorAll('.predict-form-v2, .wc-predict-form');
 
     forms.forEach(function (form) {
         form.addEventListener('submit', async function (event) {
@@ -456,10 +477,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const button = form.querySelector('button[type="submit"]')
                 || document.querySelector('button[type="submit"][form="' + form.id + '"]');
-            const card = form.closest('.match-card-v2');
+            const card = form.closest('.match-card-v2, .wc-match-card');
             const box = form.closest('.prediction-box') || card;
             const controls = card.querySelectorAll(
-                '.stepper-btn, .score-input-v2[form="' + form.id + '"], .score-input-v2:not([form])'
+                '.stepper-btn, .score-input-v2[form="' + form.id + '"], .score-input-v2:not([form]), .wc-stepper-btn, .wc-stepper-input'
             );
 
             if (!button || !card) {
@@ -545,12 +566,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 card.classList.add('save-success-pulse');
 
-                let predictionText = box.querySelector('.my-prediction-v2');
-                const bottomLine = box.querySelector('.match-bottomline');
+                let predictionText = box.querySelector('.my-prediction-v2, .wc-prediction-status');
+                const bottomLine = box.querySelector('.match-bottomline, .wc-card-footer');
 
                 if (!predictionText && bottomLine) {
                     predictionText = document.createElement('div');
-                    predictionText.className = 'my-prediction-v2';
+                    predictionText.className = card.classList.contains('wc-match-card') ? 'wc-prediction-status' : 'my-prediction-v2';
                     bottomLine.prepend(predictionText);
                 }
 
@@ -558,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     predictionText.innerHTML = 'Текущий прогноз: <b>' + home + ':' + away + '</b>';
                 }
 
-                let betsLink = box.querySelector('.bets-link-v2');
+                let betsLink = box.querySelector('.bets-link-v2, .wc-bets-link');
                 const canShowBetsLink = shouldShowBetsLink(card);
 
                 if (!canShowBetsLink && betsLink) {
@@ -569,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (canShowBetsLink && !betsLink && data.match_id) {
                     if (bottomLine) {
                         betsLink = document.createElement('a');
-                        betsLink.className = 'bets-link-v2';
+                        betsLink.className = card.classList.contains('wc-match-card') ? 'wc-bets-link' : 'bets-link-v2';
                         betsLink.href = '/match/' + data.match_id + '/predictions';
                         betsLink.setAttribute('data-bets-sheet', '');
                         betsLink.textContent = 'Ставки братишек';
