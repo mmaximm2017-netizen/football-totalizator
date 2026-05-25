@@ -2151,19 +2151,24 @@
         display: block !important;
         -webkit-line-clamp: unset;
         line-clamp: unset;
-        white-space: normal;
+        white-space: normal !important;
         width: 100% !important;
         max-width: 140px !important;
         min-height: 48px !important;
         max-height: none;
         overflow: hidden;
-        overflow-wrap: break-word;
-        word-break: break-word;
-        text-align: center;
+        overflow-wrap: break-word !important;
+        word-break: keep-all !important;
+        text-align: center !important;
         color: var(--wc-text-primary) !important;
         font-size: 16px;
         font-weight: 600;
         line-height: 1.25;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .tournament-logo {
+        width: 44px !important;
+        height: 44px !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .center-score {
