@@ -1881,9 +1881,9 @@
     body.tournament-wc2026 .match-card-v2 .teams-center {
         display: grid;
         grid-template-columns: minmax(82px, 0.78fr) minmax(148px, 174px) minmax(82px, 0.78fr);
-        align-items: start;
+        align-items: center !important;
         justify-items: center;
-        column-gap: 6px;
+        gap: 8px;
         width: 100%;
         margin: 12px auto 10px;
         padding: 0;
@@ -1912,12 +1912,12 @@
     }
 
     body.tournament-wc2026 .team-logo-v2 {
-        width: var(--flag-size) !important;
-        height: var(--flag-size) !important;
-        min-width: var(--flag-size);
-        min-height: var(--flag-size);
-        max-width: var(--flag-size);
-        max-height: var(--flag-size);
+        width: 88px !important;
+        height: 88px !important;
+        min-width: 88px;
+        min-height: 88px;
+        max-width: 88px;
+        max-height: 88px;
         margin: 0 !important;
         padding: 0 !important;
         display: flex !important;
@@ -1965,11 +1965,11 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .center-score {
-        align-self: start;
+        align-self: center;
         justify-self: center;
         width: 100%;
         min-width: 0;
-        min-height: var(--flag-size);
+        min-height: 88px;
         z-index: 2;
         display: flex !important;
         flex-direction: column !important;
@@ -1997,17 +1997,18 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .score-stepper {
-        flex: 0 0 72px;
-        width: 72px;
-        height: 144px;
+        flex: 0 0 52px;
+        width: 52px;
+        height: 124px;
         display: grid;
         grid-template-columns: 1fr;
-        grid-template-rows: 44px 44px 44px;
+        grid-template-rows: 36px 36px 36px;
         align-items: center;
-        gap: 12px;
+        justify-items: center;
+        gap: 8px;
         overflow: hidden;
         border-radius: 15px;
-        padding: 4px;
+        padding: 2px;
         background: transparent !important;
         border: 2px solid currentColor !important;
         color: #00e5ff;
@@ -2027,6 +2028,8 @@
 
     body.tournament-wc2026 .score-stepper {
         background: transparent !important;
+        gap: 8px;
+        padding: 2px;
         border-color: currentColor !important;
     }
 
@@ -2051,15 +2054,15 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .stepper-btn {
-        width: 44px !important;
-        height: 44px !important;
-        min-height: 44px;
+        width: 36px !important;
+        height: 36px !important;
+        min-height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: transparent !important;
         color: currentColor;
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: 800;
         line-height: 1;
         text-shadow: none;
@@ -2084,12 +2087,12 @@
     body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2,
     body.tournament-wc2026 .match-card-v2 .score-input-v2 {
         grid-row: 2;
-        height: 44px !important;
-        width: 64px !important;
+        height: 36px !important;
+        width: 48px !important;
         padding: 0 !important;
         background: transparent !important;
         color: #ffffff !important;
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: 800 !important;
         text-align: center;
         text-shadow: none;
@@ -2236,27 +2239,27 @@
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
-            flex-basis: 72px;
-            width: 72px;
-            height: 144px;
-            grid-template-rows: 44px 44px 44px;
-            gap: 12px;
-            padding: 4px;
+            flex-basis: 52px;
+            width: 52px;
+            height: 124px;
+            grid-template-rows: 36px 36px 36px;
+            gap: 8px;
+            padding: 2px;
             border-radius: 14px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
-            width: 44px !important;
-            height: 44px !important;
-            min-height: 44px;
-            font-size: 20px !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-height: 36px;
+            font-size: 18px !important;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 64px !important;
-            height: 44px !important;
-            font-size: 20px !important;
+            width: 48px !important;
+            height: 36px !important;
+            font-size: 18px !important;
         }
     }
 
@@ -2273,13 +2276,13 @@
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
-            flex-basis: 72px;
-            width: 72px;
+            flex-basis: 52px;
+            width: 52px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 64px !important;
+            width: 48px !important;
         }
     }
 
@@ -2312,23 +2315,23 @@
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
-            flex-basis: 72px;
-            width: 72px;
-            height: 144px;
-            grid-template-rows: 44px 44px 44px;
+            flex-basis: 52px;
+            width: 52px;
+            height: 124px;
+            grid-template-rows: 36px 36px 36px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
-            width: 44px !important;
-            height: 44px !important;
-            min-height: 44px;
-            font-size: 20px !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-height: 36px;
+            font-size: 18px !important;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 64px !important;
-            height: 44px !important;
-            font-size: 20px !important;
+            width: 48px !important;
+            height: 36px !important;
+            font-size: 18px !important;
         }
     }
