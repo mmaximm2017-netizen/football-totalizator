@@ -2200,6 +2200,7 @@
 
     body.tournament-wc2026 .match-card-v2 .score-input-v2,
     body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-        color: var(--wc-text-primary) !important;
-        background: rgba(255,255,255,0.10) !important;
+        color: #00206e !important;
+        background: #ffffff !important;
+        font-weight: 800 !important;
     }

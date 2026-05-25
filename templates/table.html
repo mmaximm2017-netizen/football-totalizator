@@ -111,12 +111,39 @@
         pointer-events: none;
     }
 
+    body.tournament-wc2026 .wc-trophy-table-bg {
+        position: absolute;
+        left: 50%;
+        top: 55% !important;
+        z-index: 0;
+        width: 65% !important;
+        height: auto !important;
+        opacity: 0.28 !important;
+        transform: translate(-50%, -50%);
+        object-fit: contain;
+        pointer-events: none;
+    }
+
     body.tournament-wc2026 #wc-standings-header img {
         width: 48px !important;
         height: 48px !important;
         filter:
             drop-shadow(0 0 8px rgba(244,200,74,0.28))
             drop-shadow(0 0 16px rgba(31,231,255,0.16));
+    }
+
+    body.tournament-wc2026 #wc-standings-header .wc-trophy-table-bg {
+        width: 65% !important;
+        height: auto !important;
+        opacity: 0.28 !important;
+        top: 55% !important;
+        filter: none;
+    }
+
+    body.tournament-wc2026 #wc-standings-header > img:not(.wc-trophy-table-bg),
+    body.tournament-wc2026 #wc-standings-header > div {
+        position: relative;
+        z-index: 1;
     }
 
     body.tournament-wc2026 #wc-standings-header div div:first-child,
@@ -157,6 +184,7 @@
 
 {% if current_tournament_name == 'ЧМ-2026' %}
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img class="wc-trophy-table-bg" src="/static/clubs/WorldCup.png" alt="" aria-hidden="true">
     <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
     <div style="text-align: left;">
         <div style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
@@ -245,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (cupHeader) {
                     cupHeader.outerHTML = `
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img class="wc-trophy-table-bg" src="/static/clubs/WorldCup.png" alt="" aria-hidden="true">
     <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
     <div style="text-align: left;">
         <div style="color: #ffffff; font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Турнирная таблица</div>
