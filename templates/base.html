@@ -1,4 +1,4 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
 
-    <title>–¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö</title>
+    <title>“Œ“»ÿ ¡–¿“»ÿ≈ </title>
 
     <link rel="manifest" href="/static/manifest.json?v=4">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -44,6 +44,36 @@
 
             --border-soft: rgba(0,119,200,0.12);
             --shadow-deep: 0 14px 34px rgba(0,78,140,0.16);
+
+            /* WC2026 colors */
+            --wc-bg-gradient-start: rgba(0,23,216,0.90);
+            --wc-bg-gradient-end: rgba(0,8,84,0.86);
+            --wc-border-light: rgba(31,231,255,0.28);
+            --wc-text-primary: #ffffff;
+            --wc-text-secondary: rgba(255,255,255,0.7);
+            --wc-accent-blue: #2aa8ff;
+
+            /* Flag sizes */
+            --flag-size: 88px;
+
+            /* Radii */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-round: 999px;
+
+            /* Shadows */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-wc-card: inset 0 1px 0 rgba(255,255,255,0.15), 0 18px 38px rgba(0,5,70,0.34);
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 20px;
         }
 
         html {
@@ -144,7 +174,7 @@ body {
         .splash-loader {
             width: 136px;
             height: 4px;
-            border-radius: 999px;
+            border-radius: var(--radius-round);
             overflow: hidden;
             margin: 24px auto 0;
             background: rgba(255,255,255,0.16);
@@ -154,8 +184,8 @@ body {
             display: block;
             height: 100%;
             width: 45%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #0077c8, #2aa8ff);
+            border-radius: var(--radius-round);
+            background: linear-gradient(90deg, #0077c8, var(--wc-accent-blue));
             animation: loaderMove 1s ease-in-out infinite;
         }
 
@@ -347,7 +377,7 @@ body {
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #0077c8, #2aa8ff);
+            background: linear-gradient(135deg, #0077c8, var(--wc-accent-blue));
             color: white;
             box-shadow: 0 12px 26px rgba(0,119,200,0.20);
         }
@@ -356,12 +386,6 @@ body {
             background: linear-gradient(135deg, #1565c0, #1e88e5);
             color: white;
             box-shadow: 0 12px 26px rgba(21,101,192,0.22);
-        }
-
-        .btn-outline {
-            background: rgba(0,119,200,0.08);
-            color: var(--accent-strong);
-            border: 1px solid rgba(0,119,200,0.24);
         }
 
         .btn-disabled {
@@ -437,7 +461,7 @@ body {
 
         .filter-btn {
             padding: 8px 14px;
-            border-radius: 999px;
+            border-radius: var(--radius-round);
 
             border: 1px solid var(--border-soft);
 
@@ -482,7 +506,7 @@ body {
             color: var(--text-soft);
         }
 
-        /* BOTTOM NAV: –í–ê–ñ–ù–û, –û–ù–ê –°–ù–ê–†–£–ñ–ò app-shell */
+        /* BOTTOM NAV: ¬¿∆ÕŒ, ŒÕ¿ —Õ¿–”∆» app-shell */
 
         .bottom-nav {
             position: fixed;
@@ -594,37 +618,6 @@ body {
     border-radius: 14px;
 }
 
-body.tournament-wc2026 .bottom-nav {
-    background: #0d1f3a !important;
-    border-top: 1px solid rgba(184, 154, 62, 0.3) !important;
-}
-
-body.tournament-wc2026 .bottom-nav a {
-    color: #a0a0a0 !important;
-}
-
-body.tournament-wc2026 .bottom-nav a .icon,
-body.tournament-wc2026 .bottom-nav a .nav-icon {
-    color: #d8b45a !important;
-    filter:
-        brightness(0)
-        invert(74%)
-        sepia(42%)
-        saturate(471%)
-        hue-rotate(7deg)
-        brightness(95%)
-        contrast(88%);
-}
-
-body.tournament-wc2026 .bottom-nav .nav-logout-btn {
-    color: #a0a0a0 !important;
-}
-
-body.tournament-wc2026 .bottom-nav a.active {
-    color: #d8b45a !important;
-    text-shadow: 0 0 4px rgba(216, 180, 90, 0.4);
-}
-
 .nav-icon {
     width: 30px;
     height: 30px;
@@ -668,7 +661,7 @@ body.tournament-wc2026 .bottom-nav a.active {
         .tournament-sheet-handle {
             width: 42px;
             height: 5px;
-            border-radius: 999px;
+            border-radius: var(--radius-round);
             margin: 0 auto 10px;
             background: rgba(0,119,200,0.22);
         }
@@ -729,7 +722,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             background: #4caf50;
             color: #fff;
             padding: 2px 6px;
-            border-radius: 999px;
+            border-radius: var(--radius-round);
             font-weight: 700;
             flex-shrink: 0;
         }
@@ -770,7 +763,6 @@ body.tournament-wc2026 .bottom-nav a.active {
             text-transform: uppercase;
         }
 
-        .prediction-label,
         .my-prediction-v2 {
             font-weight: 500;
         }
@@ -779,8 +771,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             font-weight: 600;
         }
 
-        td:first-child,
-        .username-cell {
+        td:first-child {
             font-weight: 600;
         }
 
@@ -844,42 +835,6 @@ body.tournament-wc2026 .bottom-nav a.active {
             background: linear-gradient(135deg, #1a5c9e, #2a7faa);
         }
 
-        .tournament-wc2026 .match-card-v2 {
-            background: linear-gradient(135deg, #ffd700, #ffec80) !important;
-            border-left: 4px solid #c9a03d !important;
-            box-shadow:
-                0 14px 30px rgba(119,86,18,0.24),
-                inset 0 1px 0 rgba(255,247,197,0.6);
-        }
-
-        .tournament-wc2026 .match-card-v2 .league-label,
-        .tournament-wc2026 .match-card-v2 .team-name-v2,
-        .tournament-wc2026 .match-card-v2 .match-info,
-        .tournament-wc2026 .match-card-v2 .time-label,
-        .tournament-wc2026 .match-card-v2 .deadline-label,
-        .tournament-wc2026 .match-card-v2 .deadline-timer,
-        .tournament-wc2026 .match-card-v2 .status-pill-v2,
-        .tournament-wc2026 .match-card-v2 .deadline-helper,
-        .tournament-wc2026 .match-card-v2 .deadline-cue {
-            color: #1a1a2e !important;
-        }
-
-        .tournament-wc2026 .match-card-v2 .deadline-timer.closed {
-            background: rgba(0,0,0,0.1);
-            color: #1a1a2e !important;
-        }
-
-        .tournament-wc2026 .match-card-v2 .final-score {
-            background: linear-gradient(135deg, #ffd700, #e6b800);
-            color: #1a1a2e;
-        }
-
-        .tournament-wc2026 .save-btn-v2 {
-            background: linear-gradient(135deg, #1a1a2e, #2a2a4e) !important;
-            color: #ffd700 !important;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.2) !important;
-        }
-
         .tournament-wc2026 .points-number {
             color: #c9a03d !important;
             font-weight: 800;
@@ -888,54 +843,6 @@ body.tournament-wc2026 .bottom-nav a.active {
         .tournament-wc2026 .points-v2 {
             background: #ffd700;
             color: #1a1a2e;
-        }
-
-        .tournament-wc2026 .month-title,
-        .tournament-wc2026 .day-title,
-        .tournament-wc2026 .team-name-v2 {
-            font-family: 'Montserrat', 'Inter', sans-serif;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-        }
-
-        body.tournament-wc2026 .month-header-v2 {
-            background: #c8a84e !important;
-            color: #0a1428 !important;
-            border: 1px solid rgba(10,20,40,0.2) !important;
-        }
-
-        body.tournament-wc2026 .month-title,
-        body.tournament-wc2026 .month-count {
-            color: #0a1428 !important;
-        }
-
-        body.tournament-wc2026 .month-arrow {
-            color: #0a1428 !important;
-        }
-
-        body.tournament-wc2026 .day-header-v2 {
-            background: #d8b45a !important;
-            color: #0a1428 !important;
-            border-left: 4px solid #9c7628 !important;
-        }
-
-        body.tournament-wc2026 .day-title,
-        body.tournament-wc2026 .day-count {
-            color: #0a1428 !important;
-        }
-
-        body.tournament-wc2026 .day-arrow {
-            color: #0a1428 !important;
-        }
-
-        body.tournament-wc2026 .day-header-v2.today {
-            background: #e6c86a !important;
-            border-left-color: #9c7628 !important;
-        }
-
-        body.tournament-wc2026 .day-header-v2.past {
-            background: #b89a3e !important;
-            opacity: 0.9;
         }
 
         /* Accordion visual identity per tournament */
@@ -958,30 +865,6 @@ body.tournament-wc2026 .bottom-nav a.active {
             color: #16679f;
         }
 
-        .tournament-wc2026 .month-header,
-        .tournament-wc2026 .day-header {
-            background:
-                linear-gradient(135deg, rgba(255,215,0,0.22), rgba(201,160,61,0.10)),
-                rgba(255,250,226,0.90);
-            border: 1px solid rgba(201,160,61,0.40);
-            box-shadow: 0 10px 18px rgba(92,67,13,0.16);
-        }
-
-        .tournament-wc2026 .month-title,
-        .tournament-wc2026 .day-title {
-            color: #56410f;
-        }
-
-        .tournament-wc2026 .month-count,
-        .tournament-wc2026 .day-count {
-            color: #7b5a12;
-        }
-
-        .tournament-wc2026 .month-header .toggle-icon,
-        .tournament-wc2026 .day-header .toggle-icon {
-            color: #c9a03d;
-        }
-
         body.dark.tournament-wc2026 .match-card-v2 {
             background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(30,30,40,0.9));
             border-left: 4px solid #ffd700;
@@ -996,7 +879,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             border-left: 4px solid #2aa8ff;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 430px) {
             body {
                 padding-bottom: calc(112px + env(safe-area-inset-bottom));
             }
@@ -1039,17 +922,6 @@ body.tournament-wc2026 .bottom-nav a.active {
     display: block;
 }
 
-    /* WC-2026 flags: circular, fixed size */
-    body.tournament-wc2026 .flag-icon,
-    body.tournament-wc2026 .team-logo-v2 img,
-    body.tournament-wc2026 .team-logo-v2 .flag-icon {
-        width: 36px !important;
-        height: 36px !important;
-        border-radius: 50% !important;
-        object-fit: cover !important;
-        background-color: rgba(0, 0, 0, 0.05);
-    }
-
     /* WC2026 V2 shell skin: scoped visual layer only */
     body.tournament-wc2026 {
         --wc26-display: 'IBM Plex Sans Condensed', 'Inter', sans-serif;
@@ -1069,7 +941,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             radial-gradient(circle at 4% 74%, rgba(184,50,255,0.86) 0 15%, transparent 34%),
             radial-gradient(circle at 70% 88%, rgba(216,255,34,0.86) 0 10%, transparent 28%),
             radial-gradient(circle at 16% 22%, rgba(31,231,255,0.44), transparent 30%),
-            linear-gradient(165deg, #020b98 0%, #061ad8 42%, #00106d 100%) !important;
+            linear-gradient(165deg, #020b98 0%, #061ad8 42%, #00106d 100%);
         background-attachment: fixed;
         color: #ffffff;
     }
@@ -1079,39 +951,31 @@ body.tournament-wc2026 .bottom-nav a.active {
         background:
             radial-gradient(circle at 86% -30%, rgba(255,95,80,0.72), transparent 42%),
             radial-gradient(circle at 18% 120%, rgba(31,231,255,0.28), transparent 38%),
-            linear-gradient(135deg, rgba(2,12,135,0.94), rgba(1,14,103,0.86)) !important;
-        border-bottom: 1px solid rgba(31,231,255,0.24) !important;
-        box-shadow: 0 14px 34px rgba(0,5,66,0.36) !important;
-        color: #ffffff !important;
+            linear-gradient(135deg, rgba(2,12,135,0.94), rgba(1,14,103,0.86));
+        border-bottom: 1px solid rgba(31,231,255,0.24);
+        box-shadow: 0 14px 34px rgba(0,5,66,0.36);
+        color: #ffffff;
     }
 
     body.tournament-wc2026 .app-title,
-    body.tournament-wc2026 .tournament-trigger,
-    body.tournament-wc2026 .month-title,
-    body.tournament-wc2026 .day-title,
-    body.tournament-wc2026 .team-name-v2,
-    body.tournament-wc2026 .save-btn-v2,
-    body.tournament-wc2026 .score-input-v2,
-    body.tournament-wc2026 .deadline-timer,
-    body.tournament-wc2026 .final-score,
-    body.tournament-wc2026 .points-v2 {
+    body.tournament-wc2026 .tournament-trigger {
         font-family: var(--wc26-display);
         letter-spacing: 0;
     }
 
     body.tournament-wc2026 .app-title {
-        color: #ffffff !important;
+        color: #ffffff;
         font-weight: 700;
         text-shadow: 0 2px 12px rgba(0,0,0,0.28);
     }
 
     body.tournament-wc2026 .tournament-trigger {
-        background: linear-gradient(135deg, rgba(8,17,135,0.92), rgba(1,11,92,0.86)) !important;
-        border: 1px solid rgba(31,231,255,0.28) !important;
+        background: linear-gradient(135deg, rgba(8,17,135,0.92), rgba(1,11,92,0.86));
+        border: 1px solid rgba(31,231,255,0.28);
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.14),
-            0 10px 24px rgba(0,8,83,0.30) !important;
-        color: #ffffff !important;
+            0 10px 24px rgba(0,8,83,0.30);
+        color: #ffffff;
         font-weight: 700;
     }
 
@@ -1119,43 +983,43 @@ body.tournament-wc2026 .bottom-nav a.active {
         background:
             radial-gradient(circle at 14% 10%, rgba(216,255,34,0.18), transparent 34%),
             radial-gradient(circle at 88% 80%, rgba(31,231,255,0.14), transparent 38%),
-            linear-gradient(155deg, rgba(2,9,24,0.94), rgba(8,17,44,0.92)) !important;
-        border: 1px solid rgba(31,231,255,0.18) !important;
+            linear-gradient(155deg, rgba(2,9,24,0.94), rgba(8,17,44,0.92));
+        border: 1px solid rgba(31,231,255,0.18);
         box-shadow:
             0 18px 40px rgba(0,5,35,0.52),
-            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+            inset 0 1px 0 rgba(255,255,255,0.10);
     }
 
     body.tournament-wc2026 .bottom-nav a,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn {
-        color: rgba(255,255,255,0.70) !important;
+        color: rgba(255,255,255,0.70);
     }
 
     body.tournament-wc2026 .bottom-nav a .nav-icon,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn .nav-icon {
-        filter: brightness(0) invert(1) opacity(0.78) !important;
+        filter: brightness(0) invert(1) opacity(0.78);
     }
 
     body.tournament-wc2026 .bottom-nav a.active {
         background:
-            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(38,240,200,0.10)) !important;
-        border: 1px solid rgba(216,255,34,0.30) !important;
+            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(38,240,200,0.10));
+        border: 1px solid rgba(216,255,34,0.30);
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.16),
-            0 0 24px rgba(216,255,34,0.12) !important;
-        color: #d8ff22 !important;
-        text-shadow: none !important;
+            0 0 24px rgba(216,255,34,0.12);
+        color: #d8ff22;
+        text-shadow: none;
     }
 
     body.tournament-wc2026 .bottom-nav a.active .nav-icon {
-        filter: brightness(0) saturate(100%) invert(92%) sepia(84%) saturate(990%) hue-rotate(16deg) brightness(105%) contrast(103%) !important;
+        filter: brightness(0) saturate(100%) invert(92%) sepia(84%) saturate(990%) hue-rotate(16deg) brightness(105%) contrast(103%);
     }
 	</style>
 </head>
 
-<body class="{% if current_tournament_name == '–ß–ú-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
+<body class="{% if current_tournament_name == '◊Ã-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
-    {% set current_t_name = current_tournament_name|default(selected_name|default('–¢—É—Ä–Ω–∏—Ä')) %}
+    {% set current_t_name = current_tournament_name|default(selected_name|default('“ÛÌË')) %}
     {% set active_items = active_tournaments|default([]) %}
     {% set all_items = tournaments|default([]) %}
     {% set tournament_items = active_items if active_items else all_items %}
@@ -1168,7 +1032,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             </div>
 
             <div class="splash-title">
-                –¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö
+                “Œ“»ÿ ¡–¿“»ÿ≈ 
             </div>
 
             <div class="splash-loader">
@@ -1184,18 +1048,18 @@ body.tournament-wc2026 .bottom-nav a.active {
                 <div class="app-title-stack">
                     <div class="app-title">
                         <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
-                        –¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö
+                        “Œ“»ÿ ¡–¿“»ÿ≈ 
                     </div>
                     {% if g.is_admin %}
                     <div class="admin-label">
-                        ‚öôÔ∏è –°–¢–†–ê–ù–ò–¶–ê –ê–î–ú–ò–ù–ò–°–¢–†–ê–¢–û–†–ê
+                        ?? —“–¿Õ»÷¿ ¿ƒÃ»Õ»—“–¿“Œ–¿
                     </div>
                     {% endif %}
                 </div>
 
                 {% if tournament_items %}
                 <button type="button" class="tournament-trigger" data-tournament-sheet-open>
-                    üèÜ {{ current_t_name }} ‚ñº
+                    ?? {{ current_t_name }} °
                 </button>
                 {% endif %}
             </div>
@@ -1225,7 +1089,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             class="{% if request.path == '/' %}active{% endif %}"
         >
             <img src="/static/icons/matches.svg" class="nav-icon">
-            –ú–∞—Ç—á–∏
+            Ã‡Ú˜Ë
         </a>
 
         <a
@@ -1233,7 +1097,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             class="{% if request.path == '/table' %}active{% endif %}"
         >
             <img src="/static/icons/table.svg" class="nav-icon">
-            –¢–∞–±–ª–∏—Ü–∞
+            “‡·ÎËˆ‡
         </a>
 
         {% if g.is_admin %}
@@ -1242,7 +1106,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             class="{% if request.path.startswith('/admin') %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
-            –ê–¥–º–∏–Ω
+            ¿‰ÏËÌ
         </a>
         {% else %}
         <a
@@ -1250,7 +1114,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             class="{% if request.path == '/profile' %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
-            –ü—Ä–æ—Ñ–∏–ª—å
+            œÓÙËÎ¸
         </a>
         {% endif %}
 
@@ -1258,7 +1122,7 @@ body.tournament-wc2026 .bottom-nav a.active {
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="nav-logout-btn">
                 <img src="/static/icons/logout.svg" class="nav-icon">
-                –í—ã—Ö–æ–¥
+                ¬˚ıÓ‰
             </button>
         </form>
 
@@ -1270,14 +1134,14 @@ body.tournament-wc2026 .bottom-nav a.active {
     <div class="tournament-sheet" data-tournament-sheet-panel aria-hidden="true">
         <div class="tournament-sheet-handle"></div>
         <div class="tournament-sheet-header">
-            <span>–í—ã–±—Ä–∞—Ç—å —Ç—É—Ä–Ω–∏—Ä</span>
-            <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="–ó–∞–∫—Ä—ã—Ç—å –≤—ã–±–æ—Ä —Ç—É—Ä–Ω–∏—Ä–∞">‚úï</button>
+            <span>¬˚·‡Ú¸ ÚÛÌË</span>
+            <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="«‡Í˚Ú¸ ‚˚·Ó ÚÛÌË‡">?</button>
         </div>
         <div class="tournament-sheet-list">
             {% for t in tournament_items %}
             <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
-                {% if t.is_active %}<span class="active-badge">–ê–∫—Ç–∏–≤–Ω—ã–π</span>{% endif %}
+                {% if t.is_active %}<span class="active-badge">¿ÍÚË‚Ì˚È</span>{% endif %}
             </a>
             {% endfor %}
         </div>
@@ -1370,8 +1234,8 @@ body.tournament-wc2026 .bottom-nav a.active {
 
                 const activeItem = document.querySelector('.tournament-item.active .tournament-name');
                 const triggerText = (document.querySelector('.tournament-trigger')?.textContent || '')
-                    .replace('üèÜ', '')
-                    .replace('‚ñº', '')
+                    .replace('??', '')
+                    .replace('°', '')
                     .trim();
                 const name = (activeItem?.textContent || triggerText || '').trim();
                 if (name) {
