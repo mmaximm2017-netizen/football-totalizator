@@ -2054,7 +2054,7 @@
         height: 34px;
         width: 54px !important;
         padding: 0 !important;
-        background: #ffffff !important;
+        background: rgba(0, 0, 0, 0.30) !important;
         color: #ffffff !important;
         font-size: 19px !important;
         font-weight: 800 !important;
