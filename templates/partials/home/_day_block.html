@@ -30,144 +30,14 @@
                     {% set predicted_class = 'predicted' %}
                 {% endif %}
 
-                {% if match.league == 'wc2026' %}
-                <div
-                    class="wc-match-card {{ card_state }} {{ predicted_class }}"
-                    data-match-id="{{ match.id }}"
-                    data-finished="{% if match.finished %}1{% else %}0{% endif %}"
-                    data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
-                >
-                    <div class="wc-card-header">
-                        <div class="wc-card-meta">
-                            <div class="wc-league">ЧМ-2026</div>
-                            <div class="wc-time">Начало: {{ to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] }}</div>
-                        </div>
-
-                        {% if match.finished %}
-                            <div class="wc-status">Матч завершён</div>
-                        {% elif match.deadline_passed %}
-                            <div class="wc-status">Закрыто</div>
-                        {% else %}
-                            <div class="wc-deadline" title="Приём до: {{ to_msk(match.deadline) }}">
-                                <div class="wc-deadline-label">ДО ЗАКРЫТИЯ</div>
-                                <div class="wc-deadline-timer" data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}">—</div>
-                                <div class="wc-deadline-date">
-                                    {% set deadline_short = to_msk(match.deadline).split(' (')[0].replace(' МСК', '') %}
-                                    до {{ deadline_short.replace(' ', ' • ', 1) }}
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    {% if not g.is_admin and not match.finished and not match.deadline_passed %}
-                    <form method="post" class="wc-predict-form" id="wc-predict-form-{{ match.id }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <input type="hidden" name="match_id" value="{{ match.id }}">
-                    {% endif %}
-
-                    <div class="wc-match-main">
-                        <div class="wc-team wc-team-home">
-                            <div class="wc-flag">
-                                {% set home_flag = get_flag(match.home_team) %}
-                                {% if home_flag %}
-                                    {{ home_flag|safe }}
-                                {% else %}
-                                    {{ get_club_logo(match.home_team)|safe }}
-                                {% endif %}
-                            </div>
-                            <div class="wc-team-name">{{ match.home_team }}</div>
-                        </div>
-
-                        {% if match.finished %}
-                            <div class="wc-stepper-block wc-result-block">
-                                <div class="wc-final-score">{{ match.home_score }}:{{ match.away_score }}</div>
-                            </div>
-                        {% elif match.deadline_passed or g.is_admin %}
-                            <div class="wc-stepper-block wc-locked-block">
-                                <div class="wc-final-score">
-                                    {{ match.pred_home if match.pred_home != '' else 0 }}:{{ match.pred_away if match.pred_away != '' else 0 }}
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="wc-stepper-block">
-                                <div class="wc-stepper" data-stepper>
-                                    <button type="button" class="wc-stepper-btn" data-step="-1" aria-label="Уменьшить голы {{ match.home_team }}">−</button>
-                                    <input
-                                        type="number"
-                                        class="wc-stepper-input"
-                                        name="home_goals"
-                                        value="{{ match.pred_home if match.pred_home != '' else 0 }}"
-                                        min="0"
-                                        max="99"
-                                        inputmode="numeric"
-                                    >
-                                    <button type="button" class="wc-stepper-btn" data-step="1" aria-label="Увеличить голы {{ match.home_team }}">+</button>
-                                </div>
-                                <div class="wc-stepper-divider">—</div>
-                                <div class="wc-stepper" data-stepper>
-                                    <button type="button" class="wc-stepper-btn" data-step="-1" aria-label="Уменьшить голы {{ match.away_team }}">−</button>
-                                    <input
-                                        type="number"
-                                        class="wc-stepper-input"
-                                        name="away_goals"
-                                        value="{{ match.pred_away if match.pred_away != '' else 0 }}"
-                                        min="0"
-                                        max="99"
-                                        inputmode="numeric"
-                                    >
-                                    <button type="button" class="wc-stepper-btn" data-step="1" aria-label="Увеличить голы {{ match.away_team }}">+</button>
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        <div class="wc-team wc-team-away">
-                            <div class="wc-flag">
-                                {% set away_flag = get_flag(match.away_team) %}
-                                {% if away_flag %}
-                                    {{ away_flag|safe }}
-                                {% else %}
-                                    {{ get_club_logo(match.away_team)|safe }}
-                                {% endif %}
-                            </div>
-                            <div class="wc-team-name">{{ match.away_team }}</div>
-                        </div>
-                    </div>
-
-                    <div class="wc-card-footer">
-                        {% if not g.is_admin %}
-                            {% if match.finished or match.deadline_passed %}
-                                <a href="/match/{{ match.id }}/predictions" class="wc-bets-link" data-bets-sheet>Ставки братишек</a>
-                            {% else %}
-                                <button type="submit" class="wc-save-btn">
-                                    {% if has_prediction %}Обновить{% else %}Сделать ставку{% endif %}
-                                </button>
-                            {% endif %}
-                        {% else %}
-                            <button type="button" class="wc-save-btn wc-save-btn-disabled" disabled>Админ не участвует в ставках</button>
-                        {% endif %}
-
-                        <div class="wc-prediction-status">
-                            {% if match.finished %}
-                                {% set points_value = (match.my_points or 0)|int %}
-                                Итог: {{ match.home_score }}:{{ match.away_score }} · {% if has_prediction %}Ваш прогноз: {{ match.pred_home }}:{{ match.pred_away }} · {{ points_value }} очк.{% else %}Ставка не сделана{% endif %}
-                            {% elif has_prediction %}
-                                Текущий прогноз: <b>{{ match.pred_home }}:{{ match.pred_away }}</b>
-                            {% else %}
-                                Прогноз ещё не сделан
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    {% if not g.is_admin and not match.finished and not match.deadline_passed %}
-                    </form>
-                    {% endif %}
-                </div>
-                {% else %}
                 <div
                     class="match-card-v2 {{ card_state }} {{ predicted_class }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
+{% if match.league == 'wc2026' and not match.finished %}
+<div class="wc-trophy-bg"></div>
+{% endif %}
 <div class="match-topline">
     <div class="match-meta-v2">
 
@@ -218,7 +88,6 @@
 
 
                 </div>
-                {% endif %}
 
                 {% endfor %}
             </div>
