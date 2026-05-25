@@ -2125,7 +2125,7 @@
     body.tournament-wc2026 .team-logo-v2 {
         margin: 0 !important;
         padding: 0 !important;
-        width: auto !important;
+        width: 88px !important;
         height: 88px !important;
         min-width: 0;
         min-height: 0;
@@ -2138,7 +2138,15 @@
 
     /* WC team names and vertical alignment. */
     body.tournament-wc2026 .teams-center {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
         align-items: center !important;
+        justify-items: center !important;
+        gap: 16px !important;
+        column-gap: 16px !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        position: relative !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .team-v2,
@@ -2165,6 +2173,9 @@
         overflow-wrap: break-word !important;
         word-break: keep-all !important;
         text-align: center !important;
+        margin-top: 8px !important;
+        position: relative !important;
+        top: 0 !important;
         color: var(--wc-text-primary) !important;
         font-size: 16px;
         font-weight: 600;
@@ -2184,13 +2195,18 @@
         align-self: center !important;
         justify-self: center !important;
         height: 88px !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
+        margin: 0 !important;
     }
 
     body.tournament-wc2026 .score-input-row {
         margin: 0 !important;
         padding: 0 !important;
+    }
+
+    body.tournament-wc2026 .score-divider {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1 !important;
     }
 
     /* WC dark card text contrast. */
