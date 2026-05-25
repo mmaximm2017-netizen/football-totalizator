@@ -1,4 +1,5 @@
     :root {
+        --flag-size: 88px;
         --radius-pill: var(--radius-round);
         --transition-fast: 0.18s ease;
         --glass-blur: blur(14px);
@@ -2125,8 +2126,8 @@
     body.tournament-wc2026 .team-logo-v2 {
         margin: 0 !important;
         padding: 0 !important;
-        width: 88px !important;
-        height: 88px !important;
+        width: var(--flag-size) !important;
+        height: var(--flag-size) !important;
         min-width: 0;
         min-height: 0;
         max-width: none;
@@ -2145,6 +2146,7 @@
         gap: 16px !important;
         column-gap: 16px !important;
         margin: 0 auto !important;
+        padding: 0 !important;
         width: 100% !important;
         position: relative !important;
     }
@@ -2157,6 +2159,9 @@
         flex-direction: column !important;
         align-items: center !important;
         justify-content: flex-start !important;
+        justify-self: center !important;
+        width: auto !important;
+        gap: 0 !important;
         height: auto !important;
     }
 
@@ -2194,13 +2199,18 @@
         justify-content: center !important;
         align-self: center !important;
         justify-self: center !important;
-        height: 88px !important;
+        height: var(--flag-size) !important;
         margin: 0 !important;
     }
 
     body.tournament-wc2026 .score-input-row {
+        width: auto !important;
         margin: 0 !important;
         padding: 0 !important;
+    }
+
+    body.tournament-wc2026 .score-stepper {
+        height: var(--flag-size) !important;
     }
 
     body.tournament-wc2026 .score-divider {
