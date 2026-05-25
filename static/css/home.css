@@ -1618,7 +1618,7 @@
     body.tournament-wc2026 .home-screen {
         position: relative;
         isolation: isolate;
-        gap: 12px;
+        gap: 10px;
     }
 
     body.tournament-wc2026 .home-screen::before,
@@ -1662,21 +1662,21 @@
         border: 1px solid rgba(255,255,255,0.20) !important;
         border-left: 0 !important;
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.16),
-            0 10px 22px rgba(0,5,40,0.20) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 8px 18px rgba(0,5,40,0.16) !important;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
     }
 
     body.tournament-wc2026 .month-header-v2 {
-        min-height: 56px;
+        min-height: 52px;
         background:
             radial-gradient(circle at 12% 4%, rgba(255,255,255,0.18), transparent 34%),
             linear-gradient(105deg, rgba(6,20,200,0.92) 0%, rgba(1,13,86,0.94) 100%) !important;
     }
 
     body.tournament-wc2026 .day-header-v2 {
-        min-height: 56px;
+        min-height: 50px;
         background:
             radial-gradient(circle at 11% 0%, rgba(255,255,255,0.18), transparent 32%),
             linear-gradient(105deg, #d500f9 0%, #ff5f50 100%) !important;
@@ -1718,8 +1718,8 @@
         text-shadow: none;
     }
 
-    body.tournament-wc2026 .month-title { font-size: 21px; }
-    body.tournament-wc2026 .day-title { font-size: 18px; }
+    body.tournament-wc2026 .month-title { font-size: 20px; }
+    body.tournament-wc2026 .day-title { font-size: 17px; }
 
     body.tournament-wc2026 .day-title {
         display: inline-flex;
@@ -1748,7 +1748,7 @@
     }
 
     body.tournament-wc2026 .match-card-v2 {
-        padding: 14px;
+        padding: 13px 14px 14px;
         border-radius: 26px;
         color: #ffffff !important;
         background:
@@ -1829,7 +1829,7 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-row {
-        gap: 3px;
+        gap: 2px;
         align-items: flex-end;
         justify-content: flex-start;
         row-gap: 3px;
@@ -1846,7 +1846,7 @@
     body.tournament-wc2026 .match-card-v2 .deadline-label {
         color: #ffffff !important;
         font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
         text-shadow: none;
     }
@@ -1863,15 +1863,15 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-timer {
-        min-height: 28px;
-        padding: 5px 10px;
+        min-height: 26px;
+        padding: 4px 9px;
         line-height: 1;
-        background: rgba(255,255,255,0.08) !important;
-        border-color: rgba(31,231,255,0.18) !important;
+        background: rgba(255,255,255,0.07) !important;
+        border-color: rgba(31,231,255,0.14) !important;
         color: #ffffff !important;
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.08),
-            0 4px 10px rgba(0,5,28,0.18) !important;
+            inset 0 1px 0 rgba(255,255,255,0.06),
+            0 3px 8px rgba(0,5,28,0.14) !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-timer.warning {
@@ -1905,9 +1905,9 @@
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center !important;
         justify-items: center;
-        gap: 10px;
+        gap: 9px;
         width: 100%;
-        margin: 14px auto 12px;
+        margin: 12px auto 9px;
         padding: 0;
         overflow: visible;
         background: transparent !important;
@@ -1928,7 +1928,7 @@
         justify-self: center !important;
         width: 100%;
         min-width: 0;
-        gap: 8px;
+        gap: 7px;
         padding: 0;
         text-align: center;
     }
@@ -1997,7 +1997,7 @@
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 12px 16px;
+        margin: 0 12px 8px;
     }
 
     body.tournament-wc2026 .match-card-v2 .score-input-row {
@@ -2008,9 +2008,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 7px;
         flex-wrap: nowrap;
-        min-width: 136px;
+        min-width: 132px;
         margin: 0 auto;
         padding: 0;
         border-radius: 999px;
@@ -2022,23 +2022,23 @@
     body.tournament-wc2026 .match-card-v2 .score-stepper {
         flex: 0 0 auto;
         width: auto;
-        min-width: 58px;
+        min-width: 56px;
         height: auto;
-        min-height: 148px;
+        min-height: 132px;
         display: grid;
         grid-template-columns: 1fr;
-        grid-template-rows: 44px 44px 44px;
+        grid-template-rows: 40px 40px 40px;
         align-items: center;
         justify-items: center;
-        gap: 4px;
+        gap: 3px;
         overflow: hidden;
         border-radius: 18px;
-        padding: 2px 6px;
-        background: rgba(255,255,255,0.045) !important;
-        border: 1px solid currentColor !important;
+        padding: 2px 5px;
+        background: rgba(255,255,255,0.035) !important;
+        border: 1px solid color-mix(in srgb, currentColor 68%, transparent) !important;
         color: #00e5ff;
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.08) !important;
+            inset 0 1px 0 rgba(255,255,255,0.06) !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
@@ -2046,56 +2046,60 @@
     body.tournament-wc2026 .match-card-v2 .score-stepper:focus-within {
         border-color: rgba(31,231,255,0.42) !important;
         box-shadow:
-            0 0 0 2px rgba(216,255,34,0.10),
+            0 0 0 2px rgba(216,255,34,0.08),
             inset 0 1px 0 rgba(255,255,255,0.10) !important;
     }
 
     body.tournament-wc2026 .score-stepper {
         background: transparent !important;
-        gap: 4px;
-        padding: 2px 6px;
+        gap: 3px;
+        padding: 2px 5px;
         border-color: currentColor !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+1) .score-stepper {
         color: #00e5ff;
-        border-color: #00e5ff !important;
+        border-color: rgba(0,229,255,0.68) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+2) .score-stepper {
         color: #aeea00;
-        border-color: #aeea00 !important;
+        border-color: rgba(174,234,0,0.62) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+3) .score-stepper {
         color: #ff6e4a;
-        border-color: #ff6e4a !important;
+        border-color: rgba(255,110,74,0.62) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+4) .score-stepper {
         color: #d500f9;
-        border-color: #d500f9 !important;
+        border-color: rgba(213,0,249,0.62) !important;
     }
 
     body.tournament-wc2026 .match-card-v2 .stepper-btn {
-        width: 44px !important;
-        height: 44px !important;
-        min-height: 44px;
+        width: 42px !important;
+        height: 40px !important;
+        min-height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: transparent !important;
         color: currentColor;
-        font-size: 17px !important;
-        font-weight: 700;
+        font-size: 15px !important;
+        font-weight: 600;
         line-height: 1;
+        opacity: 0.82;
         text-shadow: none;
         box-shadow: none !important;
+        transition: background 140ms ease, color 140ms ease, opacity 140ms ease, transform 140ms ease;
     }
 
     body.tournament-wc2026 .match-card-v2 .stepper-btn:active {
         background: rgba(216,255,34,0.18) !important;
         color: #06163a !important;
+        opacity: 1;
+        transform: scale(0.96);
     }
 
     body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
@@ -2111,12 +2115,12 @@
     body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2,
     body.tournament-wc2026 .match-card-v2 .score-input-v2 {
         grid-row: 2;
-        height: 44px !important;
-        width: 48px !important;
+        height: 40px !important;
+        width: 46px !important;
         padding: 0 !important;
         background: transparent !important;
         color: #ffffff !important;
-        font-size: 22px !important;
+        font-size: 21px !important;
         font-weight: 800 !important;
         text-align: center;
         text-shadow: none;
@@ -2167,8 +2171,8 @@
         width: 68%;
         min-width: 188px;
         max-width: 280px;
-        min-height: 56px;
-        margin-top: 8px;
+        min-height: 54px;
+        margin-top: 4px;
         border-radius: 18px;
         background: linear-gradient(135deg, #d8ff22 0%, #bfff26 54%, #36eecb 100%) !important;
         border: 1px solid rgba(5,67,130,0.14) !important;
@@ -2176,12 +2180,14 @@
         font-size: 15px;
         font-weight: 800;
         box-shadow:
-            0 10px 20px rgba(0,5,28,0.22),
+            0 12px 24px rgba(0,5,28,0.24),
             inset 0 1px 0 rgba(255,255,255,0.58) !important;
+        transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease;
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2:active {
-        transform: translateY(1px) scale(0.99);
+        transform: translateY(1px) scale(0.985);
+        filter: brightness(0.94);
         box-shadow:
             0 4px 10px rgba(0,5,28,0.18),
             inset 0 2px 6px rgba(5,24,63,0.12) !important;
@@ -2239,18 +2245,18 @@
 
     @media (max-width: 430px) {
         body.tournament-wc2026 .match-card-v2 {
-            padding: var(--spacing-md);
+            padding: 12px;
             border-radius: 22px;
         }
 
-        body.tournament-wc2026 .month-title { font-size: 20px; }
-        body.tournament-wc2026 .day-title { font-size: 17px; }
+        body.tournament-wc2026 .month-title { font-size: 19px; }
+        body.tournament-wc2026 .day-title { font-size: 16px; }
 
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 5px;
-            margin-top: 10px;
+            margin-top: 9px;
         }
 
         body.tournament-wc2026 .team-logo-v2,
@@ -2271,38 +2277,38 @@
 
         body.tournament-wc2026 .match-card-v2 .center-score,
         body.tournament-wc2026 .match-card-v2 .score-input-row {
-            min-height: 84px;
+            min-height: 82px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-row {
-            gap: 6px;
-            padding: 0 5px;
+            gap: 5px;
+            padding: 0 4px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
-            min-width: 58px;
+            min-width: 56px;
             height: auto;
-            min-height: 148px;
-            grid-template-rows: 44px 44px 44px;
-            gap: 4px;
-            padding: 2px 6px;
+            min-height: 132px;
+            grid-template-rows: 40px 40px 40px;
+            gap: 3px;
+            padding: 2px 5px;
             border-radius: 14px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
-            width: 44px !important;
-            height: 44px !important;
-            min-height: 44px;
-            font-size: 17px !important;
+            width: 42px !important;
+            height: 40px !important;
+            min-height: 40px;
+            font-size: 15px !important;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 48px !important;
-            height: 44px !important;
-            font-size: 18px !important;
+            width: 46px !important;
+            height: 40px !important;
+            font-size: 21px !important;
         }
     }
 
@@ -2314,19 +2320,19 @@
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-row {
-            gap: 5px;
-            padding: 0 4px;
+            gap: 4px;
+            padding: 0 3px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
-            min-width: 58px;
+            min-width: 56px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 48px !important;
+            width: 46px !important;
         }
     }
 
@@ -2355,29 +2361,29 @@
 
         body.tournament-wc2026 .match-card-v2 .center-score,
         body.tournament-wc2026 .match-card-v2 .score-input-row {
-            min-height: 80px;
+            min-height: 78px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
-            min-width: 58px;
+            min-width: 54px;
             height: auto;
-            min-height: 148px;
-            grid-template-rows: 44px 44px 44px;
+            min-height: 132px;
+            grid-template-rows: 40px 40px 40px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
-            width: 44px !important;
-            height: 44px !important;
-            min-height: 44px;
-            font-size: 17px !important;
+            width: 42px !important;
+            height: 40px !important;
+            min-height: 40px;
+            font-size: 15px !important;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 48px !important;
-            height: 44px !important;
-            font-size: 18px !important;
+            width: 46px !important;
+            height: 40px !important;
+            font-size: 21px !important;
         }
     }
