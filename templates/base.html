@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
 
-    <title>“Œ“»ÿ ¡–¿“»ÿ≈ </title>
+    <title>–¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö</title>
 
     <link rel="manifest" href="/static/manifest.json?v=4">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -506,7 +506,7 @@ body {
             color: var(--text-soft);
         }
 
-        /* BOTTOM NAV: ¬¿∆ÕŒ, ŒÕ¿ —Õ¿–”∆» app-shell */
+        /* BOTTOM NAV: –í–ê–ñ–ù–û, –û–ù–ê –°–ù–ê–†–£–ñ–ò app-shell */
 
         .bottom-nav {
             position: fixed;
@@ -1017,9 +1017,9 @@ body {
 	</style>
 </head>
 
-<body class="{% if current_tournament_name == '◊Ã-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
+<body class="{% if current_tournament_name == '–ß–ú-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
-    {% set current_t_name = current_tournament_name|default(selected_name|default('“ÛÌË')) %}
+    {% set current_t_name = current_tournament_name|default(selected_name|default('–¢—É—Ä–Ω–∏—Ä')) %}
     {% set active_items = active_tournaments|default([]) %}
     {% set all_items = tournaments|default([]) %}
     {% set tournament_items = active_items if active_items else all_items %}
@@ -1032,7 +1032,7 @@ body {
             </div>
 
             <div class="splash-title">
-                “Œ“»ÿ ¡–¿“»ÿ≈ 
+                –¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö
             </div>
 
             <div class="splash-loader">
@@ -1048,18 +1048,18 @@ body {
                 <div class="app-title-stack">
                     <div class="app-title">
                         <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
-                        “Œ“»ÿ ¡–¿“»ÿ≈ 
+                        –¢–û–¢–ò–® –ë–†–ê–¢–ò–®–ï–ö
                     </div>
                     {% if g.is_admin %}
                     <div class="admin-label">
-                        ?? —“–¿Õ»÷¿ ¿ƒÃ»Õ»—“–¿“Œ–¿
+                        ‚öôÔ∏è –°–¢–†–ê–ù–ò–¶–ê –ê–î–ú–ò–ù–ò–°–¢–†–ê–¢–û–†–ê
                     </div>
                     {% endif %}
                 </div>
 
                 {% if tournament_items %}
                 <button type="button" class="tournament-trigger" data-tournament-sheet-open>
-                    ?? {{ current_t_name }} °
+                    üèÜ {{ current_t_name }} ‚ñº
                 </button>
                 {% endif %}
             </div>
@@ -1089,7 +1089,7 @@ body {
             class="{% if request.path == '/' %}active{% endif %}"
         >
             <img src="/static/icons/matches.svg" class="nav-icon">
-            Ã‡Ú˜Ë
+            –ú–∞—Ç—á–∏
         </a>
 
         <a
@@ -1097,7 +1097,7 @@ body {
             class="{% if request.path == '/table' %}active{% endif %}"
         >
             <img src="/static/icons/table.svg" class="nav-icon">
-            “‡·ÎËˆ‡
+            –¢–∞–±–ª–∏—Ü–∞
         </a>
 
         {% if g.is_admin %}
@@ -1106,7 +1106,7 @@ body {
             class="{% if request.path.startswith('/admin') %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
-            ¿‰ÏËÌ
+            –ê–¥–º–∏–Ω
         </a>
         {% else %}
         <a
@@ -1114,7 +1114,7 @@ body {
             class="{% if request.path == '/profile' %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
-            œÓÙËÎ¸
+            –ü—Ä–æ—Ñ–∏–ª—å
         </a>
         {% endif %}
 
@@ -1122,7 +1122,7 @@ body {
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="nav-logout-btn">
                 <img src="/static/icons/logout.svg" class="nav-icon">
-                ¬˚ıÓ‰
+                –í—ã—Ö–æ–¥
             </button>
         </form>
 
@@ -1134,14 +1134,14 @@ body {
     <div class="tournament-sheet" data-tournament-sheet-panel aria-hidden="true">
         <div class="tournament-sheet-handle"></div>
         <div class="tournament-sheet-header">
-            <span>¬˚·‡Ú¸ ÚÛÌË</span>
-            <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="«‡Í˚Ú¸ ‚˚·Ó ÚÛÌË‡">?</button>
+            <span>–í—ã–±—Ä–∞—Ç—å —Ç—É—Ä–Ω–∏—Ä</span>
+            <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="–ó–∞–∫—Ä—ã—Ç—å –≤—ã–±–æ—Ä —Ç—É—Ä–Ω–∏—Ä–∞">‚úï</button>
         </div>
         <div class="tournament-sheet-list">
             {% for t in tournament_items %}
             <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
-                {% if t.is_active %}<span class="active-badge">¿ÍÚË‚Ì˚È</span>{% endif %}
+                {% if t.is_active %}<span class="active-badge">–ê–∫—Ç–∏–≤–Ω—ã–π</span>{% endif %}
             </a>
             {% endfor %}
         </div>
@@ -1234,8 +1234,8 @@ body {
 
                 const activeItem = document.querySelector('.tournament-item.active .tournament-name');
                 const triggerText = (document.querySelector('.tournament-trigger')?.textContent || '')
-                    .replace('??', '')
-                    .replace('°', '')
+                    .replace('üèÜ', '')
+                    .replace('‚ñº', '')
                     .trim();
                 const name = (activeItem?.textContent || triggerText || '').trim();
                 if (name) {
