@@ -1127,17 +1127,13 @@ body {
 
     <div id="app-splash">
         <div class="splash-inner">
+            <div class="splash-title">ТОТИШ БРАТИШЕК</div>
+
             <div class="splash-logo">
-                <img src="/static/icon-192-new.png" alt="App icon">
+                <img src="/static/clubs/WorldCup.png" alt="World Cup logo">
             </div>
 
-            <div class="splash-title">
-                ТОТИШ БРАТИШЕК
-            </div>
-
-            <div class="splash-loader">
-                <span></span>
-            </div>
+            <div class="splash-spinner" aria-hidden="true"></div>
         </div>
     </div>
 
@@ -1250,6 +1246,8 @@ body {
     </div>
     {% endif %}
 
+    <script src="{{ url_for('static', filename='js/splash.js') }}"></script>
+
     <script>
         function attachCsrfToPostForms() {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -1268,18 +1266,7 @@ body {
             });
         }
 
-        function hideSplash() {
-            const splash = document.getElementById('app-splash');
-
-            if (!splash) return;
-
-            setTimeout(function() {
-                splash.classList.add('hidden');
-            }, 650);
-        }
-
         attachCsrfToPostForms();
-        window.addEventListener('load', hideSplash);
 
         const tournamentTrigger = document.querySelector('[data-tournament-sheet-open]');
         const tournamentOverlay = document.querySelector('[data-tournament-sheet-overlay]');
