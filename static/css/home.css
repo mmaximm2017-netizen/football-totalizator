@@ -206,8 +206,6 @@
             border-color var(--transition-fast),
             box-shadow var(--transition-fast),
             background var(--transition-fast);
-	
-        animation: matchFade 0.32s ease both;
     }
 
     .match-card-v2::after {
@@ -330,6 +328,38 @@
 
         100% {
             background-position: 200% 50%;
+        }
+    }
+
+    @keyframes wc26BorderGlow {
+        0% {
+            box-shadow:
+                0 0 0 2px #00e5ff,
+                0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        25% {
+            box-shadow:
+                0 0 0 2px #aeea00,
+                0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        50% {
+            box-shadow:
+                0 0 0 2px #ff6e4a,
+                0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        75% {
+            box-shadow:
+                0 0 0 2px #d500f9,
+                0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        100% {
+            box-shadow:
+                0 0 0 2px #00e5ff,
+                0 4px 12px rgba(0,0,0,0.2);
         }
     }
 
@@ -1824,6 +1854,19 @@
         border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
 }
 
+    body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished) {
+        animation: matchFade 0.32s ease both, wc26BorderGlow 3.5s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished) {
+            animation: none;
+            box-shadow:
+                0 0 0 2px #00e5ff,
+                0 4px 12px rgba(0,0,0,0.2);
+        }
+    }
+
     body.tournament-wc2026 .match-card-v2.predicted {
         border-color: rgba(216,255,34,0.26) !important;
         box-shadow:
@@ -1879,42 +1922,6 @@
     body.tournament-wc2026 .match-card-v2.finished::after {
         content: none !important;
         display: none !important;
-    }
-
-    body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished)::after {
-        content: "";
-        display: block;
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        padding: 1px;
-        pointer-events: none;
-        z-index: 0;
-        background: linear-gradient(
-            90deg,
-            #00e5ff 0%,
-            #aeea00 25%,
-            #ff6e4a 50%,
-            #d500f9 75%,
-            #00e5ff 100%
-        );
-        background-size: 200% 100%;
-        animation: wc26CardBorderFlow 3.5s linear infinite;
-        -webkit-mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask:
-            linear-gradient(#fff 0 0) content-box,
-            linear-gradient(#fff 0 0);
-        mask-composite: exclude;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished)::after {
-            animation: none;
-            background-position: 0% 50%;
-        }
     }
 
     body.tournament-wc2026 .match-card-v2::before {
