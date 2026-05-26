@@ -48,6 +48,75 @@
     }
 </script>
 
+<div id="skeleton-loader" class="skeleton-loader">
+    <div class="skeleton-card">
+        <div class="skeleton-header">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-text" style="width: 60px;"></div>
+        </div>
+        <div class="skeleton-teams">
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+            <div class="skeleton-score-container">
+                <div class="skeleton-input"></div>
+                <div class="skeleton-divider"></div>
+                <div class="skeleton-input"></div>
+            </div>
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-button"></div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-header">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-text" style="width: 60px;"></div>
+        </div>
+        <div class="skeleton-teams">
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+            <div class="skeleton-score-container">
+                <div class="skeleton-input"></div>
+                <div class="skeleton-divider"></div>
+                <div class="skeleton-input"></div>
+            </div>
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-button"></div>
+    </div>
+    <div class="skeleton-card">
+        <div class="skeleton-header">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-text" style="width: 60px;"></div>
+        </div>
+        <div class="skeleton-teams">
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+            <div class="skeleton-score-container">
+                <div class="skeleton-input"></div>
+                <div class="skeleton-divider"></div>
+                <div class="skeleton-input"></div>
+            </div>
+            <div style="text-align: center;">
+                <div class="skeleton-flag"></div>
+                <div class="skeleton-text" style="width: 70px; margin-top: 8px;"></div>
+            </div>
+        </div>
+        <div class="skeleton-button"></div>
+    </div>
+</div>
+
 <div class="home-screen">
 
 {% for month in months %}
@@ -83,6 +152,19 @@ function pluralizeMatch(count) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Hide skeleton loader when real content is loaded
+    const skeletonLoader = document.getElementById('skeleton-loader');
+    const homeScreen = document.querySelector('.home-screen');
+    
+    if (skeletonLoader && homeScreen) {
+        const hasMatches = homeScreen.querySelector('.month-block') !== null;
+        if (hasMatches) {
+            skeletonLoader.classList.add('hidden');
+        } else {
+            skeletonLoader.classList.add('hidden');
+        }
+    }
+
     document.querySelectorAll('[data-match-count]').forEach(function(el) {
         const count = el.getAttribute('data-match-count');
         if (count) {
