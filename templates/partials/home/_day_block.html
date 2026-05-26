@@ -60,7 +60,6 @@
             <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
                 <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
                 {% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
-                <span class="deadline-label">Дедлайн</span>
                 <span
                     class="deadline-timer"
                     data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
