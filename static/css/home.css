@@ -1891,8 +1891,9 @@
         background: transparent !important;
         border-color: transparent !important;
         box-shadow: none !important;
-        margin-bottom: 5px;
+        margin-bottom: 1px;
         padding: 0;
+        line-height: 1.08;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
@@ -2375,25 +2376,34 @@
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2 {
-        width: 68%;
-        min-width: 188px;
-        max-width: 280px;
-        min-height: 46px;
-        margin-top: 5px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #d8ff22 0%, #bfff26 54%, #36eecb 100%) !important;
-        border: 1px solid rgba(5,67,130,0.14) !important;
-        color: #05183f !important;
-        font-size: 14px;
-        font-weight: 750;
-        box-shadow:
-            0 7px 14px rgba(0,5,28,0.18),
-            inset 0 1px 0 rgba(255,255,255,0.58) !important;
-        transition:
-            transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
-            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
-            box-shadow var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
-    }
+    width: 68%;
+    min-width: 188px;
+    max-width: 280px;
+    min-height: 46px;
+    margin-top: 5px;
+
+    border-radius: 16px;
+    border: 1px solid rgba(5,67,130,0.16) !important;
+
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.20), transparent 42%),
+        linear-gradient(135deg, #d8ff22 0%, #bfff26 52%, #36eecb 100%) !important;
+
+    color: #05183f !important;
+    font-size: 14px;
+    font-weight: 750;
+
+    box-shadow:
+        0 4px 8px rgba(0,5,28,0.18),
+        0 10px 20px rgba(120,255,80,0.16),
+        inset 0 1px 0 rgba(255,255,255,0.62),
+        inset 0 -2px 0 rgba(5,67,130,0.10) !important;
+
+    transition:
+        transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+        filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+        box-shadow var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+}
 
     body.tournament-wc2026 .match-card-v2.save-success-pulse {
         animation: savePulseSoft var(--wc26-motion-slow, 240ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
