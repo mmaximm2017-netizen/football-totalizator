@@ -1770,33 +1770,46 @@
         box-shadow: 0 0 16px rgba(216,255,34,0.18);
     }
 
-    body.tournament-wc2026 .match-card-v2 {
-        padding: 10px 12px 11px;
-        border-radius: 22px;
-        color: #ffffff !important;
-        background:
-            radial-gradient(ellipse at center, rgba(35,102,184,0.16), transparent 58%),
-            radial-gradient(circle at 18% 12%, rgba(31,231,255,0.10), transparent 34%),
-            radial-gradient(circle at 86% 18%, rgba(132,82,214,0.08), transparent 36%),
-            radial-gradient(circle at 84% 92%, rgba(216,255,34,0.045), transparent 34%),
-            linear-gradient(180deg, rgba(10,47,126,0.96) 0%, rgba(8,43,114,0.94) 18%, rgba(4,22,52,0.97) 68%, rgba(3,17,38,0.98) 100%) !important;
-        background-color: var(--wc26-card-bottom, #041634) !important;
-        background-blend-mode: normal;
-        border: 1px solid rgba(31,231,255,0.18) !important;
-        border-left: 1px solid rgba(31,231,255,0.18) !important;
-        box-shadow:
-            0 14px 30px rgba(0,5,28,0.30),
-            inset 0 1px 0 rgba(255,255,255,0.14),
-            inset 0 -24px 44px rgba(0,7,24,0.18) !important;
-        position: relative;
-        overflow: hidden;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        transition:
-            transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
-            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
-            border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
-    }
+   body.tournament-wc2026 .match-card-v2 {
+    padding: 10px 12px 11px;
+    border-radius: 22px;
+    color: #ffffff !important;
+
+    background:
+        radial-gradient(circle at 50% 32%, rgba(52,155,230,0.13), transparent 44%),
+        radial-gradient(circle at 18% 10%, rgba(31,231,255,0.12), transparent 34%),
+        radial-gradient(circle at 86% 18%, rgba(132,82,214,0.09), transparent 36%),
+        radial-gradient(circle at 84% 92%, rgba(216,255,34,0.05), transparent 34%),
+        linear-gradient(180deg,
+            rgba(12,54,138,0.98) 0%,
+            rgba(8,38,104,0.98) 38%,
+            rgba(4,21,56,0.99) 72%,
+            rgba(2,12,34,1) 100%
+        ) !important;
+
+    background-color: var(--wc26-card-bottom, #041634) !important;
+    background-blend-mode: normal;
+
+    border: 1px solid rgba(31,231,255,0.24) !important;
+    border-left: 1px solid rgba(31,231,255,0.24) !important;
+
+    box-shadow:
+        0 6px 14px rgba(0,0,0,0.24),
+        0 18px 38px rgba(0,10,40,0.36),
+        0 0 28px rgba(0,180,255,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        inset 0 -26px 48px rgba(0,7,24,0.22) !important;
+
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    transition:
+        transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+        filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+        border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+}
 
     body.tournament-wc2026 .match-card-v2.predicted {
         border-color: rgba(216,255,34,0.26) !important;

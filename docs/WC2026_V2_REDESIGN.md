@@ -362,3 +362,33 @@
 ### Risks
 
 - Real-device checks at 360px, 390px and 430px are still recommended because perceived contrast depends on phone brightness and browser color rendering.
+
+## WC2026 V2 home-screen polish pass
+
+### Flag frame cleanup
+
+- Removed the remaining visual frame from `body.tournament-wc2026 .team-logo-v2`.
+- The team-logo container is now transparent, borderless and shadowless.
+- The only flag accent is a subtle circular rim/glow applied to `body.tournament-wc2026 .team-logo-v2 img` and `.flag-icon`, matching the actual round flag shape instead of the container box.
+
+### Stepper emphasis
+
+- Kept the existing vertical segmented `+ / score / -` structure and all JS hooks.
+- Increased `.score-stepper` width slightly and raised `.stepper-btn` / `.score-input-v2` visual weight by small increments.
+- Mobile breakpoints were adjusted at 430px, 390px and 360px so touch targets remain compact without changing the card layout.
+
+### Alternating WC day colors
+
+- Restored alternating WC2026 day-header color variation inside the final WC layer using existing `.day-block:nth-child()` structure.
+- The day bars now cycle through FIFA26 palette families: cyan/aqua, lime/aqua, coral/magenta and electric blue/cyan.
+- Date text remains dark and bold for contrast, and collapse/expand markup/logic is unchanged.
+
+### Preserved
+
+- No HTML, JS, backend, form logic or `data-*` hooks changed.
+- RPL/Cup selectors remain untouched.
+- Active/predicted card layout, vertical score composition, flag alignment, team-name clamp, CTA and deadline spacing were preserved.
+
+### Risks
+
+- Alternating `nth-child()` colors depend on the current `.day-block` order; backend grouping changes could alter the color sequence but not functionality.
