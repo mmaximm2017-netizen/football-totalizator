@@ -1,7 +1,7 @@
     :root {
         --flag-size: 88px;
         --radius-pill: var(--radius-round);
-        --transition-fast: 0.18s ease;
+        --transition-fast: 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
         --glass-blur: blur(14px);
         --shadow-soft-blue: 0 6px 14px rgba(0,78,140,0.08);
     }
@@ -56,7 +56,7 @@
     .month-arrow,
     .day-arrow {
         flex-shrink: 0;
-        transition: transform 0.25s ease;
+        transition: transform var(--wc26-motion-slow, 240ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
         font-size: 13px;
         opacity: 0.8;
     }
@@ -165,7 +165,9 @@
         overflow: hidden;
         max-height: 0;
         opacity: 0;
-        transition: max-height 0.35s ease, opacity 0.25s ease;
+        transition:
+            max-height var(--wc26-motion-slow, 240ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            opacity var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
     }
 
     .day-content.open {
@@ -1611,7 +1613,7 @@
             radial-gradient(circle at 7% 72%, rgba(184,50,255,0.10) 0 11%, transparent 30%),
             radial-gradient(circle at 88% 40%, rgba(216,255,34,0.09) 0 8%, transparent 24%),
             radial-gradient(circle at 14% 18%, rgba(31,231,255,0.12), transparent 30%),
-            linear-gradient(165deg, #02083e 0%, #0614a8 48%, #000834 100%) !important;
+            linear-gradient(165deg, var(--wc26-bg-deep, #02083e) 0%, #0614a8 48%, #000834 100%) !important;
         background-attachment: fixed;
     }
 
@@ -1666,6 +1668,21 @@
             0 8px 18px rgba(0,5,40,0.16) !important;
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
+        transition:
+            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            transform var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    body.tournament-wc2026 .month-header-v2:active,
+    body.tournament-wc2026 .day-header-v2:active {
+        transform: scale(0.992);
+        filter: brightness(0.96);
+    }
+
+    body.tournament-wc2026 .month-header-v2:focus-visible,
+    body.tournament-wc2026 .day-header-v2:focus-visible {
+        outline-color: rgba(216,255,34,0.46);
     }
 
     body.tournament-wc2026 .month-header-v2 {
@@ -1679,7 +1696,7 @@
         min-height: 50px;
         background:
             linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
-            linear-gradient(105deg, #b900df 0%, #e85a4d 100%) !important;
+            linear-gradient(105deg, #b900df 0%, var(--wc26-coral, #ff5f50) 100%) !important;
     }
 
     body.tournament-wc2026 .day-block:nth-child(5n + 1) .day-header-v2 {
@@ -1691,25 +1708,25 @@
     body.tournament-wc2026 .day-block:nth-child(5n + 2) .day-header-v2 {
         background:
             linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
-            linear-gradient(105deg, #124bc9 0%, #16cfe8 100%) !important;
+            linear-gradient(105deg, #124bc9 0%, var(--wc26-cyan, #1fe7ff) 100%) !important;
     }
 
     body.tournament-wc2026 .day-block:nth-child(5n + 3) .day-header-v2 {
         background:
             linear-gradient(180deg, rgba(255,255,255,0.12), transparent 58%),
-            linear-gradient(105deg, #bedf20 0%, #21cdb1 100%) !important;
+            linear-gradient(105deg, var(--wc26-lime, #d8ff22) 0%, #21cdb1 100%) !important;
     }
 
     body.tournament-wc2026 .day-block:nth-child(5n + 4) .day-header-v2 {
         background:
             linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
-            linear-gradient(105deg, #6f2bd1 0%, #d83bca 100%) !important;
+            linear-gradient(105deg, var(--wc26-purple, #6f2bd1) 0%, #d83bca 100%) !important;
     }
 
     body.tournament-wc2026 .day-block:nth-child(5n) .day-header-v2 {
         background:
             linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
-            linear-gradient(105deg, #e56a2f 0%, #bf15d8 100%) !important;
+            linear-gradient(105deg, #e56a2f 0%, var(--wc26-magenta, #b832ff) 100%) !important;
     }
 
     body.tournament-wc2026 .day-title,
@@ -1749,13 +1766,13 @@
 
     body.tournament-wc2026 .today-pill {
         background: rgba(6,16,45,0.90);
-        color: #d8ff22;
+        color: var(--wc26-lime, #d8ff22);
         box-shadow: 0 0 16px rgba(216,255,34,0.18);
     }
 
     body.tournament-wc2026 .match-card-v2 {
         padding: 13px 14px 14px;
-        border-radius: 26px;
+        border-radius: var(--wc26-radius-lg, 26px);
         color: #ffffff !important;
         background:
             radial-gradient(ellipse at center, rgba(35,102,184,0.16), transparent 58%),
@@ -1763,18 +1780,41 @@
             radial-gradient(circle at 86% 18%, rgba(132,82,214,0.08), transparent 36%),
             radial-gradient(circle at 84% 92%, rgba(216,255,34,0.045), transparent 34%),
             linear-gradient(180deg, rgba(10,47,126,0.96) 0%, rgba(8,43,114,0.94) 18%, rgba(4,22,52,0.97) 68%, rgba(3,17,38,0.98) 100%) !important;
-        background-color: #041634 !important;
+        background-color: var(--wc26-card-bottom, #041634) !important;
         background-blend-mode: normal;
         border: 1px solid rgba(31,231,255,0.18) !important;
         border-left: 1px solid rgba(31,231,255,0.18) !important;
         box-shadow:
-            0 18px 38px rgba(0,5,28,0.34),
+            var(--wc26-shadow-card-soft, 0 18px 38px rgba(0,5,28,0.34)),
             inset 0 1px 0 rgba(255,255,255,0.14),
             inset 0 -34px 58px rgba(0,7,24,0.20) !important;
         position: relative;
         overflow: hidden;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        transition:
+            transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    body.tournament-wc2026 .match-card-v2.predicted {
+        border-color: rgba(216,255,34,0.26) !important;
+        box-shadow:
+            var(--wc26-shadow-card-soft, 0 18px 38px rgba(0,5,28,0.34)),
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            inset 0 -34px 58px rgba(0,7,24,0.18),
+            0 0 0 1px rgba(216,255,34,0.08) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.closed {
+        filter: saturate(0.86) brightness(0.92);
+        border-color: rgba(255,255,255,0.14) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.finished {
+        filter: saturate(0.92);
+        border-color: rgba(255,255,255,0.16) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+1) {
@@ -1858,6 +1898,7 @@
         font-weight: 600;
         text-transform: uppercase;
         text-shadow: none;
+        line-height: 1.12;
     }
 
     body.tournament-wc2026 .match-card-v2 .time-label,
@@ -1869,6 +1910,7 @@
     body.tournament-wc2026 .match-card-v2 .center-sub {
         color: #ffffff !important;
         text-shadow: none;
+        line-height: 1.24;
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-timer {
@@ -1906,6 +1948,10 @@
         font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
         font-weight: 600;
         letter-spacing: 0;
+        min-height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
@@ -1992,7 +2038,7 @@
         color: #ffffff !important;
         font-size: 15px;
         font-weight: 700;
-        line-height: 1.18;
+        line-height: 1.2;
     }
 
     body.tournament-wc2026 .match-card-v2 .center-score {
@@ -2050,6 +2096,9 @@
             inset 0 1px 0 rgba(255,255,255,0.06) !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
+        transition:
+            border-color var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            background var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
     }
 
     body.tournament-wc2026 .match-card-v2 .score-stepper:focus-within {
@@ -2101,14 +2150,21 @@
         opacity: 0.82;
         text-shadow: none;
         box-shadow: none !important;
-        transition: background 140ms ease, color 140ms ease, opacity 140ms ease, transform 140ms ease;
+        transition:
+            background var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            color var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            opacity var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            transform var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            filter var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+        will-change: transform;
     }
 
     body.tournament-wc2026 .match-card-v2 .stepper-btn:active {
         background: rgba(216,255,34,0.18) !important;
         color: #06163a !important;
         opacity: 1;
-        transform: scale(0.96);
+        transform: scale(0.95);
+        filter: brightness(0.94);
     }
 
     body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
@@ -2130,7 +2186,7 @@
         background: transparent !important;
         color: #ffffff !important;
         font-size: 21px !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         text-align: center;
         text-shadow: none;
         border: none !important;
@@ -2151,6 +2207,31 @@
         text-shadow: none;
     }
 
+    body.tournament-wc2026 .match-card-v2 .closed-prediction-center {
+        min-width: 118px;
+        min-height: 76px;
+        justify-content: center;
+        padding: 8px 12px;
+        border-radius: var(--wc26-radius-md, 18px);
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    body.tournament-wc2026 .match-card-v2 .closed-prediction-label {
+        color: rgba(255,255,255,0.66) !important;
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .closed-prediction-score {
+        color: #ffffff !important;
+        font-size: 26px;
+        font-weight: 700;
+    }
+
     body.tournament-wc2026 .match-card-v2 .prediction-box {
         margin-top: 4px;
         background: transparent !important;
@@ -2158,6 +2239,29 @@
         box-shadow: none !important;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .prediction-box.saved,
+    body.tournament-wc2026 .match-card-v2.predicted .match-bottomline {
+        color: var(--wc26-text, #ffffff) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .lock-pill {
+        min-height: 24px;
+        padding: 4px 9px;
+        background: rgba(216,255,34,0.16) !important;
+        border: 1px solid rgba(216,255,34,0.24);
+        color: var(--wc26-lime, #d8ff22) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    body.tournament-wc2026 .match-card-v2.predicted .my-prediction-v2 b,
+    body.tournament-wc2026 .match-card-v2.finished .prediction-score-finished {
+        color: var(--wc26-lime, #d8ff22);
+        font-weight: 700;
     }
 
     body.tournament-wc2026 .match-card-v2,
@@ -2191,7 +2295,15 @@
         box-shadow:
             0 12px 24px rgba(0,5,28,0.24),
             inset 0 1px 0 rgba(255,255,255,0.58) !important;
-        transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease;
+        transition:
+            transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            box-shadow var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    body.tournament-wc2026 .match-card-v2.save-success-pulse {
+        animation: savePulseSoft var(--wc26-motion-slow, 240ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+        filter: saturate(1.03);
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2:active {
@@ -2207,6 +2319,8 @@
         border-color: rgba(255,255,255,0.12) !important;
         color: rgba(255,255,255,0.44) !important;
         box-shadow: none !important;
+        cursor: not-allowed;
+        filter: saturate(0.78) brightness(0.9);
     }
 
     body.tournament-wc2026 .match-card-v2 .disabled-btn-v2,
@@ -2216,6 +2330,28 @@
         background: rgba(255,255,255,0.10) !important;
         border: 1px solid rgba(255,255,255,0.14) !important;
         color: rgba(255,255,255,0.76) !important;
+        transition:
+            transform var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            background var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    body.tournament-wc2026 .match-card-v2 .bets-link-v2:active {
+        transform: scale(0.982);
+        filter: brightness(0.96);
+    }
+
+    body.tournament-wc2026 .match-card-v2.closed .score-stepper,
+    body.tournament-wc2026 .match-card-v2.closed .score-input-v2,
+    body.tournament-wc2026 .match-card-v2.closed .stepper-btn,
+    body.tournament-wc2026 .match-card-v2 .stepper-btn:disabled,
+    body.tournament-wc2026 .match-card-v2 .score-input-v2:disabled {
+        color: rgba(255,255,255,0.42) !important;
+        border-color: rgba(255,255,255,0.14) !important;
+        opacity: 0.74;
+        cursor: not-allowed;
+        filter: saturate(0.72);
     }
 
     body.tournament-wc2026 .match-card-v2.finished .final-score {
@@ -2231,6 +2367,7 @@
         background: linear-gradient(135deg, #0614c8, #1fe7ff) !important;
         border: 1px solid rgba(255,255,255,0.22);
         color: #ffffff !important;
+        font-weight: 700;
     }
 
     body.tournament-wc2026 .match-card-v2.finished .points-v2.points-emerald {
@@ -2243,13 +2380,67 @@
         color: rgba(6,22,58,0.72) !important;
     }
 
+    body.tournament-wc2026 .match-card-v2.finished .my-prediction-v2 {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: rgba(255,255,255,0.78) !important;
+    }
+
     body.tournament-wc2026 .empty-home {
         background:
-            radial-gradient(circle at 86% 8%, rgba(255,95,80,0.28), transparent 36%),
-            linear-gradient(145deg, rgba(255,255,255,0.86), rgba(205,247,255,0.72));
-        border: 1px solid rgba(0,92,210,0.16);
-        color: #06163a;
-        box-shadow: 0 14px 28px rgba(0,42,130,0.16);
+            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.18), transparent 34%),
+            radial-gradient(circle at 12% 88%, rgba(31,231,255,0.16), transparent 34%),
+            linear-gradient(180deg, rgba(10,47,126,0.72), rgba(3,17,38,0.86));
+        border: 1px solid rgba(31,231,255,0.18);
+        color: #ffffff;
+        box-shadow: var(--wc26-shadow-card-soft, 0 18px 38px rgba(0,5,28,0.34));
+    }
+
+    body.tournament-wc2026 .empty-home p {
+        color: rgba(255,255,255,0.72) !important;
+        line-height: 1.34;
+    }
+
+    body.tournament-wc2026 .empty-home p:first-child {
+        width: 58px;
+        height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px !important;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    body.tournament-wc2026 .empty-home p:nth-child(2) {
+        color: #ffffff !important;
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        font-weight: 700 !important;
+    }
+
+    body.tournament-wc2026 .bets-sheet-loading {
+        position: relative;
+        color: rgba(255,255,255,0.76);
+        overflow: hidden;
+    }
+
+    body.tournament-wc2026 .bets-sheet-loading::after {
+        content: "";
+        display: block;
+        width: min(220px, 72%);
+        height: 8px;
+        margin: 14px auto 0;
+        border-radius: var(--wc26-radius-pill, 999px);
+        background:
+            linear-gradient(90deg, transparent, rgba(255,255,255,0.24), transparent) -120% 0 / 80% 100% no-repeat,
+            rgba(255,255,255,0.08);
+        animation: wc26Skeleton 1.2s var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)) infinite;
+    }
+
+    @keyframes wc26Skeleton {
+        to { background-position: 220% 0, 0 0; }
     }
 
     @media (max-width: 430px) {
@@ -2282,6 +2473,7 @@
         body.tournament-wc2026 .team-name-v2 {
             max-width: 98px !important;
             font-size: 13px;
+            line-height: 1.18;
         }
 
         body.tournament-wc2026 .match-card-v2 .center-score,
@@ -2325,46 +2517,50 @@
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-            column-gap: 4px;
+            column-gap: 3px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-row {
-            gap: 4px;
-            padding: 0 3px;
+            gap: 3px;
+            padding: 0 2px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
-            min-width: 56px;
+            min-width: 54px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 46px !important;
+            width: 44px !important;
         }
     }
 
     @media (max-width: 360px) {
+        body.tournament-wc2026 .match-card-v2 {
+            padding: 11px 10px 12px;
+        }
+
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-            column-gap: 3px;
+            column-gap: 2px;
         }
 
         body.tournament-wc2026 .team-logo-v2,
         body.tournament-wc2026 .team-logo-v2 .flag-icon,
         body.tournament-wc2026 .team-logo-v2 img {
-            width: 80px !important;
-            height: 80px !important;
-            min-width: 80px;
-            min-height: 80px;
-            max-width: 80px;
-            max-height: 80px;
+            width: 76px !important;
+            height: 76px !important;
+            min-width: 76px;
+            min-height: 76px;
+            max-width: 76px;
+            max-height: 76px;
         }
 
         body.tournament-wc2026 .team-name-v2 {
-            max-width: 88px !important;
+            max-width: 84px !important;
             font-size: 12px;
         }
 
@@ -2376,14 +2572,14 @@
         body.tournament-wc2026 .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
-            min-width: 54px;
+            min-width: 50px;
             height: auto;
             min-height: 132px;
             grid-template-rows: 40px 40px 40px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
-            width: 42px !important;
+            width: 40px !important;
             height: 40px !important;
             min-height: 40px;
             font-size: 15px !important;
@@ -2391,7 +2587,7 @@
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
         body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
-            width: 46px !important;
+            width: 42px !important;
             height: 40px !important;
             font-size: 21px !important;
         }

@@ -925,6 +925,9 @@ body {
     /* WC2026 V2 shell skin: scoped visual layer only */
     body.tournament-wc2026 {
         --wc26-display: 'IBM Plex Sans Condensed', 'Inter', sans-serif;
+        --wc26-bg-deep: #02083e;
+        --wc26-card-top: #0a2f7e;
+        --wc26-card-bottom: #031126;
         --wc26-blue: #0614c8;
         --wc26-blue-deep: #000b78;
         --wc26-cyan: #1fe7ff;
@@ -932,15 +935,30 @@ body {
         --wc26-lime: #d8ff22;
         --wc26-coral: #ff5f50;
         --wc26-magenta: #b832ff;
+        --wc26-purple: #6f2bd1;
         --wc26-gold: #f4c84a;
         --wc26-ink: #07112c;
+        --wc26-text: #ffffff;
+        --wc26-text-muted: rgba(255,255,255,0.68);
+        --wc26-radius-sm: 12px;
+        --wc26-radius-md: 18px;
+        --wc26-radius-lg: 26px;
+        --wc26-radius-pill: 999px;
+        --wc26-shadow-card-soft: 0 18px 38px rgba(0,5,28,0.34);
+        --wc26-shadow-elevated: 0 14px 32px rgba(0,5,22,0.42);
+        --wc26-shadow-control-inner: inset 0 1px 0 rgba(255,255,255,0.10);
+        --wc26-shadow-nav-floating: 0 14px 32px rgba(0,5,22,0.42), inset 0 1px 0 rgba(255,255,255,0.08);
+        --wc26-motion-fast: 120ms;
+        --wc26-motion-normal: 170ms;
+        --wc26-motion-slow: 240ms;
+        --wc26-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
         background:
             radial-gradient(circle at 88% 10%, rgba(255,95,80,0.16) 0 12%, transparent 28%),
             radial-gradient(circle at 94% 36%, rgba(216,255,34,0.14) 0 10%, transparent 25%),
             radial-gradient(circle at 4% 74%, rgba(184,50,255,0.14) 0 15%, transparent 34%),
             radial-gradient(circle at 16% 22%, rgba(31,231,255,0.18), transparent 30%),
-            linear-gradient(165deg, #02083e 0%, #0614a8 42%, #000834 100%);
+            linear-gradient(165deg, var(--wc26-bg-deep) 0%, #0614a8 42%, #000834 100%);
         background-attachment: fixed;
         color: #ffffff;
     }
@@ -970,16 +988,26 @@ body {
     body.tournament-wc2026 .tournament-trigger {
         background: rgba(255,255,255,0.08);
         border: 1px solid rgba(31,231,255,0.18);
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.10);
+        box-shadow: var(--wc26-shadow-control-inner);
         color: #ffffff;
         font-weight: 700;
-        transition: background 150ms ease, transform 150ms ease, border-color 150ms ease;
+        min-height: 44px;
+        transition:
+            background var(--wc26-motion-normal) var(--wc26-ease),
+            transform var(--wc26-motion-normal) var(--wc26-ease),
+            border-color var(--wc26-motion-normal) var(--wc26-ease),
+            filter var(--wc26-motion-normal) var(--wc26-ease);
     }
 
     body.tournament-wc2026 .tournament-trigger:active {
-        background: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.13);
         transform: scale(0.985);
+        filter: brightness(0.96);
+    }
+
+    body.tournament-wc2026 .tournament-trigger:focus-visible {
+        outline: 2px solid rgba(216,255,34,0.44);
+        outline-offset: 2px;
     }
 
     body.tournament-wc2026 .bottom-nav {
@@ -988,9 +1016,9 @@ body {
         background:
             linear-gradient(155deg, rgba(2,8,30,0.94), rgba(5,12,38,0.92));
         border: 1px solid rgba(255,255,255,0.10);
-        box-shadow:
-            0 14px 32px rgba(0,5,22,0.42),
-            inset 0 1px 0 rgba(255,255,255,0.08);
+        box-shadow: var(--wc26-shadow-nav-floating);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
     }
 
     body.tournament-wc2026 .bottom-nav a,
@@ -999,12 +1027,18 @@ body {
         min-height: 54px;
         font-size: 12px;
         font-weight: 600;
-        transition: background 150ms ease, color 150ms ease, transform 150ms ease, border-color 150ms ease;
+        transition:
+            background var(--wc26-motion-normal) var(--wc26-ease),
+            color var(--wc26-motion-normal) var(--wc26-ease),
+            transform var(--wc26-motion-fast) var(--wc26-ease),
+            border-color var(--wc26-motion-normal) var(--wc26-ease),
+            filter var(--wc26-motion-normal) var(--wc26-ease);
     }
 
     body.tournament-wc2026 .bottom-nav a:active,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn:active {
-        transform: scale(0.975);
+        transform: scale(0.982);
+        filter: brightness(0.96);
     }
 
     body.tournament-wc2026 .bottom-nav a .nav-icon,
@@ -1017,13 +1051,68 @@ body {
             linear-gradient(135deg, rgba(216,255,34,0.18), rgba(38,240,200,0.08));
         border: 1px solid rgba(216,255,34,0.22);
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.12);
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            inset 0 -1px 0 rgba(0,0,0,0.12);
         color: #d8ff22;
         text-shadow: none;
     }
 
     body.tournament-wc2026 .bottom-nav a.active .nav-icon {
         filter: brightness(0) saturate(100%) invert(92%) sepia(84%) saturate(990%) hue-rotate(16deg) brightness(105%) contrast(103%);
+    }
+
+    body.tournament-wc2026 .bottom-nav a:focus-visible,
+    body.tournament-wc2026 .bottom-nav .nav-logout-btn:focus-visible {
+        outline-color: rgba(216,255,34,0.46);
+    }
+
+    body.tournament-wc2026 .tournament-sheet {
+        background:
+            radial-gradient(circle at 88% 0%, rgba(31,231,255,0.10), transparent 30%),
+            linear-gradient(180deg, rgba(8,18,52,0.98), rgba(3,10,30,0.98));
+        border-top: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 -18px 34px rgba(0,5,22,0.46);
+    }
+
+    body.tournament-wc2026 .tournament-sheet-header {
+        color: #ffffff;
+        font-family: var(--wc26-display);
+        font-weight: 700;
+    }
+
+    body.tournament-wc2026 .tournament-sheet-handle,
+    body.tournament-wc2026 .tournament-sheet-close {
+        background: rgba(255,255,255,0.10);
+        color: #ffffff;
+    }
+
+    body.tournament-wc2026 .tournament-item {
+        min-height: 44px;
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.82);
+        transition:
+            background var(--wc26-motion-normal) var(--wc26-ease),
+            transform var(--wc26-motion-fast) var(--wc26-ease),
+            border-color var(--wc26-motion-normal) var(--wc26-ease),
+            filter var(--wc26-motion-normal) var(--wc26-ease);
+    }
+
+    body.tournament-wc2026 .tournament-item:active {
+        transform: scale(0.988);
+        filter: brightness(0.96);
+    }
+
+    body.tournament-wc2026 .tournament-item.active {
+        background: rgba(216,255,34,0.14);
+        border-color: rgba(216,255,34,0.24);
+        color: var(--wc26-lime);
+    }
+
+    body.tournament-wc2026 .active-badge {
+        background: rgba(216,255,34,0.18);
+        border: 1px solid rgba(216,255,34,0.22);
+        color: var(--wc26-lime);
     }
 	</style>
 </head>
