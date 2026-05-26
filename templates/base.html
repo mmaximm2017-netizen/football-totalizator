@@ -1176,7 +1176,9 @@ body {
               {% endif %}
             {% endwith %}
 
-            {% block content %}{% endblock %}
+            <div id="page-transition">
+                {% block content %}{% endblock %}
+            </div>
         </main>
 
     </div>
@@ -1364,6 +1366,53 @@ body {
                 }
             });
         }
+    </script>
+
+    <script>
+        (function () {
+            const container = document.getElementById('page-transition');
+            if (!container) return;
+
+            // initial state: ensure content is visible
+            container.classList.add('page-fade-in');
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+
+                // skip ajax/special links
+                if (
+                    link.hasAttribute('data-ajax') ||
+                    link.hasAttribute('data-no-transition') ||
+                    link.target === '_blank' ||
+                    !href ||
+                    href.startsWith('#') ||
+                    href.startsWith('javascript:')
+                ) {
+                    return;
+                }
+
+                const currentUrl = window.location.pathname + window.location.search + window.location.hash;
+                const resolved = new URL(href, window.location.origin);
+                const targetUrl = resolved.pathname + resolved.search + resolved.hash;
+
+                // skip same-page navigations
+                if (targetUrl === currentUrl) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                container.classList.remove('page-fade-in');
+                container.classList.add('page-fade-out');
+
+                setTimeout(function () {
+                    window.location.href = resolved.toString();
+                }, 200);
+            });
+        })();
     </script>
 
 </body>
