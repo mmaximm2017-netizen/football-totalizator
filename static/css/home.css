@@ -2107,7 +2107,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) max-content;
         grid-template-rows: auto auto;
-        align-items: baseline;
+        align-items: center;
         column-gap: 12px;
         row-gap: 2px;
         background: transparent !important;
@@ -2905,11 +2905,6 @@
             max-width: none;
         }
 
-        body.tournament-wc2026 .match-card-v2 .topline-right {
-            max-width: 126px;
-            flex-basis: 126px;
-        }
-
         body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
         body.tournament-wc2026 .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -3065,11 +3060,6 @@ body.tournament-wc2026 .match-card-v2 .stepper-btn {
 
         body.tournament-wc2026 .match-card-v2 .start-time-label {
             font-size: 11px;
-        }
-
-        body.tournament-wc2026 .match-card-v2 .topline-right {
-            max-width: 116px;
-            flex-basis: 116px;
         }
     }
 
