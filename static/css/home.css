@@ -1776,15 +1776,16 @@
     color: #ffffff !important;
 
     background:
-        radial-gradient(circle at 50% 32%, rgba(52,155,230,0.13), transparent 44%),
-        radial-gradient(circle at 18% 10%, rgba(31,231,255,0.12), transparent 34%),
-        radial-gradient(circle at 86% 18%, rgba(132,82,214,0.09), transparent 36%),
-        radial-gradient(circle at 84% 92%, rgba(216,255,34,0.05), transparent 34%),
+        radial-gradient(ellipse 96% 38% at 50% 0%, rgba(62,168,232,0.11), transparent 54%),
+        radial-gradient(circle at 50% 36%, rgba(42,148,214,0.10), transparent 43%),
+        radial-gradient(circle at 16% 8%, rgba(31,231,255,0.07), transparent 32%),
+        radial-gradient(circle at 88% 12%, rgba(111,43,209,0.05), transparent 34%),
+        radial-gradient(circle at 82% 96%, rgba(216,255,34,0.035), transparent 30%),
         linear-gradient(180deg,
-            rgba(12,54,138,0.98) 0%,
-            rgba(8,38,104,0.98) 38%,
-            rgba(4,21,56,0.99) 72%,
-            rgba(2,12,34,1) 100%
+            rgba(11,48,132,0.97) 0%,
+            rgba(8,36,98,0.98) 38%,
+            rgba(5,22,58,0.99) 72%,
+            rgba(2,11,32,1) 100%
         ) !important;
 
     background-color: var(--wc26-card-bottom, #041634) !important;
@@ -1794,11 +1795,13 @@
     border-left: 1px solid rgba(31,231,255,0.24) !important;
 
     box-shadow:
-        0 6px 14px rgba(0,0,0,0.24),
-        0 18px 38px rgba(0,10,40,0.36),
-        0 0 28px rgba(0,180,255,0.06),
-        inset 0 1px 0 rgba(255,255,255,0.18),
-        inset 0 -26px 48px rgba(0,7,24,0.22) !important;
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        inset 0 1px 0 rgba(80,220,255,0.05),
+        inset 0 0 0 1px rgba(0,8,28,0.32),
+        inset 0 -28px 52px rgba(0,7,24,0.26),
+        0 6px 14px rgba(0,0,0,0.22),
+        0 18px 38px rgba(0,10,40,0.32),
+        0 0 28px rgba(0,180,255,0.065) !important;
 
     position: relative;
     overflow: hidden;
@@ -1814,10 +1817,26 @@
     body.tournament-wc2026 .match-card-v2.predicted {
         border-color: rgba(216,255,34,0.26) !important;
         box-shadow:
-            0 14px 30px rgba(0,5,28,0.30),
-            inset 0 1px 0 rgba(255,255,255,0.14),
-            inset 0 -24px 44px rgba(0,7,24,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.06),
+            inset 0 1px 0 rgba(80,220,255,0.05),
+            inset 0 0 0 1px rgba(216,255,34,0.10),
+            inset 0 -28px 52px rgba(0,7,24,0.22),
+            0 6px 14px rgba(0,0,0,0.22),
+            0 18px 38px rgba(0,10,40,0.32),
+            0 0 28px rgba(0,180,255,0.065),
             0 0 0 1px rgba(216,255,34,0.08) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.urgency-mid,
+    body.tournament-wc2026 .match-card-v2.urgency-hot {
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.06),
+            inset 0 1px 0 rgba(80,220,255,0.05),
+            inset 0 0 0 1px rgba(0,8,28,0.34),
+            inset 0 -28px 52px rgba(0,7,24,0.28),
+            0 7px 16px rgba(0,0,0,0.24),
+            0 20px 42px rgba(0,10,40,0.34),
+            0 0 30px rgba(0,180,255,0.07) !important;
     }
 
     body.tournament-wc2026 .match-card-v2.closed {
@@ -1846,10 +1865,31 @@
         border-color: rgba(184,50,255,0.21) !important;
     }
 
-    body.tournament-wc2026 .match-card-v2::before,
     body.tournament-wc2026 .match-card-v2::after {
         content: none !important;
         display: none !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2::before {
+        content: "";
+        display: block;
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            radial-gradient(ellipse 72% 40% at 50% 14%, rgba(54,142,210,0.06), transparent 60%),
+            radial-gradient(circle at 50% 46%, rgba(22,92,158,0.045) 0%, transparent 54%),
+            radial-gradient(
+                128% 104% at 50% 38%,
+                transparent 36%,
+                rgba(0,3,16,0.14) 100%
+            );
+        box-shadow:
+            inset 0 16px 38px rgba(16,78,148,0.06),
+            inset 0 -22px 46px rgba(0,4,20,0.20),
+            inset 0 0 40px rgba(0,3,14,0.10);
     }
 
     body.tournament-wc2026 .match-card-v2 > * {
@@ -1868,8 +1908,8 @@
         background-size: contain !important;
         background-repeat: no-repeat !important;
         background-position: center !important;
-        opacity: 0.14 !important;
-        filter: brightness(1.08) saturate(0.82) blur(1.2px) !important;
+        opacity: 0.11 !important;
+        filter: brightness(1.02) saturate(0.76) blur(1px) !important;
         mix-blend-mode: screen;
         pointer-events: none !important;
         z-index: 0 !important;
