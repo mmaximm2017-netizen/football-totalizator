@@ -1678,32 +1678,38 @@
     body.tournament-wc2026 .day-header-v2 {
         min-height: 50px;
         background:
-            radial-gradient(circle at 11% 0%, rgba(255,255,255,0.18), transparent 32%),
-            linear-gradient(105deg, #d500f9 0%, #ff5f50 100%) !important;
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #b900df 0%, #e85a4d 100%) !important;
     }
 
-    body.tournament-wc2026 .day-block:nth-child(3n + 1) .day-header-v2 {
+    body.tournament-wc2026 .day-block:nth-child(5n + 1) .day-header-v2 {
         background:
-            radial-gradient(circle at 12% 0%, rgba(255,255,255,0.16), transparent 32%),
-            linear-gradient(105deg, #d500f9 0%, #ff5f50 100%) !important;
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #b900df 0%, #e85a4d 100%) !important;
     }
 
-    body.tournament-wc2026 .day-block:nth-child(3n + 2) .day-header-v2 {
+    body.tournament-wc2026 .day-block:nth-child(5n + 2) .day-header-v2 {
         background:
-            radial-gradient(circle at 12% 0%, rgba(255,255,255,0.16), transparent 32%),
-            linear-gradient(105deg, #c518f4 0%, #ff6e4a 100%) !important;
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #124bc9 0%, #16cfe8 100%) !important;
     }
 
-    body.tournament-wc2026 .day-block:nth-child(3n) .day-header-v2 {
+    body.tournament-wc2026 .day-block:nth-child(5n + 3) .day-header-v2 {
         background:
-            radial-gradient(circle at 12% 0%, rgba(255,255,255,0.16), transparent 32%),
-            linear-gradient(105deg, #ff5f50 0%, #b832ff 100%) !important;
+            linear-gradient(180deg, rgba(255,255,255,0.12), transparent 58%),
+            linear-gradient(105deg, #bedf20 0%, #21cdb1 100%) !important;
     }
 
-    body.tournament-wc2026 .day-block:nth-child(4n) .day-header-v2 {
+    body.tournament-wc2026 .day-block:nth-child(5n + 4) .day-header-v2 {
         background:
-            radial-gradient(circle at 12% 0%, rgba(255,255,255,0.16), transparent 32%),
-            linear-gradient(105deg, #b832ff 0%, #ff5f50 100%) !important;
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #6f2bd1 0%, #d83bca 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #e56a2f 0%, #bf15d8 100%) !important;
     }
 
     body.tournament-wc2026 .day-title,
@@ -1752,16 +1758,19 @@
         border-radius: 26px;
         color: #ffffff !important;
         background:
-            radial-gradient(circle at 22% 16%, rgba(31,231,255,0.08), transparent 36%),
-            radial-gradient(circle at 92% 84%, rgba(216,255,34,0.06), transparent 34%),
-            linear-gradient(150deg, rgba(3,12,55,0.94), rgba(2,9,36,0.98) 58%, rgba(0,7,28,0.96)) !important;
-        background-color: #020925 !important;
+            radial-gradient(ellipse at center, rgba(35,102,184,0.16), transparent 58%),
+            radial-gradient(circle at 18% 12%, rgba(31,231,255,0.10), transparent 34%),
+            radial-gradient(circle at 86% 18%, rgba(132,82,214,0.08), transparent 36%),
+            radial-gradient(circle at 84% 92%, rgba(216,255,34,0.045), transparent 34%),
+            linear-gradient(180deg, rgba(10,47,126,0.96) 0%, rgba(8,43,114,0.94) 18%, rgba(4,22,52,0.97) 68%, rgba(3,17,38,0.98) 100%) !important;
+        background-color: #041634 !important;
         background-blend-mode: normal;
         border: 1px solid rgba(31,231,255,0.18) !important;
         border-left: 1px solid rgba(31,231,255,0.18) !important;
         box-shadow:
-            0 18px 38px rgba(0,5,28,0.36),
-            inset 0 1px 0 rgba(255,255,255,0.08) !important;
+            0 18px 38px rgba(0,5,28,0.34),
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            inset 0 -34px 58px rgba(0,7,24,0.20) !important;
         position: relative;
         overflow: hidden;
         backdrop-filter: blur(8px);
@@ -1769,19 +1778,19 @@
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+1) {
-        border-color: rgba(31,231,255,0.20) !important;
+        border-color: rgba(31,231,255,0.24) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+2) {
-        border-color: rgba(216,255,34,0.18) !important;
+        border-color: rgba(216,255,34,0.22) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+3) {
-        border-color: rgba(255,95,80,0.18) !important;
+        border-color: rgba(255,95,80,0.21) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:nth-child(4n+4) {
-        border-color: rgba(184,50,255,0.18) !important;
+        border-color: rgba(184,50,255,0.21) !important;
     }
 
     body.tournament-wc2026 .match-card-v2::before,
@@ -1806,8 +1815,8 @@
         background-size: contain !important;
         background-repeat: no-repeat !important;
         background-position: center !important;
-        opacity: 0.12 !important;
-        filter: brightness(1.08) saturate(0.82) blur(1px) !important;
+        opacity: 0.18 !important;
+        filter: brightness(1.12) saturate(0.84) blur(1.4px) !important;
         mix-blend-mode: screen;
         pointer-events: none !important;
         z-index: 0 !important;
