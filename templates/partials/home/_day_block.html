@@ -59,16 +59,17 @@
         {% else %}
             <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
                 <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
-                <span class="deadline-label">⏰ До закрытия</span>
+                {% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
+                <span class="deadline-label">Дедлайн</span>
                 <span
                     class="deadline-timer"
                     data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
+                    aria-hidden="true"
                 >
                     —
                 </span>
                 <span class="deadline-helper">
-                    {% set deadline_short = to_msk(match.deadline).split(' (')[0][:11] %}
-                    до {{ deadline_short.replace(' ', ' • ', 1) }}
+                    До {{ deadline_plain.replace(' ', ' • ', 1) }}
                 </span>
                 <span class="deadline-cue"></span>
             </div>
