@@ -1908,7 +1908,7 @@
    body.tournament-wc2026 .match-card-v2 {
     padding: 10px 12px 11px;
     border-radius: 22px;
-    color: #ffffff !important;
+    color: #0a1428 !important;
 
     background:
         radial-gradient(ellipse 96% 38% at 50% 0%, rgba(62,168,232,0.11), transparent 54%),
@@ -1948,6 +1948,17 @@
         transform var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
         filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
         border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+		/* Усиленная тень для карточек ЧМ */
+body.tournament-wc2026 .match-card-v2 {
+    box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(31, 231, 255, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Тёмный текст на кнопке */
+body.tournament-wc2026 .save-btn-v2 {
+    color: #0a1428 !important;
+}
 }
 
     body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished) {
