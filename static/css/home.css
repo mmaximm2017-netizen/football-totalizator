@@ -323,6 +323,16 @@
         }
     }
 
+    @keyframes wc26CardBorderFlow {
+        0% {
+            background-position: 0% 50%;
+        }
+
+        100% {
+            background-position: 200% 50%;
+        }
+    }
+
     .match-topline {
         display: flex;
         justify-content: space-between;
@@ -1865,9 +1875,46 @@
         border-color: rgba(184,50,255,0.21) !important;
     }
 
-    body.tournament-wc2026 .match-card-v2::after {
+    body.tournament-wc2026 .match-card-v2.closed::after,
+    body.tournament-wc2026 .match-card-v2.finished::after {
         content: none !important;
         display: none !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished)::after {
+        content: "";
+        display: block;
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        pointer-events: none;
+        z-index: 0;
+        background: linear-gradient(
+            90deg,
+            #00e5ff 0%,
+            #aeea00 25%,
+            #ff6e4a 50%,
+            #d500f9 75%,
+            #00e5ff 100%
+        );
+        background-size: 200% 100%;
+        animation: wc26CardBorderFlow 3.5s linear infinite;
+        -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        body.tournament-wc2026 .match-card-v2:not(.closed):not(.finished)::after {
+            animation: none;
+            background-position: 0% 50%;
+        }
     }
 
     body.tournament-wc2026 .match-card-v2::before {
