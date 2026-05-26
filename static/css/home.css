@@ -2609,15 +2609,16 @@ body.tournament-wc2026 .save-btn-v2 {
     }
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2 {
-        width: 68%;
-        min-width: 188px;
-        max-width: 280px;
-        min-height: 46px;
-        margin-top: 5px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #d8ff22 0%, #bfff26 54%, #36eecb 100%) !important;
-        border: 1px solid rgba(5,67,130,0.14) !important;
-    }
+    width: 68%;
+    min-width: 188px;
+    max-width: 280px;
+    min-height: 46px;
+    margin-top: 5px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #d8ff22 0%, #bfff26 54%, #36eecb 100%) !important;
+    border: 1px solid rgba(5,67,130,0.14) !important;
+    color: #0a1428 !important;
+}
 
     /* SKELETON SCREEN STYLES */
     @keyframes pulse {
