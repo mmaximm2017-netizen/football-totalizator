@@ -340,12 +340,22 @@ document.addEventListener('DOMContentLoaded', function () {
         link.dataset.betsSheetBound = '1';
         link.addEventListener('click', function (event) {
             event.preventDefault();
-            loadBetsIntoSheet(link.href);
+            const url = link.dataset.betsUrl || link.href;
+            loadBetsIntoSheet(url);
         });
     }
 
     document.querySelectorAll('[data-bets-sheet]').forEach(function (link) {
         attachBetsSheetLink(link);
+    });
+
+    // Delegated handler: ensures any dynamically-added bets links open the sheet
+    document.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-bets-sheet]');
+        if (!el) return;
+        e.preventDefault();
+        const url = el.dataset.betsUrl || el.href;
+        loadBetsIntoSheet(url);
     });
 
     if (sheetOverlay) {

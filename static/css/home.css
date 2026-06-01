@@ -1910,10 +1910,11 @@
     border-radius: 22px;
     color: #ffffff !important;
 
+    /* crisper radial accents, closer to table's treatment */
     background:
-        radial-gradient(circle at 88% 10%, rgba(255,95,80,0.12), transparent 28%),
-        radial-gradient(circle at 12% 8%, rgba(31,231,255,0.09), transparent 26%),
-        radial-gradient(circle at 82% 96%, rgba(216,255,34,0.06), transparent 24%),
+        radial-gradient(circle at 88% 10%, #ff5f50 0 26%, transparent 26.5%),
+        radial-gradient(circle at 12% 8%, #1fe7ff 0 26%, transparent 26.5%),
+        radial-gradient(circle at 82% 96%, #d8ff22 0 24%, transparent 24.5%),
         linear-gradient(150deg, rgba(0,23,216,0.94), rgba(0,8,84,0.92)) !important;
 
     background-color: rgba(0,8,84,1) !important;
@@ -1946,12 +1947,13 @@
         position: absolute;
         inset: 0;
         border-radius: inherit;
+        /* use explicit stops for crisper edges and stronger color reading */
         background:
-            radial-gradient(circle at 12% 8%, rgba(31,231,255,0.24) 0 16%, transparent 34%),
-            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.20) 0 16%, transparent 34%),
-            radial-gradient(circle at 8% 92%, rgba(216,255,34,0.18) 0 16%, transparent 34%),
-            radial-gradient(circle at 92% 92%, rgba(184,50,255,0.16) 0 16%, transparent 34%);
-        opacity: 1;
+            radial-gradient(circle at 12% 8%, #1fe7ff 0 16%, transparent 34%),
+            radial-gradient(circle at 88% 10%, #ff5f50 0 16%, transparent 34%),
+            radial-gradient(circle at 8% 92%, #d8ff22 0 16%, transparent 34%),
+            radial-gradient(circle at 92% 92%, #b832ff 0 16%, transparent 34%);
+        opacity: 0.9;
         pointer-events: none;
         z-index: 0;
     }
@@ -2068,10 +2070,11 @@
     pointer-events: none;
     z-index: 0;
     border-radius: inherit;
-    background: radial-gradient(circle at 0% 0%, rgba(0,229,255,0.35), transparent 50%),
-                radial-gradient(circle at 100% 0%, rgba(174,234,0,0.35), transparent 50%),
-                radial-gradient(circle at 0% 100%, rgba(255,110,74,0.35), transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(213,0,249,0.35), transparent 50%);
+    background:
+        radial-gradient(circle at 0% 0%, #1fe7ff 0 26%, transparent 26.5%),
+        radial-gradient(circle at 100% 0%, #aeea00 0 26%, transparent 26.5%),
+        radial-gradient(circle at 0% 100%, #ff6e4a 0 26%, transparent 26.5%),
+        radial-gradient(circle at 100% 100%, #d500f9 0 26%, transparent 26.5%);
 }
 
     body.tournament-wc2026 .match-card-v2 > * {
@@ -2091,7 +2094,7 @@
         background-repeat: no-repeat !important;
         background-position: center !important;
         opacity: 0.11 !important;
-        filter: brightness(1.02) saturate(0.76) blur(1px) !important;
+        filter: brightness(1.02) saturate(0.76) blur(0px) !important;
         mix-blend-mode: screen;
         pointer-events: none !important;
         z-index: 0 !important;
