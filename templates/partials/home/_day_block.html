@@ -35,9 +35,6 @@
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
-{% if match.league == 'wc2026' and not match.finished %}
-<div class="wc-trophy-bg"></div>
-{% endif %}
 <div class="match-topline">
     <div class="match-meta-v2">
 
