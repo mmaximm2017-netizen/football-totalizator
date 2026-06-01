@@ -48,27 +48,29 @@
 
     </div>
 
-    <div class="topline-right">
+            <div class="topline-right">
         {% if match.finished %}
             <div class="status-pill-v2 status-done">✓ Матч завершён</div>
         {% elif match.deadline_passed %}
             <div class="status-pill-v2 status-closed">⏰ Закрыто</div>
         {% else %}
             <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
-                <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
-                {% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
-                <span
-                    class="deadline-timer"
-                    data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
-                    aria-hidden="true"
-                >
-                    —
-                </span>
-                <span class="deadline-label">Прогноз до</span>
-                <span class="deadline-helper">
-                    {{ deadline_plain.replace(' ', ' • ', 1) }}
-                </span>
-                <span class="deadline-cue"></span>
+                <div class="deadline-box">
+                    <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
+                    {% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
+                    <span
+                        class="deadline-timer"
+                        data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
+                        aria-hidden="true"
+                    >
+                        —
+                    </span>
+                    <span class="deadline-label">Прогноз до</span>
+                    <span class="deadline-helper">
+                        {{ deadline_plain.replace(' ', ' • ', 1) }}
+                    </span>
+                    <span class="deadline-cue"></span>
+                </div>
             </div>
 
             {% if false and match.deadline_passed %}

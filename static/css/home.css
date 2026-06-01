@@ -2120,29 +2120,14 @@
         z-index: 1;
     }
 
-    body.tournament-wc2026 .match-card-v2 .wc-trophy-bg {
-        position: absolute !important;
-        top: 48% !important;
-        left: 50% !important;
-        width: 92% !important;
-        height: 92% !important;
-        transform: translate(-50%, -50%) !important;
-        background-image: url('/static/clubs/WorldCup.png') !important;
-        background-size: contain !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        opacity: 0.11 !important;
-        filter: brightness(1.02) saturate(0.76) blur(0px) !important;
-        mix-blend-mode: screen;
-        pointer-events: none !important;
-        z-index: 0 !important;
-    }
+    /* Removed central trophy background for cleaner cards. */
 
     body.tournament-wc2026 .match-card-v2 .tournament-logo {
-        width: 42px !important;
-        height: 42px !important;
-        border-radius: 8px;
-        margin-right: 8px;
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 10px;
+        margin-right: 10px;
+        flex: 0 0 56px;
     }
 
     body.tournament-wc2026 .match-card-v2 .match-topline {
@@ -2162,12 +2147,19 @@
         -webkit-backdrop-filter: none;
 }
 
-    body.tournament-wc2026 .match-card-v2 .deadline-row {
-        display: contents;
+    body.tournament-wc2026 .match-card-v2 .topline-right {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
     }
 
-    body.tournament-wc2026 .match-card-v2 .topline-right {
-        display: contents;
+    body.tournament-wc2026 .match-card-v2 .deadline-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        padding: 0;
+        margin: 0;
     }
 
     body.tournament-wc2026 .match-card-v2 .match-meta-v2 {
@@ -2218,9 +2210,11 @@
         white-space: nowrap;
         padding: 6px 10px;
         border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.12);
-        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-        box-shadow: inset 0 2px 12px rgba(255,255,255,0.03), 0 6px 18px rgba(0,0,0,0.28);
+        /* darker olive-ish semi-transparent background */
+        background: rgba(6,12,8,0.56);
+        /* light contrasting border */
+        border: 1px solid rgba(0,229,255,0.18);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.32), inset 0 2px 8px rgba(255,255,255,0.02);
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-label::before {
@@ -2232,9 +2226,31 @@
         opacity: 0.98;
     }
 
-    /* Safe bottom padding so last card doesn't hide behind navigation */
+    /* Deadline boxed informer wrapper to force two-line layout */
+    body.tournament-wc2026 .match-card-v2 .deadline-box {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+        padding: 6px 10px;
+        border-radius: 12px;
+        background: rgba(6,12,8,0.56);
+        border: 1px solid rgba(0,229,255,0.18);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    body.tournament-wc2026 .match-card-v2 .deadline-box .deadline-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #ffffff !important;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    /* Minimal bottom padding so last card is visible but not overly spaced */
     body.tournament-wc2026 .day-content {
-        padding-bottom: 96px;
+        padding-bottom: 18px;
     }
 
     body.tournament-wc2026 .match-card-v2 .league-label {
@@ -2285,6 +2301,20 @@
         font-weight: 600;
         line-height: 1.1;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.48);
+        border: 1px solid rgba(0,229,255,0.12);
+    }
+
+    body.tournament-wc2026 .match-card-v2 .start-time-label::before {
+        content: "🕒";
+        display: inline-block;
+        font-size: 14px;
+        margin-right: 4px;
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-timer {
@@ -2419,19 +2449,18 @@
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
         line-clamp: 2;
-        width: 104px !important;
-        max-width: 104px !important;
+        min-width: 120px !important;
+        max-width: 200px !important;
         margin: 0 auto !important;
         min-height: calc(1.12em * 2) !important;
         max-height: calc(1.12em * 2);
         overflow: hidden;
-        overflow-wrap: break-word !important;
+        overflow-wrap: normal !important;
         word-break: normal !important;
         hyphens: none !important;
-        word-break: keep-all !important;
         text-align: center !important;
         color: #ffffff !important;
-        font-size: 13px;
+        font-size: clamp(13px, 2.6vw, 16px);
         font-weight: 700;
         line-height: 1.12;
     }
@@ -2987,8 +3016,8 @@
         body.tournament-wc2026 .day-title { font-size: 16px; }
 
         body.tournament-wc2026 .match-card-v2 .tournament-logo {
-            width: 22px !important;
-            height: 22px !important;
+            width: 40px !important;
+            height: 40px !important;
         }
 
         body.tournament-wc2026 .match-card-v2 .match-topline {
