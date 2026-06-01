@@ -1014,19 +1014,22 @@ body {
         min-height: 58px;
         bottom: max(10px, env(safe-area-inset-bottom));
         background:
-            linear-gradient(155deg, rgba(2,8,30,0.94), rgba(5,12,38,0.92));
-        border: 1px solid rgba(255,255,255,0.10);
-        box-shadow: var(--wc26-shadow-nav-floating);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+            linear-gradient(155deg, rgba(2,8,30,0.96), rgba(5,12,38,0.94));
+        border: 1px solid rgba(244,200,74,0.14);  /* Gold border accent */
+        box-shadow: 
+            0 8px 24px rgba(0,0,0,0.42),
+            inset 0 1px 0 rgba(244,200,74,0.08),
+            inset 0 -1px 0 rgba(0,0,0,0.16);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
     }
 
     body.tournament-wc2026 .bottom-nav a,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn {
-        color: rgba(255,255,255,0.70);
+        color: rgba(255,255,255,0.68);
         min-height: 54px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         transition:
             background var(--wc26-motion-normal) var(--wc26-ease),
             color var(--wc26-motion-normal) var(--wc26-ease),
@@ -1038,23 +1041,24 @@ body {
     body.tournament-wc2026 .bottom-nav a:active,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn:active {
         transform: scale(0.982);
-        filter: brightness(0.96);
+        filter: brightness(0.94);
     }
 
     body.tournament-wc2026 .bottom-nav a .nav-icon,
     body.tournament-wc2026 .bottom-nav .nav-logout-btn .nav-icon {
-        filter: brightness(0) invert(1) opacity(0.78);
+        filter: brightness(0) invert(1) opacity(0.74);
+        transition: filter var(--wc26-motion-normal) var(--wc26-ease);
     }
 
     body.tournament-wc2026 .bottom-nav a.active {
         background:
-            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(38,240,200,0.08));
-        border: 1px solid rgba(216,255,34,0.22);
+            linear-gradient(135deg, rgba(216,255,34,0.16), rgba(38,240,200,0.06));
+        border: 1px solid rgba(244,200,74,0.32);  /* Enhanced gold border for active */
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.12),
-            inset 0 -1px 0 rgba(0,0,0,0.12);
+            inset 0 1px 0 rgba(244,200,74,0.18),
+            inset 0 -1px 0 rgba(0,0,0,0.14);
         color: #d8ff22;
-        text-shadow: none;
+        text-shadow: 0 0 8px rgba(216,255,34,0.28);
     }
 
     body.tournament-wc2026 .bottom-nav a.active .nav-icon {
