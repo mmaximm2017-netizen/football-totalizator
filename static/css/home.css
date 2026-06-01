@@ -806,7 +806,11 @@
         max-width: 112px;
         font-size: 15px;
         font-weight: 900;
-        color: #0a4a7f;
+        color: #ffffff;
+        background: rgba(3,27,58,0.66);
+        padding: 6px 8px;
+        border-radius: 10px;
+        box-sizing: border-box;
     }
 
     .vs-badge {
@@ -1091,6 +1095,18 @@
             filter 0.14s ease,
             transform 0.14s ease;
         touch-action: manipulation;
+
+        /* Subtle dark substrates for small headers to boost legibility on busy backgrounds */
+        .league-label,
+        .start-time-label,
+        .deadline-row .deadline-label {
+            background: rgba(3,27,58,0.62);
+            color: #ffffff;
+            padding: 4px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            box-sizing: border-box;
+        }
         -webkit-tap-highlight-color: transparent;
     }
 
@@ -1940,6 +1956,26 @@
         box-shadow 0.2s ease,
         filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
         border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    /* WC2026: preserve readability substrates on tournament cards */
+    body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
+        color: #ffffff;
+        background: rgba(3,27,58,0.66);
+        padding: 6px 8px;
+        border-radius: 10px;
+        box-sizing: border-box;
+    }
+
+    body.tournament-wc2026 .league-label,
+    body.tournament-wc2026 .start-time-label,
+    body.tournament-wc2026 .deadline-row .deadline-label {
+        background: rgba(3,27,58,0.62);
+        color: #ffffff;
+        padding: 4px 8px;
+        border-radius: 10px;
+        display: inline-block;
+        box-sizing: border-box;
     }
 
     body.tournament-wc2026 .match-card-v2::before {
