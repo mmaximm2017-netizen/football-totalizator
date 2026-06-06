@@ -1984,8 +1984,8 @@
 
     /* WC2026: preserve readability substrates on tournament cards */
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
-        color: #ffffff;
-        background: rgba(0,0,0,0.28);
+        color: rgba(255,255,255,0.90);
+        background: rgba(0,0,0,0.22);
         padding: 4px 6px;
         border-radius: 8px;
         box-sizing: border-box;
@@ -2369,16 +2369,16 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         gap: 6px;
         padding: 0;
         text-align: center;
-        height: 140px;  /* Fixed height for uniform grid */
+        height: 150px;  /* Fixed height for uniform grid */
     }
-
+    
     body.tournament-wc2026 .team-logo-v2 {
-        width: 80px !important;
-        height: 80px !important;
-        min-width: 80px;
-        min-height: 80px;
-        max-width: 80px;
-        max-height: 80px;
+        width: 94px !important;
+        height: 94px !important;
+        min-width: 94px;
+        min-height: 94px;
+        max-width: 94px;
+        max-height: 94px;
         margin: 0 auto 2px !important;
         padding: 0 !important;
         display: flex !important;
@@ -2394,12 +2394,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .team-logo-v2 .flag-icon,
     body.tournament-wc2026 .team-logo-v2 img {
-        width: 86px !important;
-        height: 86px !important;
-        min-width: 86px;
-        min-height: 86px;
-        max-width: 86px;
-        max-height: 86px;
+        width: 106px !important;
+        height: 106px !important;
+        min-width: 106px;
+        min-height: 106px;
+        max-width: 106px;
+        max-height: 106px;
         border-radius: 50%;
         object-fit: cover;
         /* stronger 3D lift for flags only */
@@ -2432,9 +2432,9 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         word-break: normal !important;
         hyphens: none !important;
         text-align: center !important;
-        color: #ffffff !important;
+        color: rgba(255,255,255,0.90) !important;
         font-size: clamp(11px, 2.2vw, 13px);
-        font-weight: 700;
+        font-weight: 600;
         line-height: 1.2;
     }
 
@@ -3024,13 +3024,20 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         body.tournament-wc2026 .team-logo-v2,
         body.tournament-wc2026 .team-logo-v2 .flag-icon,
         body.tournament-wc2026 .team-logo-v2 img {
-            width: 70px !important;
-            height: 70px !important;
-            min-width: 70px;
-            min-height: 70px;
-            max-width: 70px;
-            max-height: 70px;
+            width: 84px !important;
+            height: 84px !important;
+            min-width: 84px;
+            min-height: 84px;
+            max-width: 84px;
+            max-height: 84px;
             margin-bottom: 2px;
+        }
+
+        body.tournament-wc2026 .match-card-v2 .team-v2,
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2,
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:first-child,
+        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:last-child {
+            height: 140px;
         }
 
         body.tournament-wc2026 .team-name-v2 {
@@ -3136,12 +3143,12 @@ body.tournament-wc2026 .match-card-v2 .stepper-btn {
         body.tournament-wc2026 .team-logo-v2,
         body.tournament-wc2026 .team-logo-v2 .flag-icon,
         body.tournament-wc2026 .team-logo-v2 img {
-            width: 82px !important;
-            height: 82px !important;
-            min-width: 82px;
-            min-height: 82px;
-            max-width: 82px;
-            max-height: 82px;
+            width: 98px !important;
+            height: 98px !important;
+            min-width: 98px;
+            min-height: 98px;
+            max-width: 98px;
+            max-height: 98px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-row {
@@ -3193,12 +3200,12 @@ body.tournament-wc2026 .match-card-v2 .stepper-btn {
         body.tournament-wc2026 .team-logo-v2,
         body.tournament-wc2026 .team-logo-v2 .flag-icon,
         body.tournament-wc2026 .team-logo-v2 img {
-            width: 80px !important;
-            height: 80px !important;
-            min-width: 80px;
-            min-height: 80px;
-            max-width: 80px;
-            max-height: 80px;
+            width: 96px !important;
+            height: 96px !important;
+            min-width: 96px;
+            min-height: 96px;
+            max-width: 96px;
+            max-height: 96px;
         }
 
         body.tournament-wc2026 .team-name-v2 {
