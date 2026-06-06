@@ -2453,7 +2453,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 4px;
+        margin: 6px 4px 0;
         padding: 0;
     }
 
