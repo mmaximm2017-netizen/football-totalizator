@@ -42,8 +42,9 @@
             {% include 'partials/home/_match_league.html' %}
         </div>
 
-        <div class="time-label start-time-label">
-            Начало: {{ to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] }}
+        {% set kickoff_plain = to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] %}
+        <div class="time-label start-time-label" data-start-text="{{ kickoff_plain.replace(' ', ' • ', 1) }}">
+            Начало: {{ kickoff_plain }}
         </div>
 
     </div>
