@@ -1240,6 +1240,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        font: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+        cursor: pointer;
 
         min-height: 34px;
         padding: 7px 12px;

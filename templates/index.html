@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadBetsIntoSheet(url) {
         if (!sheetContent) {
-            window.location.href = url;
+            console.warn('Bets sheet not available');
             return;
         }
 
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (!response.ok) {
-                window.location.href = url;
+                closeBetsSheet();
                 return;
             }
 
@@ -323,14 +323,14 @@ document.addEventListener('DOMContentLoaded', function () {
             const compactView = buildCompactBetsView(doc);
 
             if (!compactView) {
-                window.location.href = url;
+                closeBetsSheet();
                 return;
             }
 
             sheetContent.replaceChildren(compactView);
 
         } catch (error) {
-            window.location.href = url;
+            closeBetsSheet();
         }
     }
 
@@ -660,10 +660,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (canShowBetsLink && !betsLink && data.match_id) {
                     if (bottomLine) {
-                        betsLink = document.createElement('a');
+                        betsLink = document.createElement('button');
+                        betsLink.type = 'button';
                         betsLink.className = 'bets-link-v2';
-                        betsLink.href = '/match/' + data.match_id + '/predictions';
                         betsLink.setAttribute('data-bets-sheet', '');
+                        betsLink.setAttribute('data-bets-url', '/match/' + data.match_id + '/predictions');
                         betsLink.textContent = 'Ставки братишек';
                         bottomLine.appendChild(betsLink);
                         attachBetsSheetLink(betsLink);
