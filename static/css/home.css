@@ -2143,10 +2143,10 @@ body.tournament-wc2026 .match-card-v2 .tournament-logo {
 
 body.tournament-wc2026 .match-card-v2 .match-topline {
     display: grid;
-    grid-template-columns: 70px minmax(0, 0.9fr) minmax(0, 1fr);
+    grid-template-columns: 82px 1fr minmax(0, 1fr);
     align-items: center;
-    column-gap: 6px;
-    margin: 0 0 4px;
+    column-gap: 14px;
+    margin: 0 0 2px;
     padding: 0;
     line-height: 1.08;
     background: transparent !important;
@@ -2165,9 +2165,9 @@ body.tournament-wc2026 .match-card-v2 .league-row {
     grid-row: 1;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    width: 70px;
-    height: 58px;
+    justify-content: center;
+    width: 82px;
+    height: 56px;
     min-width: 0;
     overflow: visible;
 }
@@ -2206,18 +2206,18 @@ body.tournament-wc2026 .match-card-v2 .start-time-label {
 body.tournament-wc2026 .match-card-v2 .start-time-label::before {
     content: "Начало матча";
     display: block;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
-    color: rgba(255,255,255,0.66);
+    color: rgba(255,255,255,0.78);
     line-height: 1.05;
 }
 
 body.tournament-wc2026 .match-card-v2 .start-time-label::after {
     content: attr(data-start-text);
     display: block;
-    font-size: 11.5px;
-    font-weight: 750;
-    color: rgba(255,255,255,0.92);
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.96);
     line-height: 1.05;
 }
 
@@ -2258,7 +2258,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-label {
 
     color: var(--wc26-lime, #d8ff22) !important;
     font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 800;
     line-height: 1.05;
     text-transform: none;
@@ -2280,7 +2280,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-helper {
     padding: 0 !important;
 
     color: rgba(255,255,255,0.96) !important;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 850;
     line-height: 1.05;
     white-space: nowrap;
@@ -2999,14 +2999,15 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
 
         body.tournament-wc2026 .match-card-v2 .match-topline {
-            grid-template-columns: 54px minmax(0, 0.9fr) minmax(0, 1fr);
-            column-gap: 5px;
-            margin-bottom: 4px;
+            grid-template-columns: 58px 1fr minmax(0, 1fr);
+            column-gap: 10px;
+            margin-bottom: 2px;
         }
 
         body.tournament-wc2026 .match-card-v2 .league-row {
-            width: 54px;
+            width: 58px;
             height: 44px;
+            justify-content: center;
         }
 
         body.tournament-wc2026 .match-card-v2 .deadline-row {
