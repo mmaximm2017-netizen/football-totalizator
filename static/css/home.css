@@ -2481,10 +2481,10 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         width: auto;
         min-width: 42px;
         height: auto;
-        min-height: 94px;
+        min-height: 136px;
         display: grid;
         grid-template-columns: 1fr;
-        grid-template-rows: 28px 32px 28px;
+        grid-template-rows: 38px 50px 38px;
         align-items: center;
         justify-items: center;
         gap: 0;
@@ -3038,8 +3038,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             width: auto;
             min-width: 38px;
             height: auto;
-            min-height: 88px;
-            grid-template-rows: 26px 30px 26px;
+            min-height: 120px;
+            grid-template-rows: 34px 44px 34px;
             gap: 0;
             padding: 2px;
             border-radius: 14px;
@@ -3112,6 +3112,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             flex-basis: auto;
             width: auto;
             min-width: 45px;
+            min-height: 130px;
+            grid-template-rows: 36px 48px 36px;
         }
 
         body.tournament-wc2026 .match-card-v2 .score-input-v2,
@@ -3195,8 +3197,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             width: auto;
             min-width: 43px;
             height: auto;
-            min-height: 98px;
-            grid-template-rows: 28px 34px 28px;
+            min-height: 126px;
+            grid-template-rows: 36px 46px 36px;
         }
 
         body.tournament-wc2026 .match-card-v2 .stepper-btn {
