@@ -2399,10 +2399,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         background: rgba(255,255,255,0.08) !important;
         border: 0 !important;
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 0 0 5px rgba(255,255,255,0.15),
+            0 0 14px 5px rgba(180,240,255,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.15),
             inset 0 -1px 0 rgba(0,0,0,0.08) !important;
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         overflow: visible;
         flex-shrink: 0;
         transition: all 0.2s ease;
@@ -2411,8 +2413,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-wc2026 .team-logo-v2:hover,
     body.tournament-wc2026 .team-logo-v2:active {
         background: rgba(255,255,255,0.12) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        box-shadow:
+            0 0 0 8px rgba(255,255,255,0.18),
+            0 0 18px 8px rgba(180,240,255,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
 
     body.tournament-wc2026 .team-logo-v2 .flag-icon,
@@ -2431,11 +2438,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         /* stronger 3D lift for flags only */
         box-shadow:
             0 0 0 2px rgba(0,0,0,0.30),
+            0 0 0 5px rgba(255,255,255,0.15),
+            0 0 14px 5px rgba(180,240,255,0.14),
             0 10px 20px rgba(0, 0, 0, 0.35),
-            inset 0 1px 0 rgba(255,255,255,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.15),
             inset 0 -1px 0 rgba(0,0,0,0.08);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         transform: translateY(-2px);
         transition: all 0.2s ease;
     }
@@ -2451,11 +2460,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         background-color: rgba(255,255,255,0.12);
         box-shadow:
             0 0 0 2px rgba(0,0,0,0.30),
+            0 0 0 8px rgba(255,255,255,0.18),
+            0 0 18px 8px rgba(180,240,255,0.18),
             0 14px 24px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255,255,255,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.15),
             inset 0 -1px 0 rgba(0,0,0,0.08);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
 
     body.tournament-wc2026 .team-name-v2 {
