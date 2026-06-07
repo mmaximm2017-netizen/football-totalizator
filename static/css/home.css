@@ -1988,14 +1988,22 @@
 
     /* WC2026: preserve readability substrates on tournament cards */
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
-        color: rgba(255,255,255,0.90);
-        background: rgba(0,0,0,0.22);
+        color: rgba(255,255,255,0.94);
+        background: rgba(255,255,255,0.08);
         padding: 4px 6px;
         box-sizing: border-box;
         height: 46px;
         display: flex !important;
         align-items: center;
         justify-content: center;
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            inset 0 -1px 0 rgba(0,0,0,0.10);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        text-shadow: 0 1px 4px rgba(0,0,0,0.32);
     }
 
     body.tournament-wc2026 .league-label,
