@@ -2750,8 +2750,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     margin-top: -4px;
     border-radius: 14px;
     background:
-        linear-gradient(135deg, rgba(24,198,217,0.98), rgba(31,231,255,0.92)) padding-box,
-        linear-gradient(135deg, #FFD700 0%, #00FF87 52%, #9D00FF 100%) border-box !important;
+        linear-gradient(135deg, #FFF8E7 0%, #FDF5E6 52%, #FAF0E6 100%) padding-box,
+        linear-gradient(135deg, rgba(255,215,0,0.78) 0%, rgba(255,248,231,0.92) 56%, rgba(157,0,255,0.28) 100%) border-box !important;
     border: 2px solid transparent !important;
     color: rgba(6,18,50,0.95) !important;
     display: flex;
@@ -2767,11 +2767,10 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     -webkit-text-stroke: 0;
     transform: translateY(-6px);
     box-shadow:
-        inset 0 2px 0 rgba(255,255,255,0.20),
-        0 0 0 2px rgba(255,215,0,0.24),
-        0 0 16px rgba(0,255,135,0.24),
-        0 10px 25px rgba(0,80,120,0.48),
-        0 12px 28px rgba(0,0,0,0.28);
+        inset 0 2px 0 rgba(255,255,255,0.72),
+        0 0 0 2px rgba(255,215,0,0.22),
+        0 10px 25px rgba(82,46,0,0.30),
+        0 12px 28px rgba(0,0,0,0.34);
     transition:
         transform 0.12s ease,
         box-shadow 0.12s ease,
@@ -2785,12 +2784,14 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .match-card-v2 .save-btn-v2:hover {
         transform: translateY(-8px);
+        background:
+            linear-gradient(135deg, #FFFCF4 0%, #FFF8E7 54%, #FDF5E6 100%) padding-box,
+            linear-gradient(135deg, rgba(255,215,0,0.86) 0%, rgba(255,255,255,0.96) 56%, rgba(157,0,255,0.34) 100%) border-box !important;
         box-shadow:
-            inset 0 2px 0 rgba(255,255,255,0.26),
-            0 0 0 2px rgba(255,215,0,0.34),
-            0 0 22px rgba(0,255,135,0.34),
-            0 16px 35px rgba(0,80,120,0.55),
-            0 8px 16px rgba(0,0,0,0.22);
+            inset 0 2px 0 rgba(255,255,255,0.82),
+            0 0 0 2px rgba(255,215,0,0.30),
+            0 16px 35px rgba(82,46,0,0.38),
+            0 10px 20px rgba(0,0,0,0.30);
     }
 
     /* SKELETON SCREEN STYLES */
@@ -2919,8 +2920,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         transform: translateY(3px) scale(0.98);
         filter: brightness(0.94);
         box-shadow:
-            0 2px 5px rgba(0,80,120,0.15),
-            inset 0 3px 12px rgba(0,30,60,0.22) !important;
+            0 2px 5px rgba(82,46,0,0.16),
+            inset 0 3px 12px rgba(82,46,0,0.20) !important;
         transition:
             transform 0.03s ease,
             box-shadow 0.03s ease,
@@ -3224,19 +3225,21 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             font-size: 13px;
             border-radius: 12px;
             transform: translateY(-4px);
+            background:
+                linear-gradient(135deg, #FFF8E7 0%, #FDF5E6 52%, #FAF0E6 100%) padding-box,
+                linear-gradient(135deg, rgba(255,215,0,0.74) 0%, rgba(255,248,231,0.90) 56%, rgba(157,0,255,0.24) 100%) border-box !important;
             box-shadow:
-                inset 0 1.5px 0 rgba(255,255,255,0.18),
-                0 0 0 2px rgba(255,215,0,0.22),
-                0 0 14px rgba(0,255,135,0.22),
-                0 8px 20px rgba(0,80,120,0.38),
-                0 4px 8px rgba(0,0,0,0.18);
+                inset 0 1.5px 0 rgba(255,255,255,0.68),
+                0 0 0 2px rgba(255,215,0,0.20),
+                0 8px 20px rgba(82,46,0,0.28),
+                0 6px 14px rgba(0,0,0,0.26);
         }
 
         body.tournament-wc2026 .match-card-v2 .save-btn-v2:active {
             transform: translateY(2px) scale(0.98);
             box-shadow:
-                0 1px 3px rgba(0,80,120,0.12),
-                inset 0 3px 10px rgba(0,30,60,0.20) !important;
+                0 1px 3px rgba(82,46,0,0.14),
+                inset 0 3px 10px rgba(82,46,0,0.18) !important;
             transition:
                 transform 0.03s ease,
                 box-shadow 0.03s ease,
