@@ -2680,8 +2680,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     min-height: 38px;
     margin-top: -4px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(216,255,34,0.84), rgba(191,255,38,0.78)) !important;
-    border: 1px solid rgba(216,255,34,0.24) !important;
+    background: linear-gradient(135deg, rgba(24,198,217,0.88), rgba(20,190,215,0.80)) !important;
+    border: 1px solid rgba(24,198,217,0.32) !important;
     color: rgba(10,20,40,0.92) !important;
     font-size: 13px;
     font-weight: 700;
