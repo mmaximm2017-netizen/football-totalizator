@@ -6,7 +6,6 @@ from flask import Blueprint, flash, redirect, request, url_for
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import recalc_match_points
-from app.services.tournament_service import get_active_tournament_id
 
 
 admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
@@ -48,6 +47,21 @@ def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_ti
 
     deadline_utc = deadline_msk.astimezone(timezone.utc)
     return kickoff_utc, deadline_utc
+
+
+def get_match_tournament_id(cur, match_id):
+    cur.execute(
+        """
+        SELECT tournament_id
+        FROM matches
+        WHERE id = %s
+        """,
+        (match_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, False
+    return row[0], True
 
 
 def handle_add_match(conn, cur):
@@ -198,10 +212,14 @@ def force_finish():
             flash("���� �� ����� ���� �������������", "error")
             return redirect(url_for("admin.admin"))
 
-        tournament_id = get_active_tournament_id()
+        tournament_id, match_found = get_match_tournament_id(cur, match_id)
+
+        if not match_found:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
 
         if not tournament_id:
-            flash("�������� ������ �� ������", "error")
+            flash("Турнир матча не определён", "error")
             return redirect(url_for("admin.admin"))
 
         cur.execute(
@@ -218,10 +236,6 @@ def force_finish():
                 match_id,
             ),
         )
-
-        if cur.rowcount == 0:
-            flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
 
         recalc_match_points(
             match_id,
@@ -265,10 +279,14 @@ def admin_fix_result():
     cur = conn.cursor()
 
     try:
-        tournament_id = get_active_tournament_id()
+        tournament_id, match_found = get_match_tournament_id(cur, match_id)
+
+        if not match_found:
+            flash("���� �� ������", "error")
+            return redirect(url_for("admin.admin"))
 
         if not tournament_id:
-            flash("�������� ������ �� ������", "error")
+            flash("Турнир матча не определён", "error")
             return redirect(url_for("admin.admin"))
 
         cur.execute(
@@ -284,10 +302,6 @@ def admin_fix_result():
                 match_id,
             ),
         )
-
-        if cur.rowcount == 0:
-            flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
 
         recalc_match_points(
             match_id,

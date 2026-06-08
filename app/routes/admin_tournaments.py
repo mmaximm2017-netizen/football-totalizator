@@ -7,7 +7,6 @@ from app.services.scoring_recalculation_service import (
     recalc_match_points,
     recalc_tournament_points,
 )
-from app.services.tournament_service import get_active_tournament_id
 from app.utils import translate_name
 
 
@@ -107,11 +106,23 @@ def recalc_all():
     cur = conn.cursor()
 
     try:
-        tournament_id = get_active_tournament_id()
+        tournament_id = request.form.get("tournament_id", type=int)
 
         if not tournament_id:
-            flash("�������� ������ �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            flash("Выберите турнир для пересчёта", "error")
+            return redirect(url_for("admin.admin_matches"))
+
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE id = %s
+            """,
+            (tournament_id,),
+        )
+        if not cur.fetchone():
+            flash("Турнир не найден", "error")
+            return redirect(url_for("admin.admin_matches"))
 
         summary = recalc_tournament_points(tournament_id, conn=conn, cur=cur)
         total_updated = summary.get("updated", 0)

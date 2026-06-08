@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 SYNC_LOCK_KEY = 88422031
+RPL_TOURNAMENT_NAME = "РПЛ 2026/27"
 
 # Пробуем импортировать Understat
 try:
@@ -38,6 +39,7 @@ def _empty_sync_summary():
         "matches_inserted": 0,
         "matches_updated": 0,
         "matches_skipped_finished": 0,
+        "matches_skipped_missing_tournament": 0,
         "matches_became_finished": [],
         "changed_finished_match_ids": [],
         "changed_finished_matches_count": 0,
@@ -244,6 +246,8 @@ def update_matches():
     try:
         cup_tournament_id = get_tournament_id_by_name(cur, "Кубок Матч-премьер")
         wc_tournament_id = get_tournament_id_by_name(cur, "ЧМ-2026")
+        rpl_tournament_id = get_tournament_id_by_name(cur, RPL_TOURNAMENT_NAME)
+        missing_tournament_leagues = set()
 
         for match in matches_data:
             api_id = match['id']
@@ -252,7 +256,22 @@ def update_matches():
             home_team = translate_name(raw_home); away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', '')).replace('Z', '')
             status = match.get('status', 'SCHEDULED'); league = match.get('league', 'other')
-            tournament_id = wc_tournament_id if league == 'wc2026' else cup_tournament_id
+            if league == 'wc2026':
+                tournament_id = wc_tournament_id
+            elif league == 'rpl':
+                tournament_id = rpl_tournament_id
+            else:
+                tournament_id = cup_tournament_id
+
+            if not tournament_id:
+                summary["matches_skipped_missing_tournament"] += 1
+                if league not in missing_tournament_leagues:
+                    msg = f"No tournament configured for league={league}; skipping source matches"
+                    logger.error(msg)
+                    summary["errors"].append(msg)
+                    missing_tournament_leagues.add(league)
+                continue
+
             home_score = away_score = None
             if status == 'FINISHED':
                 score = match.get('score', {}); ft = score.get('fullTime') or score.get('extraTime') or {}
