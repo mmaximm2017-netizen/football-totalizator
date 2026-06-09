@@ -61,8 +61,8 @@ class ScoringRulesTests(unittest.TestCase):
             (1, 1, 10),
             (0, 0, 7),
             (2, 2, 7),
-            (1, 0, 0),
-            (0, 1, 0),
+            (1, 0, 2),
+            (0, 1, 2),
         ]
 
         for pred_home, pred_away, expected in cases:
@@ -74,8 +74,8 @@ class ScoringRulesTests(unittest.TestCase):
             (0, 0, 10),
             (1, 1, 7),
             (2, 2, 7),
-            (1, 0, 0),
-            (0, 1, 0),
+            (1, 0, 2),
+            (0, 1, 2),
         ]
 
         for pred_home, pred_away, expected in cases:
@@ -97,27 +97,37 @@ class ScoringRulesTests(unittest.TestCase):
             with self.subTest(pred=f"{pred_home}:{pred_away}"):
                 self.assert_points(4, 1, pred_home, pred_away, expected)
 
-    def test_draw_prediction_for_one_goal_result_gets_two_points(self):
+    def test_draw_and_one_goal_result_crossover_gets_two_points(self):
         cases = [
             (1, 0, 0, 0),
             (1, 0, 1, 1),
             (2, 1, 0, 0),
+            (2, 1, 1, 1),
             (0, 1, 0, 0),
             (1, 2, 1, 1),
             (2, 1, 2, 2),
             (2, 3, 2, 2),
+            (0, 0, 1, 0),
+            (1, 1, 2, 1),
+            (2, 2, 3, 2),
+            (0, 0, 0, 1),
+            (1, 1, 1, 2),
+            (2, 2, 2, 3),
         ]
 
         for real_home, real_away, pred_home, pred_away in cases:
             with self.subTest(real=f"{real_home}:{real_away}", pred=f"{pred_home}:{pred_away}"):
                 self.assert_points(real_home, real_away, pred_home, pred_away, 2)
 
-    def test_draw_prediction_for_larger_result_does_not_get_two_points(self):
+    def test_draw_and_larger_result_crossover_does_not_get_two_points(self):
         cases = [
             (2, 0, 0, 0),
             (3, 1, 1, 1),
             (3, 0, 0, 0),
             (4, 1, 2, 2),
+            (0, 0, 2, 0),
+            (1, 1, 3, 1),
+            (2, 2, 5, 2),
         ]
 
         for real_home, real_away, pred_home, pred_away in cases:
