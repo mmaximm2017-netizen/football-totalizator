@@ -656,6 +656,169 @@
             font-size: 27px;
         }
     }
+
+    /* RPL profile rollout: scoped visual layer only. */
+    body.tournament-rpl .profile-screen {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-rpl .profile-hero,
+    body.tournament-rpl .stat-card,
+    body.tournament-rpl .section-card {
+        background:
+            radial-gradient(circle at 94% 8%, rgba(227,6,19,0.24) 0 13%, transparent 13.5%),
+            radial-gradient(circle at 6% 28%, rgba(42,168,255,0.20) 0 10%, transparent 10.5%),
+            linear-gradient(155deg, rgba(7,22,52,0.88), rgba(4,10,28,0.84));
+        border-color: rgba(42,168,255,0.24);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 18px 38px rgba(0,6,28,0.34);
+        backdrop-filter: blur(16px) saturate(130%);
+        -webkit-backdrop-filter: blur(16px) saturate(130%);
+    }
+
+    body.tournament-rpl .profile-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            repeating-conic-gradient(from -20deg at 72% 24%, rgba(255,255,255,0.08) 0deg 7deg, transparent 7deg 18deg),
+            linear-gradient(135deg, rgba(42,168,255,0.10), transparent 46%);
+        pointer-events: none;
+    }
+
+    body.tournament-rpl .profile-hero > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .profile-name,
+    body.tournament-rpl .section-title,
+    body.tournament-rpl .match-teams {
+        color: #ffffff;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.34);
+    }
+
+    body.tournament-rpl .profile-subtitle,
+    body.tournament-rpl .stat-label,
+    body.tournament-rpl .accuracy-label,
+    body.tournament-rpl .match-bottom,
+    body.tournament-rpl .profile-race-cue,
+    body.tournament-rpl .titles-inline-empty,
+    body.tournament-rpl .empty-box {
+        color: rgba(255,255,255,0.74);
+    }
+
+    body.tournament-rpl .place-pill {
+        background: linear-gradient(135deg, #2aa8ff, #9fe0ff);
+        color: #041022;
+        border-color: rgba(255,255,255,0.38);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.36),
+            0 0 20px rgba(42,168,255,0.18),
+            0 12px 24px rgba(0,6,28,0.24);
+    }
+
+    body.tournament-rpl .title-item,
+    body.tournament-rpl .accuracy-item,
+    body.tournament-rpl .match-row,
+    body.tournament-rpl .empty-box {
+        background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(42,168,255,0.06));
+        border-color: rgba(42,168,255,0.18);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            0 10px 22px rgba(0,6,28,0.22);
+    }
+
+    body.tournament-rpl .title-item {
+        color: #9fe0ff;
+    }
+
+    body.tournament-rpl .stat-card:nth-child(1) {
+        background:
+            radial-gradient(circle at 90% 8%, rgba(42,168,255,0.32) 0 16%, transparent 16.5%),
+            linear-gradient(155deg, rgba(8,32,72,0.90), rgba(4,10,28,0.86));
+    }
+
+    body.tournament-rpl .stat-card:nth-child(2) {
+        background:
+            radial-gradient(circle at 90% 8%, rgba(255,255,255,0.22) 0 16%, transparent 16.5%),
+            linear-gradient(155deg, rgba(8,32,72,0.90), rgba(4,10,28,0.86));
+    }
+
+    body.tournament-rpl .stat-card:nth-child(3) {
+        background:
+            radial-gradient(circle at 90% 8%, rgba(227,6,19,0.28) 0 16%, transparent 16.5%),
+            linear-gradient(155deg, rgba(8,32,72,0.90), rgba(4,10,28,0.86));
+    }
+
+    body.tournament-rpl .stat-value,
+    body.tournament-rpl .stat-value.blue,
+    body.tournament-rpl .accuracy-value.blue {
+        color: #9fe0ff;
+        text-shadow: 0 0 14px rgba(42,168,255,0.16);
+    }
+
+    body.tournament-rpl .stat-value.gray {
+        color: rgba(255,255,255,0.82);
+    }
+
+    body.tournament-rpl .green {
+        color: #78e08f;
+    }
+
+    body.tournament-rpl .orange {
+        color: #9fe0ff;
+    }
+
+    body.tournament-rpl .red {
+        color: #ff7b83;
+    }
+
+    body.tournament-rpl .match-row {
+        background:
+            radial-gradient(circle at 96% 16%, rgba(42,168,255,0.18) 0 12%, transparent 12.5%),
+            linear-gradient(145deg, rgba(255,255,255,0.08), rgba(42,168,255,0.05));
+    }
+
+    body.tournament-rpl .points-good {
+        background: linear-gradient(135deg, rgba(120,224,143,0.26), rgba(42,168,255,0.14));
+        color: #b8ffd0;
+        border: 1px solid rgba(120,224,143,0.26);
+    }
+
+    body.tournament-rpl .points-mid {
+        background: linear-gradient(135deg, rgba(42,168,255,0.24), rgba(159,224,255,0.12));
+        color: #c7edff;
+        border: 1px solid rgba(42,168,255,0.24);
+    }
+
+    body.tournament-rpl .points-bad {
+        background: rgba(255,255,255,0.09);
+        color: rgba(255,255,255,0.74);
+        border: 1px solid rgba(255,255,255,0.13);
+    }
+
+    body.tournament-rpl .back-btn {
+        background: linear-gradient(135deg, #2aa8ff 0%, #1677c8 58%, #e30613 100%);
+        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.30);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            0 0 22px rgba(42,168,255,0.20),
+            0 12px 24px rgba(0,6,28,0.30);
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .profile-name {
+            font-size: 25px;
+        }
+
+        body.tournament-rpl .stat-value {
+            font-size: 27px;
+        }
+    }
 </style>
 
 <div class="profile-screen">

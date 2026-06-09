@@ -1049,12 +1049,151 @@
         color: #ffffff !important;
     }
 
+    /* RPL table rollout: scoped visual layer only. */
+    body.tournament-rpl .table-container {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-rpl .table-shell {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 92% 0%, rgba(227,6,19,0.24), transparent 28%),
+            radial-gradient(circle at 8% 24%, rgba(42,168,255,0.20), transparent 26%),
+            linear-gradient(155deg, rgba(7,22,52,0.88), rgba(4,10,28,0.84)) !important;
+        border-color: rgba(42,168,255,0.26) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 18px 38px rgba(0,6,28,0.36),
+            0 0 0 1px rgba(227,6,19,0.08) !important;
+        backdrop-filter: blur(16px) saturate(130%);
+        -webkit-backdrop-filter: blur(16px) saturate(130%);
+    }
+
+    body.tournament-rpl .standings-table {
+        background: transparent !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr {
+        background: rgba(255,255,255,0.045) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+
+    body.tournament-rpl .standings-table tbody tr:nth-child(even) {
+        background: rgba(42,168,255,0.055) !important;
+    }
+
+    body.tournament-rpl .player-row + .player-row td {
+        border-top-color: rgba(42,168,255,0.14) !important;
+    }
+
+    body.tournament-rpl .place-box,
+    body.tournament-rpl .points-number,
+    body.tournament-rpl .leader-badge {
+        letter-spacing: 0;
+    }
+
+    body.tournament-rpl .player-name {
+        color: #ffffff !important;
+        font-size: 18px !important;
+        font-weight: 950 !important;
+        text-shadow: 0 1px 8px rgba(0,0,0,0.28);
+    }
+
+    body.tournament-rpl .place-box {
+        background: rgba(255,255,255,0.10) !important;
+        color: #7fd3ff !important;
+        border: 1px solid rgba(42,168,255,0.20);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 8px 16px rgba(0,6,28,0.22);
+    }
+
+    body.tournament-rpl .shared-place {
+        color: rgba(255,255,255,0.62) !important;
+    }
+
+    body.tournament-rpl .points-number {
+        background: linear-gradient(135deg, rgba(42,168,255,0.22), rgba(127,211,255,0.12)) !important;
+        color: #9fe0ff !important;
+        border-color: rgba(42,168,255,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 0 18px rgba(42,168,255,0.12);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(255,255,255,0.14) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(42,168,255,0.24), rgba(7,22,52,0.58)) !important;
+        box-shadow:
+            inset 4px 0 0 #2aa8ff,
+            inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(255,255,255,0.12) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(255,255,255,0.12), rgba(7,22,52,0.52)) !important;
+        box-shadow:
+            inset 4px 0 0 rgba(255,255,255,0.70),
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(227,6,19,0.20) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(227,6,19,0.16), rgba(7,22,52,0.52)) !important;
+        box-shadow:
+            inset 4px 0 0 #e30613,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 .points-number {
+        background: linear-gradient(135deg, #2aa8ff, #9fe0ff) !important;
+        color: #041022 !important;
+        border-color: rgba(255,255,255,0.36) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 .points-number {
+        background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(159,224,255,0.70)) !important;
+        color: #041022 !important;
+        border-color: rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 .points-number {
+        background: linear-gradient(135deg, #e30613, #ff6b73) !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.28) !important;
+    }
+
+    body.tournament-rpl .leader-badge {
+        background: linear-gradient(135deg, #2aa8ff, #9fe0ff) !important;
+        color: #041022 !important;
+        border: 1px solid rgba(255,255,255,0.36) !important;
+        box-shadow: 0 0 16px rgba(42,168,255,0.18);
+    }
+
+    body.tournament-rpl .empty-table {
+        background:
+            radial-gradient(circle at 88% 10%, rgba(227,6,19,0.24) 0 14%, transparent 14.5%),
+            linear-gradient(145deg, rgba(7,22,52,0.88), rgba(4,10,28,0.84)) !important;
+        border-color: rgba(42,168,255,0.24) !important;
+        color: #ffffff !important;
+    }
+
     @media (max-width: 430px) {
         body.tournament-wc2026 .player-name {
             font-size: 16px !important;
         }
 
         body.tournament-wc2026 .points-number {
+            font-size: 16px !important;
+        }
+
+        body.tournament-rpl .player-name,
+        body.tournament-rpl .points-number {
             font-size: 16px !important;
         }
     }

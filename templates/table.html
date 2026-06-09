@@ -3,7 +3,8 @@
 
 <style>
     #cup-standings-header,
-    #wc-standings-header {
+    #wc-standings-header,
+    #rpl-standings-header {
         min-height: 72px;
         padding: 12px 14px;
         border-radius: 22px;
@@ -32,19 +33,22 @@
     }
 
     #cup-standings-header img,
-    #wc-standings-header img {
+    #wc-standings-header img,
+    #rpl-standings-header img {
         width: 44px !important;
         height: 44px !important;
         flex-shrink: 0;
     }
 
     #cup-standings-header div,
-    #wc-standings-header div {
+    #wc-standings-header div,
+    #rpl-standings-header div {
         min-width: 0;
     }
 
     #cup-standings-header div div:first-child,
-    #wc-standings-header div div:first-child {
+    #wc-standings-header div div:first-child,
+    #rpl-standings-header div div:first-child {
         font-size: 18px !important;
         font-weight: 1000 !important;
         line-height: 1.1;
@@ -52,7 +56,8 @@
     }
 
     #cup-standings-header div div:last-child,
-    #wc-standings-header div div:last-child {
+    #wc-standings-header div div:last-child,
+    #rpl-standings-header div div:last-child {
         margin-top: 3px;
         font-size: 13px !important;
         font-weight: 800 !important;
@@ -64,9 +69,65 @@
         color: rgba(255,255,255,0.76) !important;
     }
 
+    body.tournament-rpl #rpl-standings-header {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        min-height: 78px;
+        background:
+            radial-gradient(circle at 88% 12%, rgba(227,6,19,0.42) 0 16%, transparent 16.5%),
+            radial-gradient(circle at 12% 84%, rgba(42,168,255,0.34) 0 15%, transparent 15.5%),
+            linear-gradient(145deg, rgba(6,18,46,0.94), rgba(4,10,28,0.90)) !important;
+        border: 1px solid rgba(42,168,255,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 18px 38px rgba(0,6,28,0.34) !important;
+    }
+
+    body.tournament-rpl #rpl-standings-header::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background:
+            repeating-conic-gradient(from -18deg at 50% 50%, rgba(255,255,255,0.10) 0deg 8deg, transparent 8deg 19deg),
+            linear-gradient(135deg, rgba(42,168,255,0.12), transparent 46%);
+        pointer-events: none;
+    }
+
+    body.tournament-rpl #rpl-standings-header img {
+        width: 50px !important;
+        height: 50px !important;
+        object-fit: contain;
+        filter: drop-shadow(0 0 12px rgba(42,168,255,0.24));
+    }
+
+    body.tournament-rpl #rpl-standings-header > img,
+    body.tournament-rpl #rpl-standings-header > div {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl #rpl-standings-header div div:first-child {
+        color: #ffffff !important;
+        font-size: 22px !important;
+        font-weight: 1000 !important;
+        text-transform: uppercase;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.36) !important;
+    }
+
+    body.tournament-rpl #rpl-standings-header div div:last-child {
+        color: #7fd3ff !important;
+        font-size: 14px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase;
+        text-shadow: 0 1px 10px rgba(0,0,0,0.34) !important;
+    }
+
     @media (max-width: 430px) {
         #cup-standings-header,
-        #wc-standings-header {
+        #wc-standings-header,
+        #rpl-standings-header {
             justify-content: flex-start !important;
             min-height: 68px;
             gap: 10px !important;
@@ -75,7 +136,8 @@
         }
 
         #cup-standings-header img,
-        #wc-standings-header img {
+        #wc-standings-header img,
+        #rpl-standings-header img {
             width: 40px !important;
             height: 40px !important;
         }
@@ -191,6 +253,14 @@
         <div style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">чемпионата мира 2026</div>
     </div>
 </div>
+{% elif current_tournament_name == 'Чемпионат России 🇷🇺' %}
+<div id="rpl-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/russian-premier-league-footballlogos-org.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.94;" alt="РПЛ">
+    <div style="text-align: left;">
+        <div style="font-size: 20px; font-weight: 700; color: #ffffff;">Турнирная таблица</div>
+        <div style="font-size: 16px; font-weight: 600; color: #7fd3ff;">чемпионата России</div>
+    </div>
+</div>
 {% else %}
 <div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
     <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.9;" alt="MatchTV">
@@ -269,10 +339,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const wcHeader = document.getElementById('wc-standings-header');
             const cupHeader = document.getElementById('cup-standings-header');
+            const rplHeader = document.getElementById('rpl-standings-header');
 
             if (data.tournament_key === 'wc2026') {
-                if (cupHeader) {
-                    cupHeader.outerHTML = `
+                const currentHeader = cupHeader || rplHeader;
+                if (currentHeader) {
+                    currentHeader.outerHTML = `
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
     <img class="wc-trophy-table-bg" src="/static/clubs/WorldCup.png" alt="" aria-hidden="true">
     <img src="/static/clubs/WorldCup.png" style="width: 48px; height: 48px; opacity: 0.9;" alt="Кубок мира">
@@ -282,9 +354,22 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>`;
                 }
+            } else if (data.tournament_key === 'rpl') {
+                const currentHeader = wcHeader || cupHeader;
+                if (currentHeader) {
+                    currentHeader.outerHTML = `
+<div id="rpl-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/static/clubs/russian-premier-league-footballlogos-org.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.94;" alt="РПЛ">
+    <div style="text-align: left;">
+        <div style="font-size: 20px; font-weight: 700; color: #ffffff;">Турнирная таблица</div>
+        <div style="font-size: 16px; font-weight: 600; color: #7fd3ff;">чемпионата России</div>
+    </div>
+</div>`;
+                }
             } else {
-                if (wcHeader) {
-                    wcHeader.outerHTML = `
+                const currentHeader = wcHeader || rplHeader;
+                if (currentHeader) {
+                    currentHeader.outerHTML = `
 <div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
     <img src="/static/clubs/MatchTV.png" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.9;" alt="MatchTV">
     <div style="text-align: left;">
