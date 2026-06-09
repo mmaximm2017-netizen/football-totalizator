@@ -2095,19 +2095,20 @@
         padding: 12px 13px 10px;
         margin-bottom: 10px;
         background:
-            linear-gradient(180deg, rgba(13,34,82,0.78) 0%, rgba(9,25,62,0.72) 100%) !important;
-        background-color: rgba(11,29,72,0.74) !important;
+            linear-gradient(180deg, rgba(18,48,104,0.66) 0%, rgba(10,28,70,0.58) 100%) !important;
+        background-color: rgba(12,31,78,0.60) !important;
         border: 0 !important;
         border-left: 0 !important;
         box-shadow:
-            0 0 0 1px rgba(88,178,255,0.30),
-            0 0 26px rgba(63,165,255,0.20),
-            0 32px 74px rgba(0,0,0,0.52),
-            0 16px 38px rgba(0,0,0,0.34),
-            inset 0 1px 0 rgba(255,255,255,0.18),
-            inset 0 -1px 0 rgba(80,170,255,0.10) !important;
-        backdrop-filter: blur(24px) saturate(120%);
-        -webkit-backdrop-filter: blur(24px) saturate(120%);
+            0 0 0 1px rgba(118,196,255,0.34),
+            0 0 34px rgba(71,169,255,0.24),
+            0 38px 86px rgba(0,0,0,0.58),
+            0 18px 42px rgba(0,0,0,0.38),
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            inset 0 12px 32px rgba(142,209,255,0.08),
+            inset 0 -1px 0 rgba(80,170,255,0.12) !important;
+        backdrop-filter: blur(30px) saturate(138%);
+        -webkit-backdrop-filter: blur(30px) saturate(138%);
     }
 
     body.tournament-rpl .match-card-v2 .match-topline {
@@ -2144,7 +2145,7 @@
     }
 
     body.tournament-rpl .match-card-v2 .league-label,
-    body.tournament-rpl .match-card-v2 .time-label {
+    body.tournament-rpl .match-card-v2 .match-meta-v2 > .time-label:not(.start-time-label) {
         position: absolute;
         width: 1px;
         height: 1px;
@@ -2155,16 +2156,49 @@
     }
 
     body.tournament-rpl .match-card-v2 .start-time-label {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
         grid-column: 1;
         order: 1;
         color: rgba(255,255,255,0.92);
-        font-size: 12px;
+        font-size: 0;
         font-weight: 850;
         line-height: 1.18;
         align-self: center;
     }
 
+    body.tournament-rpl .match-card-v2 .start-time-label::after {
+        content: attr(data-start-text);
+        display: block;
+        color: rgba(255,255,255,0.92);
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1.18;
+    }
+
+    body.tournament-rpl .match-card-v2 .start-time-label::before {
+        content: "Начало матча";
+        display: block;
+        margin-bottom: 4px;
+        color: rgba(255,255,255,0.62);
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 1.05;
+    }
+
     body.tournament-rpl .match-card-v2 .deadline-row {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
         grid-column: 3;
         order: 3;
         align-items: flex-end;
