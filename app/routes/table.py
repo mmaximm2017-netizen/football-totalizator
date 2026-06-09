@@ -132,6 +132,7 @@ def table():
                 'html': html,
                 'tournament_key': tournament_key,
                 'tournament_name': selected_name,
+                'tournament_is_active': bool(selected_is_active),
                 'tid': tid,
             }
         )

@@ -67,6 +67,11 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
         logger.debug(" -> 3 correct outcome")
         return 3
 
-    # 5. Ничего не угадано.
+    # 5. Прогноз-ничья при фактической победе/поражении в 1 гол.
+    if real_out != 0 and abs(real_diff) == 1 and pred_out == 0:
+        logger.debug(" -> 2 draw prediction for one-goal result")
+        return 2
+
+    # 6. Ничего не угадано.
     logger.debug(" -> 0 no match")
     return 0

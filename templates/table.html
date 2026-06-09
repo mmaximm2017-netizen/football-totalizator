@@ -334,7 +334,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const trigger = document.querySelector('.tournament-trigger');
             if (trigger && data.tournament_name) {
-                trigger.textContent = '🏆 ' + data.tournament_name + ' ▼';
+                trigger.textContent = '🏆 ' + data.tournament_name + ' ';
+                if (data.tournament_is_active === false) {
+                    const badge = document.createElement('span');
+                    badge.className = 'archive-badge';
+                    badge.textContent = 'Архив';
+                    trigger.appendChild(badge);
+                    trigger.appendChild(document.createTextNode(' '));
+                }
+                trigger.appendChild(document.createTextNode('▼'));
             }
 
             const wcHeader = document.getElementById('wc-standings-header');
@@ -389,6 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     || new URL(item.href, window.location.origin).searchParams.get('tid');
                 item.classList.toggle('active', String(itemTid) === String(nextTid));
             });
+            localStorage.setItem('selected_tournament_active', data.tournament_is_active === false ? '0' : '1');
         } catch (error) {
             console.error('Ошибка загрузки таблицы:', error);
             tableContainer.innerHTML = '<div style="text-align:center;padding:28px;color:#c62828;font-weight:700;">Ошибка загрузки. Обновите страницу.</div>';

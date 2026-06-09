@@ -90,11 +90,22 @@ def match_predictions(match_id):
     finally:
         close_db(conn, cur)
 
+    tournaments = get_all_tournaments()
+    active_tournaments = [t for t in tournaments if t.get("is_active")]
+    tournament_state = get_tournament_state_flags(tournaments)
+    selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
+    current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+
     return render_template(
         'match_predictions.html',
         match=match,
         predictions=predictions,
-        to_msk=cached_to_msk
+        to_msk=cached_to_msk,
+        tournaments=tournaments,
+        active_tournaments=active_tournaments,
+        **tournament_state,
+        current_tournament_id=tournament_id,
+        current_tournament_name=current_tournament_name,
     )
 
 

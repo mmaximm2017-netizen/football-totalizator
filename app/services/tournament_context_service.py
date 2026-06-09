@@ -16,12 +16,15 @@ def get_nearest_upcoming_tournament_id():
     try:
         cur.execute(
             """
-            SELECT tournament_id
-            FROM matches
-            WHERE kickoff_time >= NOW()
-              AND tournament_id IS NOT NULL
-            GROUP BY tournament_id
-            ORDER BY MIN(kickoff_time) ASC
+            SELECT m.tournament_id
+            FROM matches m
+            JOIN tournaments t
+              ON t.id = m.tournament_id
+            WHERE m.kickoff_time >= NOW()
+              AND m.tournament_id IS NOT NULL
+              AND t.is_active = 1
+            GROUP BY m.tournament_id
+            ORDER BY MIN(m.kickoff_time) ASC
             LIMIT 1
             """
         )

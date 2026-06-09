@@ -696,6 +696,15 @@ body {
             -webkit-overflow-scrolling: touch;
         }
 
+        .tournament-section-label {
+            margin: 8px 4px 2px;
+            color: rgba(93,120,148,0.82);
+            font-size: 11px;
+            font-weight: 1000;
+            letter-spacing: 0.35px;
+            text-transform: uppercase;
+        }
+
         .tournament-item {
             display: flex;
             align-items: center;
@@ -725,6 +734,26 @@ body {
             border-radius: var(--radius-round);
             font-weight: 700;
             flex-shrink: 0;
+        }
+
+        .archive-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 7px;
+            border-radius: var(--radius-round);
+            background: rgba(93,120,148,0.14);
+            color: rgba(93,120,148,0.94);
+            border: 1px solid rgba(93,120,148,0.18);
+            font-size: 10px;
+            font-weight: 900;
+            line-height: 1.15;
+            flex-shrink: 0;
+        }
+
+        .tournament-trigger .archive-badge {
+            margin-left: 6px;
+            vertical-align: middle;
         }
 
         /* TYPOGRAPHY SYSTEM: MONTSERRAT */
@@ -1185,6 +1214,12 @@ body {
         border: 1px solid rgba(216,255,34,0.22);
         color: var(--wc26-lime);
     }
+
+    body.tournament-wc2026 .archive-badge {
+        background: rgba(255,255,255,0.10);
+        border-color: rgba(255,255,255,0.14);
+        color: rgba(255,255,255,0.72);
+    }
 	</style>
 </head>
 
@@ -1193,7 +1228,14 @@ body {
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set active_items = active_tournaments|default([]) %}
     {% set all_items = tournaments|default([]) %}
-    {% set tournament_items = active_items if active_items else all_items %}
+    {% set archive_items = all_items|rejectattr('is_active')|list %}
+    {% set tournament_items = all_items %}
+    {% set current_archive = namespace(value=false) %}
+    {% for t in all_items %}
+        {% if current_tid == t.id and not t.is_active %}
+            {% set current_archive.value = true %}
+        {% endif %}
+    {% endfor %}
     {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/')) %}
 
     <div id="app-splash">
@@ -1226,7 +1268,7 @@ body {
 
                 {% if tournament_items %}
                 <button type="button" class="tournament-trigger" data-tournament-sheet-open>
-                    🏆 {{ current_t_name }} ▼
+                    🏆 {{ current_t_name }}{% if current_archive.value %} <span class="archive-badge">Архив</span>{% endif %} ▼
                 </button>
                 {% endif %}
             </div>
@@ -1307,12 +1349,25 @@ body {
             <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="Закрыть выбор турнира">✕</button>
         </div>
         <div class="tournament-sheet-list">
-            {% for t in tournament_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+            {% if active_items %}
+            <div class="tournament-section-label">Активные турниры</div>
+            {% for t in active_items %}
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
-                {% if t.is_active %}<span class="active-badge">Активный</span>{% endif %}
+                <span class="active-badge">Активный</span>
             </a>
             {% endfor %}
+            {% endif %}
+
+            {% if archive_items %}
+            <div class="tournament-section-label">Архив</div>
+            {% for t in archive_items %}
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+                <span class="tournament-name">{{ t.name }}</span>
+                <span class="archive-badge">Архив</span>
+            </a>
+            {% endfor %}
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -1379,9 +1434,19 @@ body {
             const params = new URLSearchParams(window.location.search);
             const currentTid = params.get('tid');
             const savedTid = localStorage.getItem('selected_tid');
+            const savedTidActive = localStorage.getItem('selected_tournament_active');
+            const savedItem = savedTid
+                ? Array.from(document.querySelectorAll('.tournament-item')).find(function(item) {
+                    return String(item.getAttribute('data-tid')) === String(savedTid);
+                })
+                : null;
+            const savedItemActive = savedItem?.getAttribute('data-tournament-active');
+            const canRestoreSavedTid = savedTidActive === '0' || savedItemActive === '0'
+                ? false
+                : Boolean(savedTid);
 
-            // Restore selected tournament when URL has no tid.
-            if (!currentTid && savedTid) {
+            // Restore only active saved tournaments on bare URLs; archive stays explicit via ?tid.
+            if (!currentTid && canRestoreSavedTid) {
                 params.set('tid', savedTid);
                 const query = params.toString();
                 const newUrl = path + (query ? ('?' + query) : '') + (window.location.hash || '');
@@ -1392,14 +1457,19 @@ body {
             if (currentTid) {
                 localStorage.setItem('selected_tid', currentTid);
 
-                const activeItem = document.querySelector('.tournament-item.active .tournament-name');
+                const activeItemName = document.querySelector('.tournament-item.active .tournament-name');
                 const triggerText = (document.querySelector('.tournament-trigger')?.textContent || '')
                     .replace('🏆', '')
                     .replace('▼', '')
                     .trim();
-                const name = (activeItem?.textContent || triggerText || '').trim();
+                const name = (activeItemName?.textContent || triggerText || '').trim();
                 if (name) {
                     localStorage.setItem('selected_tournament_name', name);
+                }
+                const activeItem = document.querySelector('.tournament-item.active');
+                const isActive = activeItem?.getAttribute('data-tournament-active');
+                if (isActive !== null && isActive !== undefined) {
+                    localStorage.setItem('selected_tournament_active', isActive);
                 }
             }
 
@@ -1409,8 +1479,10 @@ body {
                         || new URL(item.href, window.location.origin).searchParams.get('tid');
                     const name = item.querySelector('.tournament-name')?.textContent?.trim()
                         || item.textContent.trim();
+                    const isActive = item.getAttribute('data-tournament-active');
                     if (tid) localStorage.setItem('selected_tid', tid);
                     if (name) localStorage.setItem('selected_tournament_name', name);
+                    if (isActive !== null) localStorage.setItem('selected_tournament_active', isActive);
                 });
             });
         })();
