@@ -2074,6 +2074,33 @@
         -webkit-backdrop-filter: blur(24px) saturate(120%);
     }
 
+    body.tournament-rpl .match-card-v2:not(.finished) .teams-center {
+        background: rgba(255,255,255,0.055) !important;
+        border: 0 !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.08),
+            inset 0 -1px 0 rgba(255,255,255,0.03) !important;
+        backdrop-filter: blur(10px) saturate(108%);
+        -webkit-backdrop-filter: blur(10px) saturate(108%);
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .team-name-v2 {
+        color: rgba(255,255,255,0.94);
+        background: rgba(255,255,255,0.065) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.08),
+            inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+        backdrop-filter: blur(8px) saturate(108%);
+        -webkit-backdrop-filter: blur(8px) saturate(108%);
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .team-logo-v2 {
+        background: rgba(255,255,255,0.045) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        backdrop-filter: blur(8px) saturate(106%);
+        -webkit-backdrop-filter: blur(8px) saturate(106%);
+    }
+
     body.tournament-rpl .match-card-v2::after {
         border: 0 !important;
         box-shadow: none !important;
