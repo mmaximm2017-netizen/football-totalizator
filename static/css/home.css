@@ -2015,17 +2015,17 @@
     /* RPL premium matte glass card layer: card only, no inner layout changes */
     body.tournament-rpl .match-card-v2 {
         background:
-            linear-gradient(180deg, rgba(8,18,50,0.68) 0%, rgba(8,18,50,0.64) 100%) !important;
-        background-color: rgba(8,18,50,0.66) !important;
+            linear-gradient(180deg, rgba(8,18,50,0.66) 0%, rgba(8,18,50,0.62) 100%) !important;
+        background-color: rgba(8,18,50,0.64) !important;
         border: 0 !important;
         border-left: 0 !important;
         box-shadow:
             0 30px 70px rgba(0,0,0,0.46),
             0 14px 34px rgba(0,0,0,0.30),
             inset 0 1px 0 rgba(255,255,255,0.14),
-            inset 0 -1px 0 rgba(255,255,255,0.04) !important;
-        backdrop-filter: blur(22px) saturate(118%);
-        -webkit-backdrop-filter: blur(22px) saturate(118%);
+            inset 0 -1px 0 rgba(255,255,255,0.06) !important;
+        backdrop-filter: blur(24px) saturate(120%);
+        -webkit-backdrop-filter: blur(24px) saturate(120%);
     }
 
     body.tournament-rpl .match-card-v2::after {
