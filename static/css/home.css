@@ -2012,6 +2012,52 @@
             background 0.16s ease;
     }
 
+    /* RPL tournament background: page layer only */
+    body.tournament-rpl {
+        background:
+            radial-gradient(circle at 82% 12%, rgba(43,169,255,0.10), transparent 30%),
+            radial-gradient(circle at 16% 86%, rgba(229,39,59,0.10), transparent 32%),
+            linear-gradient(180deg, #020b27 0%, #041235 58%, #020817 100%) !important;
+        background-attachment: fixed;
+    }
+
+    body.tournament-rpl .home-screen {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-rpl .home-screen::before,
+    body.tournament-rpl .home-screen::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.34;
+        filter: blur(1px);
+    }
+
+    body.tournament-rpl .home-screen::before {
+        width: min(520px, 86vw);
+        height: min(360px, 58vw);
+        top: -76px;
+        right: -170px;
+        background:
+            linear-gradient(128deg, transparent 0 42%, rgba(255,255,255,0.18) 42% 45%, transparent 45% 100%),
+            linear-gradient(138deg, transparent 0 48%, rgba(229,39,59,0.20) 48% 52%, transparent 52% 100%),
+            linear-gradient(148deg, transparent 0 55%, rgba(43,169,255,0.18) 55% 58%, transparent 58% 100%);
+    }
+
+    body.tournament-rpl .home-screen::after {
+        width: min(540px, 92vw);
+        height: min(380px, 64vw);
+        left: -190px;
+        bottom: 44px;
+        background:
+            linear-gradient(322deg, transparent 0 40%, rgba(43,169,255,0.16) 40% 43%, transparent 43% 100%),
+            linear-gradient(332deg, transparent 0 49%, rgba(255,255,255,0.16) 49% 52%, transparent 52% 100%),
+            linear-gradient(342deg, transparent 0 57%, rgba(229,39,59,0.18) 57% 61%, transparent 61% 100%);
+    }
+
     /* RPL premium matte glass card layer: card only, no inner layout changes */
     body.tournament-rpl .match-card-v2 {
         background:
