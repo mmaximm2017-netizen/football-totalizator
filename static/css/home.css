@@ -2015,8 +2015,25 @@
     /* RPL tournament background: page layer only */
     body.tournament-rpl {
         background:
-            radial-gradient(circle at 82% 12%, rgba(43,169,255,0.10), transparent 30%),
-            radial-gradient(circle at 16% 86%, rgba(229,39,59,0.10), transparent 32%),
+            radial-gradient(circle at 50% 42%, rgba(43,169,255,0.14), transparent 16%),
+            conic-gradient(from 246deg at 50% 42%,
+                transparent 0deg 12deg,
+                rgba(255,255,255,0.10) 12deg 16deg,
+                transparent 16deg 31deg,
+                rgba(229,39,59,0.12) 31deg 37deg,
+                transparent 37deg 58deg,
+                rgba(43,169,255,0.13) 58deg 66deg,
+                transparent 66deg 91deg,
+                rgba(255,255,255,0.09) 91deg 98deg,
+                transparent 98deg 128deg,
+                rgba(229,39,59,0.10) 128deg 135deg,
+                transparent 135deg 164deg,
+                rgba(43,169,255,0.11) 164deg 173deg,
+                transparent 173deg 211deg,
+                rgba(255,255,255,0.08) 211deg 218deg,
+                transparent 218deg 255deg,
+                rgba(229,39,59,0.09) 255deg 264deg,
+                transparent 264deg 360deg),
             linear-gradient(180deg, #020b27 0%, #041235 58%, #020817 100%) !important;
         background-attachment: fixed;
     }
@@ -2032,30 +2049,83 @@
         position: fixed;
         pointer-events: none;
         z-index: -1;
-        opacity: 0.46;
-        filter: blur(1px);
+        left: 50%;
+        top: 42%;
+        transform: translate(-50%, -50%);
     }
 
     body.tournament-rpl .home-screen::before {
-        width: min(520px, 86vw);
-        height: min(360px, 58vw);
-        top: -76px;
-        right: -170px;
+        width: max(150vw, 1120px);
+        height: max(140vh, 900px);
+        opacity: 0.58;
+        filter: blur(0.5px);
         background:
-            linear-gradient(128deg, transparent 0 42%, rgba(255,255,255,0.24) 42% 45%, transparent 45% 100%),
-            linear-gradient(138deg, transparent 0 48%, rgba(229,39,59,0.27) 48% 52%, transparent 52% 100%),
-            linear-gradient(148deg, transparent 0 55%, rgba(43,169,255,0.24) 55% 58%, transparent 58% 100%);
+            conic-gradient(from 252deg at 50% 50%,
+                transparent 0deg 7deg,
+                rgba(43,169,255,0.38) 7deg 12deg,
+                transparent 12deg 21deg,
+                rgba(255,255,255,0.34) 21deg 27deg,
+                transparent 27deg 43deg,
+                rgba(229,39,59,0.42) 43deg 50deg,
+                transparent 50deg 67deg,
+                rgba(43,169,255,0.30) 67deg 74deg,
+                transparent 74deg 96deg,
+                rgba(255,255,255,0.28) 96deg 102deg,
+                transparent 102deg 126deg,
+                rgba(229,39,59,0.34) 126deg 132deg,
+                transparent 132deg 156deg,
+                rgba(43,169,255,0.34) 156deg 164deg,
+                transparent 164deg 190deg,
+                rgba(255,255,255,0.30) 190deg 198deg,
+                transparent 198deg 224deg,
+                rgba(229,39,59,0.36) 224deg 232deg,
+                transparent 232deg 257deg,
+                rgba(43,169,255,0.28) 257deg 266deg,
+                transparent 266deg 292deg,
+                rgba(255,255,255,0.26) 292deg 300deg,
+                transparent 300deg 326deg,
+                rgba(229,39,59,0.30) 326deg 334deg,
+                transparent 334deg 360deg),
+            repeating-conic-gradient(from 248deg at 50% 50%,
+                transparent 0deg 5deg,
+                rgba(255,255,255,0.16) 5deg 5.9deg,
+                transparent 5.9deg 10deg,
+                rgba(43,169,255,0.14) 10deg 11.2deg,
+                transparent 11.2deg 16deg,
+                rgba(229,39,59,0.15) 16deg 17.1deg,
+                transparent 17.1deg 22deg);
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
+        mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
     }
 
     body.tournament-rpl .home-screen::after {
-        width: min(540px, 92vw);
-        height: min(380px, 64vw);
-        left: -190px;
-        bottom: 44px;
+        width: max(132vw, 980px);
+        height: max(120vh, 760px);
+        opacity: 0.42;
+        filter: blur(0);
         background:
-            linear-gradient(322deg, transparent 0 40%, rgba(43,169,255,0.22) 40% 43%, transparent 43% 100%),
-            linear-gradient(332deg, transparent 0 49%, rgba(255,255,255,0.22) 49% 52%, transparent 52% 100%),
-            linear-gradient(342deg, transparent 0 57%, rgba(229,39,59,0.25) 57% 61%, transparent 61% 100%);
+            repeating-conic-gradient(from 250deg at 50% 50%,
+                transparent 0deg 3.8deg,
+                rgba(255,255,255,0.22) 3.8deg 4.3deg,
+                transparent 4.3deg 7.2deg,
+                rgba(43,169,255,0.20) 7.2deg 7.8deg,
+                transparent 7.8deg 12deg,
+                rgba(229,39,59,0.22) 12deg 12.7deg,
+                transparent 12.7deg 17deg),
+            repeating-conic-gradient(from 253deg at 50% 50%,
+                transparent 0deg 14deg,
+                rgba(255,255,255,0.32) 14deg 14.7deg,
+                transparent 14.7deg 18deg,
+                rgba(255,255,255,0.18) 18deg 18.6deg,
+                transparent 18.6deg 31deg,
+                rgba(229,39,59,0.30) 31deg 32.2deg,
+                transparent 32.2deg 44deg,
+                rgba(43,169,255,0.28) 44deg 45.2deg,
+                transparent 45.2deg 58deg);
+        -webkit-mask-image:
+            radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
+        mask-image:
+            radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
     }
 
     body.tournament-rpl .month-header-v2 {
