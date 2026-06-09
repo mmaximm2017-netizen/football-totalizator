@@ -2058,8 +2058,42 @@
             linear-gradient(342deg, transparent 0 57%, rgba(229,39,59,0.18) 57% 61%, transparent 61% 100%);
     }
 
+    body.tournament-rpl .month-header-v2,
+    body.tournament-rpl .day-header-v2 {
+        background: rgba(8,18,50,0.58) !important;
+        color: rgba(255,255,255,0.94) !important;
+        border: 0 !important;
+        border-left: 0 !important;
+        box-shadow:
+            0 12px 26px rgba(0,0,0,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.09),
+            inset 0 -1px 0 rgba(255,255,255,0.035) !important;
+        backdrop-filter: blur(16px) saturate(112%);
+        -webkit-backdrop-filter: blur(16px) saturate(112%);
+    }
+
+    body.tournament-rpl .month-title,
+    body.tournament-rpl .day-title,
+    body.tournament-rpl .month-count,
+    body.tournament-rpl .day-count,
+    body.tournament-rpl .month-arrow,
+    body.tournament-rpl .day-arrow {
+        color: rgba(255,255,255,0.94) !important;
+    }
+
+    body.tournament-rpl .day-header-v2.today {
+        background:
+            linear-gradient(90deg, rgba(229,39,59,0.26), rgba(8,18,50,0.58) 42%, rgba(8,18,50,0.56)) !important;
+        box-shadow:
+            0 13px 28px rgba(0,0,0,0.26),
+            inset 3px 0 0 rgba(229,39,59,0.82),
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
     /* RPL premium matte glass card layer: card only, no inner layout changes */
     body.tournament-rpl .match-card-v2 {
+        padding: 10px 11px 9px;
+        margin-bottom: 10px;
         background:
             linear-gradient(180deg, rgba(8,18,50,0.66) 0%, rgba(8,18,50,0.62) 100%) !important;
         background-color: rgba(8,18,50,0.64) !important;
@@ -2075,6 +2109,8 @@
     }
 
     body.tournament-rpl .match-card-v2:not(.finished) .teams-center {
+        margin: 7px 0 5px;
+        padding: 8px 8px 9px;
         background: rgba(255,255,255,0.055) !important;
         border: 0 !important;
         box-shadow:
@@ -2099,6 +2135,60 @@
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
         backdrop-filter: blur(8px) saturate(106%);
         -webkit-backdrop-filter: blur(8px) saturate(106%);
+    }
+
+    body.tournament-rpl .match-card-v2 .predict-form-v2 {
+        gap: 5px;
+    }
+
+    body.tournament-rpl .match-card-v2 .match-bottomline {
+        margin-top: 6px;
+        row-gap: 5px;
+    }
+
+    body.tournament-rpl .match-card-v2 .prediction-box {
+        margin-top: 6px;
+        padding: 7px 9px;
+        background: rgba(255,255,255,0.055) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        backdrop-filter: blur(8px) saturate(108%);
+        -webkit-backdrop-filter: blur(8px) saturate(108%);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper {
+        background: rgba(255,255,255,0.07) !important;
+        border: 0 !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            inset 0 -1px 0 rgba(0,0,0,0.10),
+            0 8px 18px rgba(0,0,0,0.20) !important;
+        backdrop-filter: blur(10px) saturate(110%);
+        -webkit-backdrop-filter: blur(10px) saturate(110%);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn {
+        background: rgba(255,255,255,0.045) !important;
+        color: rgba(255,255,255,0.88);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07) !important;
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .score-input-v2,
+    body.tournament-rpl .match-card-v2 .score-input-v2 {
+        background: rgba(0,0,0,0.12) !important;
+        color: #ffffff !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05) !important;
+    }
+
+    body.tournament-rpl .match-card-v2 .save-btn-v2 {
+        width: 48%;
+        min-width: 132px;
+        max-width: 190px;
+        margin-top: 1px;
+        background: linear-gradient(135deg, #155dff, #2799ff) !important;
+        color: #ffffff;
+        box-shadow:
+            0 12px 24px rgba(21,93,255,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.18) !important;
     }
 
     body.tournament-rpl .match-card-v2::after {
