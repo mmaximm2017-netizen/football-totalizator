@@ -55,10 +55,20 @@ def admin():
 @admin_bp.route('/matches', methods=['GET'])
 @admin_required
 def admin_matches():
+    requested_tid = request.args.get('tid', type=int)
     conn = get_db()
     cur = conn.cursor()
     try:
         data = prepare_admin_matches_data(cur)
+        tournament_ids = {t.get('id') for t in data.get('tournaments', [])}
+        selected_tid = requested_tid if requested_tid in tournament_ids else None
+        selected_tournament = next(
+            (t for t in data.get('tournaments', []) if t.get('id') == selected_tid),
+            None,
+        )
+        data['selected_recalc_tournament_id'] = selected_tid
+        data['current_tournament_id'] = selected_tid
+        data['current_tournament_name'] = selected_tournament.get('name') if selected_tournament else 'Админка'
         data.update(build_sync_panel_context())
     finally:
         close_db(conn, cur)

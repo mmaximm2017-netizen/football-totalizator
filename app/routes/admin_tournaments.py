@@ -130,7 +130,7 @@ def recalc_all():
         conn.commit()
 
         flash(
-            f"����������� {total_updated} ���������",
+            f"Пересчитано {total_updated} прогнозов для турнира #{tournament_id}",
             "success",
         )
 
@@ -141,7 +141,7 @@ def recalc_all():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin"))
+    return redirect(url_for("admin.admin_matches", tid=tournament_id))
 
 
 @admin_tournaments_bp.route("/translate", methods=["POST"])

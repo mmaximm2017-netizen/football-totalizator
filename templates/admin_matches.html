@@ -353,6 +353,13 @@
             <div class="admin-service-grid">
                 <form method="post" action="/admin/recalc_all" onsubmit="return confirm('Пересчитать очки? Это массово обновит результаты по завершённым матчам.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label>Турнир для пересчёта</label>
+                    <select name="tournament_id" required>
+                        <option value="">-- Выберите турнир --</option>
+                        {% for t in tournaments %}
+                        <option value="{{ t.id }}" {% if selected_recalc_tournament_id == t.id %}selected{% endif %}>{{ t.name }}{% if not t.is_active %} (архив){% endif %}</option>
+                        {% endfor %}
+                    </select>
                     <button type="submit" class="admin-btn">Пересчитать очки для всех завершённых матчей</button>
                 </form>
                 <form method="post" action="/admin/translate" onsubmit="return confirm('Перевести названия команд? Это массово обновит названия в матчах.')">
