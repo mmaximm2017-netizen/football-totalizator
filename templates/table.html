@@ -252,11 +252,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const body = document.body;
             if (body) {
+                body.classList.remove('tournament-cup', 'tournament-wc2026', 'tournament-rpl');
                 if (data.tournament_key === 'wc2026') {
-                    body.classList.remove('tournament-cup');
                     body.classList.add('tournament-wc2026');
+                } else if (data.tournament_key === 'rpl') {
+                    body.classList.add('tournament-rpl');
                 } else {
-                    body.classList.remove('tournament-wc2026');
                     body.classList.add('tournament-cup');
                 }
             }

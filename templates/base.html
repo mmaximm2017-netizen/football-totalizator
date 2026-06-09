@@ -1121,7 +1121,7 @@ body {
 	</style>
 </head>
 
-<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
+<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% elif current_tournament_name == 'Чемпионат России 🇷🇺' %}tournament-rpl{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set active_items = active_tournaments|default([]) %}

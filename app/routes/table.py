@@ -121,7 +121,12 @@ def table():
             current_tournament_id=tid,
             current_tournament_name=selected_name,
         )
-        tournament_key = 'wc2026' if selected_name == 'ЧМ-2026' else 'cup'
+        if selected_name == 'ЧМ-2026':
+            tournament_key = 'wc2026'
+        elif selected_name == 'Чемпионат России 🇷🇺':
+            tournament_key = 'rpl'
+        else:
+            tournament_key = 'cup'
         return jsonify(
             {
                 'html': html,
