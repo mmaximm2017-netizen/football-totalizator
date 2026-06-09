@@ -2114,7 +2114,7 @@
     body.tournament-rpl .match-card-v2 .match-topline {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-        align-items: start;
+        align-items: center;
         gap: 10px;
         margin: 0 0 8px;
         padding: 0 2px 8px;
@@ -2125,15 +2125,14 @@
     }
 
     body.tournament-rpl .match-card-v2 .match-meta-v2 {
-        grid-column: 2;
-        align-items: center;
-        justify-content: center;
-        order: 2;
-        gap: 0;
+        display: contents;
     }
 
     body.tournament-rpl .match-card-v2 .league-row {
+        grid-column: 2;
+        grid-row: 1;
         justify-content: center;
+        align-self: center;
         gap: 0;
     }
 
@@ -2164,12 +2163,14 @@
         clip-path: none;
         white-space: normal;
         grid-column: 1;
-        order: 1;
+        grid-row: 1;
         color: rgba(255,255,255,0.92);
         font-size: 0;
         font-weight: 850;
         line-height: 1.18;
         align-self: center;
+        justify-self: start;
+        text-align: left;
     }
 
     body.tournament-rpl .match-card-v2 .start-time-label::after {
@@ -2191,6 +2192,10 @@
         line-height: 1.05;
     }
 
+    body.tournament-rpl .match-card-v2 .topline-right {
+        display: contents;
+    }
+
     body.tournament-rpl .match-card-v2 .deadline-row {
         position: static;
         width: auto;
@@ -2200,7 +2205,7 @@
         clip-path: none;
         white-space: normal;
         grid-column: 3;
-        order: 3;
+        grid-row: 1;
         align-items: flex-end;
         justify-self: end;
         align-self: center;
