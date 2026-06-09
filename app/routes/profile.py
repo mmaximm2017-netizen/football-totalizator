@@ -95,9 +95,9 @@ def profile():
             SELECT
                 COUNT(*) AS total_bets,
                 COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 9 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points = 2 THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN p.points = 5 THEN 1 ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN p.points = 0 THEN 1 ELSE 0 END), 0),
                 ROUND(COALESCE(AVG(p.points), 0), 1),
                 COALESCE(SUM(p.points), 0)

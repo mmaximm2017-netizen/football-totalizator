@@ -7,8 +7,8 @@ def get_tournament_ranking(tournament_id):
     Tie-break order:
     1) total_points
     2) exact_scores (points >= 10)
-    3) exact_diffs (points between 7 and 8)
-    4) outcomes (points between 3 and 6)
+    3) exact_diffs (points 7 or 8)
+    4) outcomes (points 3)
     5) username ASC
 
     Place numbering uses SQL RANK(): 1,1,3...
@@ -26,13 +26,13 @@ def get_tournament_ranking(tournament_id):
                     COALESCE(SUM(p.points), 0) AS total_points,
                     COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
                     COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
-                    COALESCE(SUM(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 ELSE 0 END), 0) AS outcomes,
+                    COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes,
                     RANK() OVER (
                         ORDER BY
                             COALESCE(SUM(p.points), 0) DESC,
                             COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) DESC,
                             COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) DESC,
-                            COALESCE(SUM(CASE WHEN p.points BETWEEN 3 AND 6 THEN 1 ELSE 0 END), 0) DESC,
+                            COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) DESC,
                             u.username ASC
                     ) AS place_rank
                 FROM users u
