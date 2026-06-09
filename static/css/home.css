@@ -2343,8 +2343,8 @@
     }
 
     body.tournament-rpl .match-card-v2:not(.finished) .team-logo-v2 {
-        width: clamp(104px, 30vw, 116px);
-        height: clamp(104px, 30vw, 116px);
+        width: 120px;
+        height: 120px;
         background: transparent !important;
         box-shadow: none !important;
         backdrop-filter: none;
@@ -2354,8 +2354,8 @@
 
     body.tournament-rpl .match-card-v2 .team-logo-v2 img,
     body.tournament-rpl .match-card-v2 .team-logo-v2 .flag-icon {
-        width: clamp(106px, 29vw, 116px) !important;
-        height: clamp(106px, 29vw, 116px) !important;
+        width: 120px !important;
+        height: 120px !important;
         max-width: none;
         max-height: none;
         filter:
