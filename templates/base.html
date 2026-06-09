@@ -1010,6 +1010,39 @@ body {
         outline-offset: 2px;
     }
 
+    body.tournament-rpl .header {
+        background: rgba(8,18,50,0.50);
+        border-bottom: 0;
+        box-shadow:
+            0 10px 26px rgba(0,0,0,0.22),
+            inset 0 -1px 0 rgba(255,255,255,0.04);
+        backdrop-filter: blur(18px) saturate(112%);
+        -webkit-backdrop-filter: blur(18px) saturate(112%);
+        color: rgba(255,255,255,0.96);
+    }
+
+    body.tournament-rpl .app-title {
+        color: rgba(255,255,255,0.96);
+        text-shadow: 0 1px 10px rgba(0,0,0,0.26);
+    }
+
+    body.tournament-rpl .tournament-trigger {
+        background: rgba(255,255,255,0.07);
+        border: 0;
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            inset 0 -1px 0 rgba(255,255,255,0.03);
+        color: rgba(255,255,255,0.94);
+        backdrop-filter: blur(16px) saturate(110%);
+        -webkit-backdrop-filter: blur(16px) saturate(110%);
+    }
+
+    body.tournament-rpl .tournament-trigger:focus-visible {
+        outline: 2px solid rgba(255,255,255,0.28);
+        outline-offset: 2px;
+    }
+
     body.tournament-wc2026 .bottom-nav {
         min-height: 58px;
         bottom: max(10px, env(safe-area-inset-bottom));
