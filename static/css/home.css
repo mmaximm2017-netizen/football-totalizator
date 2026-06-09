@@ -2032,7 +2032,7 @@
         position: fixed;
         pointer-events: none;
         z-index: -1;
-        opacity: 0.34;
+        opacity: 0.46;
         filter: blur(1px);
     }
 
@@ -2042,9 +2042,9 @@
         top: -76px;
         right: -170px;
         background:
-            linear-gradient(128deg, transparent 0 42%, rgba(255,255,255,0.18) 42% 45%, transparent 45% 100%),
-            linear-gradient(138deg, transparent 0 48%, rgba(229,39,59,0.20) 48% 52%, transparent 52% 100%),
-            linear-gradient(148deg, transparent 0 55%, rgba(43,169,255,0.18) 55% 58%, transparent 58% 100%);
+            linear-gradient(128deg, transparent 0 42%, rgba(255,255,255,0.24) 42% 45%, transparent 45% 100%),
+            linear-gradient(138deg, transparent 0 48%, rgba(229,39,59,0.27) 48% 52%, transparent 52% 100%),
+            linear-gradient(148deg, transparent 0 55%, rgba(43,169,255,0.24) 55% 58%, transparent 58% 100%);
     }
 
     body.tournament-rpl .home-screen::after {
@@ -2053,23 +2053,37 @@
         left: -190px;
         bottom: 44px;
         background:
-            linear-gradient(322deg, transparent 0 40%, rgba(43,169,255,0.16) 40% 43%, transparent 43% 100%),
-            linear-gradient(332deg, transparent 0 49%, rgba(255,255,255,0.16) 49% 52%, transparent 52% 100%),
-            linear-gradient(342deg, transparent 0 57%, rgba(229,39,59,0.18) 57% 61%, transparent 61% 100%);
+            linear-gradient(322deg, transparent 0 40%, rgba(43,169,255,0.22) 40% 43%, transparent 43% 100%),
+            linear-gradient(332deg, transparent 0 49%, rgba(255,255,255,0.22) 49% 52%, transparent 52% 100%),
+            linear-gradient(342deg, transparent 0 57%, rgba(229,39,59,0.25) 57% 61%, transparent 61% 100%);
     }
 
-    body.tournament-rpl .month-header-v2,
-    body.tournament-rpl .day-header-v2 {
-        background: rgba(8,18,50,0.58) !important;
+    body.tournament-rpl .month-header-v2 {
+        background:
+            linear-gradient(135deg, rgba(229,39,59,0.62), rgba(92,13,35,0.54) 58%, rgba(8,18,50,0.50)) !important;
         color: rgba(255,255,255,0.94) !important;
         border: 0 !important;
         border-left: 0 !important;
         box-shadow:
-            0 12px 26px rgba(0,0,0,0.24),
-            inset 0 1px 0 rgba(255,255,255,0.09),
-            inset 0 -1px 0 rgba(255,255,255,0.035) !important;
-        backdrop-filter: blur(16px) saturate(112%);
-        -webkit-backdrop-filter: blur(16px) saturate(112%);
+            0 14px 30px rgba(0,0,0,0.30),
+            inset 0 1px 0 rgba(255,255,255,0.13),
+            inset 0 -1px 0 rgba(255,255,255,0.04) !important;
+        backdrop-filter: blur(18px) saturate(118%);
+        -webkit-backdrop-filter: blur(18px) saturate(118%);
+    }
+
+    body.tournament-rpl .day-header-v2 {
+        background:
+            linear-gradient(135deg, rgba(18,109,255,0.54), rgba(9,50,132,0.50) 58%, rgba(8,18,50,0.50)) !important;
+        color: rgba(255,255,255,0.94) !important;
+        border: 0 !important;
+        border-left: 0 !important;
+        box-shadow:
+            0 13px 28px rgba(0,0,0,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            inset 0 -1px 0 rgba(255,255,255,0.04) !important;
+        backdrop-filter: blur(18px) saturate(118%);
+        -webkit-backdrop-filter: blur(18px) saturate(118%);
     }
 
     body.tournament-rpl .month-title,
@@ -2083,11 +2097,11 @@
 
     body.tournament-rpl .day-header-v2.today {
         background:
-            linear-gradient(90deg, rgba(229,39,59,0.26), rgba(8,18,50,0.58) 42%, rgba(8,18,50,0.56)) !important;
+            linear-gradient(135deg, rgba(18,109,255,0.68), rgba(10,64,170,0.56) 50%, rgba(229,39,59,0.32)) !important;
         box-shadow:
-            0 13px 28px rgba(0,0,0,0.26),
-            inset 3px 0 0 rgba(229,39,59,0.82),
-            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+            0 15px 32px rgba(0,0,0,0.32),
+            inset 3px 0 0 rgba(229,39,59,0.88),
+            inset 0 1px 0 rgba(255,255,255,0.14) !important;
     }
 
     /* RPL premium matte glass card layer: card only, no inner layout changes */
@@ -2095,20 +2109,20 @@
         padding: 12px 13px 10px;
         margin-bottom: 10px;
         background:
-            linear-gradient(180deg, rgba(18,48,104,0.66) 0%, rgba(10,28,70,0.58) 100%) !important;
-        background-color: rgba(12,31,78,0.60) !important;
+            linear-gradient(180deg, rgba(24,61,126,0.70) 0%, rgba(12,35,84,0.62) 100%) !important;
+        background-color: rgba(15,40,92,0.64) !important;
         border: 0 !important;
         border-left: 0 !important;
         box-shadow:
-            0 0 0 1px rgba(118,196,255,0.34),
-            0 0 34px rgba(71,169,255,0.24),
-            0 38px 86px rgba(0,0,0,0.58),
-            0 18px 42px rgba(0,0,0,0.38),
-            inset 0 1px 0 rgba(255,255,255,0.28),
-            inset 0 12px 32px rgba(142,209,255,0.08),
-            inset 0 -1px 0 rgba(80,170,255,0.12) !important;
-        backdrop-filter: blur(30px) saturate(138%);
-        -webkit-backdrop-filter: blur(30px) saturate(138%);
+            0 0 0 1px rgba(118,196,255,0.28),
+            0 0 42px rgba(71,169,255,0.28),
+            0 44px 96px rgba(0,0,0,0.62),
+            0 20px 48px rgba(0,0,0,0.42),
+            inset 0 1px 0 rgba(255,255,255,0.32),
+            inset 0 16px 38px rgba(142,209,255,0.10),
+            inset 0 -1px 0 rgba(80,170,255,0.14) !important;
+        backdrop-filter: blur(32px) saturate(145%);
+        -webkit-backdrop-filter: blur(32px) saturate(145%);
     }
 
     body.tournament-rpl .match-card-v2 .match-topline {
@@ -2265,6 +2279,14 @@
         -webkit-backdrop-filter: none;
     }
 
+    body.tournament-rpl .match-card-v2 .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2 .team-logo-v2 .flag-icon {
+        width: 94px !important;
+        height: 94px !important;
+        filter: drop-shadow(0 14px 20px rgba(0,0,0,0.40)) drop-shadow(0 0 16px rgba(74,170,255,0.16));
+        transform: translateY(-2px);
+    }
+
     body.tournament-rpl .match-card-v2 .predict-form-v2 {
         gap: 5px;
     }
@@ -2291,7 +2313,7 @@
         border: 0 !important;
         box-shadow:
             0 0 0 1px rgba(64,174,255,0.40),
-            0 0 18px rgba(35,144,255,0.28),
+            0 0 22px rgba(35,144,255,0.34),
             inset 0 1px 0 rgba(80,190,255,0.20),
             inset 0 -1px 0 rgba(238,28,54,0.34),
             0 12px 24px rgba(0,0,0,0.34) !important;
@@ -2308,12 +2330,12 @@
     }
 
     body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
-        color: #2aa6ff;
+        color: #39b4ff;
         border-bottom: 1px solid rgba(64,174,255,0.24);
     }
 
     body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
-        color: #ea2743;
+        color: #ff3852;
         border-top: 1px solid rgba(238,28,54,0.28);
     }
 
@@ -2337,7 +2359,7 @@
         background: linear-gradient(135deg, #126dff, #0a4ee8) !important;
         color: #ffffff;
         box-shadow:
-            0 14px 28px rgba(18,109,255,0.34),
+            0 16px 32px rgba(18,109,255,0.40),
             inset 0 1px 0 rgba(255,255,255,0.22),
             inset 0 -1px 0 rgba(0,0,0,0.20) !important;
     }
