@@ -119,6 +119,30 @@ class ScoringRulesTests(unittest.TestCase):
             with self.subTest(real=f"{real_home}:{real_away}", pred=f"{pred_home}:{pred_away}"):
                 self.assert_points(real_home, real_away, pred_home, pred_away, 2)
 
+    def test_draw_and_one_goal_result_crossover_priority_cases(self):
+        cases = [
+            (2, 1, 1, 1),
+            (1, 1, 2, 1),
+            (1, 0, 0, 0),
+            (0, 0, 1, 0),
+            (0, 1, 0, 0),
+            (0, 0, 0, 1),
+        ]
+
+        for real_home, real_away, pred_home, pred_away in cases:
+            with self.subTest(real=f"{real_home}:{real_away}", pred=f"{pred_home}:{pred_away}"):
+                self.assert_points(real_home, real_away, pred_home, pred_away, 2)
+
+    def test_same_outcome_diff_off_by_one_still_gets_five_points(self):
+        cases = [
+            (3, 1, 2, 1),
+            (2, 0, 1, 0),
+        ]
+
+        for real_home, real_away, pred_home, pred_away in cases:
+            with self.subTest(real=f"{real_home}:{real_away}", pred=f"{pred_home}:{pred_away}"):
+                self.assert_points(real_home, real_away, pred_home, pred_away, 5)
+
     def test_draw_and_larger_result_crossover_does_not_get_two_points(self):
         cases = [
             (2, 0, 0, 0),

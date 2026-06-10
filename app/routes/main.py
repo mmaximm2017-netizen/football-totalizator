@@ -194,41 +194,21 @@ WHERE id = %s
                 return redirect(url_for('main.index'))
 
             cur.execute("""
-                SELECT 1 FROM predictions
-                WHERE user_id=%s AND match_id=%s AND tournament_id=%s
-            """, (
-                session['user_id'],
-                match_id,
-                match_tid
-            ))
-
-            exists = cur.fetchone()
-
-            if exists:
-                cur.execute("""
-                    UPDATE predictions
-                    SET home_goals=%s, away_goals=%s
-                    WHERE user_id=%s AND match_id=%s AND tournament_id=%s
-                """, (
-                    h,
-                    a,
-                    session['user_id'],
-                    match_id,
-                    match_tid
-                ))
-            else:
-                cur.execute("""
-                    INSERT INTO predictions (
-                        user_id, match_id, tournament_id,
+                INSERT INTO predictions (
+                    user_id, match_id, tournament_id,
                     home_goals, away_goals
                 )
-                VALUES (%s,%s,%s,%s,%s)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (user_id, match_id, tournament_id)
+                DO UPDATE SET
+                    home_goals = EXCLUDED.home_goals,
+                    away_goals = EXCLUDED.away_goals
             """, (
                 session['user_id'],
                 match_id,
                 match_tid,
                 h,
-                a
+                a,
             ))
 
             conn.commit()

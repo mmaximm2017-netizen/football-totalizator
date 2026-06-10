@@ -316,6 +316,32 @@ def init_db():
 
         cur.execute("""
         DO $$
+        DECLARE
+            null_rows integer;
+        BEGIN
+            SELECT COUNT(*) INTO null_rows
+            FROM predictions
+            WHERE user_id IS NULL
+               OR match_id IS NULL
+               OR tournament_id IS NULL;
+
+            IF null_rows > 0 THEN
+                RAISE EXCEPTION 'Cannot set predictions key columns NOT NULL: % rows contain NULL user_id/match_id/tournament_id', null_rows;
+            END IF;
+
+            ALTER TABLE predictions
+            ALTER COLUMN user_id SET NOT NULL;
+
+            ALTER TABLE predictions
+            ALTER COLUMN match_id SET NOT NULL;
+
+            ALTER TABLE predictions
+            ALTER COLUMN tournament_id SET NOT NULL;
+        END $$;
+        """)
+
+        cur.execute("""
+        DO $$
         BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM pg_constraint WHERE conname = 'pred_unique'

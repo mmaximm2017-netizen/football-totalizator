@@ -68,7 +68,7 @@ def profile():
                 flash("Пользователь не найден", "error")
                 return redirect(url_for('auth.login'))
             username = row[0]
-            user_is_deleted = row[1]
+            user_is_deleted = row[1] if len(row) > 1 else 0
 
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]

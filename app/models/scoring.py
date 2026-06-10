@@ -57,23 +57,23 @@ def calculate_points(real_home, real_away, pred_home, pred_away):
         logger.debug(f" -> {pts} exact diff")
         return pts
 
-    # 3. Ошибка в разнице на 1 гол. Бонус за крупный счёт не применяется.
-    if real_out == pred_out and abs(real_diff - pred_diff) == 1:
-        logger.debug(" -> 5 diff off by 1")
-        return 5
-
-    # 4. Только исход. Бонус за крупный счёт не применяется.
-    if real_out == pred_out:
-        logger.debug(" -> 3 correct outcome")
-        return 3
-
-    # 5. Ничья <-> победа/поражение в 1 гол.
+    # 3. Ничья <-> победа/поражение в 1 гол.
     if (
         (real_out != 0 and abs(real_diff) == 1 and pred_out == 0)
         or (real_out == 0 and pred_out != 0 and abs(pred_diff) == 1)
     ):
         logger.debug(" -> 2 draw and one-goal result crossover")
         return 2
+
+    # 4. Ошибка в разнице на 1 гол. Бонус за крупный счёт не применяется.
+    if real_out == pred_out and abs(real_diff - pred_diff) == 1:
+        logger.debug(" -> 5 diff off by 1")
+        return 5
+
+    # 5. Только исход. Бонус за крупный счёт не применяется.
+    if real_out == pred_out:
+        logger.debug(" -> 3 correct outcome")
+        return 3
 
     # 6. Ничего не угадано.
     logger.debug(" -> 0 no match")
