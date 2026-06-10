@@ -8,6 +8,8 @@
 
                         <div class="teams-center">
                             {% set team = match.home_team %}
+                            {% set home_team_label = match.home_team or 'Участник определится' %}
+                            {% set away_team_label = match.away_team or 'Участник определится' %}
                             {% include 'partials/home/_team_v2.html' %}
 
                             <div class="center-score">
@@ -26,7 +28,7 @@
                                                     type="button"
                                                     class="stepper-btn"
                                                     data-step="-1"
-                                                    aria-label="Уменьшить голы {{ match.home_team }}"
+                                                    aria-label="Уменьшить голы {{ home_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >−</button>
 
@@ -46,7 +48,7 @@
                                                     type="button"
                                                     class="stepper-btn"
                                                     data-step="1"
-                                                    aria-label="Увеличить голы {{ match.home_team }}"
+                                                    aria-label="Увеличить голы {{ home_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >+</button>
                                             </div>
@@ -58,7 +60,7 @@
                                                     type="button"
                                                     class="stepper-btn"
                                                     data-step="-1"
-                                                    aria-label="Уменьшить голы {{ match.away_team }}"
+                                                    aria-label="Уменьшить голы {{ away_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >−</button>
 
@@ -78,7 +80,7 @@
                                                     type="button"
                                                     class="stepper-btn"
                                                     data-step="1"
-                                                    aria-label="Увеличить голы {{ match.away_team }}"
+                                                    aria-label="Увеличить голы {{ away_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >+</button>
                                             </div>

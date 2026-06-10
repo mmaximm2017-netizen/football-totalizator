@@ -1,15 +1,18 @@
 <div class="team-v2">
     <div class="team-logo-v2">
-        {% set team_flag = get_flag(team) %}
+        {% set team_label = team or 'Участник определится' %}
+        {% set team_flag = get_flag(team) if team else '' %}
 
         {% if team_flag %}
             {{ team_flag|safe }}
-        {% else %}
+        {% elif team %}
             {{ get_club_logo(team)|safe }}
+        {% else %}
+            <span class="team-placeholder-logo" aria-hidden="true">?</span>
         {% endif %}
     </div>
 
     <div class="team-name-v2">
-        {{ team }}
+        {{ team_label }}
     </div>
 </div>

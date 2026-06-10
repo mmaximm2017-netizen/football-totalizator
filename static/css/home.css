@@ -752,6 +752,20 @@
     margin: 0 !important;
 }
 
+.team-placeholder-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(6,59,115,0.62);
+    background: rgba(255,255,255,0.42);
+    border: 1px dashed rgba(6,59,115,0.22);
+    font-size: 34px;
+    font-weight: 950;
+}
+
     .center-score {
         text-align: center;
         display: flex;
