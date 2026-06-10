@@ -39,7 +39,7 @@ def login():
         try:
             cur.execute(
                 """
-                SELECT id, password
+                SELECT id, password, COALESCE(is_deleted, 0)
                 FROM users
                 WHERE username = %s
                 """,
@@ -53,6 +53,11 @@ def login():
 
             user_id = user[0]
             stored_password = user[1]
+            is_deleted = user[2]
+
+            if is_deleted == 1:
+                flash("Аккаунт деактивирован. Обратитесь к администратору.", "error")
+                return render_template('login.html')
 
             if is_password_hash(stored_password):
                 password_ok = check_password_hash(stored_password, password)

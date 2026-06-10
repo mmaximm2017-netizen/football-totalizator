@@ -2,8 +2,12 @@
 
 from flask import (
     Blueprint,
+    flash,
+    redirect,
     render_template,
     request,
+    session,
+    url_for,
 )
 
 from app.db import get_db, close_db
@@ -97,6 +101,79 @@ def admin_users():
     finally:
         close_db(conn, cur)
     return render_template('admin_users.html', **data)
+
+
+@admin_bp.route('/users/<int:user_id>/deactivate', methods=['POST'])
+@admin_required
+def deactivate_user(user_id):
+    current_user_id = session.get('user_id')
+
+    if user_id == current_user_id:
+        flash("Нельзя деактивировать самого себя", "error")
+        return redirect(url_for('admin.admin_users'))
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT username, is_admin, COALESCE(is_deleted, 0) FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+        if not user:
+            conn.rollback()
+            flash("Пользователь не найден", "error")
+            return redirect(url_for('admin.admin_users'))
+
+        if user[1] == 1:
+            cur.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND COALESCE(is_deleted, 0) = 0")
+            active_admins = cur.fetchone()[0] or 0
+            if active_admins <= 1:
+                conn.rollback()
+                flash("Нельзя деактивировать последнего администратора", "error")
+                return redirect(url_for('admin.admin_users'))
+
+        cur.execute("UPDATE users SET is_deleted = 1 WHERE id = %s", (user_id,))
+        cur.execute(
+            """
+            DELETE FROM predictions p
+            USING tournaments t
+            WHERE p.tournament_id = t.id
+              AND t.is_active = 1
+              AND p.user_id = %s
+            """,
+            (user_id,),
+        )
+        deleted_predictions = cur.rowcount
+        conn.commit()
+
+        flash(f"Пользователь деактивирован. Удалено прогнозов: {deleted_predictions}", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка деактивации пользователя: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for('admin.admin_users'))
+
+
+@admin_bp.route('/users/<int:user_id>/restore', methods=['POST'])
+@admin_required
+def restore_user(user_id):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE users SET is_deleted = 0 WHERE id = %s", (user_id,))
+        if cur.rowcount == 0:
+            conn.rollback()
+            flash("Пользователь не найден", "error")
+        else:
+            conn.commit()
+            flash("Пользователь восстановлен", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка восстановления пользователя: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(url_for('admin.admin_users'))
 
 
 @admin_bp.route('/archive_tournament/<int:tid>', methods=['POST'])

@@ -74,8 +74,12 @@ def match_predictions(match_id):
             JOIN users u ON p.user_id = u.id
             WHERE p.match_id = %s
               AND p.tournament_id = %s
+              AND (
+                  NOT EXISTS (SELECT 1 FROM tournaments t WHERE t.id = %s AND t.is_active = 1)
+                  OR COALESCE(u.is_deleted, 0) = 0
+              )
             ORDER BY u.username
-        """, (match_id, tournament_id))
+        """, (match_id, tournament_id, tournament_id))
 
         predictions = [
             {

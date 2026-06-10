@@ -149,6 +149,26 @@ def init_db():
         """)
 
         cur.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='users' AND column_name='is_deleted'
+            ) THEN
+                ALTER TABLE users
+                ADD COLUMN is_deleted INTEGER DEFAULT 0;
+            END IF;
+        END $$;
+        """)
+
+        cur.execute("""
+        UPDATE users
+        SET is_deleted = 0
+        WHERE is_deleted IS NULL;
+        """)
+
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS tournaments (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,

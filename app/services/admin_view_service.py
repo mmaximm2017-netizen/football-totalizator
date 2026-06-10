@@ -186,9 +186,20 @@ def prepare_admin_view_data(cur):
     active_tournaments = [t for t in tournaments if t.get('is_active')]
 
     cur.execute("""
-        SELECT id, username, is_admin, last_seen
-        FROM users
-        ORDER BY username
+        SELECT
+            u.id,
+            u.username,
+            u.is_admin,
+            u.last_seen,
+            COALESCE(u.is_deleted, 0),
+            COUNT(DISTINCT (p.user_id, p.match_id, p.tournament_id)) AS predictions_total,
+            COUNT(DISTINCT (p.user_id, p.match_id, p.tournament_id)) FILTER (WHERE t.is_active = 1) AS active_predictions,
+            COUNT(DISTINCT (p.user_id, p.match_id, p.tournament_id)) FILTER (WHERE t.is_active = 0) AS archive_predictions
+        FROM users u
+        LEFT JOIN predictions p ON p.user_id = u.id
+        LEFT JOIN tournaments t ON t.id = p.tournament_id
+        GROUP BY u.id, u.username, u.is_admin, u.last_seen, u.is_deleted
+        ORDER BY u.username
     """)
     users = []
     title_users = []
@@ -200,9 +211,13 @@ def prepare_admin_view_data(cur):
             'last_seen': (
                 u[3].astimezone(MSK).strftime('%d.%m.%Y %H:%M')
                 if u[3] else 'Никогда'
-            )
+            ),
+            'is_deleted': u[4] or 0,
+            'predictions_total': u[5] or 0,
+            'active_predictions': u[6] or 0,
+            'archive_predictions': u[7] or 0,
         })
-        if u[2] == 0:
+        if u[2] == 0 and (u[4] or 0) == 0:
             title_users.append({'id': u[0], 'username': u[1]})
 
     return {

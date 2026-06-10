@@ -111,13 +111,17 @@ def create_app():
 
         try:
             cur.execute(
-                "SELECT is_admin, last_seen FROM users WHERE id = %s",
+                "SELECT is_admin, last_seen, COALESCE(is_deleted, 0) FROM users WHERE id = %s",
                 (session['user_id'],)
             )
 
             user = cur.fetchone()
 
             if user:
+                if user[2] == 1:
+                    session.pop('user_id', None)
+                    return
+
                 if user[0] == 1:
                     g.is_admin = True
 

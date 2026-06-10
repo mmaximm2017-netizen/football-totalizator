@@ -16,12 +16,12 @@ def admin_required(f):
 
         try:
             cur.execute(
-                "SELECT is_admin FROM users WHERE id = %s",
+                "SELECT is_admin, COALESCE(is_deleted, 0) FROM users WHERE id = %s",
                 (session["user_id"],),
             )
             user = cur.fetchone()
 
-            if not user or user[0] != 1:
+            if not user or user[0] != 1 or user[1] == 1:
                 flash("������ ��������", "error")
                 return redirect(url_for("main.index"))
 

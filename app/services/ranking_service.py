@@ -19,6 +19,17 @@ def get_tournament_ranking(tournament_id):
     try:
         cur.execute(
             """
+            SELECT COALESCE(is_active, 0)
+            FROM tournaments
+            WHERE id = %s
+            """,
+            (tournament_id,),
+        )
+        tournament = cur.fetchone()
+        tournament_is_active = bool(tournament and tournament[0])
+
+        cur.execute(
+            """
             WITH ranked AS (
                 SELECT
                     u.id AS user_id,
@@ -40,6 +51,7 @@ def get_tournament_ranking(tournament_id):
                     ON p.user_id = u.id
                     AND p.tournament_id = %s
                 WHERE u.is_admin = 0
+                  AND (%s = FALSE OR COALESCE(u.is_deleted, 0) = 0)
                 GROUP BY u.id, u.username
             )
             SELECT
@@ -59,7 +71,7 @@ def get_tournament_ranking(tournament_id):
                 outcomes DESC,
                 username ASC
             """,
-            (tournament_id,),
+            (tournament_id, tournament_is_active),
         )
 
         return [

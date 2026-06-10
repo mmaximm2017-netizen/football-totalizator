@@ -37,7 +37,7 @@ def profile():
         if username:
             cur.execute(
                 """
-                SELECT id
+                SELECT id, COALESCE(is_deleted, 0)
                 FROM users
                 WHERE username = %s
                 """,
@@ -48,6 +48,7 @@ def profile():
                 flash("Игрок не найден", "error")
                 return redirect(url_for('table.table'))
             uid = row[0]
+            user_is_deleted = row[1]
         else:
             uid = session.get('user_id')
             if not uid:
@@ -56,7 +57,7 @@ def profile():
 
             cur.execute(
                 """
-                SELECT username
+                SELECT username, COALESCE(is_deleted, 0)
                 FROM users
                 WHERE id = %s
                 """,
@@ -67,6 +68,7 @@ def profile():
                 flash("Пользователь не найден", "error")
                 return redirect(url_for('auth.login'))
             username = row[0]
+            user_is_deleted = row[1]
 
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
@@ -77,6 +79,11 @@ def profile():
             flash("Активный турнир не найден", "error")
             return redirect(url_for('table.table'))
 
+        selected_tournament = get_tournament_by_id(tournament_id)
+        if user_is_deleted == 1 and selected_tournament and selected_tournament.get("is_active"):
+            flash("Игрок не участвует в активном турнире", "error")
+            return redirect(url_for('table.table', tid=tournament_id))
+
         ranking = get_tournament_ranking(tournament_id)
         user_row = next((r for r in ranking if r['user_id'] == uid), None)
         current_place = user_row['place'] if user_row else None
@@ -84,9 +91,13 @@ def profile():
         cur.execute(
             """
             SELECT COUNT(*)
-            FROM users
-            WHERE is_admin = 0
+            FROM users u
+            JOIN tournaments t ON t.id = %s
+            WHERE u.is_admin = 0
+              AND (t.is_active = 0 OR COALESCE(u.is_deleted, 0) = 0)
             """
+            ,
+            (tournament_id,),
         )
         total_players = cur.fetchone()[0] or 0
 
@@ -170,7 +181,6 @@ def profile():
         close_db(conn, cur)
 
     tournaments = all_tournaments
-    selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
     return render_template(
