@@ -230,6 +230,22 @@ document.addEventListener('DOMContentLoaded', function () {
         return points > 0 ? '+' + points : '0';
     }
 
+    function applyTeamNameLengthClass(node, text) {
+        const clean = (text || '').trim();
+
+        if (clean.length >= 15) {
+            node.classList.add('is-very-long-team-name');
+            return true;
+        }
+
+        if (clean.length >= 11) {
+            node.classList.add('is-long-team-name');
+            return true;
+        }
+
+        return false;
+    }
+
     function buildCompactBetsView(doc) {
         const page = doc.querySelector('.predictions-page');
 
@@ -265,6 +281,13 @@ document.addEventListener('DOMContentLoaded', function () {
         homeName.textContent = teamNames[0] || 'Участник определится';
         awayName.textContent = teamNames[1] || 'Участник определится';
         vsNode.textContent = score || 'VS';
+
+        const hasLongHomeName = applyTeamNameLengthClass(homeName, homeName.textContent);
+        const hasLongAwayName = applyTeamNameLengthClass(awayName, awayName.textContent);
+
+        if (hasLongHomeName || hasLongAwayName) {
+            matchLine.classList.add('has-long-team-name');
+        }
 
         matchLine.appendChild(homeIcon);
         matchLine.appendChild(homeName);

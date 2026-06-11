@@ -3762,6 +3762,20 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         text-shadow: 0 3px 12px rgba(0,0,0,0.26);
     }
 
+    body.tournament-wc2026 .bets-compact-match.has-long-team-name {
+        gap: 6px;
+    }
+
+    body.tournament-wc2026 .bets-compact-team-name.is-long-team-name {
+        font-size: clamp(18px, 5vw, 24px);
+        letter-spacing: -0.02em;
+    }
+
+    body.tournament-wc2026 .bets-compact-team-name.is-very-long-team-name {
+        font-size: clamp(16px, 4.4vw, 21px);
+        letter-spacing: -0.04em;
+    }
+
     body.tournament-wc2026 .bets-compact-vs {
         padding: 6px 9px;
         border-radius: 999px;
@@ -3900,6 +3914,18 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
         body.tournament-wc2026 .bets-compact-team-name {
             font-size: clamp(19px, 5.6vw, 22px);
+        }
+
+        body.tournament-wc2026 .bets-compact-match.has-long-team-name {
+            gap: 5px;
+        }
+
+        body.tournament-wc2026 .bets-compact-team-name.is-long-team-name {
+            font-size: clamp(16px, 4.6vw, 19px);
+        }
+
+        body.tournament-wc2026 .bets-compact-team-name.is-very-long-team-name {
+            font-size: clamp(14px, 4.1vw, 17px);
         }
     }
 
