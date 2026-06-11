@@ -3531,7 +3531,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .bets-sheet {
         max-height: min(76vh, 620px);
-        padding: 8px 12px calc(18px + env(safe-area-inset-bottom) + 64px);
+        padding: 5px 12px calc(18px + env(safe-area-inset-bottom) + 64px);
         border-radius: 28px 28px 0 0;
         background:
             radial-gradient(circle at 5% 86%, rgba(20,222,230,0.42), transparent 35%),
@@ -3615,6 +3615,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .bets-sheet-handle {
         width: 48px;
+        height: 3px;
+        margin: 3px auto 5px;
         background: rgba(255,255,255,0.30);
         box-shadow:
             0 0 18px rgba(255,255,255,0.20),
@@ -3627,7 +3629,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         box-shadow: none;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        padding-bottom: 13px;
+        padding: 0 2px 6px;
     }
 
     body.tournament-wc2026 .bets-sheet-top::after {
@@ -3637,7 +3639,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-wc2026 .bets-sheet-title {
         color: #ffffff;
         font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 900;
         letter-spacing: 0.3px;
         background: transparent;
@@ -3650,15 +3652,16 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     }
 
     body.tournament-wc2026 .bets-sheet-close {
-        width: 38px;
-        height: 38px;
+        width: 31px;
+        height: 31px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.10);
-        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.13);
         color: #ffffff;
+        font-size: 18px;
         box-shadow:
-            0 0 18px rgba(106,227,255,0.16),
-            inset 0 1px 0 rgba(255,255,255,0.18);
+            0 0 12px rgba(106,227,255,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.14);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
     }
@@ -3677,30 +3680,54 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     }
 
     body.tournament-wc2026 .bets-compact {
-        gap: 9px;
+        gap: 8px;
     }
 
     body.tournament-wc2026 .bets-compact-match {
         display: grid;
-        grid-template-columns: 36px minmax(0, 1fr) auto minmax(0, 1fr) 36px;
+        grid-template-columns: 45px minmax(0, 1fr) auto minmax(0, 1fr) 45px;
         align-items: center;
-        gap: 9px;
-        padding: 12px;
-        border-radius: 20px;
-        background: rgba(255,255,255,0.15);
+        gap: 10px;
+        position: relative;
+        overflow: hidden;
+        padding: 13px 12px;
+        border-radius: 22px;
+        background:
+            radial-gradient(circle at 10% 90%, rgba(106,227,255,0.44), transparent 34%),
+            radial-gradient(circle at 92% 6%, rgba(255,116,74,0.42), transparent 34%),
+            radial-gradient(circle at 52% 112%, rgba(255,213,65,0.20), transparent 38%),
+            linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.10));
         border: 1px solid rgba(255,255,255,0.15);
         color: #ffffff;
         box-shadow:
-            0 12px 28px rgba(0,0,0,0.12),
-            inset 0 1px 0 rgba(255,255,255,0.22),
+            0 16px 34px rgba(0,0,0,0.18),
+            0 0 30px rgba(106,227,255,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.30),
             inset 0 -1px 0 rgba(255,255,255,0.06);
         backdrop-filter: blur(16px) saturate(150%);
         -webkit-backdrop-filter: blur(16px) saturate(150%);
     }
 
+    body.tournament-wc2026 .bets-compact-match::before {
+        content: "";
+        position: absolute;
+        inset: -42px -56px;
+        background:
+            radial-gradient(ellipse 180px 130px at 4% 100%, rgba(29,238,220,0.48), transparent 68%),
+            radial-gradient(ellipse 190px 120px at 100% 0%, rgba(255,90,112,0.42), transparent 70%),
+            radial-gradient(ellipse 150px 100px at 54% 112%, rgba(255,213,65,0.26), transparent 72%);
+        filter: blur(12px);
+        pointer-events: none;
+    }
+
+    body.tournament-wc2026 .bets-compact-match > * {
+        position: relative;
+        z-index: 1;
+    }
+
     body.tournament-wc2026 .bets-compact-team-icon {
-        width: 36px;
-        height: 36px;
+        width: 45px;
+        height: 45px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -3712,8 +3739,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .bets-compact-team-icon img,
     body.tournament-wc2026 .bets-compact-team-icon .flag-icon {
-        width: 36px !important;
-        height: 36px !important;
+        width: 45px !important;
+        height: 45px !important;
         object-fit: cover !important;
         border-radius: 50% !important;
     }
@@ -3724,11 +3751,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         text-overflow: ellipsis;
         white-space: nowrap;
         color: rgba(255,255,255,0.88);
-        font-size: clamp(18px, 5.1vw, 22px);
+        font-size: clamp(22px, 6vw, 28px);
         font-weight: 900;
-        line-height: 0.92;
-        letter-spacing: -0.3px;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.20);
+        line-height: 0.88;
+        letter-spacing: -0.55px;
+        text-shadow: 0 3px 12px rgba(0,0,0,0.26);
     }
 
     body.tournament-wc2026 .bets-compact-vs {
@@ -3791,7 +3818,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-wc2026 .bets-compact-name {
         color: #ffffff;
-        font-size: clamp(20px, 5vw, 22px);
+        font-size: clamp(18px, 4.6vw, 20px);
         font-weight: 800;
         line-height: 0.96;
         letter-spacing: -0.25px;
@@ -3851,20 +3878,20 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     @media (max-width: 430px) {
         body.tournament-wc2026 .bets-compact-match {
-            grid-template-columns: 30px minmax(0, 1fr) auto minmax(0, 1fr) 30px;
-            gap: 6px;
-            padding: 10px;
+            grid-template-columns: 38px minmax(0, 1fr) auto minmax(0, 1fr) 38px;
+            gap: 7px;
+            padding: 12px 10px;
         }
 
         body.tournament-wc2026 .bets-compact-team-icon,
         body.tournament-wc2026 .bets-compact-team-icon img,
         body.tournament-wc2026 .bets-compact-team-icon .flag-icon {
-            width: 30px !important;
-            height: 30px !important;
+            width: 38px !important;
+            height: 38px !important;
         }
 
         body.tournament-wc2026 .bets-compact-team-name {
-            font-size: 16px;
+            font-size: clamp(19px, 5.6vw, 22px);
         }
     }
 
