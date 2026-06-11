@@ -8,7 +8,7 @@ from app.services.tournament_context_service import (
     get_tournament_state_flags,
 )
 from app.services.tournament_service import get_all_tournaments, get_tournament_by_id
-from app.utils import cached_to_msk, is_before_deadline, utc_now
+from app.utils import cached_to_msk, get_club_logo, get_flag, is_before_deadline, utc_now
 
 predictions_bp = Blueprint('predictions', __name__)
 
@@ -105,6 +105,8 @@ def match_predictions(match_id):
         match=match,
         predictions=predictions,
         to_msk=cached_to_msk,
+        get_flag=get_flag,
+        get_club_logo=get_club_logo,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
         **tournament_state,

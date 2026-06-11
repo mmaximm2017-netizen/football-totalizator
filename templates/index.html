@@ -235,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!page) return null;
 
+        const teamNodes = Array.from(page.querySelectorAll('.team-side'));
         const teamNames = Array.from(page.querySelectorAll('.team-name')).map(function (node) {
             return node.textContent.trim();
         });
@@ -248,7 +249,27 @@ document.addEventListener('DOMContentLoaded', function () {
         matchLine.className = 'bets-compact-match';
         list.className = 'bets-compact-list';
 
-        matchLine.textContent = [teamNames[0], score, teamNames[1]].filter(Boolean).join(' ');
+        const homeIcon = teamNodes[0]?.querySelector('.team-logo-box')?.cloneNode(true) || document.createElement('span');
+        const awayIcon = teamNodes[1]?.querySelector('.team-logo-box')?.cloneNode(true) || document.createElement('span');
+        const homeName = document.createElement('span');
+        const awayName = document.createElement('span');
+        const vsNode = document.createElement('span');
+
+        homeIcon.className = 'bets-compact-team-icon';
+        awayIcon.className = 'bets-compact-team-icon';
+        homeName.className = 'bets-compact-team-name';
+        awayName.className = 'bets-compact-team-name';
+        vsNode.className = 'bets-compact-vs';
+
+        homeName.textContent = teamNames[0] || 'Участник определится';
+        awayName.textContent = teamNames[1] || 'Участник определится';
+        vsNode.textContent = score || 'VS';
+
+        matchLine.appendChild(homeIcon);
+        matchLine.appendChild(homeName);
+        matchLine.appendChild(vsNode);
+        matchLine.appendChild(awayName);
+        matchLine.appendChild(awayIcon);
         wrapper.appendChild(matchLine);
 
         if (!rows.length) {
@@ -280,6 +301,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (points === '0') {
                 pointsNode.classList.add('zero');
+            }
+
+            const numericPoints = Number(points.replace('+', '')) || 0;
+            if (numericPoints === 11) {
+                item.classList.add('leader-gold');
+            } else if (numericPoints === 10) {
+                item.classList.add('leader-silver');
+            } else if (numericPoints >= 7 && numericPoints <= 8) {
+                item.classList.add('leader-blue');
             }
 
             nameNode.textContent = name;

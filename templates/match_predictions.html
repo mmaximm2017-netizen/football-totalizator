@@ -362,13 +362,19 @@
 
             <div class="team-side">
                 <div class="team-logo-box">
-⚽
-
-⚽
+                    {% set team = match.home_team %}
+                    {% set team_flag = get_flag(team) if team else '' %}
+                    {% if team_flag %}
+                        {{ team_flag|safe }}
+                    {% elif team %}
+                        {{ get_club_logo(team)|safe }}
+                    {% else %}
+                        ⚽
+                    {% endif %}
                 </div>
 
                 <div class="team-name">
-                    {{ match.home_team }}
+                    {{ match.home_team or 'Участник определится' }}
                 </div>
             </div>
 
@@ -394,13 +400,19 @@
 
             <div class="team-side">
                 <div class="team-logo-box">
-                    ⚽
-
-⚽
+                    {% set team = match.away_team %}
+                    {% set team_flag = get_flag(team) if team else '' %}
+                    {% if team_flag %}
+                        {{ team_flag|safe }}
+                    {% elif team %}
+                        {{ get_club_logo(team)|safe }}
+                    {% else %}
+                        ⚽
+                    {% endif %}
                 </div>
 
                 <div class="team-name">
-                    {{ match.away_team }}
+                    {{ match.away_team or 'Участник определится' }}
                 </div>
             </div>
 
