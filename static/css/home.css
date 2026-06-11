@@ -1495,6 +1495,10 @@
             0 3px 9px rgba(0,78,140,0.05);
     }
 
+    .bets-compact-row.no-points {
+        grid-template-columns: minmax(0, 1fr) 58px;
+    }
+
     .bets-compact-name {
         min-width: 0;
         overflow: hidden;
@@ -3788,6 +3792,10 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         backdrop-filter: blur(14px) saturate(150%);
         -webkit-backdrop-filter: blur(14px) saturate(150%);
         animation: wc26BetsRowIn 250ms ease-out both;
+    }
+
+    body.tournament-wc2026 .bets-compact-row.no-points {
+        grid-template-columns: minmax(0, 1fr) 64px;
     }
 
     body.tournament-wc2026 .bets-compact-row:nth-child(2) { animation-delay: 25ms; }

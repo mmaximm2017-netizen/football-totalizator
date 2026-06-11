@@ -240,6 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return node.textContent.trim();
         });
         const score = page.querySelector('.score-box')?.textContent.trim() || 'VS';
+        const isFinished = page.getAttribute('data-match-finished') === '1';
         const rows = Array.from(page.querySelectorAll('.prediction-row'));
         const wrapper = document.createElement('div');
         const matchLine = document.createElement('div');
@@ -292,33 +293,47 @@ document.addEventListener('DOMContentLoaded', function () {
             const item = document.createElement('div');
             const nameNode = document.createElement('div');
             const scoreNode = document.createElement('div');
-            const pointsNode = document.createElement('div');
+            let pointsNode = null;
 
             item.className = 'bets-compact-row';
             nameNode.className = 'bets-compact-name';
             scoreNode.className = 'bets-compact-score';
-            pointsNode.className = 'bets-compact-points';
 
-            if (points === '0') {
-                pointsNode.classList.add('zero');
+            if (!isFinished) {
+                item.classList.add('no-points');
+            }
+
+            if (isFinished) {
+                pointsNode = document.createElement('div');
+
+                pointsNode.className = 'bets-compact-points';
+
+                if (points === '0') {
+                    pointsNode.classList.add('zero');
+                }
+
+                pointsNode.textContent = points;
             }
 
             const numericPoints = Number(points.replace('+', '')) || 0;
-            if (numericPoints === 11) {
-                item.classList.add('leader-gold');
-            } else if (numericPoints === 10) {
-                item.classList.add('leader-silver');
-            } else if (numericPoints >= 7 && numericPoints <= 8) {
-                item.classList.add('leader-blue');
+            if (isFinished) {
+                if (numericPoints === 11) {
+                    item.classList.add('leader-gold');
+                } else if (numericPoints === 10) {
+                    item.classList.add('leader-silver');
+                } else if (numericPoints >= 7 && numericPoints <= 8) {
+                    item.classList.add('leader-blue');
+                }
             }
 
             nameNode.textContent = name;
             scoreNode.textContent = prediction;
-            pointsNode.textContent = points;
 
             item.appendChild(nameNode);
             item.appendChild(scoreNode);
-            item.appendChild(pointsNode);
+            if (pointsNode) {
+                item.appendChild(pointsNode);
+            }
             list.appendChild(item);
         });
 
