@@ -65,7 +65,9 @@ def match_predictions(match_id):
             flash("Ставки будут доступны после дедлайна", "error")
             return redirect(url_for('main.index'))
 
-        cur.execute("""
+        order_by = "COALESCE(p.points, 0) DESC, u.username ASC" if match['status'] == 'FINISHED' else "u.username ASC"
+
+        cur.execute(f"""
             SELECT u.username,
                    p.home_goals,
                    p.away_goals,
@@ -78,7 +80,7 @@ def match_predictions(match_id):
                   NOT EXISTS (SELECT 1 FROM tournaments t WHERE t.id = %s AND t.is_active = 1)
                   OR COALESCE(u.is_deleted, 0) = 0
               )
-            ORDER BY u.username
+            ORDER BY {order_by}
         """, (match_id, tournament_id, tournament_id))
 
         predictions = [
