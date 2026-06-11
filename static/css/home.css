@@ -2731,9 +2731,9 @@ body.tournament-wc2026 .match-card-v2 .start-time-label::after {
     content: attr(data-start-text);
     display: block;
     padding-left: 0;
-    font-size: clamp(18px, 4.8vw, 20px);
-    font-weight: 900;
-    color: #ffffff;
+    font-size: clamp(16px, 4.2vw, 17px);
+    font-weight: 850;
+    color: #c9f4ff;
     line-height: 1;
 }
 
@@ -2841,13 +2841,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         white-space: nowrap !important;
         border: 0 !important;
         background: transparent !important;
-        color: #ffffff !important;
+        color: #6ae3ff !important;
         box-shadow: none !important;
-        font-size: clamp(20px, 5.2vw, 22px);
-        font-weight: 950;
+        font-size: clamp(18px, 4.7vw, 19px);
+        font-weight: 900;
         line-height: 1;
         letter-spacing: -0.02em;
-        text-shadow: 0 0 10px rgba(106,227,255,0.18);
+        text-shadow: 0 0 10px rgba(106,227,255,0.22);
     }
 
     body.tournament-wc2026 .match-card-v2 .deadline-timer.warning {
