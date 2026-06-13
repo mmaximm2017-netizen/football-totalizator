@@ -36,20 +36,16 @@
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
 <div class="match-topline">
-    <div class="match-meta-v2">
-
-        <div class="league-row">
-            {% include 'partials/home/_match_league.html' %}
-        </div>
-
-        {% set kickoff_plain = to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] %}
-        <div class="time-label start-time-label" data-start-text="{{ kickoff_plain.replace(' ', ' • ', 1) }}">
-            Начало: {{ kickoff_plain }}
-        </div>
-
+    <div class="league-row">
+        {% include 'partials/home/_match_league.html' %}
     </div>
 
-            <div class="topline-right">
+    {% set kickoff_plain = to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] %}
+    <div class="time-label start-time-label" data-start-text="{{ kickoff_plain.replace(' ', ' • ', 1) }}">
+        Начало: {{ kickoff_plain }}
+    </div>
+
+    <div class="topline-right">
         {% if match.finished %}
             <div class="status-pill-v2 status-done">✓ Матч завершён</div>
         {% elif match.deadline_passed %}
