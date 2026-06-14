@@ -172,18 +172,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // One-time initial scroll to the day that is pre-opened by backend open_day.
-    (function scrollToOpenedDayOnce() {
+    // One-time initial scroll to nearest future match selected by backend.
+    (function scrollToInitialMatchOnce() {
+        const initialMatchId = {{ initial_match_id|tojson }};
+        const targetMatch = initialMatchId
+            ? document.querySelector('[data-match-id="' + initialMatchId + '"]')
+            : null;
         const openedDayContent = document.querySelector('.day-content.open');
-        if (!openedDayContent) return;
+        const target = targetMatch || (openedDayContent ? openedDayContent.closest('.day-block')?.querySelector('.day-header-v2') : null);
 
-        const dayBlock = openedDayContent.closest('.day-block');
-        const dayHeader = dayBlock ? dayBlock.querySelector('.day-header-v2') : null;
-        if (!dayHeader) return;
+        if (!target) return;
 
         const fixedHeader = document.querySelector('.header');
         const headerOffset = fixedHeader ? fixedHeader.offsetHeight + 10 : 12;
-        const targetTop = dayHeader.getBoundingClientRect().top + window.scrollY - headerOffset;
+        const targetTop = target.getBoundingClientRect().top + window.scrollY - headerOffset;
 
         setTimeout(function () {
             window.scrollTo({

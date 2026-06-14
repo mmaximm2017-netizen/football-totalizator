@@ -32,6 +32,7 @@
 
                 <div
                     class="match-card-v2 {{ card_state }} {{ predicted_class }}"
+                    data-match-id="{{ match.id }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
                 >
