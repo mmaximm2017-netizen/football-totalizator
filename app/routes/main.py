@@ -39,6 +39,16 @@ main_bp = Blueprint('main', __name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 
+VISIBLE_MATCH_STATUSES = (
+    'SCHEDULED',
+    'TIMED',
+    'IN_PLAY',
+    'LIVE',
+    'PAUSED',
+    'HALFTIME',
+    'FINISHED',
+)
+
 
 # =========================================================
 # HELPERS
@@ -237,11 +247,11 @@ WHERE id = %s
                    status, league, tournament_id,
                    home_score, away_score
             FROM matches
-            WHERE status IN ('SCHEDULED','TIMED','FINISHED')
+            WHERE status = ANY(%s)
             AND kickoff_time >= %s
             AND (%s IS NULL OR tournament_id = %s OR tournament_id IS NULL)
             ORDER BY kickoff_time
-        """, (start, tid, tid))
+        """, (list(VISIBLE_MATCH_STATUSES), start, tid, tid))
 
         rows = cur.fetchall()
 
