@@ -126,6 +126,30 @@ class RankingMovementTests(unittest.TestCase):
             ranking._fetch_latest_played_finished_match_id(Cursor(), tournament_id=7)
         )
 
+    def test_ranking_aggregates_only_played_finished_matches(self):
+        class Cursor:
+            def execute(self, query, params):
+                self.query = query
+                self.params = params
+
+            def fetchall(self):
+                return []
+
+        cur = Cursor()
+
+        ranking._fetch_ranking(
+            cur,
+            tournament_id=7,
+            tournament_is_active=True,
+            exclude_match_id=42,
+        )
+
+        self.assertEqual(cur.params, (7, 42, 42, True))
+        self.assertIn("LEFT JOIN matches m", cur.query)
+        self.assertIn("UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')", cur.query)
+        self.assertIn("m.kickoff_time <= NOW()", cur.query)
+        self.assertIn("m.id <> %s", cur.query)
+
 
 if __name__ == "__main__":
     unittest.main()

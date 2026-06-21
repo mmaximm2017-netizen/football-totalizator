@@ -33,30 +33,45 @@ def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=T
 def _fetch_ranking(cur, tournament_id, tournament_is_active, exclude_match_id=None):
     cur.execute(
         """
-        WITH ranked AS (
+        WITH player_scores AS (
             SELECT
                 u.id AS user_id,
                 u.username,
-                COALESCE(SUM(p.points), 0) AS total_points,
-                COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
-                COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
-                COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes,
-                RANK() OVER (
-                    ORDER BY
-                        COALESCE(SUM(p.points), 0) DESC,
-                        COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) DESC,
-                        COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) DESC,
-                        COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) DESC,
-                        u.username ASC
-                ) AS place_rank
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL THEN p.points ELSE 0 END), 0) AS total_points,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes
             FROM users u
             LEFT JOIN predictions p
                 ON p.user_id = u.id
                 AND p.tournament_id = %s
-                AND (%s IS NULL OR p.match_id <> %s)
+            LEFT JOIN matches m
+                ON m.id = p.match_id
+                AND m.tournament_id = p.tournament_id
+                AND UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
+                AND m.kickoff_time <= NOW()
+                AND (%s IS NULL OR m.id <> %s)
             WHERE u.is_admin = 0
               AND (%s = FALSE OR COALESCE(u.is_deleted, 0) = 0)
             GROUP BY u.id, u.username
+        ),
+        ranked AS (
+            SELECT
+                user_id,
+                username,
+                total_points,
+                exact_scores,
+                exact_diffs,
+                outcomes,
+                RANK() OVER (
+                    ORDER BY
+                        total_points DESC,
+                        exact_scores DESC,
+                        exact_diffs DESC,
+                        outcomes DESC,
+                        username ASC
+                ) AS place_rank
+            FROM player_scores
         )
         SELECT
             user_id,
