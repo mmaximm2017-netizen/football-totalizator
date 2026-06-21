@@ -97,6 +97,35 @@ class RankingMovementTests(unittest.TestCase):
         self.assertIsNone(movements[1])
         self.assertIsNone(movements[2])
 
+    def test_latest_finished_match_ignores_future_kickoffs(self):
+        class Cursor:
+            def execute(self, query, params):
+                self.query = query
+                self.params = params
+
+            def fetchone(self):
+                return (42,)
+
+        cur = Cursor()
+
+        match_id = ranking._fetch_latest_played_finished_match_id(cur, tournament_id=7)
+
+        self.assertEqual(match_id, 42)
+        self.assertEqual(cur.params, (7,))
+        self.assertIn("kickoff_time <= NOW()", cur.query)
+
+    def test_latest_finished_match_returns_none_when_missing(self):
+        class Cursor:
+            def execute(self, query, params):
+                pass
+
+            def fetchone(self):
+                return None
+
+        self.assertIsNone(
+            ranking._fetch_latest_played_finished_match_id(Cursor(), tournament_id=7)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

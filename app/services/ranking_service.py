@@ -93,6 +93,23 @@ def _fetch_ranking(cur, tournament_id, tournament_is_active, exclude_match_id=No
     ]
 
 
+def _fetch_latest_played_finished_match_id(cur, tournament_id):
+    cur.execute(
+        """
+        SELECT id
+        FROM matches
+        WHERE tournament_id = %s
+          AND UPPER(status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
+          AND kickoff_time <= NOW()
+        ORDER BY kickoff_time DESC, id DESC
+        LIMIT 1
+        """,
+        (tournament_id,),
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def get_tournament_ranking(tournament_id):
     """
     Canonical ranking logic for leaderboard/profile.
@@ -122,27 +139,16 @@ def get_tournament_ranking(tournament_id):
 
         current_ranking = _fetch_ranking(cur, tournament_id, tournament_is_active)
 
-        cur.execute(
-            """
-            SELECT id
-            FROM matches
-            WHERE tournament_id = %s
-              AND UPPER(status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
-            ORDER BY kickoff_time DESC, id DESC
-            LIMIT 1
-            """,
-            (tournament_id,),
-        )
-        last_finished_match = cur.fetchone()
+        last_finished_match_id = _fetch_latest_played_finished_match_id(cur, tournament_id)
 
-        if not last_finished_match:
+        if not last_finished_match_id:
             return apply_rank_movements(current_ranking, [], has_finished_match=False)
 
         previous_ranking = _fetch_ranking(
             cur,
             tournament_id,
             tournament_is_active,
-            exclude_match_id=last_finished_match[0],
+            exclude_match_id=last_finished_match_id,
         )
 
         return apply_rank_movements(current_ranking, previous_ranking)
