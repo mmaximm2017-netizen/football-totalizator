@@ -72,6 +72,27 @@
         text-decoration: none;
     }
 
+    .rank-movement {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 6px;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .rank-movement.up {
+        color: #39ff88;
+        text-shadow: 0 0 8px rgba(57,255,136,0.34);
+    }
+
+    .rank-movement.down {
+        color: #ff4d5e;
+        text-shadow: 0 0 8px rgba(255,77,94,0.30);
+    }
+
     .points-number {
         color: #2e7d32;
         font-weight: 600;
@@ -1216,6 +1237,11 @@
                 </td>
                 <td class="player-cell">
                     <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
+                    {% if row.movement == 'up' %}
+                        <span class="rank-movement up" title="Поднялся после последнего матча" aria-label="Поднялся после последнего матча">▲</span>
+                    {% elif row.movement == 'down' %}
+                        <span class="rank-movement down" title="Опустился после последнего матча" aria-label="Опустился после последнего матча">▼</span>
+                    {% endif %}
                     {% if row.place == 1 %}<span class="leader-badge">ЛИДЕР</span>{% endif %}
                 </td>
                 <td class="points-cell">

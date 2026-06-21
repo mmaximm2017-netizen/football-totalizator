@@ -1,6 +1,98 @@
 from app.db import get_db, close_db
 
 
+def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=True):
+    """Annotate current ranking with movement since the latest finished match."""
+    previous_places = {
+        row["user_id"]: row["place"]
+        for row in previous_ranking
+        if row.get("place") is not None
+    }
+
+    annotated = []
+    for row in current_ranking:
+        item = dict(row)
+        movement = None
+
+        if has_finished_match:
+            previous_place = previous_places.get(item["user_id"])
+            current_place = item.get("place")
+
+            if previous_place is not None and current_place is not None:
+                if current_place < previous_place:
+                    movement = "up"
+                elif current_place > previous_place:
+                    movement = "down"
+
+        item["movement"] = movement
+        annotated.append(item)
+
+    return annotated
+
+
+def _fetch_ranking(cur, tournament_id, tournament_is_active, exclude_match_id=None):
+    cur.execute(
+        """
+        WITH ranked AS (
+            SELECT
+                u.id AS user_id,
+                u.username,
+                COALESCE(SUM(p.points), 0) AS total_points,
+                COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
+                COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
+                COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes,
+                RANK() OVER (
+                    ORDER BY
+                        COALESCE(SUM(p.points), 0) DESC,
+                        COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) DESC,
+                        COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) DESC,
+                        COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) DESC,
+                        u.username ASC
+                ) AS place_rank
+            FROM users u
+            LEFT JOIN predictions p
+                ON p.user_id = u.id
+                AND p.tournament_id = %s
+                AND (%s IS NULL OR p.match_id <> %s)
+            WHERE u.is_admin = 0
+              AND (%s = FALSE OR COALESCE(u.is_deleted, 0) = 0)
+            GROUP BY u.id, u.username
+        )
+        SELECT
+            user_id,
+            username,
+            total_points,
+            exact_scores,
+            exact_diffs,
+            outcomes,
+            place_rank,
+            COUNT(*) OVER (PARTITION BY place_rank) AS shared_count
+        FROM ranked
+        ORDER BY
+            total_points DESC,
+            exact_scores DESC,
+            exact_diffs DESC,
+            outcomes DESC,
+            username ASC
+        """,
+        (tournament_id, exclude_match_id, exclude_match_id, tournament_is_active),
+    )
+
+    return [
+        {
+            "user_id": r[0],
+            "username": r[1],
+            "points": r[2] or 0,
+            "exact_scores": r[3] or 0,
+            "exact_diffs": r[4] or 0,
+            "outcomes": r[5] or 0,
+            "place": r[6],
+            "shared": (r[7] or 0) > 1,
+        }
+        for r in cur.fetchall()
+    ]
+
+
 def get_tournament_ranking(tournament_id):
     """
     Canonical ranking logic for leaderboard/profile.
@@ -28,64 +120,31 @@ def get_tournament_ranking(tournament_id):
         tournament = cur.fetchone()
         tournament_is_active = bool(tournament and tournament[0])
 
+        current_ranking = _fetch_ranking(cur, tournament_id, tournament_is_active)
+
         cur.execute(
             """
-            WITH ranked AS (
-                SELECT
-                    u.id AS user_id,
-                    u.username,
-                    COALESCE(SUM(p.points), 0) AS total_points,
-                    COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
-                    COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
-                    COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes,
-                    RANK() OVER (
-                        ORDER BY
-                            COALESCE(SUM(p.points), 0) DESC,
-                            COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0) DESC,
-                            COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) DESC,
-                            COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0) DESC,
-                            u.username ASC
-                    ) AS place_rank
-                FROM users u
-                LEFT JOIN predictions p
-                    ON p.user_id = u.id
-                    AND p.tournament_id = %s
-                WHERE u.is_admin = 0
-                  AND (%s = FALSE OR COALESCE(u.is_deleted, 0) = 0)
-                GROUP BY u.id, u.username
-            )
-            SELECT
-                user_id,
-                username,
-                total_points,
-                exact_scores,
-                exact_diffs,
-                outcomes,
-                place_rank,
-                COUNT(*) OVER (PARTITION BY place_rank) AS shared_count
-            FROM ranked
-            ORDER BY
-                total_points DESC,
-                exact_scores DESC,
-                exact_diffs DESC,
-                outcomes DESC,
-                username ASC
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s
+              AND UPPER(status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
+            ORDER BY kickoff_time DESC, id DESC
+            LIMIT 1
             """,
-            (tournament_id, tournament_is_active),
+            (tournament_id,),
+        )
+        last_finished_match = cur.fetchone()
+
+        if not last_finished_match:
+            return apply_rank_movements(current_ranking, [], has_finished_match=False)
+
+        previous_ranking = _fetch_ranking(
+            cur,
+            tournament_id,
+            tournament_is_active,
+            exclude_match_id=last_finished_match[0],
         )
 
-        return [
-            {
-                "user_id": r[0],
-                "username": r[1],
-                "points": r[2] or 0,
-                "exact_scores": r[3] or 0,
-                "exact_diffs": r[4] or 0,
-                "outcomes": r[5] or 0,
-                "place": r[6],
-                "shared": (r[7] or 0) > 1,
-            }
-            for r in cur.fetchall()
-        ]
+        return apply_rank_movements(current_ranking, previous_ranking)
     finally:
         close_db(conn, cur)
