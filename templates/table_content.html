@@ -166,6 +166,10 @@
         margin-left: 8px;
     }
 
+    .leader-badge.confident {
+        box-shadow: 0 0 10px rgba(255,215,0,0.38);
+    }
+
     .shared-place {
         font-size: 9px;
         color: #888;
@@ -1242,7 +1246,11 @@
                     {% elif row.movement == 'down' %}
                         <span class="rank-movement down" title="Опустился после последнего матча" aria-label="Опустился после последнего матча">▼</span>
                     {% endif %}
-                    {% if row.place == 1 %}<span class="leader-badge">ЛИДЕР</span>{% endif %}
+                    {% if row.leader_status == 'confident' %}
+                        <span class="leader-badge confident">Уверенный лидер</span>
+                    {% elif row.leader_status == 'leader' %}
+                        <span class="leader-badge">Лидер</span>
+                    {% endif %}
                 </td>
                 <td class="points-cell">
                     <span class="points-number">{{ row.points }}</span>

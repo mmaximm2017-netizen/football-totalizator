@@ -30,6 +30,30 @@ def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=T
     return annotated
 
 
+def apply_leader_status(ranking):
+    """Annotate the first-place player with a leader status based on point gap."""
+    annotated = []
+    for row in ranking:
+        item = dict(row)
+        item["leader_status"] = None
+        annotated.append(item)
+
+    if len(annotated) < 2 or annotated[0].get("place") != 1:
+        return annotated
+
+    try:
+        gap = int(annotated[0].get("points") or 0) - int(annotated[1].get("points") or 0)
+    except (TypeError, ValueError):
+        return annotated
+
+    if gap >= 20:
+        annotated[0]["leader_status"] = "confident"
+    elif gap > 0:
+        annotated[0]["leader_status"] = "leader"
+
+    return annotated
+
+
 def _fetch_ranking(cur, tournament_id, tournament_is_active, exclude_match_id=None):
     cur.execute(
         """
@@ -157,7 +181,9 @@ def get_tournament_ranking(tournament_id):
         last_finished_match_id = _fetch_latest_played_finished_match_id(cur, tournament_id)
 
         if not last_finished_match_id:
-            return apply_rank_movements(current_ranking, [], has_finished_match=False)
+            return apply_leader_status(
+                apply_rank_movements(current_ranking, [], has_finished_match=False)
+            )
 
         previous_ranking = _fetch_ranking(
             cur,
@@ -166,6 +192,6 @@ def get_tournament_ranking(tournament_id):
             exclude_match_id=last_finished_match_id,
         )
 
-        return apply_rank_movements(current_ranking, previous_ranking)
+        return apply_leader_status(apply_rank_movements(current_ranking, previous_ranking))
     finally:
         close_db(conn, cur)

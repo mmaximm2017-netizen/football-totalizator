@@ -41,11 +41,11 @@ def load_ranking_module():
 ranking = load_ranking_module()
 
 
-def row(user_id, place):
+def row(user_id, place, points=0):
     return {
         "user_id": user_id,
         "username": f"user{user_id}",
-        "points": 0,
+        "points": points,
         "exact_scores": 0,
         "exact_diffs": 0,
         "outcomes": 0,
@@ -149,6 +149,26 @@ class RankingMovementTests(unittest.TestCase):
         self.assertIn("UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')", cur.query)
         self.assertIn("m.kickoff_time <= NOW()", cur.query)
         self.assertIn("m.id <> %s", cur.query)
+
+    def leader_status_for_gap(self, gap):
+        ranking_rows = [row(1, 1, 100), row(2, 2, 100 - gap)]
+
+        return ranking.apply_leader_status(ranking_rows)[0]["leader_status"]
+
+    def test_leader_status_gap_zero_is_hidden(self):
+        self.assertIsNone(self.leader_status_for_gap(0))
+
+    def test_leader_status_gap_five_is_leader(self):
+        self.assertEqual(self.leader_status_for_gap(5), "leader")
+
+    def test_leader_status_gap_nineteen_is_leader(self):
+        self.assertEqual(self.leader_status_for_gap(19), "leader")
+
+    def test_leader_status_gap_twenty_is_confident(self):
+        self.assertEqual(self.leader_status_for_gap(20), "confident")
+
+    def test_leader_status_gap_thirty_is_confident(self):
+        self.assertEqual(self.leader_status_for_gap(30), "confident")
 
 
 if __name__ == "__main__":
