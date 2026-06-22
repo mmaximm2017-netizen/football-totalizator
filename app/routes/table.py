@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, render_template, request
 
 from app.db import close_db, get_db
 from app.services.ranking_service import get_tournament_ranking
+from app.services.top_scorer_service import get_tournament_top_scorers
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_tournament_state_flags,
@@ -75,6 +76,7 @@ def table():
             return render_template(
                 'table.html',
                 table=[],
+                top_scorers=[],
                 tournaments=[],
                 active_tournaments=[],
                 selected_tid=None,
@@ -103,6 +105,7 @@ def table():
         close_db(conn, cur)
 
     table_data = get_tournament_ranking(tid)
+    top_scorers = get_tournament_top_scorers(tid)
 
     is_ajax = request.args.get('ajax') == '1'
 
@@ -110,6 +113,7 @@ def table():
         html = render_template(
             'table_content.html',
             table=table_data,
+            top_scorers=top_scorers,
             tournaments=tournaments,
             active_tournaments=active_tournaments,
             **tournament_state,
@@ -140,6 +144,7 @@ def table():
     return render_template(
         'table.html',
         table=table_data,
+        top_scorers=top_scorers,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
         **tournament_state,
