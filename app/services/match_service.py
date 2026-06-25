@@ -414,28 +414,15 @@ def update_matches():
                 ):
                     status = 'FINISHED'
 
-                # Keep completed matches immutable on sync:
-                # do not overwrite status/kickoff/deadline/league once both scores are known.
-                if is_locked_completed and not finished_score_changed:
-                    summary["matches_skipped_finished"] += 1
-                    continue
-
-                if finished_score_changed:
-                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s WHERE api_match_id=%s""",
-                        (status, home_score, away_score, str(api_id)))
-                    _add_changed_finished_match(summary, match_id)
-                    summary["matches_updated"] += 1
-                    continue
-                
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
-                    cur.execute("""UPDATE matches SET status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
-                        (status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
-                    if existing_status != 'FINISHED' and match_id is not None:
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                    if match_id is not None and (existing_status != 'FINISHED' or finished_score_changed):
                         summary["matches_became_finished"].append(match_id)
                         _add_changed_finished_match(summary, match_id)
                 else:
-                    cur.execute("""UPDATE matches SET status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
-                        (status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
                 summary["matches_updated"] += 1
         conn.commit()
         return summary
