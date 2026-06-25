@@ -79,6 +79,19 @@ def admin_matches():
     return render_template('admin_matches.html', **data)
 
 
+@admin_bp.route('/wc-playoff', methods=['GET'])
+@admin_required
+def admin_wc_playoff():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        data = prepare_admin_matches_data(cur)
+        data['current_tournament_name'] = 'Плей-офф ЧМ-2026'
+    finally:
+        close_db(conn, cur)
+    return render_template('admin_wc_playoff.html', **data)
+
+
 @admin_bp.route('/tournaments', methods=['GET'])
 @admin_required
 def admin_tournaments():

@@ -96,6 +96,7 @@
     <div class="admin-nav">
         <a href="{{ url_for('admin.admin') }}">← Админка</a>
         <a class="active" href="{{ url_for('admin.admin_matches') }}">Матчи</a>
+        <a href="{{ url_for('admin.admin_wc_playoff') }}">Плей-офф ЧМ-2026</a>
         <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
         <a href="{{ url_for('admin.admin_users') }}">Пользователи</a>
     </div>
@@ -225,48 +226,6 @@
             </div>
             <button type="submit" class="admin-btn">Добавить матч</button>
         </form>
-    </div>
-
-    <div class="admin-card">
-        <div class="admin-card-header">Ручное управление плей-офф</div>
-        <div class="admin-subsection-title">Только ЧМ-2026 • исключительные случаи</div>
-        <div class="admin-zone-note" style="margin-bottom:10px;">Групповой этап продолжает обновляться только через API. Эти флаги блокируют API только для соответствующих данных конкретного матча плей-офф.</div>
-        <datalist id="wc-team-options">
-            {% for team in wc_team_options %}
-                <option value="{{ team }}"></option>
-            {% endfor %}
-        </datalist>
-        {% if wc_playoff_matches %}
-            <div class="override-grid">
-                {% for m in wc_playoff_matches %}
-                    <div class="override-card">
-                        <div class="override-title">[{{ m.id }}] {{ m.home_team or 'Участник определится' }} — {{ m.away_team or 'Участник определится' }}</div>
-                        <div class="override-meta">{{ m.match_date_msk }}{% if m.playoff_stage_label %} • {{ m.playoff_stage_label }}{% endif %} • {{ m.status }} • прогнозов: {{ m.predictions_count }}</div>
-                        <div class="override-statuses">
-                            {% if m.manual_teams_override %}<span class="override-pill active">Команды назначены вручную</span>{% else %}<span class="override-pill">Команды из API</span>{% endif %}
-                            {% if m.manual_result_override %}<span class="override-pill active">Результат установлен вручную</span>{% else %}<span class="override-pill">Результат из API</span>{% endif %}
-                        </div>
-                        <form method="post" action="/admin/wc_playoff_override" class="override-form" onsubmit="var cb=this.querySelector('[name=manual_teams_override]'); var h=this.querySelector('[name=home_team]'); var a=this.querySelector('[name=away_team]'); var changed=h&&a&&(h.value!==h.dataset.original||a.value!==a.dataset.original); if(cb && cb.checked && changed && {{ 1 if m.predictions_count else 0 }}){ if(!confirm('На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?')) return false; this.confirm_team_change.value='1'; } return true;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <input type="hidden" name="match_id" value="{{ m.id }}">
-                            <input type="hidden" name="tid" value="{{ current_tournament_id or '' }}">
-                            <input type="hidden" name="confirm_team_change" value="0">
-                            <label class="override-check"><input type="checkbox" name="manual_teams_override" value="1" {% if m.manual_teams_override %}checked{% endif %}> Manual teams override</label>
-                            <div class="edit-fields"><input type="text" name="home_team" list="wc-team-options" value="{{ m.home_team or '' }}" data-original="{{ m.home_team or '' }}" placeholder="Домашняя команда"><span class="score-divider">—</span><input type="text" name="away_team" list="wc-team-options" value="{{ m.away_team or '' }}" data-original="{{ m.away_team or '' }}" placeholder="Гостевая команда"></div>
-                            <div>
-                                <label>Стадия турнира</label>
-                                <select name="playoff_stage">
-                                    <option value="">-- Не указана --</option>
-                                    {% for value, label in playoff_stages %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                                </select>
-                            </div>
-                            <label class="override-check"><input type="checkbox" name="manual_result_override" value="1" {% if m.manual_result_override %}checked{% endif %}> Manual result override</label>
-                            <div class="score-form"><input class="score-input" type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}" placeholder="0"><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}" placeholder="0"><button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Сохранить</button></div>
-                        </form>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}<div class="admin-empty">Матчи плей-офф ЧМ-2026 пока не найдены</div>{% endif %}
     </div>
 
     <div class="admin-card">

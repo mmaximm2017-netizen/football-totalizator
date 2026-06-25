@@ -347,6 +347,36 @@ def update_matches():
                     existing_kickoff,
                 )
 
+                api_conflicts = []
+
+                if (
+                    manual_teams_override
+                    and manual_override_allowed
+                    and (home_team != existing_home_team or away_team != existing_away_team)
+                ):
+                    api_conflicts.append("API прислал другие команды")
+
+                if (
+                    manual_result_override
+                    and manual_override_allowed
+                    and status == 'FINISHED'
+                    and home_score is not None
+                    and away_score is not None
+                    and (home_score != existing_home or away_score != existing_away)
+                ):
+                    api_conflicts.append("API прислал другой результат")
+
+                api_conflict_note = "; ".join(api_conflicts) if api_conflicts else None
+
+                cur.execute(
+                    """
+                    UPDATE matches
+                    SET api_conflict_note = %s
+                    WHERE id = %s
+                    """,
+                    (api_conflict_note, match_id),
+                )
+
                 if manual_teams_override and manual_override_allowed:
                     home_team = existing_home_team
                     away_team = existing_away_team

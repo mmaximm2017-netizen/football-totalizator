@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, redirect, request, url_for
@@ -356,7 +356,10 @@ def admin_fix_result():
 def admin_wc_playoff_override():
     match_id = request.form.get("match_id", type=int)
     tid = request.form.get("tid", type=int)
-    redirect_target = url_for("admin.admin_matches", tid=tid) if tid else url_for("admin.admin_matches")
+    if request.form.get("next") == "wc_playoff":
+        redirect_target = url_for("admin.admin_wc_playoff")
+    else:
+        redirect_target = url_for("admin.admin_matches", tid=tid) if tid else url_for("admin.admin_matches")
 
     if not match_id:
         flash("Матч не выбран", "error")
@@ -411,6 +414,21 @@ def admin_wc_playoff_override():
         home_team = (request.form.get("home_team") or "").strip()
         away_team = (request.form.get("away_team") or "").strip()
         home_score = away_score = None
+        kickoff_utc = deadline_utc = None
+
+        match_date = (request.form.get("match_date") or "").strip()
+        match_time = (request.form.get("match_time") or "").strip()
+        if match_date and match_time:
+            try:
+                kickoff_msk = datetime.strptime(
+                    f"{match_date} {match_time}",
+                    "%Y-%m-%d %H:%M",
+                ).replace(tzinfo=MSK)
+                kickoff_utc = kickoff_msk.astimezone(timezone.utc)
+                deadline_utc = (kickoff_msk - timedelta(hours=6)).astimezone(timezone.utc)
+            except Exception:
+                flash("Некорректные дата или время матча", "error")
+                return redirect(redirect_target)
 
         if teams_override_enabled:
             if not home_team or not away_team:
@@ -458,10 +476,12 @@ def admin_wc_playoff_override():
         cur.execute(
             """
             UPDATE matches
-            SET playoff_stage = %s
+            SET playoff_stage = %s,
+                kickoff_time = COALESCE(%s, kickoff_time),
+                deadline = COALESCE(%s, deadline)
             WHERE id = %s
             """,
-            (playoff_stage, match_id),
+            (playoff_stage, kickoff_utc, deadline_utc, match_id),
         )
 
         if result_override_enabled:

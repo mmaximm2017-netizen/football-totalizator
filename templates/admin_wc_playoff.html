@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.playoff-list{display:grid;gap:12px}.playoff-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.94),rgba(232,246,255,.82));border:1px solid rgba(255,255,255,.66);box-shadow:0 12px 30px rgba(0,78,140,.14)}.playoff-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}.playoff-title{font-size:16px;font-weight:1000;color:#063b73;line-height:1.2}.playoff-meta{margin-top:4px;color:#5d7894;font-size:12px;font-weight:800}.badge-row{display:flex;flex-wrap:wrap;gap:6px}.badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:1000;background:#e8f4ff;color:#0a4e8d;border:1px solid rgba(10,108,194,.14)}.badge-manual{background:#e4f7e9;color:#176b2c;border-color:rgba(23,107,44,.18)}.badge-api{background:#e8f4ff;color:#0a4e8d}.badge-conflict{background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18)}.badge-warn{background:#fff7df;color:#8a5b00;border-color:rgba(138,91,0,.18)}.playoff-form{display:grid;gap:10px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}.check-row{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}.check-row input{width:auto!important;margin:0!important}label{font-size:12px;font-weight:900;color:#5d7894}input,select{width:100%}.admin-btn{width:100%;min-height:44px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff;font-size:14px;font-weight:1000}.hint{padding:10px 12px;border-radius:14px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.18);font-size:12px;font-weight:900}.empty{padding:22px;text-align:center;color:#5d7894;font-weight:900}.readonly-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.readonly-item{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.66);color:#5d7894;font-size:12px;font-weight:800}.readonly-item strong{display:block;color:#063b73;font-size:13px;margin-top:2px;overflow-wrap:anywhere}@media(max-width:640px){.playoff-top{flex-direction:column}.form-grid,.team-grid,.result-row,.readonly-line{grid-template-columns:1fr}.admin-btn{min-height:48px}}
+</style>
+
+<div class="admin-screen">
+    <div class="admin-nav">
+        <a href="{{ url_for('admin.admin') }}">← Админка</a>
+        <a href="{{ url_for('admin.admin_matches') }}">Матчи</a>
+        <a class="active" href="{{ url_for('admin.admin_wc_playoff') }}">Плей-офф ЧМ-2026</a>
+        <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
+        <a href="{{ url_for('admin.admin_users') }}">Пользователи</a>
+    </div>
+
+    <div>
+        <div class="admin-title">Плей-офф ЧМ-2026</div>
+        <div class="admin-note">Центральный экран для назначения пар, стадии, времени и ручного результата. Групповой этап и другие турниры здесь не отображаются.</div>
+    </div>
+
+    <datalist id="wc-team-options">
+        {% for team in wc_team_options %}<option value="{{ team }}"></option>{% endfor %}
+    </datalist>
+
+    {% if wc_playoff_matches %}
+        <div class="playoff-list">
+            {% for m in wc_playoff_matches %}
+                {% set teams_missing = not m.home_team or not m.away_team or m.home_team == 'Unknown' or m.away_team == 'Unknown' %}
+                <section class="playoff-card">
+                    <div class="playoff-top">
+                        <div>
+                            <div class="playoff-title">{{ m.playoff_stage_label or 'Стадия не указана' }} • {{ m.home_team or 'Участник определится' }} — {{ m.away_team or 'Участник определится' }}</div>
+                            <div class="playoff-meta">{{ m.match_date_msk }} • ID {{ m.id }}{% if m.api_match_id %} • API ID {{ m.api_match_id }}{% endif %}</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge {% if m.manual_teams_override %}badge-manual{% else %}badge-api{% endif %}">Команды: {% if m.manual_teams_override %}Вручную{% else %}API{% endif %}</span>
+                            <span class="badge {% if m.manual_result_override %}badge-manual{% else %}badge-api{% endif %}">Результат: {% if m.manual_result_override %}Вручную{% else %}API{% endif %}</span>
+                            {% if m.api_conflict_note %}<span class="badge badge-conflict">Конфликт</span>{% endif %}
+                            {% if teams_missing %}<span class="badge badge-warn">Требует проверки</span>{% endif %}
+                        </div>
+                    </div>
+
+                    {% if teams_missing %}<div class="hint">Нужно назначить команды вручную, если пара уже известна.</div>{% endif %}
+                    {% if m.api_conflict_note %}<div class="hint" style="background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18);">{{ m.api_conflict_note }}</div>{% endif %}
+
+                    <div class="readonly-line">
+                        <div class="readonly-item">Статус матча<strong>{% if m.api_conflict_note %}Конфликт с API{% elif teams_missing %}Требует проверки{% elif m.status == 'FINISHED' %}Завершён{% elif m.status in ['IN_PLAY','LIVE','PAUSED','HALFTIME'] %}Идёт{% else %}Запланирован{% endif %}</strong></div>
+                        <div class="readonly-item">Текущий счёт<strong>{% if m.home_score is not none and m.away_score is not none %}{{ m.home_score }}:{{ m.away_score }}{% else %}пусто{% endif %}</strong></div>
+                        <div class="readonly-item">Прогнозов<strong>{{ m.predictions_count }}</strong></div>
+                    </div>
+
+                    <form method="post" action="/admin/wc_playoff_override" class="playoff-form" onsubmit="var cb=this.querySelector('[name=manual_teams_override]'); var h=this.querySelector('[name=home_team]'); var a=this.querySelector('[name=away_team]'); var changed=h&&a&&(h.value!==h.dataset.original||a.value!==a.dataset.original); if(cb && cb.checked && changed && {{ 1 if m.predictions_count else 0 }}){ if(!confirm('На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?')) return false; this.confirm_team_change.value='1'; } return true;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="match_id" value="{{ m.id }}">
+                        <input type="hidden" name="next" value="wc_playoff">
+                        <input type="hidden" name="confirm_team_change" value="0">
+
+                        <div class="form-grid">
+                            <div><label>Стадия</label><select name="playoff_stage"><option value="">-- Не указана --</option>{% for value, label in playoff_stages %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                            <div class="form-grid" style="gap:8px;"><div><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_input }}" required></div><div><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_input }}" required></div></div>
+                        </div>
+
+                        <label class="check-row"><input type="checkbox" name="manual_teams_override" value="1" {% if m.manual_teams_override %}checked{% endif %}> Ручное управление командами</label>
+                        <div class="team-grid">
+                            <div><label>Команда 1</label><input type="text" name="home_team" list="wc-team-options" value="{{ m.home_team or '' }}" data-original="{{ m.home_team or '' }}" placeholder="Команда 1"></div>
+                            <div><label>Команда 2</label><input type="text" name="away_team" list="wc-team-options" value="{{ m.away_team or '' }}" data-original="{{ m.away_team or '' }}" placeholder="Команда 2"></div>
+                        </div>
+
+                        <label class="check-row"><input type="checkbox" name="manual_result_override" value="1" {% if m.manual_result_override %}checked{% endif %}> Ручной финальный результат</label>
+                        <div class="result-row">
+                            <div><label>Голы команды 1</label><input type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}"></div>
+                            <div><label>Голы команды 2</label><input type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}"></div>
+                            <button type="submit" class="admin-btn">Сохранить</button>
+                        </div>
+                    </form>
+                </section>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="playoff-card empty">Матчи плей-офф ЧМ-2026 пока не найдены.</div>
+    {% endif %}
+</div>
+
+{% endblock %}

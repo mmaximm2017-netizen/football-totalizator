@@ -192,6 +192,7 @@ def init_db():
             manual_teams_override INTEGER DEFAULT 0,
             manual_result_override INTEGER DEFAULT 0,
             playoff_stage TEXT,
+            api_conflict_note TEXT,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
         );
@@ -225,6 +226,15 @@ def init_db():
             ) THEN
                 ALTER TABLE matches
                 ADD COLUMN playoff_stage TEXT;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='api_conflict_note'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN api_conflict_note TEXT;
             END IF;
 
             IF NOT EXISTS (

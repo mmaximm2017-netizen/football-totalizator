@@ -242,6 +242,8 @@ def prepare_admin_view_data(cur):
             COALESCE(m.manual_teams_override, 0),
             COALESCE(m.manual_result_override, 0),
             m.playoff_stage,
+            m.api_match_id,
+            m.api_conflict_note,
             COUNT(p.user_id) AS predictions_count
         FROM matches m
         JOIN tournaments t ON t.id = m.tournament_id
@@ -271,8 +273,13 @@ def prepare_admin_view_data(cur):
             'manual_result_override': bool(m[11]),
             'playoff_stage': m[12],
             'playoff_stage_label': get_playoff_stage_label(m[12]),
-            'predictions_count': m[13] or 0,
+            'api_match_id': m[13],
+            'api_conflict_note': m[14],
+            'has_api_conflict': bool(m[14]),
+            'predictions_count': m[15] or 0,
             'match_date_msk': kickoff_msk.strftime("%d.%m.%Y %H:%M") if kickoff_msk else "",
+            'match_date_input': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
+            'match_time_input': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
         })
     wc_playoff_matches.sort(
         key=lambda m: (
