@@ -74,6 +74,16 @@
     .edit-fields input{margin-bottom:0!important}
     .edit-form{margin-bottom:0}
     .delete-form{margin:0}
+    .override-grid{display:grid;gap:10px}
+    .override-card{padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(0,119,200,.12)}
+    .override-title{font-size:14px;font-weight:1000;color:#063b73;line-height:1.25}
+    .override-meta{margin-top:4px;font-size:11px;color:#5d7894;font-weight:800}
+    .override-statuses{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .override-pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:1000;background:#e8f4ff;color:#0a4e8d;border:1px solid rgba(10,108,194,.14)}
+    .override-pill.active{background:#e4f7e9;color:#176b2c;border-color:rgba(23,107,44,.18)}
+    .override-form{display:grid;gap:10px;margin-top:10px}
+    .override-check{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}
+    .override-check input{width:auto!important;margin:0!important}
     .admin-danger-zone{margin-top:14px;padding:12px;border-radius:14px;background:rgba(183,28,28,.08);border:1px solid rgba(183,28,28,.18)}
     .admin-danger-label{margin-bottom:8px;font-size:11px;font-weight:1000;letter-spacing:.35px;text-transform:uppercase;color:#9f1d1d}
     .admin-danger-zone .admin-btn{min-height:42px}
@@ -207,6 +217,41 @@
             </select>
             <button type="submit" class="admin-btn">Добавить матч</button>
         </form>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">Ручное управление плей-офф</div>
+        <div class="admin-subsection-title">Только ЧМ-2026 • исключительные случаи</div>
+        <div class="admin-zone-note" style="margin-bottom:10px;">Групповой этап продолжает обновляться только через API. Эти флаги блокируют API только для соответствующих данных конкретного матча плей-офф.</div>
+        <datalist id="wc-team-options">
+            {% for team in wc_team_options %}
+                <option value="{{ team }}"></option>
+            {% endfor %}
+        </datalist>
+        {% if wc_playoff_matches %}
+            <div class="override-grid">
+                {% for m in wc_playoff_matches %}
+                    <div class="override-card">
+                        <div class="override-title">[{{ m.id }}] {{ m.home_team or 'Участник определится' }} — {{ m.away_team or 'Участник определится' }}</div>
+                        <div class="override-meta">{{ m.match_date_msk }} • {{ m.status }} • прогнозов: {{ m.predictions_count }}</div>
+                        <div class="override-statuses">
+                            {% if m.manual_teams_override %}<span class="override-pill active">Команды назначены вручную</span>{% else %}<span class="override-pill">Команды из API</span>{% endif %}
+                            {% if m.manual_result_override %}<span class="override-pill active">Результат установлен вручную</span>{% else %}<span class="override-pill">Результат из API</span>{% endif %}
+                        </div>
+                        <form method="post" action="/admin/wc_playoff_override" class="override-form" onsubmit="var cb=this.querySelector('[name=manual_teams_override]'); var h=this.querySelector('[name=home_team]'); var a=this.querySelector('[name=away_team]'); var changed=h&&a&&(h.value!==h.dataset.original||a.value!==a.dataset.original); if(cb && cb.checked && changed && {{ 1 if m.predictions_count else 0 }}){ if(!confirm('На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?')) return false; this.confirm_team_change.value='1'; } return true;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="match_id" value="{{ m.id }}">
+                            <input type="hidden" name="tid" value="{{ current_tournament_id or '' }}">
+                            <input type="hidden" name="confirm_team_change" value="0">
+                            <label class="override-check"><input type="checkbox" name="manual_teams_override" value="1" {% if m.manual_teams_override %}checked{% endif %}> Manual teams override</label>
+                            <div class="edit-fields"><input type="text" name="home_team" list="wc-team-options" value="{{ m.home_team or '' }}" data-original="{{ m.home_team or '' }}" placeholder="Домашняя команда"><span class="score-divider">—</span><input type="text" name="away_team" list="wc-team-options" value="{{ m.away_team or '' }}" data-original="{{ m.away_team or '' }}" placeholder="Гостевая команда"></div>
+                            <label class="override-check"><input type="checkbox" name="manual_result_override" value="1" {% if m.manual_result_override %}checked{% endif %}> Manual result override</label>
+                            <div class="score-form"><input class="score-input" type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}" placeholder="0"><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}" placeholder="0"><button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Сохранить</button></div>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}<div class="admin-empty">Матчи плей-офф ЧМ-2026 пока не найдены</div>{% endif %}
     </div>
 
     <div class="admin-card">

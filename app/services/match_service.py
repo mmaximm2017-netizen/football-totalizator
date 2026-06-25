@@ -13,6 +13,7 @@ from app.services.sync_history_service import (
     recover_stale_syncs,
 )
 from app.utils import translate_name, parse_utc_time, utc_now
+from app.services.wc_playoff_service import is_wc2026_playoff_match
 
 logger = logging.getLogger(__name__)
 
@@ -308,12 +309,52 @@ def update_matches():
                     summary["matches_became_finished"].append(match_id)
                     _add_changed_finished_match(summary, match_id)
             else:
-                cur.execute("SELECT id, status, home_score, away_score FROM matches WHERE api_match_id = %s", (str(api_id),))
+                cur.execute(
+                    """
+                    SELECT m.id,
+                           m.status,
+                           m.home_score,
+                           m.away_score,
+                           m.home_team,
+                           m.away_team,
+                           COALESCE(m.manual_teams_override, 0),
+                           COALESCE(m.manual_result_override, 0),
+                           t.name,
+                           m.league,
+                           m.kickoff_time
+                    FROM matches m
+                    LEFT JOIN tournaments t ON t.id = m.tournament_id
+                    WHERE m.api_match_id = %s
+                    """,
+                    (str(api_id),),
+                )
                 existing_match = cur.fetchone()
                 match_id = existing_match[0] if existing_match else None
                 existing_status = existing_match[1] if existing_match else None
                 existing_home = existing_match[2] if existing_match else None
                 existing_away = existing_match[3] if existing_match else None
+                existing_home_team = existing_match[4] if existing_match else None
+                existing_away_team = existing_match[5] if existing_match else None
+                manual_teams_override = bool(existing_match and existing_match[6])
+                manual_result_override = bool(existing_match and existing_match[7])
+                existing_tournament_name = existing_match[8] if existing_match else None
+                existing_league = existing_match[9] if existing_match else None
+                existing_kickoff = existing_match[10] if existing_match else None
+
+                manual_override_allowed = is_wc2026_playoff_match(
+                    existing_tournament_name,
+                    existing_league,
+                    existing_kickoff,
+                )
+
+                if manual_teams_override and manual_override_allowed:
+                    home_team = existing_home_team
+                    away_team = existing_away_team
+
+                if manual_result_override and manual_override_allowed:
+                    status = existing_status
+                    home_score = existing_home
+                    away_score = existing_away
                 
                 is_locked_completed = (
                     existing_status == 'FINISHED'
@@ -321,6 +362,8 @@ def update_matches():
                     and existing_away is not None
                 )
                 finished_score_changed = (
+                    not (manual_result_override and manual_override_allowed)
+                    and
                     is_locked_completed
                     and status == 'FINISHED'
                     and home_score is not None

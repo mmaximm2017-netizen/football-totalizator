@@ -189,6 +189,8 @@ def init_db():
             status TEXT DEFAULT 'SCHEDULED',
             home_score INTEGER,
             away_score INTEGER,
+            manual_teams_override INTEGER DEFAULT 0,
+            manual_result_override INTEGER DEFAULT 0,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
         );
@@ -197,6 +199,24 @@ def init_db():
         cur.execute("""
         DO $$
         BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='manual_teams_override'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN manual_teams_override INTEGER DEFAULT 0;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='manual_result_override'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN manual_result_override INTEGER DEFAULT 0;
+            END IF;
+
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns

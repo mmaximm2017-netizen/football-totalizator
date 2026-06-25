@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from app.config import START_DATE
 from app.routes.admin_actions import ALLOWED_TITLES
+from app.services.wc_playoff_service import is_wc2026_playoff_match
 from app.utils import (
     format_date_ru,
     format_month_label,
@@ -185,6 +186,74 @@ def prepare_admin_view_data(cur):
         })
     active_tournaments = [t for t in tournaments if t.get('is_active')]
 
+    cur.execute(
+        """
+        SELECT DISTINCT team_name
+        FROM (
+            SELECT home_team AS team_name
+            FROM matches
+            WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026')
+              AND home_team IS NOT NULL
+              AND home_team <> ''
+            UNION
+            SELECT away_team AS team_name
+            FROM matches
+            WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026')
+              AND away_team IS NOT NULL
+              AND away_team <> ''
+        ) teams
+        WHERE team_name <> 'Unknown'
+        ORDER BY team_name
+        """
+    )
+    wc_team_options = [r[0] for r in cur.fetchall()]
+
+    cur.execute(
+        """
+        SELECT
+            m.id,
+            m.home_team,
+            m.away_team,
+            m.kickoff_time,
+            m.deadline,
+            m.status,
+            m.home_score,
+            m.away_score,
+            m.league,
+            t.name,
+            COALESCE(m.manual_teams_override, 0),
+            COALESCE(m.manual_result_override, 0),
+            COUNT(p.user_id) AS predictions_count
+        FROM matches m
+        JOIN tournaments t ON t.id = m.tournament_id
+        LEFT JOIN predictions p ON p.match_id = m.id AND p.tournament_id = m.tournament_id
+        WHERE t.name = 'ЧМ-2026'
+        GROUP BY m.id, t.name
+        ORDER BY m.kickoff_time
+        """
+    )
+    wc_playoff_matches = []
+    for m in cur.fetchall():
+        kickoff_dt = parse_datetime(m[3])
+        if not is_wc2026_playoff_match(m[9], m[8], kickoff_dt):
+            continue
+        kickoff_msk = kickoff_dt.astimezone(MSK) if kickoff_dt else None
+        wc_playoff_matches.append({
+            'id': m[0],
+            'home_team': m[1],
+            'away_team': m[2],
+            'kickoff_time': kickoff_dt,
+            'deadline': parse_datetime(m[4]),
+            'status': m[5],
+            'home_score': m[6],
+            'away_score': m[7],
+            'league': m[8],
+            'manual_teams_override': bool(m[10]),
+            'manual_result_override': bool(m[11]),
+            'predictions_count': m[12] or 0,
+            'match_date_msk': kickoff_msk.strftime("%d.%m.%Y %H:%M") if kickoff_msk else "",
+        })
+
     cur.execute("""
         SELECT
             u.id,
@@ -229,6 +298,8 @@ def prepare_admin_view_data(cur):
         'allowed_titles': ALLOWED_TITLES,
         'tournaments': tournaments,
         'active_tournaments': active_tournaments,
+        'wc_team_options': wc_team_options,
+        'wc_playoff_matches': wc_playoff_matches,
     }
 
 

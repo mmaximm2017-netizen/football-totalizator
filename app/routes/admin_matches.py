@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, request, url_for
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import recalc_match_points
+from app.services.wc_playoff_service import is_wc2026_playoff_match
 
 
 admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
@@ -325,6 +326,144 @@ def admin_fix_result():
         close_db(conn, cur)
 
     return redirect(url_for("admin.admin"))
+
+
+@admin_matches_bp.route("/wc_playoff_override", methods=["POST"])
+@admin_required
+def admin_wc_playoff_override():
+    match_id = request.form.get("match_id", type=int)
+    tid = request.form.get("tid", type=int)
+    redirect_target = url_for("admin.admin_matches", tid=tid) if tid else url_for("admin.admin_matches")
+
+    if not match_id:
+        flash("Матч не выбран", "error")
+        return redirect(redirect_target)
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT m.id,
+                   m.home_team,
+                   m.away_team,
+                   m.kickoff_time,
+                   m.league,
+                   m.tournament_id,
+                   t.name,
+                   COALESCE(m.manual_teams_override, 0),
+                   COALESCE(m.manual_result_override, 0)
+            FROM matches m
+            JOIN tournaments t ON t.id = m.tournament_id
+            WHERE m.id = %s
+            """,
+            (match_id,),
+        )
+        match = cur.fetchone()
+
+        if not match:
+            flash("Матч не найден", "error")
+            return redirect(redirect_target)
+
+        if not is_wc2026_playoff_match(match[6], match[4], match[3]):
+            flash("Ручное управление доступно только для матчей плей-офф ЧМ-2026", "error")
+            return redirect(redirect_target)
+
+        cur.execute(
+            """
+            SELECT COUNT(1)
+            FROM predictions
+            WHERE match_id = %s
+              AND tournament_id = %s
+            """,
+            (match_id, match[5]),
+        )
+        predictions_count = cur.fetchone()[0] or 0
+
+        teams_override_enabled = request.form.get("manual_teams_override") == "1"
+        result_override_enabled = request.form.get("manual_result_override") == "1"
+
+        home_team = (request.form.get("home_team") or "").strip()
+        away_team = (request.form.get("away_team") or "").strip()
+        home_score = away_score = None
+
+        if teams_override_enabled:
+            if not home_team or not away_team:
+                flash("Для ручного назначения команд заполните обе команды", "error")
+                return redirect(redirect_target)
+
+            teams_changed = home_team != (match[1] or "") or away_team != (match[2] or "")
+            if teams_changed and predictions_count > 0 and request.form.get("confirm_team_change") != "1":
+                flash(
+                    "На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?",
+                    "error",
+                )
+                return redirect(redirect_target)
+
+        if result_override_enabled:
+            home_score, away_score = validate_score(
+                request.form.get("home_score"),
+                request.form.get("away_score"),
+            )
+            if home_score is None:
+                flash("Для ручного результата укажите корректный счёт", "error")
+                return redirect(redirect_target)
+
+        if teams_override_enabled:
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_team = %s,
+                    away_team = %s,
+                    manual_teams_override = 1
+                WHERE id = %s
+                """,
+                (home_team, away_team, match_id),
+            )
+        else:
+            cur.execute(
+                """
+                UPDATE matches
+                SET manual_teams_override = 0
+                WHERE id = %s
+                """,
+                (match_id,),
+            )
+
+        if result_override_enabled:
+            cur.execute(
+                """
+                UPDATE matches
+                SET status = 'FINISHED',
+                    home_score = %s,
+                    away_score = %s,
+                    manual_result_override = 1
+                WHERE id = %s
+                """,
+                (home_score, away_score, match_id),
+            )
+
+            recalc_match_points(match_id, tournament_id=match[5], conn=conn, cur=cur)
+        else:
+            cur.execute(
+                """
+                UPDATE matches
+                SET manual_result_override = 0
+                WHERE id = %s
+                """,
+                (match_id,),
+            )
+
+        conn.commit()
+        flash("Ручные настройки матча плей-офф сохранены", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка сохранения ручных настроек: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(redirect_target)
 
 
 @admin_matches_bp.route("/edit_match", methods=["POST"])
