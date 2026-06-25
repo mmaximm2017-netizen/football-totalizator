@@ -2,7 +2,7 @@
 {% block content %}
 
 <style>
-    .admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.playoff-list{display:grid;gap:12px}.playoff-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.94),rgba(232,246,255,.82));border:1px solid rgba(255,255,255,.66);box-shadow:0 12px 30px rgba(0,78,140,.14)}.playoff-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}.playoff-title{font-size:16px;font-weight:1000;color:#063b73;line-height:1.2}.playoff-meta{margin-top:4px;color:#5d7894;font-size:12px;font-weight:800}.badge-row{display:flex;flex-wrap:wrap;gap:6px}.badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:1000;background:#e8f4ff;color:#0a4e8d;border:1px solid rgba(10,108,194,.14)}.badge-manual{background:#e4f7e9;color:#176b2c;border-color:rgba(23,107,44,.18)}.badge-api{background:#e8f4ff;color:#0a4e8d}.badge-conflict{background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18)}.badge-warn{background:#fff7df;color:#8a5b00;border-color:rgba(138,91,0,.18)}.playoff-form{display:grid;gap:10px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}.check-row{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}.check-row input{width:auto!important;margin:0!important}label{font-size:12px;font-weight:900;color:#5d7894}input,select{width:100%}.admin-btn{width:100%;min-height:44px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff;font-size:14px;font-weight:1000}.hint{padding:10px 12px;border-radius:14px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.18);font-size:12px;font-weight:900}.empty{padding:22px;text-align:center;color:#5d7894;font-weight:900}.readonly-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.readonly-item{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.66);color:#5d7894;font-size:12px;font-weight:800}.readonly-item strong{display:block;color:#063b73;font-size:13px;margin-top:2px;overflow-wrap:anywhere}@media(max-width:640px){.playoff-top{flex-direction:column}.form-grid,.team-grid,.result-row,.readonly-line{grid-template-columns:1fr}.admin-btn{min-height:48px}}
+    .admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.playoff-search{padding:12px;border-radius:18px;background:rgba(255,255,255,.84);border:1px solid rgba(0,119,200,.12);box-shadow:0 10px 24px rgba(0,78,140,.10)}.playoff-search input{margin:0!important}.playoff-search-help{margin-top:6px;color:#5d7894;font-size:11px;font-weight:800}.playoff-list{display:grid;gap:12px}.playoff-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.94),rgba(232,246,255,.82));border:1px solid rgba(255,255,255,.66);box-shadow:0 12px 30px rgba(0,78,140,.14)}.playoff-card.hidden-by-search{display:none}.playoff-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}.playoff-title{font-size:16px;font-weight:1000;color:#063b73;line-height:1.2}.playoff-meta{margin-top:4px;color:#5d7894;font-size:12px;font-weight:800}.badge-row{display:flex;flex-wrap:wrap;gap:6px}.badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:1000;background:#e8f4ff;color:#0a4e8d;border:1px solid rgba(10,108,194,.14)}.badge-manual{background:#e4f7e9;color:#176b2c;border-color:rgba(23,107,44,.18)}.badge-api{background:#e8f4ff;color:#0a4e8d}.badge-conflict{background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18)}.badge-warn{background:#fff7df;color:#8a5b00;border-color:rgba(138,91,0,.18)}.playoff-form{display:grid;gap:10px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}.check-row{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}.check-row input{width:auto!important;margin:0!important}label{font-size:12px;font-weight:900;color:#5d7894}input,select{width:100%}.admin-btn{width:100%;min-height:44px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff;font-size:14px;font-weight:1000}.hint{padding:10px 12px;border-radius:14px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.18);font-size:12px;font-weight:900}.empty{padding:22px;text-align:center;color:#5d7894;font-weight:900}.readonly-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.readonly-item{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.66);color:#5d7894;font-size:12px;font-weight:800}.readonly-item strong{display:block;color:#063b73;font-size:13px;margin-top:2px;overflow-wrap:anywhere}@media(max-width:640px){.playoff-top{flex-direction:column}.form-grid,.team-grid,.result-row,.readonly-line{grid-template-columns:1fr}.admin-btn{min-height:48px}}
 </style>
 
 <div class="admin-screen">
@@ -24,10 +24,16 @@
     </datalist>
 
     {% if wc_playoff_matches %}
+        <div class="playoff-search">
+            <label for="playoff-search-input">Поиск матча</label>
+            <input id="playoff-search-input" type="search" placeholder="Команда, матч, ID, API ID, стадия, статус..." autocomplete="off">
+            <div class="playoff-search-help">Ищет по командам, паре матча, ID, API ID, стадии, статусу и тексту “Участник определится”.</div>
+        </div>
         <div class="playoff-list">
             {% for m in wc_playoff_matches %}
                 {% set teams_missing = not m.home_team or not m.away_team or m.home_team == 'Unknown' or m.away_team == 'Unknown' %}
-                <section class="playoff-card">
+                {% set status_label = 'Конфликт с API' if m.api_conflict_note else ('Требует проверки' if teams_missing else ('Завершён' if m.status == 'FINISHED' else ('Идёт' if m.status in ['IN_PLAY','LIVE','PAUSED','HALFTIME'] else 'Запланирован'))) %}
+                <section class="playoff-card" data-search="{{ (m.id|string) ~ ' ' ~ (m.api_match_id or '') ~ ' ' ~ (m.playoff_stage_label or '') ~ ' ' ~ (m.home_team or 'Участник определится') ~ ' ' ~ (m.away_team or 'Участник определится') ~ ' ' ~ ((m.home_team or 'Участник определится') ~ ' — ' ~ (m.away_team or 'Участник определится')) ~ ' ' ~ m.status ~ ' ' ~ status_label ~ (' Участник определится' if teams_missing else '') }}">
                     <div class="playoff-top">
                         <div>
                             <div class="playoff-title">{{ m.playoff_stage_label or 'Стадия не указана' }} • {{ m.home_team or 'Участник определится' }} — {{ m.away_team or 'Участник определится' }}</div>
@@ -45,7 +51,7 @@
                     {% if m.api_conflict_note %}<div class="hint" style="background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18);">{{ m.api_conflict_note }}</div>{% endif %}
 
                     <div class="readonly-line">
-                        <div class="readonly-item">Статус матча<strong>{% if m.api_conflict_note %}Конфликт с API{% elif teams_missing %}Требует проверки{% elif m.status == 'FINISHED' %}Завершён{% elif m.status in ['IN_PLAY','LIVE','PAUSED','HALFTIME'] %}Идёт{% else %}Запланирован{% endif %}</strong></div>
+                        <div class="readonly-item">Статус матча<strong>{{ status_label }}</strong></div>
                         <div class="readonly-item">Текущий счёт<strong>{% if m.home_score is not none and m.away_score is not none %}{{ m.home_score }}:{{ m.away_score }}{% else %}пусто{% endif %}</strong></div>
                         <div class="readonly-item">Прогнозов<strong>{{ m.predictions_count }}</strong></div>
                     </div>
@@ -77,9 +83,41 @@
                 </section>
             {% endfor %}
         </div>
+        <div id="playoff-search-empty" class="playoff-card empty" style="display:none;">Ничего не найдено. Проверьте команду, ID матча, API ID или стадию.</div>
     {% else %}
         <div class="playoff-card empty">Матчи плей-офф ЧМ-2026 пока не найдены.</div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var input = document.getElementById('playoff-search-input');
+    if (!input) return;
+
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.playoff-card[data-search]'));
+    var empty = document.getElementById('playoff-search-empty');
+
+    function normalize(value) {
+        return (value || '').toString().toLowerCase().replace(/ё/g, 'е').trim();
+    }
+
+    function applySearch() {
+        var query = normalize(input.value);
+        var shown = 0;
+
+        cards.forEach(function (card) {
+            var haystack = normalize(card.getAttribute('data-search'));
+            var visible = !query || haystack.indexOf(query) !== -1;
+            card.classList.toggle('hidden-by-search', !visible);
+            if (visible) shown += 1;
+        });
+
+        if (empty) empty.style.display = shown ? 'none' : 'block';
+    }
+
+    input.addEventListener('input', applySearch);
+    applySearch();
+});
+</script>
 
 {% endblock %}
