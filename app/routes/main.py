@@ -34,6 +34,10 @@ from app.services.tournament_service import (
     get_all_tournaments,
     get_tournament_by_id,
 )
+from app.services.wc_playoff_service import (
+    get_playoff_stage_label,
+    get_playoff_stage_sort_order,
+)
 
 main_bp = Blueprint('main', __name__)
 
@@ -245,7 +249,8 @@ WHERE id = %s
             SELECT id, home_team, away_team,
                    kickoff_time, deadline,
                    status, league, tournament_id,
-                   home_score, away_score
+                   home_score, away_score,
+                   playoff_stage
             FROM matches
             WHERE status = ANY(%s)
             AND kickoff_time >= %s
@@ -270,6 +275,8 @@ WHERE id = %s
                 "tournament_id": m[7],
                 "home_score": m[8],
                 "away_score": m[9],
+                "playoff_stage": m[10],
+                "playoff_stage_label": get_playoff_stage_label(m[10]),
             })
 
         # =================================================
@@ -338,6 +345,14 @@ WHERE id = %s
                 m["my_points"] = 0
 
             grouped[day].append(m)
+
+        for day_matches in grouped.values():
+            day_matches.sort(
+                key=lambda x: (
+                    get_playoff_stage_sort_order(x.get("playoff_stage")),
+                    parse_dt(x.get("kickoff_time")) or datetime.max.replace(tzinfo=timezone.utc),
+                )
+            )
 
         # =================================================
         # BUILD DAYS

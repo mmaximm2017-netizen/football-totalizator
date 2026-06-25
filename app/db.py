@@ -191,6 +191,7 @@ def init_db():
             away_score INTEGER,
             manual_teams_override INTEGER DEFAULT 0,
             manual_result_override INTEGER DEFAULT 0,
+            playoff_stage TEXT,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
         );
@@ -215,6 +216,15 @@ def init_db():
             ) THEN
                 ALTER TABLE matches
                 ADD COLUMN manual_result_override INTEGER DEFAULT 0;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='playoff_stage'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN playoff_stage TEXT;
             END IF;
 
             IF NOT EXISTS (

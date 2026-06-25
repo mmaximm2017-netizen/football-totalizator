@@ -28,6 +28,7 @@
                 {% if match.home_team == 'Россия' or match.away_team == 'Россия' %}
                     Сборная России
                 {% elif match.league == 'wc2026' %}
+                    {{ match.playoff_stage_label or '' }}
 {% elif match.league == 'rcup' %}
                     Кубок России
                 {% elif match.league == 'rpl' %}

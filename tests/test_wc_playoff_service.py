@@ -64,6 +64,29 @@ class WcPlayoffServiceTests(unittest.TestCase):
             )
         )
 
+    def test_normalize_playoff_stage_accepts_known_value(self):
+        self.assertEqual(service.normalize_playoff_stage("quarter_final"), "quarter_final")
+
+    def test_normalize_playoff_stage_rejects_unknown_value(self):
+        self.assertIsNone(service.normalize_playoff_stage("group_stage"))
+
+    def test_playoff_stage_label(self):
+        self.assertEqual(service.get_playoff_stage_label("final"), "Финал")
+
+    def test_playoff_stage_sort_order(self):
+        ordered = sorted(
+            ["final", "round_16", "third_place", "round_32"],
+            key=service.get_playoff_stage_sort_order,
+        )
+
+        self.assertEqual(ordered, ["round_32", "round_16", "third_place", "final"])
+
+    def test_unknown_playoff_stage_sorts_last(self):
+        self.assertGreater(
+            service.get_playoff_stage_sort_order(None),
+            service.get_playoff_stage_sort_order("final"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

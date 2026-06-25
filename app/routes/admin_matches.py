@@ -6,7 +6,10 @@ from flask import Blueprint, flash, redirect, request, url_for
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import recalc_match_points
-from app.services.wc_playoff_service import is_wc2026_playoff_match
+from app.services.wc_playoff_service import (
+    is_wc2026_playoff_match,
+    normalize_playoff_stage,
+)
 
 
 admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
@@ -65,6 +68,19 @@ def get_match_tournament_id(cur, match_id):
     return row[0], True
 
 
+def get_tournament_name(cur, tournament_id):
+    cur.execute(
+        """
+        SELECT name
+        FROM tournaments
+        WHERE id = %s
+        """,
+        (tournament_id,),
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def handle_add_match(conn, cur):
     try:
         home = request.form["home_team"].strip()
@@ -109,6 +125,11 @@ def handle_add_match(conn, cur):
             flash("Выберите турнир для матча", "error")
             return redirect(url_for("admin.admin_matches"))
 
+        tournament_name = get_tournament_name(cur, tournament_id)
+        playoff_stage = None
+        if is_wc2026_playoff_match(tournament_name, league, kickoff_utc):
+            playoff_stage = normalize_playoff_stage(request.form.get("playoff_stage"))
+
         cur.execute(
             """
             INSERT INTO matches (
@@ -118,9 +139,10 @@ def handle_add_match(conn, cur):
                 deadline,
                 status,
                 league,
-                tournament_id
+                tournament_id,
+                playoff_stage
             )
-            VALUES (%s, %s, %s, %s, 'SCHEDULED', %s, %s)
+            VALUES (%s, %s, %s, %s, 'SCHEDULED', %s, %s, %s)
             """,
             (
                 home,
@@ -129,6 +151,7 @@ def handle_add_match(conn, cur):
                 deadline_utc,
                 league,
                 tournament_id,
+                playoff_stage,
             ),
         )
 
@@ -383,6 +406,7 @@ def admin_wc_playoff_override():
 
         teams_override_enabled = request.form.get("manual_teams_override") == "1"
         result_override_enabled = request.form.get("manual_result_override") == "1"
+        playoff_stage = normalize_playoff_stage(request.form.get("playoff_stage"))
 
         home_team = (request.form.get("home_team") or "").strip()
         away_team = (request.form.get("away_team") or "").strip()
@@ -430,6 +454,15 @@ def admin_wc_playoff_override():
                 """,
                 (match_id,),
             )
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET playoff_stage = %s
+            WHERE id = %s
+            """,
+            (playoff_stage, match_id),
+        )
 
         if result_override_enabled:
             cur.execute(
@@ -487,9 +520,13 @@ def admin_edit_match():
     try:
         cur.execute(
             """
-            SELECT status
-            FROM matches
-            WHERE id = %s
+            SELECT m.status,
+                   m.league,
+                   m.tournament_id,
+                   t.name
+            FROM matches m
+            LEFT JOIN tournaments t ON t.id = m.tournament_id
+            WHERE m.id = %s
             """,
             (match_id,),
         )
@@ -501,6 +538,8 @@ def admin_edit_match():
             return redirect(url_for("admin.admin"))
 
         status = row[0]
+        league = row[1]
+        tournament_name = row[3]
 
         try:
             kickoff_utc, deadline_utc = build_manual_deadline_utc(
@@ -516,17 +555,23 @@ def admin_edit_match():
             flash("������������ ���� ��� �����", "error")
             return redirect(url_for("admin.admin"))
 
+        playoff_stage = None
+        if is_wc2026_playoff_match(tournament_name, league, kickoff_utc):
+            playoff_stage = normalize_playoff_stage(request.form.get("playoff_stage"))
+
         if status == "FINISHED":
             cur.execute(
                 """
                 UPDATE matches
                 SET home_team = %s,
-                    away_team = %s
+                    away_team = %s,
+                    playoff_stage = %s
                 WHERE id = %s
                 """,
                 (
                     home_team,
                     away_team,
+                    playoff_stage,
                     match_id,
                 ),
             )
@@ -539,7 +584,8 @@ def admin_edit_match():
                 SET home_team = %s,
                     away_team = %s,
                     kickoff_time = %s,
-                    deadline = %s
+                    deadline = %s,
+                    playoff_stage = %s
                 WHERE id = %s
                 """,
                 (
@@ -547,6 +593,7 @@ def admin_edit_match():
                     away_team,
                     kickoff_utc,
                     deadline_utc,
+                    playoff_stage,
                     match_id,
                 ),
             )
