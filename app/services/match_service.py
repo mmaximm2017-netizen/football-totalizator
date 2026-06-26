@@ -310,14 +310,14 @@ def update_matches():
                     kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id, playoff_stage_auto))
                 match_id = cur.fetchone()[0]
                 logger.info(
-                    "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s matchday=%s round_number=%s is_playoff=%s effective_stage=%s css_class=%s",
+                    "[PLAYOFF_CHECK] match_id=%s api_match_id=%s is_playoff_match=%s raw_stage=%s round_raw=%s matchday=%s round_number=%s effective_stage=%s css_class=%s",
                     match_id,
                     api_id,
+                    is_playoff_api_match,
                     match.get('stage'),
                     match.get('round') or match.get('roundName') or match.get('round_name'),
                     match.get('matchday'),
                     match.get('round_number'),
-                    is_playoff_api_match,
                     playoff_stage_auto or ("playoff" if is_playoff_api_match else None),
                     "match-card--playoff" if is_playoff_api_match else "",
                 )
@@ -352,14 +352,14 @@ def update_matches():
                 existing_match = cur.fetchone()
                 match_id = existing_match[0] if existing_match else None
                 logger.info(
-                    "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s matchday=%s round_number=%s is_playoff=%s effective_stage=%s css_class=%s",
+                    "[PLAYOFF_CHECK] match_id=%s api_match_id=%s is_playoff_match=%s raw_stage=%s round_raw=%s matchday=%s round_number=%s effective_stage=%s css_class=%s",
                     match_id,
                     api_id,
+                    is_playoff_api_match,
                     match.get('stage'),
                     match.get('round') or match.get('roundName') or match.get('round_name'),
                     match.get('matchday'),
                     match.get('round_number'),
-                    is_playoff_api_match,
                     playoff_stage_auto or ("playoff" if is_playoff_api_match else None),
                     "match-card--playoff" if is_playoff_api_match else "",
                 )

@@ -37,6 +37,15 @@ class WcPlayoffServiceTests(unittest.TestCase):
             )
         )
 
+    def test_late_group_match_in_utc_is_not_playoff(self):
+        self.assertFalse(
+            service.is_wc2026_playoff_match(
+                "ЧМ-2026",
+                "wc2026",
+                datetime(2026, 6, 28, 2, 0, tzinfo=timezone.utc),
+            )
+        )
+
     def test_non_wc_match_is_not_allowed(self):
         self.assertFalse(
             service.is_wc2026_playoff_match(
@@ -67,11 +76,35 @@ class WcPlayoffServiceTests(unittest.TestCase):
     def test_normalize_playoff_stage_accepts_known_value(self):
         self.assertEqual(service.normalize_playoff_stage("quarter_final"), "quarter_final")
 
+    def test_normalize_playoff_stage_accepts_api_alias(self):
+        self.assertEqual(service.normalize_playoff_stage("QF"), "quarter_final")
+
     def test_normalize_playoff_stage_rejects_unknown_value(self):
         self.assertIsNone(service.normalize_playoff_stage("group_stage"))
 
     def test_playoff_stage_label(self):
         self.assertEqual(service.get_playoff_stage_label("final"), "Финал")
+
+    def test_effective_stage_prefers_manual(self):
+        self.assertEqual(
+            service.determine_effective_playoff_stage("final", "semi_final"),
+            "final",
+        )
+
+    def test_effective_stage_uses_auto_when_manual_missing(self):
+        self.assertEqual(
+            service.determine_effective_playoff_stage(None, "R16"),
+            "round_16",
+        )
+
+    def test_effective_stage_infers_from_api_matchday(self):
+        self.assertEqual(
+            service.determine_effective_playoff_stage(None, None, {"matchday": 104}),
+            "final",
+        )
+
+    def test_effective_stage_falls_back_to_playoff(self):
+        self.assertEqual(service.determine_effective_playoff_stage(), "playoff")
 
     def test_playoff_stage_sort_order(self):
         ordered = sorted(

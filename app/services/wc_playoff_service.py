@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 
 
-WC2026_PLAYOFF_START = datetime(2026, 6, 28, tzinfo=timezone.utc)
+# The group stage can include late June 27 local-time matches that are already
+# June 28 in UTC. Keep the fallback cutoff safely after those fixtures so group
+# matches never receive the generic playoff design just because stage is unknown.
+WC2026_PLAYOFF_START = datetime(2026, 6, 28, 12, 0, tzinfo=timezone.utc)
 
 PLAYOFF_STAGES = (
     ("playoff", "Плей-офф"),

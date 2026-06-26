@@ -291,12 +291,11 @@ WHERE id = %s
             css_class = PLAYOFF_STAGE_CARD_CLASSES.get(effective_stage, "")
 
             logger.info(
-                "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s is_playoff=%s effective_stage=%s css_class=%s",
+                "[PLAYOFF_CHECK] match_id=%s api_match_id=%s is_playoff_match=%s raw_stage=%s effective_stage=%s css_class=%s",
                 m[0],
                 m[12],
-                m[10],
-                m[11],
                 is_playoff,
+                m[10] or m[11],
                 effective_stage,
                 css_class,
             )
