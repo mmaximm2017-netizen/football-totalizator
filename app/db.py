@@ -124,6 +124,9 @@ def init_db():
     cur = conn.cursor()
 
     try:
+        cur.execute("SET lock_timeout = '5s';")
+        cur.execute("SET statement_timeout = '30s';")
+
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -191,7 +194,10 @@ def init_db():
             away_score INTEGER,
             manual_teams_override INTEGER DEFAULT 0,
             manual_result_override INTEGER DEFAULT 0,
+            manual_kickoff_override INTEGER DEFAULT 0,
             playoff_stage TEXT,
+            playoff_stage_manual TEXT,
+            playoff_stage_auto TEXT,
             api_conflict_note TEXT,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
@@ -222,6 +228,15 @@ def init_db():
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='manual_kickoff_override'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN manual_kickoff_override INTEGER DEFAULT 0;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
                 WHERE table_name='matches' AND column_name='playoff_stage'
             ) THEN
                 ALTER TABLE matches
@@ -240,12 +255,37 @@ def init_db():
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='playoff_stage_manual'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN playoff_stage_manual TEXT;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='playoff_stage_auto'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN playoff_stage_auto TEXT;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
                 WHERE table_name='matches' AND column_name='tournament_id'
             ) THEN
                 ALTER TABLE matches
                 ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id);
             END IF;
         END $$;
+        """)
+
+        cur.execute("""
+        UPDATE matches
+        SET playoff_stage_manual = playoff_stage
+        WHERE playoff_stage_manual IS NULL
+          AND playoff_stage IS NOT NULL;
         """)
 
         cur.execute("""

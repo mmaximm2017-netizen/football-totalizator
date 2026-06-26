@@ -1,7 +1,9 @@
 # app/__init__.py
 import logging
 import hmac
+import os
 import secrets
+import threading
 from flask import Flask, g, session, request, abort, jsonify
 
 from app.config import SECRET_KEY
@@ -13,8 +15,32 @@ from app.services.tournament_service import (
 )
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 CSRF_SESSION_KEY = "csrf_token"
+
+
+def run_startup_db_init():
+    logger.info("[STARTUP] db init background start")
+    try:
+        init_db()
+        logger.info("[STARTUP] db init background done")
+    except Exception:
+        logger.exception("[STARTUP] db init background failed")
+
+
+def schedule_startup_db_init():
+    if os.environ.get("DISABLE_STARTUP_DB_INIT") == "1":
+        logger.info("[STARTUP] db init background skipped by DISABLE_STARTUP_DB_INIT=1")
+        return
+
+    thread = threading.Thread(
+        target=run_startup_db_init,
+        name="startup-db-init",
+        daemon=True,
+    )
+    thread.start()
+    logger.info("[STARTUP] db init background scheduled")
 
 
 def ensure_csrf_token():
@@ -28,6 +54,7 @@ def ensure_csrf_token():
 
 
 def create_app():
+    logger.info("[STARTUP] create_app start")
     app = Flask(
         __name__,
         template_folder='../templates',
@@ -40,17 +67,11 @@ def create_app():
     from datetime import timedelta
     app.permanent_session_lifetime = timedelta(days=7)
 
-    # =====================================================
-    # INIT DB
-    # =====================================================
-    with app.app_context():
-        init_db()
-
-        # IMPORTANT:
-        # Do not run heavy data sync in web startup.
-        # Under Gunicorn/Render create_app() can run in multiple workers,
-        # which may trigger duplicate API/DB sync work and slow boot.
-        # Keep match/points sync manual (admin action) for now.
+    # IMPORTANT:
+    # Do not block web startup with DB DDL/migrations or API sync.
+    # Render must see an open port quickly; DB init runs in a daemon thread.
+    # Heavy match/points sync stays manual through admin actions/scripts.
+    schedule_startup_db_init()
 
     # =====================================================
     # BLUEPRINTS
@@ -199,4 +220,5 @@ def create_app():
 
         return jsonify(result), http_status
 
+    logger.info("[STARTUP] create_app done")
     return app

@@ -1,14 +1,17 @@
+import logging
 import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info("[STARTUP] import wsgi")
 
 from app import create_app
 
-print("START APP")
-
 app = create_app()
 
-print("APP CREATED")
+logger.info("[STARTUP] gunicorn app ready")
 
 if __name__ == '__main__':
-    print("RUN SERVER")
+    logger.info("[STARTUP] run development server")
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
