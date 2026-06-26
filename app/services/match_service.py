@@ -13,7 +13,7 @@ from app.services.sync_history_service import (
     recover_stale_syncs,
 )
 from app.utils import translate_name, parse_utc_time, utc_now
-from app.services.wc_playoff_service import is_wc2026_playoff_match
+from app.services.wc_playoff_service import infer_playoff_stage_from_api, is_wc2026_playoff_match
 
 logger = logging.getLogger(__name__)
 
@@ -295,15 +295,32 @@ def update_matches():
                 deadline_msk = min(eleven_am_msk, kickoff_minus_5m_msk)
             
             deadline_utc = deadline_msk.astimezone(timezone.utc)
+            api_tournament_name = "ЧМ-2026" if tournament_id == wc_tournament_id else None
+            is_playoff_api_match = is_wc2026_playoff_match(api_tournament_name, league, kickoff_utc)
+            playoff_stage_auto = None
+            if is_playoff_api_match:
+                playoff_stage_auto = infer_playoff_stage_from_api(match)
             
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
             existing_row = cur.fetchone()
             if not existing_row:
-                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id, playoff_stage_auto)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     RETURNING id""", (str(api_id), home_team, away_team,
-                    kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id))
+                    kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id, playoff_stage_auto))
                 match_id = cur.fetchone()[0]
+                logger.info(
+                    "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s matchday=%s round_number=%s is_playoff=%s effective_stage=%s css_class=%s",
+                    match_id,
+                    api_id,
+                    match.get('stage'),
+                    match.get('round') or match.get('roundName') or match.get('round_name'),
+                    match.get('matchday'),
+                    match.get('round_number'),
+                    is_playoff_api_match,
+                    playoff_stage_auto or ("playoff" if is_playoff_api_match else None),
+                    "match-card--playoff" if is_playoff_api_match else "",
+                )
                 summary["matches_inserted"] += 1
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
                     summary["matches_became_finished"].append(match_id)
@@ -319,9 +336,13 @@ def update_matches():
                            m.away_team,
                            COALESCE(m.manual_teams_override, 0),
                            COALESCE(m.manual_result_override, 0),
+                           COALESCE(m.manual_kickoff_override, 0),
                            t.name,
                            m.league,
-                           m.kickoff_time
+                           m.kickoff_time,
+                           m.deadline,
+                           m.playoff_stage_manual,
+                           m.playoff_stage_auto
                     FROM matches m
                     LEFT JOIN tournaments t ON t.id = m.tournament_id
                     WHERE m.api_match_id = %s
@@ -330,6 +351,18 @@ def update_matches():
                 )
                 existing_match = cur.fetchone()
                 match_id = existing_match[0] if existing_match else None
+                logger.info(
+                    "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s matchday=%s round_number=%s is_playoff=%s effective_stage=%s css_class=%s",
+                    match_id,
+                    api_id,
+                    match.get('stage'),
+                    match.get('round') or match.get('roundName') or match.get('round_name'),
+                    match.get('matchday'),
+                    match.get('round_number'),
+                    is_playoff_api_match,
+                    playoff_stage_auto or ("playoff" if is_playoff_api_match else None),
+                    "match-card--playoff" if is_playoff_api_match else "",
+                )
                 existing_status = existing_match[1] if existing_match else None
                 existing_home = existing_match[2] if existing_match else None
                 existing_away = existing_match[3] if existing_match else None
@@ -337,9 +370,12 @@ def update_matches():
                 existing_away_team = existing_match[5] if existing_match else None
                 manual_teams_override = bool(existing_match and existing_match[6])
                 manual_result_override = bool(existing_match and existing_match[7])
-                existing_tournament_name = existing_match[8] if existing_match else None
-                existing_league = existing_match[9] if existing_match else None
-                existing_kickoff = existing_match[10] if existing_match else None
+                manual_kickoff_override = bool(existing_match and existing_match[8])
+                existing_tournament_name = existing_match[9] if existing_match else None
+                existing_league = existing_match[10] if existing_match else None
+                existing_kickoff = existing_match[11] if existing_match else None
+                existing_deadline = existing_match[12] if existing_match else None
+                existing_stage_manual = existing_match[13] if existing_match else None
 
                 manual_override_allowed = is_wc2026_playoff_match(
                     existing_tournament_name,
@@ -366,6 +402,22 @@ def update_matches():
                 ):
                     api_conflicts.append("API прислал другой результат")
 
+                if (
+                    existing_stage_manual
+                    and manual_override_allowed
+                    and playoff_stage_auto
+                    and playoff_stage_auto != existing_stage_manual
+                ):
+                    api_conflicts.append("API прислал другую стадию")
+
+                if (
+                    manual_kickoff_override
+                    and manual_override_allowed
+                    and existing_kickoff
+                    and kickoff_utc != existing_kickoff
+                ):
+                    api_conflicts.append("API прислал другое время матча")
+
                 api_conflict_note = "; ".join(api_conflicts) if api_conflicts else None
 
                 cur.execute(
@@ -385,6 +437,10 @@ def update_matches():
                     status = existing_status
                     home_score = existing_home
                     away_score = existing_away
+
+                if manual_kickoff_override and manual_override_allowed:
+                    kickoff_utc = existing_kickoff
+                    deadline_utc = existing_deadline
                 
                 is_locked_completed = (
                     existing_status == 'FINISHED'
@@ -415,14 +471,14 @@ def update_matches():
                     status = 'FINISHED'
 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, str(api_id)))
                     if match_id is not None and (existing_status != 'FINISHED' or finished_score_changed):
                         summary["matches_became_finished"].append(match_id)
                         _add_changed_finished_match(summary, match_id)
                 else:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, str(api_id)))
                 summary["matches_updated"] += 1
         conn.commit()
         return summary

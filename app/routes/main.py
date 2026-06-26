@@ -1,5 +1,6 @@
 ﻿# app/routes/main.py
 
+import logging
 from datetime import datetime, timezone
 from collections import defaultdict
 from zoneinfo import ZoneInfo
@@ -35,11 +36,14 @@ from app.services.tournament_service import (
     get_tournament_by_id,
 )
 from app.services.wc_playoff_service import (
+    determine_effective_playoff_stage,
     get_playoff_stage_label,
     get_playoff_stage_sort_order,
+    is_wc2026_playoff_match,
 )
 
 main_bp = Blueprint('main', __name__)
+logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 
@@ -52,6 +56,16 @@ VISIBLE_MATCH_STATUSES = (
     'HALFTIME',
     'FINISHED',
 )
+
+PLAYOFF_STAGE_CARD_CLASSES = {
+    "playoff": "match-card--playoff",
+    "round_32": "match-card--playoff match-card--r32",
+    "round_16": "match-card--playoff match-card--r16",
+    "quarter_final": "match-card--playoff match-card--qf",
+    "semi_final": "match-card--playoff match-card--sf",
+    "third_place": "match-card--playoff match-card--third",
+    "final": "match-card--playoff match-card--final",
+}
 
 
 # =========================================================
@@ -246,16 +260,20 @@ WHERE id = %s
         # =================================================
 
         cur.execute("""
-            SELECT id, home_team, away_team,
-                   kickoff_time, deadline,
-                   status, league, tournament_id,
-                   home_score, away_score,
-                   playoff_stage
-            FROM matches
-            WHERE status = ANY(%s)
-            AND kickoff_time >= %s
-            AND (%s IS NULL OR tournament_id = %s OR tournament_id IS NULL)
-            ORDER BY kickoff_time
+            SELECT m.id, m.home_team, m.away_team,
+                   m.kickoff_time, m.deadline,
+                   m.status, m.league, m.tournament_id,
+                   m.home_score, m.away_score,
+                   m.playoff_stage_manual,
+                   m.playoff_stage_auto,
+                   m.api_match_id,
+                   t.name
+            FROM matches m
+            LEFT JOIN tournaments t ON t.id = m.tournament_id
+            WHERE m.status = ANY(%s)
+            AND m.kickoff_time >= %s
+            AND (%s IS NULL OR m.tournament_id = %s OR m.tournament_id IS NULL)
+            ORDER BY m.kickoff_time
         """, (list(VISIBLE_MATCH_STATUSES), start, tid, tid))
 
         rows = cur.fetchall()
@@ -263,6 +281,25 @@ WHERE id = %s
         raw_matches = []
 
         for m in rows:
+
+            is_playoff = is_wc2026_playoff_match(
+                m[13],
+                m[6],
+                m[3],
+            )
+            effective_stage = determine_effective_playoff_stage(m[10], m[11]) if is_playoff else None
+            css_class = PLAYOFF_STAGE_CARD_CLASSES.get(effective_stage, "")
+
+            logger.info(
+                "[PLAYOFF_STAGE] match_id=%s api_match_id=%s stage_raw=%s round_raw=%s is_playoff=%s effective_stage=%s css_class=%s",
+                m[0],
+                m[12],
+                m[10],
+                m[11],
+                is_playoff,
+                effective_stage,
+                css_class,
+            )
 
             raw_matches.append({
                 "id": m[0],
@@ -275,8 +312,10 @@ WHERE id = %s
                 "tournament_id": m[7],
                 "home_score": m[8],
                 "away_score": m[9],
-                "playoff_stage": m[10],
-                "playoff_stage_label": get_playoff_stage_label(m[10]),
+                "playoff_stage": effective_stage,
+                "effective_playoff_stage": effective_stage,
+                "playoff_stage_css_class": css_class,
+                "playoff_stage_label": get_playoff_stage_label(effective_stage),
             })
 
         # =================================================
@@ -349,7 +388,7 @@ WHERE id = %s
         for day_matches in grouped.values():
             day_matches.sort(
                 key=lambda x: (
-                    get_playoff_stage_sort_order(x.get("playoff_stage")),
+                    get_playoff_stage_sort_order(x.get("effective_playoff_stage")),
                     parse_dt(x.get("kickoff_time")) or datetime.max.replace(tzinfo=timezone.utc),
                 )
             )
