@@ -270,11 +270,10 @@ WHERE id = %s
                    t.name
             FROM matches m
             LEFT JOIN tournaments t ON t.id = m.tournament_id
-            WHERE m.status = ANY(%s)
-            AND m.kickoff_time >= %s
+            WHERE (m.kickoff_time >= %s OR m.kickoff_time IS NULL)
             AND (%s IS NULL OR m.tournament_id = %s OR m.tournament_id IS NULL)
-            ORDER BY m.kickoff_time
-        """, (list(VISIBLE_MATCH_STATUSES), start, tid, tid))
+            ORDER BY m.kickoff_time NULLS LAST
+        """, (start, tid, tid))
 
         rows = cur.fetchall()
 
@@ -289,16 +288,33 @@ WHERE id = %s
             )
             effective_stage = determine_effective_playoff_stage(m[10], m[11]) if is_playoff else None
             css_class = PLAYOFF_STAGE_CARD_CLASSES.get(effective_stage, "")
+            included_on_home = True
+            exclude_reason = ""
+
+            if not m[3]:
+                included_on_home = False
+                exclude_reason = "missing_kickoff"
+            elif not is_playoff and m[5] not in VISIBLE_MATCH_STATUSES:
+                included_on_home = False
+                exclude_reason = f"status_not_visible:{m[5]}"
 
             logger.info(
-                "[PLAYOFF_CHECK] match_id=%s api_match_id=%s is_playoff_match=%s raw_stage=%s effective_stage=%s css_class=%s",
+                "[MAIN_MATCHES] match_id=%s api_match_id=%s kickoff=%s home_team=%s away_team=%s stage=%s effective_playoff_stage=%s is_playoff_match=%s included_on_home=%s exclude_reason=%s css_class=%s",
                 m[0],
                 m[12],
-                is_playoff,
+                m[3],
+                m[1],
+                m[2],
                 m[10] or m[11],
                 effective_stage,
+                is_playoff,
+                included_on_home,
+                exclude_reason,
                 css_class,
             )
+
+            if not included_on_home:
+                continue
 
             raw_matches.append({
                 "id": m[0],
