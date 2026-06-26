@@ -1,13 +1,11 @@
 # app/__init__.py
 import logging
 import hmac
-import os
 import secrets
-import threading
 from flask import Flask, g, session, request, abort, jsonify
 
 from app.config import SECRET_KEY
-from app.db import init_db, get_db, close_db
+from app.db import get_db, close_db
 from app.services.ranking_service import get_tournament_ranking
 from app.services.tournament_service import (
     ensure_single_active_tournament,
@@ -18,29 +16,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CSRF_SESSION_KEY = "csrf_token"
-
-
-def run_startup_db_init():
-    logger.info("[STARTUP] db init background start")
-    try:
-        init_db()
-        logger.info("[STARTUP] db init background done")
-    except Exception:
-        logger.exception("[STARTUP] db init background failed")
-
-
-def schedule_startup_db_init():
-    if os.environ.get("DISABLE_STARTUP_DB_INIT") == "1":
-        logger.info("[STARTUP] db init background skipped by DISABLE_STARTUP_DB_INIT=1")
-        return
-
-    thread = threading.Thread(
-        target=run_startup_db_init,
-        name="startup-db-init",
-        daemon=True,
-    )
-    thread.start()
-    logger.info("[STARTUP] db init background scheduled")
 
 
 def ensure_csrf_token():
@@ -68,10 +43,9 @@ def create_app():
     app.permanent_session_lifetime = timedelta(days=7)
 
     # IMPORTANT:
-    # Do not block web startup with DB DDL/migrations or API sync.
-    # Render must see an open port quickly; DB init runs in a daemon thread.
-    # Heavy match/points sync stays manual through admin actions/scripts.
-    schedule_startup_db_init()
+    # Do not run DB DDL/migrations, API sync, recalculation, or background loops
+    # during web startup. Render must see an open port quickly.
+    logger.info("[STARTUP] db init skipped in web startup")
 
     # =====================================================
     # BLUEPRINTS
