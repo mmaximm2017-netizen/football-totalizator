@@ -192,7 +192,8 @@
         font-weight: 800;
     }
 
-    .leader-badge.confident {
+    .leader-badge.confident,
+    .leader-badge.dominant {
         box-shadow: 0 0 10px rgba(255,215,0,0.38);
     }
 
@@ -1426,7 +1427,9 @@
                         {% elif row.movement == 'down' %}
                             <span class="rank-movement down" title="Опустился после последнего матча" aria-label="Опустился после последнего матча">▼</span>
                         {% endif %}
-                        {% if row.leader_status == 'confident' %}
+                        {% if row.leader_status == 'dominant' %}
+                            <span class="leader-badge dominant">Явный лидер</span>
+                        {% elif row.leader_status == 'confident' %}
                             <span class="leader-badge confident">Уверенный лидер</span>
                         {% elif row.leader_status == 'leader' %}
                             <span class="leader-badge">Лидер</span>

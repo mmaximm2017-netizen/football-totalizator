@@ -38,7 +38,11 @@ def apply_leader_status(ranking):
         item["leader_status"] = None
         annotated.append(item)
 
-    if len(annotated) < 2 or annotated[0].get("place") != 1:
+    if not annotated or annotated[0].get("place") != 1:
+        return annotated
+
+    if len(annotated) < 2:
+        annotated[0]["leader_status"] = "leader"
         return annotated
 
     try:
@@ -46,9 +50,11 @@ def apply_leader_status(ranking):
     except (TypeError, ValueError):
         return annotated
 
-    if gap >= 20:
+    if gap >= 30:
+        annotated[0]["leader_status"] = "dominant"
+    elif gap >= 20:
         annotated[0]["leader_status"] = "confident"
-    elif gap > 0:
+    elif gap >= 0:
         annotated[0]["leader_status"] = "leader"
 
     return annotated
