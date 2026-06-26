@@ -21,22 +21,15 @@
                 {% set has_prediction = match.pred_home != '' %}
                 {% set card_state = 'active' %}
                 {% set predicted_class = '' %}
-                {% set playoff_stage_class = ('wc-playoff playoff-stage-' ~ match.playoff_stage) if match.playoff_stage else '' %}
+                {% set playoff_stage_class = ('wc-playoff playoff-stage-' ~ match.playoff_stage ~ ' ' ~ (match.playoff_stage_css_class or '')) if match.playoff_stage else '' %}
                 {% set playoff_stage_title = {
+                    'playoff': 'ПЛЕЙ-ОФФ',
                     'round_32': '1/16 ФИНАЛА',
                     'round_16': '1/8 ФИНАЛА',
                     'quarter_final': 'ЧЕТВЕРТЬФИНАЛ',
                     'semi_final': 'ПОЛУФИНАЛ',
                     'third_place': 'МАТЧ ЗА 3 МЕСТО',
                     'final': 'ФИНАЛ'
-                }.get(match.playoff_stage) %}
-                {% set playoff_stage_path = {
-                    'round_32': 'Победитель выходит в 1/8 финала',
-                    'round_16': 'Победитель выходит в четвертьфинал',
-                    'quarter_final': 'Победитель выходит в полуфинал',
-                    'semi_final': 'Победитель выходит в финал',
-                    'third_place': 'Матч за бронзу Чемпионата мира',
-                    'final': 'ПОБЕДИТЕЛЬ СТАНЕТ\nЧЕМПИОНОМ МИРА'
                 }.get(match.playoff_stage) %}
 
                 {% if match.finished %}
@@ -104,12 +97,6 @@
                         {% include 'partials/home/_match_finished.html' %}
                     {% else %}
                         {% include 'partials/home/_match_active.html' %}
-                    {% endif %}
-
-                    {% if playoff_stage_path %}
-                        <div class="playoff-path-note">
-                            {{ playoff_stage_path.replace('\n', '<br>')|safe }}
-                        </div>
                     {% endif %}
 
                 </div>

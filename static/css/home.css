@@ -2033,7 +2033,7 @@
     /* WC2026 playoff evolution layer. Applied only when playoff_stage is set. */
     body.tournament-wc2026 .match-card-v2.wc-playoff {
         margin-top: 6px;
-        padding-top: 12px;
+        padding-top: 14px;
         isolation: isolate;
     }
 
@@ -2072,29 +2072,31 @@
             0 10px 22px rgba(0,0,0,0.22);
     }
 
-    body.tournament-wc2026 .playoff-path-note {
-        margin-top: 10px;
-        padding: 8px 10px;
-        border-radius: 16px;
-        text-align: center;
-        color: rgba(255,255,255,0.88);
-        font-size: 11px;
-        font-weight: 1000;
-        letter-spacing: .45px;
-        text-transform: uppercase;
-        background: rgba(255,255,255,0.10);
-        border: 1px solid rgba(255,255,255,0.14);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
-    }
-
     body.tournament-wc2026 .match-card-v2.wc-playoff .match-topline {
         margin-top: 0;
+        margin-bottom: 2px;
     }
 
     body.tournament-wc2026 .match-card-v2.wc-playoff .center-score,
     body.tournament-wc2026 .match-card-v2.wc-playoff .final-score,
     body.tournament-wc2026 .match-card-v2.wc-playoff .vs-badge {
         transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-playoff {
+        color: #f8fbff !important;
+        background:
+            radial-gradient(circle at 18% 0%, rgba(255,255,255,0.18), transparent 28%),
+            linear-gradient(150deg, rgba(16,58,122,0.92), rgba(9,28,71,0.94)) !important;
+        border-color: rgba(134,199,255,0.34) !important;
+        box-shadow:
+            0 16px 32px rgba(0,34,86,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.20) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-playoff .playoff-stage-ribbon span {
+        background: linear-gradient(135deg, #dff4ff, #74c8ff);
+        color: #06234d;
     }
 
     body.tournament-wc2026 .match-card-v2.playoff-stage-round_32 {
@@ -2223,12 +2225,6 @@
         text-shadow: 0 1px 5px rgba(0,0,0,0.26);
     }
 
-    body.tournament-wc2026 .match-card-v2.playoff-stage-third_place .playoff-path-note {
-        color: #ffe4c7;
-        background: rgba(205,127,50,0.18);
-        border-color: rgba(255,177,109,0.24);
-    }
-
     body.tournament-wc2026 .match-card-v2.playoff-stage-final {
         padding-top: 17px;
         transform: translateY(-8px);
@@ -2277,16 +2273,6 @@
         filter: drop-shadow(0 0 10px rgba(255,232,139,0.44));
     }
 
-    body.tournament-wc2026 .match-card-v2.playoff-stage-final .playoff-path-note {
-        padding: 11px 12px;
-        color: #050505;
-        background: linear-gradient(135deg, #ffffff, #fff0a8 46%, #d8b45a);
-        border-color: rgba(255,255,255,0.52);
-        font-size: 13px;
-        letter-spacing: 1px;
-        box-shadow: 0 0 28px rgba(255,232,139,0.26), inset 0 1px 0 rgba(255,255,255,0.68);
-    }
-
     body.tournament-wc2026 .match-card-v2.wc-playoff:hover {
         transform: translateY(-7px);
         filter: saturate(1.05);
@@ -2315,15 +2301,6 @@
             font-size: 11px;
         }
 
-        body.tournament-wc2026 .playoff-path-note {
-            margin-top: 8px;
-            padding: 7px 8px;
-            font-size: 9px;
-        }
-
-        body.tournament-wc2026 .match-card-v2.playoff-stage-final .playoff-path-note {
-            font-size: 11px;
-        }
     }
 
     /* RPL tournament background: page layer only */
