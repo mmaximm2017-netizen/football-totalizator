@@ -7,6 +7,7 @@ from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.scoring_recalculation_service import recalc_match_points
 from app.services.wc_playoff_service import (
+    determine_effective_playoff_stage,
     is_wc2026_playoff_match,
     normalize_playoff_stage,
 )
@@ -81,6 +82,30 @@ def get_tournament_name(cur, tournament_id):
     return row[0] if row else None
 
 
+def get_wc2026_tournament_id(cur):
+    cur.execute(
+        """
+        SELECT id
+        FROM tournaments
+        WHERE name = 'ЧМ-2026'
+        ORDER BY id DESC
+        LIMIT 1
+        """
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def build_wc_kickoff_and_deadline(match_date, match_time):
+    kickoff_msk = datetime.strptime(
+        f"{match_date} {match_time}",
+        "%Y-%m-%d %H:%M",
+    ).replace(tzinfo=MSK)
+    kickoff_utc = kickoff_msk.astimezone(timezone.utc)
+    deadline_utc = (kickoff_msk - timedelta(hours=6)).astimezone(timezone.utc)
+    return kickoff_utc, deadline_utc
+
+
 def handle_add_match(conn, cur):
     try:
         home = request.form["home_team"].strip()
@@ -140,7 +165,7 @@ def handle_add_match(conn, cur):
                 status,
                 league,
                 tournament_id,
-                playoff_stage
+                playoff_stage_manual
             )
             VALUES (%s, %s, %s, %s, 'SCHEDULED', %s, %s, %s)
             """,
@@ -375,11 +400,17 @@ def admin_wc_playoff_override():
                    m.home_team,
                    m.away_team,
                    m.kickoff_time,
+                   m.deadline,
                    m.league,
                    m.tournament_id,
                    t.name,
                    COALESCE(m.manual_teams_override, 0),
-                   COALESCE(m.manual_result_override, 0)
+                   COALESCE(m.manual_result_override, 0),
+                   COALESCE(m.manual_kickoff_override, 0),
+                   m.playoff_stage_manual,
+                   m.playoff_stage_auto,
+                   m.home_score,
+                   m.away_score
             FROM matches m
             JOIN tournaments t ON t.id = m.tournament_id
             WHERE m.id = %s
@@ -392,7 +423,7 @@ def admin_wc_playoff_override():
             flash("Матч не найден", "error")
             return redirect(redirect_target)
 
-        if not is_wc2026_playoff_match(match[6], match[4], match[3]):
+        if not is_wc2026_playoff_match(match[7], match[5], match[3]):
             flash("Ручное управление доступно только для матчей плей-офф ЧМ-2026", "error")
             return redirect(redirect_target)
 
@@ -403,116 +434,214 @@ def admin_wc_playoff_override():
             WHERE match_id = %s
               AND tournament_id = %s
             """,
-            (match_id, match[5]),
+            (match_id, match[6]),
         )
         predictions_count = cur.fetchone()[0] or 0
 
-        teams_override_enabled = request.form.get("manual_teams_override") == "1"
-        result_override_enabled = request.form.get("manual_result_override") == "1"
-        playoff_stage = normalize_playoff_stage(request.form.get("playoff_stage"))
-
+        submitted_stage = normalize_playoff_stage(request.form.get("playoff_stage_manual"))
         home_team = (request.form.get("home_team") or "").strip()
         away_team = (request.form.get("away_team") or "").strip()
-        home_score = away_score = None
-        kickoff_utc = deadline_utc = None
+        if not home_team or not away_team:
+            flash("Заполните обе команды", "error")
+            return redirect(redirect_target)
+        if home_team == away_team:
+            flash("Команды должны отличаться", "error")
+            return redirect(redirect_target)
 
         match_date = (request.form.get("match_date") or "").strip()
         match_time = (request.form.get("match_time") or "").strip()
-        if match_date and match_time:
-            try:
-                kickoff_msk = datetime.strptime(
-                    f"{match_date} {match_time}",
-                    "%Y-%m-%d %H:%M",
-                ).replace(tzinfo=MSK)
-                kickoff_utc = kickoff_msk.astimezone(timezone.utc)
-                deadline_utc = (kickoff_msk - timedelta(hours=6)).astimezone(timezone.utc)
-            except Exception:
-                flash("Некорректные дата или время матча", "error")
-                return redirect(redirect_target)
+        if not match_date or not match_time:
+            flash("Заполните дату и время матча", "error")
+            return redirect(redirect_target)
+        try:
+            kickoff_utc, deadline_utc = build_wc_kickoff_and_deadline(match_date, match_time)
+        except Exception:
+            flash("Некорректные дата или время матча", "error")
+            return redirect(redirect_target)
+        if not is_wc2026_playoff_match("ЧМ-2026", "wc2026", kickoff_utc):
+            flash("Дата должна относиться к плей-офф ЧМ-2026", "error")
+            return redirect(redirect_target)
 
-        if teams_override_enabled:
-            if not home_team or not away_team:
-                flash("Для ручного назначения команд заполните обе команды", "error")
-                return redirect(redirect_target)
+        teams_changed = home_team != (match[1] or "") or away_team != (match[2] or "")
+        if teams_changed and predictions_count > 0 and request.form.get("confirm_team_change") != "1":
+            flash(
+                "На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными.",
+                "error",
+            )
+            return redirect(redirect_target)
 
-            teams_changed = home_team != (match[1] or "") or away_team != (match[2] or "")
-            if teams_changed and predictions_count > 0 and request.form.get("confirm_team_change") != "1":
-                flash(
-                    "На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?",
-                    "error",
-                )
-                return redirect(redirect_target)
+        existing_effective_stage = determine_effective_playoff_stage(match[11], match[12])
+        if submitted_stage and (match[11] or submitted_stage != existing_effective_stage):
+            playoff_stage_manual = submitted_stage
+        else:
+            playoff_stage_manual = match[11]
 
-        if result_override_enabled:
+        manual_teams_override = 1 if (match[8] or teams_changed) else 0
+        manual_kickoff_override = 1 if (match[10] or kickoff_utc != match[3]) else 0
+
+        result_home_raw = (request.form.get("home_score") or "").strip()
+        result_away_raw = (request.form.get("away_score") or "").strip()
+        has_result = bool(result_home_raw or result_away_raw)
+        home_score = away_score = None
+        manual_result_override = 1 if match[9] else 0
+        if has_result:
             home_score, away_score = validate_score(
-                request.form.get("home_score"),
-                request.form.get("away_score"),
+                result_home_raw,
+                result_away_raw,
             )
             if home_score is None:
-                flash("Для ручного результата укажите корректный счёт", "error")
+                flash("Укажите корректный итоговый счёт", "error")
                 return redirect(redirect_target)
+            result_changed = home_score != match[13] or away_score != match[14]
+            manual_result_override = 1 if (match[9] or result_changed) else 0
+        elif match[9]:
+            home_score = match[13]
+            away_score = match[14]
 
-        if teams_override_enabled:
+        if manual_result_override:
             cur.execute(
                 """
                 UPDATE matches
                 SET home_team = %s,
                     away_team = %s,
-                    manual_teams_override = 1
-                WHERE id = %s
-                """,
-                (home_team, away_team, match_id),
-            )
-        else:
-            cur.execute(
-                """
-                UPDATE matches
-                SET manual_teams_override = 0
-                WHERE id = %s
-                """,
-                (match_id,),
-            )
-
-        cur.execute(
-            """
-            UPDATE matches
-            SET playoff_stage = %s,
-                kickoff_time = COALESCE(%s, kickoff_time),
-                deadline = COALESCE(%s, deadline)
-            WHERE id = %s
-            """,
-            (playoff_stage, kickoff_utc, deadline_utc, match_id),
-        )
-
-        if result_override_enabled:
-            cur.execute(
-                """
-                UPDATE matches
-                SET status = 'FINISHED',
+                    kickoff_time = %s,
+                    deadline = %s,
+                    playoff_stage_manual = %s,
+                    manual_teams_override = %s,
+                    manual_kickoff_override = %s,
+                    status = 'FINISHED',
                     home_score = %s,
                     away_score = %s,
                     manual_result_override = 1
                 WHERE id = %s
                 """,
-                (home_score, away_score, match_id),
+                (
+                    home_team,
+                    away_team,
+                    kickoff_utc,
+                    deadline_utc,
+                    playoff_stage_manual,
+                    manual_teams_override,
+                    manual_kickoff_override,
+                    home_score,
+                    away_score,
+                    match_id,
+                ),
             )
-
-            recalc_match_points(match_id, tournament_id=match[5], conn=conn, cur=cur)
+            recalc_match_points(match_id, tournament_id=match[6], conn=conn, cur=cur)
         else:
             cur.execute(
                 """
                 UPDATE matches
-                SET manual_result_override = 0
+                SET home_team = %s,
+                    away_team = %s,
+                    kickoff_time = %s,
+                    deadline = %s,
+                    playoff_stage_manual = %s,
+                    manual_teams_override = %s,
+                    manual_kickoff_override = %s
                 WHERE id = %s
                 """,
-                (match_id,),
+                (
+                    home_team,
+                    away_team,
+                    kickoff_utc,
+                    deadline_utc,
+                    playoff_stage_manual,
+                    manual_teams_override,
+                    manual_kickoff_override,
+                    match_id,
+                ),
             )
 
         conn.commit()
-        flash("Ручные настройки матча плей-офф сохранены", "success")
+        flash("Матч сохранён", "success")
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка сохранения ручных настроек: {e}", "error")
+    finally:
+        close_db(conn, cur)
+
+    return redirect(redirect_target)
+
+
+@admin_matches_bp.route("/wc_playoff_create", methods=["POST"])
+@admin_required
+def admin_wc_playoff_create():
+    redirect_target = url_for("admin.admin_wc_playoff")
+
+    stage = normalize_playoff_stage(request.form.get("playoff_stage_manual"))
+    home_team = (request.form.get("home_team") or "").strip()
+    away_team = (request.form.get("away_team") or "").strip()
+    match_date = (request.form.get("match_date") or "").strip()
+    match_time = (request.form.get("match_time") or "").strip()
+
+    if not stage:
+        flash("Выберите стадию матча", "error")
+        return redirect(redirect_target)
+    if not home_team or not away_team:
+        flash("Выберите обе команды", "error")
+        return redirect(redirect_target)
+    if home_team == away_team:
+        flash("Команды должны отличаться", "error")
+        return redirect(redirect_target)
+    if not match_date or not match_time:
+        flash("Выберите дату и время матча", "error")
+        return redirect(redirect_target)
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        tournament_id = get_wc2026_tournament_id(cur)
+        if not tournament_id:
+            flash("Турнир ЧМ-2026 не найден", "error")
+            return redirect(redirect_target)
+
+        kickoff_utc, deadline_utc = build_wc_kickoff_and_deadline(match_date, match_time)
+        if not is_wc2026_playoff_match("ЧМ-2026", "wc2026", kickoff_utc):
+            flash("Дата должна относиться к плей-офф ЧМ-2026", "error")
+            return redirect(redirect_target)
+
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s
+              AND home_team = %s
+              AND away_team = %s
+              AND kickoff_time = %s
+            """,
+            (tournament_id, home_team, away_team, kickoff_utc),
+        )
+        if cur.fetchone():
+            flash("Такой матч уже существует", "error")
+            return redirect(redirect_target)
+
+        cur.execute(
+            """
+            INSERT INTO matches (
+                home_team,
+                away_team,
+                kickoff_time,
+                deadline,
+                status,
+                league,
+                tournament_id,
+                manual_teams_override,
+                manual_kickoff_override,
+                playoff_stage_manual
+            )
+            VALUES (%s, %s, %s, %s, 'SCHEDULED', 'wc2026', %s, 1, 1, %s)
+            """,
+            (home_team, away_team, kickoff_utc, deadline_utc, tournament_id, stage),
+        )
+
+        conn.commit()
+        flash("Матч успешно создан.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка создания матча: {e}", "error")
     finally:
         close_db(conn, cur)
 
@@ -585,7 +714,7 @@ def admin_edit_match():
                 UPDATE matches
                 SET home_team = %s,
                     away_team = %s,
-                    playoff_stage = %s
+                    playoff_stage_manual = %s
                 WHERE id = %s
                 """,
                 (
@@ -605,7 +734,7 @@ def admin_edit_match():
                     away_team = %s,
                     kickoff_time = %s,
                     deadline = %s,
-                    playoff_stage = %s
+                    playoff_stage_manual = %s
                 WHERE id = %s
                 """,
                 (
@@ -643,10 +772,15 @@ def admin_edit_match():
 @admin_required
 def admin_delete_match():
     match_id = request.form.get("match_id")
+    redirect_target = (
+        url_for("admin.admin_wc_playoff")
+        if request.form.get("next") == "wc_playoff"
+        else url_for("admin.admin")
+    )
 
     if not match_id:
         flash("�� ������ match_id", "error")
-        return redirect(url_for("admin.admin"))
+        return redirect(redirect_target)
 
     conn = get_db()
     cur = conn.cursor()
@@ -670,7 +804,7 @@ def admin_delete_match():
 
         if cur.rowcount == 0:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return redirect(redirect_target)
 
         conn.commit()
 
@@ -686,4 +820,4 @@ def admin_delete_match():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin"))
+    return redirect(redirect_target)

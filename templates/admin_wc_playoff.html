@@ -2,7 +2,7 @@
 {% block content %}
 
 <style>
-    .admin-screen{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:24px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.playoff-search{padding:12px;border-radius:18px;background:rgba(255,255,255,.84);border:1px solid rgba(0,119,200,.12);box-shadow:0 10px 24px rgba(0,78,140,.10)}.playoff-search input{margin:0!important}.playoff-search-help{margin-top:6px;color:#5d7894;font-size:11px;font-weight:800}.playoff-list{display:grid;gap:12px}.playoff-card{border-radius:20px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.94),rgba(232,246,255,.82));border:1px solid rgba(255,255,255,.66);box-shadow:0 12px 30px rgba(0,78,140,.14)}.playoff-card.hidden-by-search{display:none}.playoff-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}.playoff-title{font-size:16px;font-weight:1000;color:#063b73;line-height:1.2}.playoff-meta{margin-top:4px;color:#5d7894;font-size:12px;font-weight:800}.badge-row{display:flex;flex-wrap:wrap;gap:6px}.badge{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:1000;background:#e8f4ff;color:#0a4e8d;border:1px solid rgba(10,108,194,.14)}.badge-manual{background:#e4f7e9;color:#176b2c;border-color:rgba(23,107,44,.18)}.badge-api{background:#e8f4ff;color:#0a4e8d}.badge-conflict{background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18)}.badge-warn{background:#fff7df;color:#8a5b00;border-color:rgba(138,91,0,.18)}.playoff-form{display:grid;gap:10px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}.check-row{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}.check-row input{width:auto!important;margin:0!important}label{font-size:12px;font-weight:900;color:#5d7894}input,select{width:100%}.admin-btn{width:100%;min-height:44px;border:none;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff;font-size:14px;font-weight:1000}.hint{padding:10px 12px;border-radius:14px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.18);font-size:12px;font-weight:900}.empty{padding:22px;text-align:center;color:#5d7894;font-weight:900}.readonly-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.readonly-item{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.66);color:#5d7894;font-size:12px;font-weight:800}.readonly-item strong{display:block;color:#063b73;font-size:13px;margin-top:2px;overflow-wrap:anywhere}@media(max-width:640px){.playoff-top{flex-direction:column}.form-grid,.team-grid,.result-row,.readonly-line{grid-template-columns:1fr}.admin-btn{min-height:48px}}
+    .admin-screen{display:flex;flex-direction:column;gap:18px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:26px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.section-card{border-radius:24px;padding:18px;background:linear-gradient(160deg,rgba(255,255,255,.96),rgba(232,246,255,.86));border:1px solid rgba(255,255,255,.74);box-shadow:0 16px 38px rgba(0,78,140,.14)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.section-title{font-size:20px;font-weight:1000;color:#063b73}.section-subtitle{margin-top:4px;color:#5d7894;font-size:13px;font-weight:800}.match-list{display:grid;gap:12px}.match-card{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:14px;border-radius:20px;background:#fff;border:1px solid rgba(10,108,194,.10);box-shadow:0 10px 24px rgba(0,78,140,.09)}.match-main{display:grid;gap:10px}.match-title{font-size:17px;font-weight:1000;color:#063b73;line-height:1.25}.teams-line{font-size:15px;font-weight:1000;color:#0b2848}.unknown{color:#8a5b00}.match-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.fact{padding:9px 10px;border-radius:14px;background:#f4f9ff;border:1px solid rgba(10,108,194,.08);color:#5d7894;font-size:12px;font-weight:800}.fact strong{display:block;margin-top:2px;color:#063b73;font-size:13px}.source-pill{display:inline-flex;width:max-content;align-items:center;padding:6px 10px;border-radius:999px;background:#e8f4ff;color:#0a4e8d;font-size:12px;font-weight:1000}.source-pill.manual{background:#e4f7e9;color:#176b2c}.source-pill.mixed{background:#fff7df;color:#8a5b00}.action-col{display:flex;flex-direction:column;gap:8px;align-items:stretch}.admin-btn{border:0;border-radius:14px;padding:11px 16px;background:#0a6cc2;color:#fff;font-weight:1000;cursor:pointer;text-decoration:none;text-align:center}.admin-btn.secondary{background:#eef6ff;color:#0a4e8d}.admin-btn.danger{background:#fde8e8;color:#9f1d1d}.admin-btn.large{width:100%;padding:14px 18px;font-size:16px}.create-steps{display:grid;gap:14px}.step{padding:14px;border-radius:20px;background:#fff;border:1px solid rgba(10,108,194,.10)}.step-title{font-size:14px;font-weight:1000;color:#063b73;margin-bottom:8px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;font-weight:1000;color:#063b73;margin-bottom:6px}.field-help{margin-top:5px;color:#6a849d;font-size:12px;font-weight:700;line-height:1.3}.empty-state{padding:18px;border-radius:20px;background:#fff;color:#5d7894;font-weight:900;text-align:center}.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,19,42,.62);z-index:1000}.modal-backdrop.open{display:flex}.modal{width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#f7fbff;box-shadow:0 24px 80px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.78)}.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px;border-bottom:1px solid rgba(10,108,194,.10);background:#fff}.modal-title{font-size:20px;font-weight:1000;color:#063b73}.modal-body{padding:18px;display:grid;gap:14px}.modal-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:0 18px 18px}.close-x{border:0;background:#eef6ff;color:#0a4e8d;border-radius:12px;padding:8px 11px;font-weight:1000;cursor:pointer}.inline-delete{display:inline}.hint-box{padding:10px 12px;border-radius:16px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.15);font-size:13px;font-weight:800}@media(max-width:760px){.section-head,.match-card{grid-template-columns:1fr}.match-facts,.form-grid{grid-template-columns:1fr}.action-col{align-items:stretch}.modal-actions{justify-content:stretch}.modal-actions .admin-btn,.modal-actions form{width:100%}}
 </style>
 
 <div class="admin-screen">
@@ -16,108 +16,212 @@
 
     <div>
         <div class="admin-title">Плей-офф ЧМ-2026</div>
-        <div class="admin-note">Центральный экран для назначения пар, стадии, времени и ручного результата. Групповой этап и другие турниры здесь не отображаются.</div>
+        <div class="admin-note">Управляйте матчами плей-офф простыми действиями: создать матч, отредактировать, удалить или сохранить изменения.</div>
     </div>
 
     <datalist id="wc-team-options">
         {% for team in wc_team_options %}<option value="{{ team }}"></option>{% endfor %}
     </datalist>
 
-    {% if wc_playoff_matches %}
-        <div class="playoff-search">
-            <label for="playoff-search-input">Поиск матча</label>
-            <input id="playoff-search-input" type="search" placeholder="Команда, матч, ID, API ID, стадия, статус..." autocomplete="off">
-            <div class="playoff-search-help">Ищет по командам, паре матча, ID, API ID, стадии, статусу и тексту “Участник определится”.</div>
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <div class="section-title">Существующие матчи</div>
+                <div class="section-subtitle">Здесь отображаются уже созданные или полученные через API матчи плей-офф.</div>
+            </div>
         </div>
-        <div class="playoff-list">
-            {% for m in wc_playoff_matches %}
-                {% set teams_missing = not m.home_team or not m.away_team or m.home_team == 'Unknown' or m.away_team == 'Unknown' %}
-                {% set status_label = 'Конфликт с API' if m.api_conflict_note else ('Требует проверки' if teams_missing else ('Завершён' if m.status == 'FINISHED' else ('Идёт' if m.status in ['IN_PLAY','LIVE','PAUSED','HALFTIME'] else 'Запланирован'))) %}
-                <section class="playoff-card" data-search="{{ (m.id|string) ~ ' ' ~ (m.api_match_id or '') ~ ' ' ~ (m.playoff_stage_label or '') ~ ' ' ~ (m.home_team or 'Участник определится') ~ ' ' ~ (m.away_team or 'Участник определится') ~ ' ' ~ ((m.home_team or 'Участник определится') ~ ' — ' ~ (m.away_team or 'Участник определится')) ~ ' ' ~ m.status ~ ' ' ~ status_label ~ (' Участник определится' if teams_missing else '') }}">
-                    <div class="playoff-top">
-                        <div>
-                            <div class="playoff-title">{{ m.playoff_stage_label or 'Стадия не указана' }} • {{ m.home_team or 'Участник определится' }} — {{ m.away_team or 'Участник определится' }}</div>
-                            <div class="playoff-meta">{{ m.match_date_msk }} • ID {{ m.id }}{% if m.api_match_id %} • API ID {{ m.api_match_id }}{% endif %}</div>
+
+        {% if wc_playoff_matches %}
+            <div class="match-list">
+                {% for m in wc_playoff_matches %}
+                    {% set teams_missing = not m.home_team or not m.away_team or m.home_team == 'Unknown' or m.away_team == 'Unknown' %}
+                    {% set any_manual = m.manual_teams_override or m.manual_kickoff_override or m.manual_result_override or m.playoff_stage_manual %}
+                    {% set all_manual = m.manual_teams_override and m.manual_kickoff_override and (m.manual_result_override or (m.home_score is none and m.away_score is none)) and m.playoff_stage_manual %}
+                    <article class="match-card">
+                        <div class="match-main">
+                            <div>
+                                <div class="match-title">{{ m.playoff_stage_label or 'Плей-офф' }}</div>
+                                <div class="teams-line {% if teams_missing %}unknown{% endif %}">{{ m.home_team if m.home_team and m.home_team != 'Unknown' else 'Участник определится' }} — {{ m.away_team if m.away_team and m.away_team != 'Unknown' else 'Участник определится' }}</div>
+                            </div>
+                            {% if teams_missing %}<div class="hint-box">Команды ещё не заполнены. Откройте редактирование и выберите участников матча.</div>{% endif %}
+                            <div class="match-facts">
+                                <div class="fact">Дата<strong>{{ m.match_date_input or 'не указана' }}</strong></div>
+                                <div class="fact">Время<strong>{{ m.match_time_input or 'не указано' }}</strong></div>
+                                <div class="fact">Результат<strong>{% if m.home_score is not none and m.away_score is not none %}{{ m.home_score }}:{{ m.away_score }}{% else %}не указан{% endif %}</strong></div>
+                                <div class="fact">Статус<strong>{% if m.status == 'FINISHED' %}Завершён{% elif m.status in ['IN_PLAY','LIVE','PAUSED','HALFTIME'] %}Идёт{% else %}Запланирован{% endif %}</strong></div>
+                            </div>
+                            <span class="source-pill {% if all_manual %}manual{% elif any_manual %}mixed{% endif %}">Источник: {% if all_manual %}вручную{% elif any_manual %}частично вручную{% else %}API{% endif %}</span>
                         </div>
-                        <div class="badge-row">
-                            <span class="badge {% if m.manual_teams_override %}badge-manual{% else %}badge-api{% endif %}">Команды: {% if m.manual_teams_override %}Вручную{% else %}API{% endif %}</span>
-                            <span class="badge {% if m.manual_result_override %}badge-manual{% else %}badge-api{% endif %}">Результат: {% if m.manual_result_override %}Вручную{% else %}API{% endif %}</span>
-                            {% if m.api_conflict_note %}<span class="badge badge-conflict">Конфликт</span>{% endif %}
-                            {% if teams_missing %}<span class="badge badge-warn">Требует проверки</span>{% endif %}
+                        <div class="action-col">
+                            <button type="button" class="admin-btn" data-open-modal="edit-match-{{ m.id }}">Редактировать</button>
+                            <form method="post" action="/admin/delete_match" onsubmit="return confirm('Удалить матч? Прогнозы на этот матч тоже будут удалены.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="match_id" value="{{ m.id }}">
+                                <input type="hidden" name="next" value="wc_playoff">
+                                <button type="submit" class="admin-btn danger">Удалить</button>
+                            </form>
+                        </div>
+                    </article>
+
+                    <div class="modal-backdrop" id="edit-match-{{ m.id }}" aria-hidden="true">
+                        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title-{{ m.id }}">
+                            <div class="modal-head">
+                                <div>
+                                    <div class="modal-title" id="edit-title-{{ m.id }}">Редактировать матч</div>
+                                    <div class="section-subtitle">Изменённые поля автоматически станут ручными и не будут перезаписаны API.</div>
+                                </div>
+                                <button type="button" class="close-x" data-close-modal aria-label="Закрыть">×</button>
+                            </div>
+                            <form method="post" action="/admin/wc_playoff_override" data-predictions="{{ m.predictions_count }}" onsubmit="return confirmTeamChange(this);">
+                                <div class="modal-body">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="match_id" value="{{ m.id }}">
+                                    <input type="hidden" name="next" value="wc_playoff">
+                                    <input type="hidden" name="confirm_team_change" value="0">
+
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label>Стадия</label>
+                                            <select name="playoff_stage_manual" required>
+                                                {% for value, label in playoff_stages %}{% if value != 'playoff' %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
+                                            </select>
+                                            <div class="field-help">Определяет оформление карточки матча.</div>
+                                        </div>
+                                        <div class="field">
+                                            <label>Дата</label>
+                                            <input type="date" name="match_date" value="{{ m.match_date_input }}" required>
+                                            <div class="field-help">Если не изменять вручную, будет обновляться через API.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label>Команда 1</label>
+                                            <input type="text" name="home_team" list="wc-team-options" value="{{ '' if m.home_team == 'Unknown' else (m.home_team or '') }}" data-original="{{ '' if m.home_team == 'Unknown' else (m.home_team or '') }}" placeholder="Участник определится" required>
+                                            <div class="field-help">Выберите первого участника матча.</div>
+                                        </div>
+                                        <div class="field">
+                                            <label>Команда 2</label>
+                                            <input type="text" name="away_team" list="wc-team-options" value="{{ '' if m.away_team == 'Unknown' else (m.away_team or '') }}" data-original="{{ '' if m.away_team == 'Unknown' else (m.away_team or '') }}" placeholder="Участник определится" required>
+                                            <div class="field-help">Выберите второго участника матча.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label>Время МСК</label>
+                                            <input type="time" name="match_time" value="{{ m.match_time_input }}" required>
+                                            <div class="field-help">Время начала матча по Москве.</div>
+                                        </div>
+                                        <div class="field">
+                                            <label>Результат</label>
+                                            <div class="form-grid" style="gap:8px;">
+                                                <input type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}" placeholder="0">
+                                                <input type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}" placeholder="0">
+                                            </div>
+                                            <div class="field-help">Используется для начисления очков. Заполняйте после финального свистка.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-actions">
+                                    <button type="submit" class="admin-btn">Сохранить</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">Матчи плей-офф пока не созданы. Создайте первый матч в блоке ниже.</div>
+        {% endif %}
+    </section>
 
-                    {% if teams_missing %}<div class="hint">Нужно назначить команды вручную, если пара уже известна.</div>{% endif %}
-                    {% if m.api_conflict_note %}<div class="hint" style="background:#fde8e8;color:#9f1d1d;border-color:rgba(159,29,29,.18);">{{ m.api_conflict_note }}</div>{% endif %}
-
-                    <div class="readonly-line">
-                        <div class="readonly-item">Статус матча<strong>{{ status_label }}</strong></div>
-                        <div class="readonly-item">Текущий счёт<strong>{% if m.home_score is not none and m.away_score is not none %}{{ m.home_score }}:{{ m.away_score }}{% else %}пусто{% endif %}</strong></div>
-                        <div class="readonly-item">Прогнозов<strong>{{ m.predictions_count }}</strong></div>
-                    </div>
-
-                    <form method="post" action="/admin/wc_playoff_override" class="playoff-form" onsubmit="var cb=this.querySelector('[name=manual_teams_override]'); var h=this.querySelector('[name=home_team]'); var a=this.querySelector('[name=away_team]'); var changed=h&&a&&(h.value!==h.dataset.original||a.value!==a.dataset.original); if(cb && cb.checked && changed && {{ 1 if m.predictions_count else 0 }}){ if(!confirm('На этот матч уже есть прогнозы участников. Изменение команд может сделать существующие прогнозы некорректными. Продолжить?')) return false; this.confirm_team_change.value='1'; } return true;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <input type="hidden" name="match_id" value="{{ m.id }}">
-                        <input type="hidden" name="next" value="wc_playoff">
-                        <input type="hidden" name="confirm_team_change" value="0">
-
-                        <div class="form-grid">
-                            <div><label>Стадия</label><select name="playoff_stage"><option value="">-- Не указана --</option>{% for value, label in playoff_stages %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-                            <div class="form-grid" style="gap:8px;"><div><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_input }}" required></div><div><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_input }}" required></div></div>
-                        </div>
-
-                        <label class="check-row"><input type="checkbox" name="manual_teams_override" value="1" {% if m.manual_teams_override %}checked{% endif %}> Ручное управление командами</label>
-                        <div class="team-grid">
-                            <div><label>Команда 1</label><input type="text" name="home_team" list="wc-team-options" value="{{ m.home_team or '' }}" data-original="{{ m.home_team or '' }}" placeholder="Команда 1"></div>
-                            <div><label>Команда 2</label><input type="text" name="away_team" list="wc-team-options" value="{{ m.away_team or '' }}" data-original="{{ m.away_team or '' }}" placeholder="Команда 2"></div>
-                        </div>
-
-                        <label class="check-row"><input type="checkbox" name="manual_result_override" value="1" {% if m.manual_result_override %}checked{% endif %}> Ручной финальный результат</label>
-                        <div class="result-row">
-                            <div><label>Голы команды 1</label><input type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}"></div>
-                            <div><label>Голы команды 2</label><input type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}"></div>
-                            <button type="submit" class="admin-btn">Сохранить</button>
-                        </div>
-                    </form>
-                </section>
-            {% endfor %}
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <div class="section-title">Создать матч вручную</div>
+                <div class="section-subtitle">Используйте этот блок, если матч ещё не пришёл из API или его нужно добавить заранее.</div>
+            </div>
         </div>
-        <div id="playoff-search-empty" class="playoff-card empty" style="display:none;">Ничего не найдено. Проверьте команду, ID матча, API ID или стадию.</div>
-    {% else %}
-        <div class="playoff-card empty">Матчи плей-офф ЧМ-2026 пока не найдены.</div>
-    {% endif %}
+
+        <form method="post" action="/admin/wc_playoff_create" class="create-steps">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="step">
+                <div class="step-title">Шаг 1. Выберите стадию</div>
+                <div class="field">
+                    <select name="playoff_stage_manual" required>
+                        <option value="">Выберите стадию</option>
+                        {% for value, label in playoff_stages %}{% if value != 'playoff' %}<option value="{{ value }}">{{ label }}</option>{% endif %}{% endfor %}
+                    </select>
+                    <div class="field-help">Определяет оформление карточки матча.</div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Шаг 2. Выберите команды</div>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Команда 1</label>
+                        <input type="text" name="home_team" list="wc-team-options" placeholder="Например: Brazil" required>
+                        <div class="field-help">Выберите первого участника матча.</div>
+                    </div>
+                    <div class="field">
+                        <label>Команда 2</label>
+                        <input type="text" name="away_team" list="wc-team-options" placeholder="Например: France" required>
+                        <div class="field-help">Выберите второго участника матча.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Шаг 3. Выберите дату и время</div>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Дата</label>
+                        <input type="date" name="match_date" required>
+                        <div class="field-help">Дата матча. Для ЧМ дедлайн ставок будет за 6 часов до начала.</div>
+                    </div>
+                    <div class="field">
+                        <label>Время МСК</label>
+                        <input type="time" name="match_time" required>
+                        <div class="field-help">Время начала матча по Москве.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Шаг 4. Создайте матч</div>
+                <button type="submit" class="admin-btn large">Создать матч</button>
+            </div>
+        </form>
+    </section>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    var input = document.getElementById('playoff-search-input');
-    if (!input) return;
-
-    var cards = Array.prototype.slice.call(document.querySelectorAll('.playoff-card[data-search]'));
-    var empty = document.getElementById('playoff-search-empty');
-
-    function normalize(value) {
-        return (value || '').toString().toLowerCase().replace(/ё/g, 'е').trim();
+document.addEventListener('click', function (event) {
+    var openButton = event.target.closest('[data-open-modal]');
+    if (openButton) {
+        var modal = document.getElementById(openButton.getAttribute('data-open-modal'));
+        if (modal) modal.classList.add('open');
     }
 
-    function applySearch() {
-        var query = normalize(input.value);
-        var shown = 0;
-
-        cards.forEach(function (card) {
-            var haystack = normalize(card.getAttribute('data-search'));
-            var visible = !query || haystack.indexOf(query) !== -1;
-            card.classList.toggle('hidden-by-search', !visible);
-            if (visible) shown += 1;
-        });
-
-        if (empty) empty.style.display = shown ? 'none' : 'block';
+    if (event.target.matches('[data-close-modal]') || event.target.classList.contains('modal-backdrop')) {
+        var backdrop = event.target.closest('.modal-backdrop');
+        if (backdrop) backdrop.classList.remove('open');
     }
-
-    input.addEventListener('input', applySearch);
-    applySearch();
 });
+
+function confirmTeamChange(form) {
+    var home = form.querySelector('[name=home_team]');
+    var away = form.querySelector('[name=away_team]');
+    var changed = home && away && (home.value !== home.dataset.original || away.value !== away.dataset.original);
+    var predictions = parseInt(form.getAttribute('data-predictions') || '0', 10);
+    if (changed && predictions > 0) {
+        if (!confirm('На этот матч уже есть прогнозы. Изменить команды?')) return false;
+        form.querySelector('[name=confirm_team_change]').value = '1';
+    }
+    return true;
+}
 </script>
 
 {% endblock %}
