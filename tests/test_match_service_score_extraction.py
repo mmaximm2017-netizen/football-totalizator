@@ -1,0 +1,147 @@
+import importlib.util
+import sys
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SERVICE_PATH = ROOT / "app" / "services" / "match_service.py"
+
+
+def load_match_service_module():
+    fake_app = types.ModuleType("app")
+    fake_config = types.ModuleType("app.config")
+    fake_db = types.ModuleType("app.db")
+    fake_services = types.ModuleType("app.services")
+    fake_sync_history = types.ModuleType("app.services.sync_history_service")
+    fake_utils = types.ModuleType("app.utils")
+    fake_wc_playoff = types.ModuleType("app.services.wc_playoff_service")
+
+    fake_config.API_KEY = "test"
+    fake_config.LEAGUE_IDS = [2000]
+    fake_db.get_db = lambda: None
+    fake_db.close_db = lambda conn, cur=None: None
+    fake_sync_history.create_sync_run = lambda summary=None: None
+    fake_sync_history.finish_sync_run = lambda *args, **kwargs: None
+    fake_sync_history.recover_stale_syncs = lambda: None
+    fake_utils.translate_name = lambda value: value
+    fake_utils.parse_utc_time = lambda value: value
+    fake_utils.utc_now = lambda: None
+    fake_wc_playoff.infer_playoff_stage_from_api = lambda match: None
+    fake_wc_playoff.is_wc2026_playoff_match = lambda *args, **kwargs: False
+
+    module_name = "match_service_score_under_test"
+    spec = importlib.util.spec_from_file_location(module_name, SERVICE_PATH)
+    module = importlib.util.module_from_spec(spec)
+
+    with patch.dict(
+        sys.modules,
+        {
+            "app": fake_app,
+            "app.config": fake_config,
+            "app.db": fake_db,
+            "app.services": fake_services,
+            "app.services.sync_history_service": fake_sync_history,
+            "app.utils": fake_utils,
+            "app.services.wc_playoff_service": fake_wc_playoff,
+        },
+    ):
+        spec.loader.exec_module(module)
+
+    return module
+
+
+service = load_match_service_module()
+
+
+class MatchServiceScoreExtractionTests(unittest.TestCase):
+    def test_group_regular_uses_full_time(self):
+        match = {
+            "status": "FINISHED",
+            "score": {"duration": "REGULAR", "fullTime": {"home": 2, "away": 1}},
+        }
+
+        self.assertEqual(service.extract_api_match_score(match, is_playoff_match=False), (2, 1, "score.fullTime"))
+
+    def test_playoff_regular_uses_full_time(self):
+        match = {
+            "status": "FINISHED",
+            "score": {"duration": "REGULAR", "fullTime": {"home": 1, "away": 0}},
+        }
+
+        self.assertEqual(service.extract_api_match_score(match, is_playoff_match=True), (1, 0, "score.fullTime"))
+
+    def test_playoff_extra_time_uses_120_min_score(self):
+        match = {
+            "status": "FINISHED",
+            "score": {
+                "duration": "EXTRA_TIME",
+                "fullTime": {"home": 2, "away": 1},
+                "regularTime": {"home": 1, "away": 1},
+                "extraTime": {"home": 1, "away": 0},
+            },
+        }
+
+        self.assertEqual(service.extract_api_match_score(match, is_playoff_match=True), (2, 1, "score.fullTime.extra_time"))
+
+    def test_playoff_penalty_shootout_uses_regular_plus_extra_time(self):
+        match = {
+            "status": "FINISHED",
+            "score": {
+                "duration": "PENALTY_SHOOTOUT",
+                "fullTime": {"home": 7, "away": 6},
+                "regularTime": {"home": 1, "away": 1},
+                "extraTime": {"home": 0, "away": 0},
+                "penalties": {"home": 6, "away": 5},
+            },
+        }
+
+        self.assertEqual(service.extract_api_match_score(match, is_playoff_match=True), (1, 1, "score.regularTime+extraTime"))
+
+    def test_score_extraction_accepts_home_team_away_team_keys(self):
+        match = {
+            "status": "FINISHED",
+            "score": {
+                "duration": "PENALTY_SHOOTOUT",
+                "regularTime": {"homeTeam": 2, "awayTeam": 2},
+                "extraTime": {"homeTeam": 1, "awayTeam": 0},
+            },
+        }
+
+        self.assertEqual(service.extract_api_match_score(match, is_playoff_match=True), (3, 2, "score.regularTime+extraTime"))
+
+    def test_playoff_penalty_shootout_without_reliable_fields_does_not_return_score(self):
+        match = {
+            "status": "FINISHED",
+            "score": {
+                "duration": "PENALTY_SHOOTOUT",
+                "fullTime": {"home": 7, "away": 6},
+                "penalties": {"home": 6, "away": 5},
+            },
+        }
+
+        self.assertEqual(
+            service.extract_api_match_score(match, is_playoff_match=True),
+            (None, None, "penalty_unreliable_120min_score"),
+        )
+
+    def test_manual_result_override_blocks_api_score_update(self):
+        self.assertEqual(
+            service.apply_manual_result_override(
+                "FINISHED",
+                7,
+                6,
+                "FINISHED",
+                1,
+                1,
+                manual_result_override=True,
+                manual_override_allowed=True,
+            ),
+            ("FINISHED", 1, 1),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

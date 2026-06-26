@@ -5,6 +5,7 @@ from app.config import START_DATE
 from app.routes.admin_actions import ALLOWED_TITLES
 from app.services.wc_playoff_service import (
     PLAYOFF_STAGES,
+    determine_effective_playoff_stage,
     get_playoff_stage_label,
     get_playoff_stage_sort_order,
     is_wc2026_playoff_match,
@@ -157,7 +158,8 @@ def prepare_admin_view_data(cur):
                m.deadline,
                m.status,
                m.league,
-               m.playoff_stage,
+               m.playoff_stage_manual,
+               m.playoff_stage_auto,
                t.name
         FROM matches m
         LEFT JOIN tournaments t ON t.id = m.tournament_id
@@ -171,7 +173,8 @@ def prepare_admin_view_data(cur):
         deadline_dt = parse_datetime(m[4])
         kickoff_msk = kickoff_dt.astimezone(MSK) if kickoff_dt else None
         deadline_msk = deadline_dt.astimezone(MSK) if deadline_dt else None
-        is_playoff = is_wc2026_playoff_match(m[8], m[6], kickoff_dt)
+        is_playoff = is_wc2026_playoff_match(m[9], m[6], kickoff_dt)
+        effective_stage = determine_effective_playoff_stage(m[7], m[8]) if is_playoff else None
         manual_matches.append({
             'id': m[0],
             'home_team': m[1],
@@ -180,8 +183,11 @@ def prepare_admin_view_data(cur):
             'deadline': deadline_dt,
             'status': m[5],
             'league': m[6] if len(m) > 6 else 'other',
-            'playoff_stage': m[7],
-            'playoff_stage_label': get_playoff_stage_label(m[7]),
+            'playoff_stage': effective_stage,
+            'playoff_stage_manual': m[7],
+            'playoff_stage_auto': m[8],
+            'effective_playoff_stage': effective_stage,
+            'playoff_stage_label': get_playoff_stage_label(effective_stage),
             'is_wc2026_playoff': is_playoff,
             'match_date_msk': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
             'match_time_msk': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
@@ -241,7 +247,9 @@ def prepare_admin_view_data(cur):
             t.name,
             COALESCE(m.manual_teams_override, 0),
             COALESCE(m.manual_result_override, 0),
-            m.playoff_stage,
+            COALESCE(m.manual_kickoff_override, 0),
+            m.playoff_stage_manual,
+            m.playoff_stage_auto,
             m.api_match_id,
             m.api_conflict_note,
             COUNT(p.user_id) AS predictions_count
@@ -271,19 +279,23 @@ def prepare_admin_view_data(cur):
             'league': m[8],
             'manual_teams_override': bool(m[10]),
             'manual_result_override': bool(m[11]),
-            'playoff_stage': m[12],
-            'playoff_stage_label': get_playoff_stage_label(m[12]),
-            'api_match_id': m[13],
-            'api_conflict_note': m[14],
-            'has_api_conflict': bool(m[14]),
-            'predictions_count': m[15] or 0,
+            'manual_kickoff_override': bool(m[12]),
+            'playoff_stage_manual': m[13],
+            'playoff_stage_auto': m[14],
+            'effective_playoff_stage': determine_effective_playoff_stage(m[13], m[14]),
+            'playoff_stage': determine_effective_playoff_stage(m[13], m[14]),
+            'playoff_stage_label': get_playoff_stage_label(determine_effective_playoff_stage(m[13], m[14])),
+            'api_match_id': m[15],
+            'api_conflict_note': m[16],
+            'has_api_conflict': bool(m[16]),
+            'predictions_count': m[17] or 0,
             'match_date_msk': kickoff_msk.strftime("%d.%m.%Y %H:%M") if kickoff_msk else "",
             'match_date_input': kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
             'match_time_input': kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
         })
     wc_playoff_matches.sort(
         key=lambda m: (
-            get_playoff_stage_sort_order(m.get('playoff_stage')),
+            get_playoff_stage_sort_order(m.get('effective_playoff_stage')),
             m.get('kickoff_time'),
         )
     )

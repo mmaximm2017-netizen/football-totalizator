@@ -1,4 +1,5 @@
 # app/services/match_service.py
+import json
 import logging
 import os
 import time
@@ -54,6 +55,70 @@ def _add_changed_finished_match(summary, match_id):
     if match_id not in summary["changed_finished_match_ids"]:
         summary["changed_finished_match_ids"].append(match_id)
         summary["changed_finished_matches_count"] = len(summary["changed_finished_match_ids"])
+
+
+def _score_side(score_node, side):
+    if not score_node:
+        return None
+    return score_node.get(side) if side in score_node else score_node.get(f"{side}Team")
+
+
+def _score_pair(score_node):
+    home = _score_side(score_node, "home")
+    away = _score_side(score_node, "away")
+    if home is None or away is None:
+        return None, None
+    return home, away
+
+
+def _sum_score_pairs(first, second):
+    first_home, first_away = _score_pair(first)
+    second_home, second_away = _score_pair(second)
+    if None in (first_home, first_away, second_home, second_away):
+        return None, None
+    return first_home + second_home, first_away + second_away
+
+
+def extract_api_match_score(match, is_playoff_match=False):
+    if match.get('status') != 'FINISHED':
+        return None, None, "not_finished"
+
+    score = match.get('score', {}) or {}
+
+    if not is_playoff_match:
+        full_time = score.get('fullTime') or {}
+        home, away = _score_pair(full_time)
+        if home is not None and away is not None:
+            return home, away, "score.fullTime"
+        home, away = _score_pair(score.get('extraTime') or {})
+        return home, away, "score.extraTime"
+
+    duration = (score.get('duration') or 'REGULAR').upper()
+    if duration == 'REGULAR':
+        home, away = _score_pair(score.get('fullTime') or {})
+        return home, away, "score.fullTime"
+
+    if duration == 'EXTRA_TIME':
+        home, away = _score_pair(score.get('fullTime') or {})
+        if home is not None and away is not None:
+            return home, away, "score.fullTime.extra_time"
+        home, away = _sum_score_pairs(score.get('regularTime'), score.get('extraTime'))
+        return home, away, "score.regularTime+extraTime"
+
+    if duration == 'PENALTY_SHOOTOUT':
+        home, away = _sum_score_pairs(score.get('regularTime'), score.get('extraTime'))
+        if home is None or away is None:
+            return None, None, "penalty_unreliable_120min_score"
+        return home, away, "score.regularTime+extraTime"
+
+    home, away = _score_pair(score.get('fullTime') or {})
+    return home, away, "score.fullTime"
+
+
+def apply_manual_result_override(api_status, api_home_score, api_away_score, existing_status, existing_home_score, existing_away_score, manual_result_override, manual_override_allowed):
+    if manual_result_override and manual_override_allowed:
+        return existing_status, existing_home_score, existing_away_score
+    return api_status, api_home_score, api_away_score
 
 
 def fetch_matches(errors=None):
@@ -273,11 +338,6 @@ def update_matches():
                     missing_tournament_leagues.add(league)
                 continue
 
-            home_score = away_score = None
-            if status == 'FINISHED':
-                score = match.get('score', {}); ft = score.get('fullTime') or score.get('extraTime') or {}
-                home_score = ft.get('home'); away_score = ft.get('away')
-            
             if ' ' in utc_time:
                 kickoff_utc = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             else:
@@ -297,9 +357,38 @@ def update_matches():
             deadline_utc = deadline_msk.astimezone(timezone.utc)
             api_tournament_name = "ЧМ-2026" if tournament_id == wc_tournament_id else None
             is_playoff_api_match = is_wc2026_playoff_match(api_tournament_name, league, kickoff_utc)
+            home_score, away_score, score_source = extract_api_match_score(match, is_playoff_api_match)
+            if is_playoff_api_match and score_source == "penalty_unreliable_120min_score":
+                logger.warning(
+                    "[API_SCORE_WARNING] penalty shootout without reliable 120min score api_match_id=%s stage=%s home_team=%s away_team=%s raw_score=%s",
+                    api_id,
+                    match.get('stage'),
+                    raw_home,
+                    raw_away,
+                    json.dumps(match.get('score', {}), ensure_ascii=False, default=str),
+                )
             playoff_stage_auto = None
             if is_playoff_api_match:
                 playoff_stage_auto = infer_playoff_stage_from_api(match)
+                score = match.get('score', {}) or {}
+                logger.info(
+                    "[API_MATCH_RAW] api_match_id=%s stage=%s status=%s home_team=%s away_team=%s raw_score=%s full_time_score=%s regular_time_score=%s extra_time_score=%s penalty_score=%s winner=%s all_score_fields=%s current_code_score_source=%s current_code_home_score=%s current_code_away_score=%s",
+                    api_id,
+                    match.get('stage'),
+                    status,
+                    raw_home,
+                    raw_away,
+                    json.dumps(score, ensure_ascii=False, default=str),
+                    json.dumps(score.get('fullTime'), ensure_ascii=False, default=str),
+                    json.dumps(score.get('regularTime'), ensure_ascii=False, default=str),
+                    json.dumps(score.get('extraTime'), ensure_ascii=False, default=str),
+                    json.dumps(score.get('penalties'), ensure_ascii=False, default=str),
+                    score.get('winner'),
+                    json.dumps(score, ensure_ascii=False, default=str),
+                    score_source,
+                    home_score,
+                    away_score,
+                )
             
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
             existing_row = cur.fetchone()
@@ -433,10 +522,16 @@ def update_matches():
                     home_team = existing_home_team
                     away_team = existing_away_team
 
-                if manual_result_override and manual_override_allowed:
-                    status = existing_status
-                    home_score = existing_home
-                    away_score = existing_away
+                status, home_score, away_score = apply_manual_result_override(
+                    status,
+                    home_score,
+                    away_score,
+                    existing_status,
+                    existing_home,
+                    existing_away,
+                    manual_result_override,
+                    manual_override_allowed,
+                )
 
                 if manual_kickoff_override and manual_override_allowed:
                     kickoff_utc = existing_kickoff
