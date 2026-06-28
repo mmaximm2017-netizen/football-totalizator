@@ -163,7 +163,7 @@ def prepare_admin_view_data(cur):
                t.name
         FROM matches m
         LEFT JOIN tournaments t ON t.id = m.tournament_id
-        WHERE (m.api_match_id IS NULL OR m.api_match_id = '')
+        WHERE ((m.api_match_id IS NULL OR m.api_match_id = '') OR t.name = 'ЧМ-2026')
         AND m.kickoff_time >= %s
         ORDER BY m.kickoff_time
     """, (start_date_str,))

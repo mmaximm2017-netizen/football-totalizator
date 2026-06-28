@@ -22,6 +22,8 @@ API_KEY = require_env("API_KEY")
 
 LEAGUE_IDS = [2000]  # ЧМ-2026
 
+WC2026_API_SYNC_ENABLED = os.getenv("WC2026_API_SYNC_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
 INVITE_CODE = require_env("INVITE_CODE")
 
 ADMIN_USERNAME = require_env("ADMIN_USERNAME")

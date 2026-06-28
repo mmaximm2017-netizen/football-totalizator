@@ -114,6 +114,19 @@
                                             <div class="field-help">Время начала матча по Москве.</div>
                                         </div>
                                         <div class="field">
+                                            <label>Статус</label>
+                                            <select name="status">
+                                                <option value="SCHEDULED" {% if m.status == 'SCHEDULED' %}selected{% endif %}>scheduled</option>
+                                                <option value="TIMED" {% if m.status == 'TIMED' %}selected{% endif %}>timed</option>
+                                                <option value="LIVE" {% if m.status == 'LIVE' %}selected{% endif %}>live</option>
+                                                <option value="FINISHED" {% if m.status == 'FINISHED' %}selected{% endif %}>finished</option>
+                                            </select>
+                                            <div class="field-help">Если заполнить результат, статус станет finished.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-grid">
+                                        <div class="field">
                                             <label>Результат</label>
                                             <div class="form-grid" style="gap:8px;">
                                                 <input type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}" placeholder="0">
@@ -186,6 +199,19 @@
                         <input type="time" name="match_time" required>
                         <div class="field-help">Время начала матча по Москве.</div>
                     </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Статус матча</div>
+                <div class="field">
+                    <select name="status">
+                        <option value="SCHEDULED">scheduled</option>
+                        <option value="TIMED">timed</option>
+                        <option value="LIVE">live</option>
+                        <option value="FINISHED">finished</option>
+                    </select>
+                    <div class="field-help">Обычно при создании оставьте scheduled или timed.</div>
                 </div>
             </div>
 

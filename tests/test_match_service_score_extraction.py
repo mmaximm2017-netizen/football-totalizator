@@ -21,6 +21,7 @@ def load_match_service_module():
 
     fake_config.API_KEY = "test"
     fake_config.LEAGUE_IDS = [2000]
+    fake_config.WC2026_API_SYNC_ENABLED = False
     fake_db.get_db = lambda: None
     fake_db.close_db = lambda conn, cur=None: None
     fake_sync_history.create_sync_run = lambda summary=None: None
@@ -141,6 +142,30 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
             ),
             ("FINISHED", 1, 1),
         )
+
+    def test_fetch_matches_skips_wc2026_when_disabled_but_keeps_other_competitions(self):
+        calls = []
+
+        class Response:
+            status_code = 200
+
+            def json(self):
+                return {"matches": [{"id": 11}]}
+
+        def fake_get(url, headers=None, params=None, timeout=None):
+            calls.append(url)
+            return Response()
+
+        original_league_ids = service.LEAGUE_IDS
+        service.LEAGUE_IDS = [2000, 9999]
+        try:
+            with patch.object(service.requests, "get", side_effect=fake_get):
+                matches = service.fetch_matches()
+        finally:
+            service.LEAGUE_IDS = original_league_ids
+
+        self.assertEqual(calls, ["https://api.football-data.org/v4/competitions/9999/matches"])
+        self.assertEqual(matches, [{"id": 11, "league": "other"}])
 
 
 if __name__ == "__main__":

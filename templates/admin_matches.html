@@ -206,6 +206,13 @@
                 <div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date"></div>
                 <div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time"></div>
             </div>
+            <label>Статус</label>
+            <select name="status">
+                <option value="SCHEDULED">scheduled</option>
+                <option value="TIMED">timed</option>
+                <option value="LIVE">live</option>
+                <option value="FINISHED">finished</option>
+            </select>
             <label>Турнир (для очков/таблицы)</label>
             <select name="tournament_id" id="add-match-tournament" required>
                 <option value="">-- Выберите турнир --</option>
@@ -220,7 +227,7 @@
             <div class="playoff-stage-field" id="add-playoff-stage-field">
                 <label>Стадия турнира</label>
                 <select name="playoff_stage">
-                    <option value="">-- Не указана --</option>
+                    <option value="">Группа</option>
                     {% for value, label in playoff_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
                 </select>
             </div>
@@ -348,6 +355,15 @@
                                             </div>
                                             {% endif %}
                                             <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                                            <div style="margin-top: 10px;">
+                                                <label>Статус</label>
+                                                <select name="status">
+                                                    <option value="SCHEDULED" {% if m.status == 'SCHEDULED' %}selected{% endif %}>scheduled</option>
+                                                    <option value="TIMED" {% if m.status == 'TIMED' %}selected{% endif %}>timed</option>
+                                                    <option value="LIVE" {% if m.status == 'LIVE' %}selected{% endif %}>live</option>
+                                                    <option value="FINISHED" {% if m.status == 'FINISHED' %}selected{% endif %}>finished</option>
+                                                </select>
+                                            </div>
                                             <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
                                         </form>
                                         <div class="admin-danger-zone">
@@ -403,7 +419,7 @@
 function toggleMonth(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.style.display==='none'||c.style.display===''){c.style.display='block';a.style.transform='rotate(90deg)'}else{c.style.display='none';a.style.transform='rotate(0deg)'}}
 function toggleDay(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.classList.contains('open')){c.classList.remove('open');a.style.transform='rotate(0deg)'}else{c.classList.add('open');a.style.transform='rotate(90deg)'}}
 document.addEventListener('DOMContentLoaded',function(){var m=document.querySelector('[id^="free-month-"]');if(m){var a=document.getElementById('arrow-'+m.id);m.style.display='block';if(a){a.style.transform='rotate(90deg)'}}var fm=document.querySelector('[id^="finished-month-"]');if(fm){var fa=document.getElementById('arrow-'+fm.id);fm.style.display='block';if(fa){fa.style.transform='rotate(90deg)'}}});
-document.addEventListener('DOMContentLoaded',function(){var league=document.getElementById('add-match-league');var tournament=document.getElementById('add-match-tournament');var date=document.querySelector('input[name="match_date"]');var field=document.getElementById('add-playoff-stage-field');function syncStage(){if(!league||!tournament||!date||!field)return;var selected=tournament.options[tournament.selectedIndex];var isWc=selected&&selected.textContent.indexOf('ЧМ-2026')!==-1;field.style.display=(isWc&&league.value==='wc2026'&&date.value>='2026-06-28')?'block':'none'}if(league){league.addEventListener('change',syncStage)}if(tournament){tournament.addEventListener('change',syncStage)}if(date){date.addEventListener('change',syncStage)}syncStage();});
+document.addEventListener('DOMContentLoaded',function(){var league=document.getElementById('add-match-league');var tournament=document.getElementById('add-match-tournament');var field=document.getElementById('add-playoff-stage-field');function syncStage(){if(!league||!tournament||!field)return;var selected=tournament.options[tournament.selectedIndex];var isWc=selected&&selected.textContent.indexOf('ЧМ-2026')!==-1;field.style.display=(isWc&&league.value==='wc2026')?'block':'none'}if(league){league.addEventListener('change',syncStage)}if(tournament){tournament.addEventListener('change',syncStage)}syncStage();});
 </script>
 
 {% endblock %}

@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import requests
-from app.config import API_KEY, LEAGUE_IDS
+from app.config import API_KEY, LEAGUE_IDS, WC2026_API_SYNC_ENABLED
 from app.db import get_db, close_db
 from app.services.sync_history_service import (
     create_sync_run,
@@ -125,13 +125,16 @@ def fetch_matches(errors=None):
     headers = {'X-Auth-Token': API_KEY}
     all_matches = []
     for league_id in LEAGUE_IDS:
+        if league_id == 2000 and not WC2026_API_SYNC_ENABLED:
+            logger.info("[SYNC_SKIP] WC2026 API sync disabled")
+            continue
         url = f"https://api.football-data.org/v4/competitions/{league_id}/matches"
         params = {'status': 'SCHEDULED,TIMED,FINISHED,IN_PLAY,PAUSED,POSTPONED,CANCELLED'}
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=10)
             if resp.status_code == 200:
                 for m in resp.json().get('matches', []):
-                    m['league'] = 'wc2026'; all_matches.append(m)
+                    m['league'] = 'wc2026' if league_id == 2000 else 'other'; all_matches.append(m)
             else:
                 msg = f"football-data {league_id} returned status {resp.status_code}"
                 logger.warning(msg)
@@ -322,6 +325,9 @@ def update_matches():
             home_team = translate_name(raw_home); away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', '')).replace('Z', '')
             status = match.get('status', 'SCHEDULED'); league = match.get('league', 'other')
+            if league == 'wc2026' and not WC2026_API_SYNC_ENABLED:
+                logger.info("[SYNC_SKIP] WC2026 API sync disabled")
+                continue
             if league == 'wc2026':
                 tournament_id = wc_tournament_id
             elif league == 'rpl':
