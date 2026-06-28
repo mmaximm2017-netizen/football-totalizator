@@ -173,8 +173,14 @@ class RankingMovementTests(unittest.TestCase):
     def test_leader_status_gap_thirty_is_dominant(self):
         self.assertEqual(self.leader_status_for_gap(30), "dominant")
 
-    def test_leader_status_gap_forty_is_dominant(self):
-        self.assertEqual(self.leader_status_for_gap(40), "dominant")
+    def test_leader_status_gap_thirty_nine_is_dominant(self):
+        self.assertEqual(self.leader_status_for_gap(39), "dominant")
+
+    def test_leader_status_gap_forty_is_absolute(self):
+        self.assertEqual(self.leader_status_for_gap(40), "absolute")
+
+    def test_leader_status_gap_fifty_is_absolute(self):
+        self.assertEqual(self.leader_status_for_gap(50), "absolute")
 
     def test_leader_status_only_first_sorted_player(self):
         ranking_rows = [row(1, 1, 100), row(2, 1, 100)]

@@ -50,7 +50,9 @@ def apply_leader_status(ranking):
     except (TypeError, ValueError):
         return annotated
 
-    if gap >= 30:
+    if gap >= 40:
+        annotated[0]["leader_status"] = "absolute"
+    elif gap >= 30:
         annotated[0]["leader_status"] = "dominant"
     elif gap >= 20:
         annotated[0]["leader_status"] = "confident"
