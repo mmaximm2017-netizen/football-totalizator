@@ -238,6 +238,19 @@
         box-shadow: 0 0 10px rgba(183,28,28,0.30);
     }
 
+    .leader-badge.outsider-badge.confident {
+        background: linear-gradient(135deg, #ff3d2e, #c1121f);
+    }
+
+    .leader-badge.outsider-badge.dominant {
+        background: linear-gradient(135deg, #d31f2f, #7f111b);
+    }
+
+    .leader-badge.outsider-badge.absolute {
+        background: linear-gradient(135deg, #7f111b, #32070c);
+        box-shadow: 0 0 12px rgba(127,17,27,0.36);
+    }
+
     .top-scorers-card {
         margin-top: 16px;
         padding: 12px;
@@ -1442,19 +1455,15 @@
     }
 
     .standings-table .leader-badge.outsider-badge {
-        background: linear-gradient(135deg, #ff7043, #b71c1c) !important;
         color: #fff8f2 !important;
         border-color: rgba(255,255,255,0.28) !important;
-        box-shadow: 0 0 12px rgba(183,28,28,0.24) !important;
+        margin-left: 0 !important;
     }
 
     .standings-table tbody tr:last-child .outsider-badge {
         flex: 0 0 auto;
         width: fit-content;
         max-width: none;
-        margin-left: 0 !important;
-        padding-left: 5px !important;
-        padding-right: 5px !important;
         overflow: visible;
         text-overflow: clip;
         white-space: nowrap;
@@ -1538,17 +1547,6 @@
             padding-right: 4px;
         }
 
-        .standings-table tbody tr:last-child .player-line {
-            flex-wrap: wrap;
-            row-gap: 4px;
-        }
-
-        .standings-table tbody tr:last-child .outsider-badge {
-            align-self: flex-start;
-            flex-basis: 100%;
-            padding-left: 4px !important;
-            padding-right: 4px !important;
-        }
     }
 
     @media (max-width: 340px) {
@@ -1563,10 +1561,6 @@
             padding-right: 4px;
         }
 
-        .standings-table tbody tr:last-child .outsider-badge {
-            padding-left: 4px !important;
-            padding-right: 4px !important;
-        }
     }
 </style>
 
