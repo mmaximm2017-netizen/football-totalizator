@@ -31,11 +31,12 @@ def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=T
 
 
 def apply_leader_status(ranking):
-    """Annotate the first-place player with a leader status based on point gap."""
+    """Annotate edge players with leader/outsider statuses based on point gaps."""
     annotated = []
     for row in ranking:
         item = dict(row)
         item["leader_status"] = None
+        item["outsider_status"] = None
         annotated.append(item)
 
     if not annotated or annotated[0].get("place") != 1:
@@ -58,6 +59,20 @@ def apply_leader_status(ranking):
         annotated[0]["leader_status"] = "confident"
     elif gap >= 0:
         annotated[0]["leader_status"] = "leader"
+
+    try:
+        outsider_gap = int(annotated[-2].get("points") or 0) - int(annotated[-1].get("points") or 0)
+    except (TypeError, ValueError):
+        return annotated
+
+    if outsider_gap >= 40:
+        annotated[-1]["outsider_status"] = "absolute"
+    elif outsider_gap >= 30:
+        annotated[-1]["outsider_status"] = "dominant"
+    elif outsider_gap >= 20:
+        annotated[-1]["outsider_status"] = "confident"
+    elif outsider_gap >= 0:
+        annotated[-1]["outsider_status"] = "outsider"
 
     return annotated
 

@@ -232,6 +232,12 @@
         box-shadow: 0 0 10px rgba(255,215,0,0.38);
     }
 
+    .leader-badge.outsider-badge {
+        background: linear-gradient(135deg, #ff7043, #b71c1c);
+        color: #fff8f2;
+        box-shadow: 0 0 10px rgba(183,28,28,0.30);
+    }
+
     .top-scorers-card {
         margin-top: 16px;
         padding: 12px;
@@ -1435,6 +1441,25 @@
         white-space: nowrap;
     }
 
+    .standings-table .leader-badge.outsider-badge {
+        background: linear-gradient(135deg, #ff7043, #b71c1c) !important;
+        color: #fff8f2 !important;
+        border-color: rgba(255,255,255,0.28) !important;
+        box-shadow: 0 0 12px rgba(183,28,28,0.24) !important;
+    }
+
+    .standings-table tbody tr:last-child .outsider-badge {
+        flex: 0 0 auto;
+        width: fit-content;
+        max-width: none;
+        margin-left: 0 !important;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
     @media (max-width: 430px) {
         .player-row td:first-child {
             width: 48px;
@@ -1512,6 +1537,18 @@
             padding-left: 4px;
             padding-right: 4px;
         }
+
+        .standings-table tbody tr:last-child .player-line {
+            flex-wrap: wrap;
+            row-gap: 4px;
+        }
+
+        .standings-table tbody tr:last-child .outsider-badge {
+            align-self: flex-start;
+            flex-basis: 100%;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
     }
 
     @media (max-width: 340px) {
@@ -1524,6 +1561,11 @@
         .top-1 .leader-badge {
             padding-left: 4px;
             padding-right: 4px;
+        }
+
+        .standings-table tbody tr:last-child .outsider-badge {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
         }
     }
 </style>
@@ -1559,6 +1601,15 @@
                             <span class="leader-badge confident">Уверенный лидер</span>
                         {% elif row.leader_status == 'leader' %}
                             <span class="leader-badge">Лидер</span>
+                        {% endif %}
+                        {% if row.outsider_status == 'absolute' %}
+                            <span class="leader-badge outsider-badge absolute">Безоговорочный аутсайдер</span>
+                        {% elif row.outsider_status == 'dominant' %}
+                            <span class="leader-badge outsider-badge dominant">Явный аутсайдер</span>
+                        {% elif row.outsider_status == 'confident' %}
+                            <span class="leader-badge outsider-badge confident">Уверенный аутсайдер</span>
+                        {% elif row.outsider_status == 'outsider' %}
+                            <span class="leader-badge outsider-badge">Аутсайдер</span>
                         {% endif %}
                     </div>
                 </td>

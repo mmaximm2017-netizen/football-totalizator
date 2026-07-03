@@ -155,6 +155,11 @@ class RankingMovementTests(unittest.TestCase):
 
         return ranking.apply_leader_status(ranking_rows)[0]["leader_status"]
 
+    def outsider_status_for_gap(self, gap):
+        ranking_rows = [row(1, 1, 100), row(2, 2, 100 - gap)]
+
+        return ranking.apply_leader_status(ranking_rows)[-1]["outsider_status"]
+
     def test_leader_status_gap_zero_is_leader(self):
         self.assertEqual(self.leader_status_for_gap(0), "leader")
 
@@ -189,6 +194,41 @@ class RankingMovementTests(unittest.TestCase):
 
         self.assertEqual(annotated[0]["leader_status"], "leader")
         self.assertIsNone(annotated[1]["leader_status"])
+
+    def test_outsider_status_gap_zero_is_outsider(self):
+        self.assertEqual(self.outsider_status_for_gap(0), "outsider")
+
+    def test_outsider_status_gap_one_is_outsider(self):
+        self.assertEqual(self.outsider_status_for_gap(1), "outsider")
+
+    def test_outsider_status_gap_nineteen_is_outsider(self):
+        self.assertEqual(self.outsider_status_for_gap(19), "outsider")
+
+    def test_outsider_status_gap_twenty_is_confident(self):
+        self.assertEqual(self.outsider_status_for_gap(20), "confident")
+
+    def test_outsider_status_gap_twenty_nine_is_confident(self):
+        self.assertEqual(self.outsider_status_for_gap(29), "confident")
+
+    def test_outsider_status_gap_thirty_is_dominant(self):
+        self.assertEqual(self.outsider_status_for_gap(30), "dominant")
+
+    def test_outsider_status_gap_thirty_nine_is_dominant(self):
+        self.assertEqual(self.outsider_status_for_gap(39), "dominant")
+
+    def test_outsider_status_gap_forty_is_absolute(self):
+        self.assertEqual(self.outsider_status_for_gap(40), "absolute")
+
+    def test_outsider_status_gap_fifty_is_absolute(self):
+        self.assertEqual(self.outsider_status_for_gap(50), "absolute")
+
+    def test_outsider_status_only_last_sorted_player(self):
+        ranking_rows = [row(1, 1, 100), row(2, 2, 90), row(3, 2, 90)]
+
+        annotated = ranking.apply_leader_status(ranking_rows)
+
+        self.assertIsNone(annotated[1]["outsider_status"])
+        self.assertEqual(annotated[2]["outsider_status"], "outsider")
 
 
 if __name__ == "__main__":
