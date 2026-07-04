@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 db_pool = None
 _match_category_column_checked = False
+_russian_cup_tournament_checked = False
+
+RUSSIAN_CUP_TOURNAMENT_NAME = "Кубок России"
 
 
 def init_pool():
@@ -103,6 +106,62 @@ def ensure_match_category_column(conn):
     _match_category_column_checked = True
 
 
+def ensure_russian_cup_tournament(conn):
+    global _russian_cup_tournament_checked
+
+    if _russian_cup_tournament_checked:
+        return
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_name='tournaments'
+        """)
+        if not cur.fetchone():
+            return
+
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE name = %s
+            LIMIT 1
+            """,
+            (RUSSIAN_CUP_TOURNAMENT_NAME,),
+        )
+        exists = cur.fetchone()
+
+        try:
+            if exists:
+                cur.execute(
+                    """
+                    UPDATE tournaments
+                    SET is_active = 1
+                    WHERE id = %s
+                      AND COALESCE(is_active, 0) <> 1
+                    """,
+                    (exists[0],),
+                )
+                if cur.rowcount:
+                    conn.commit()
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO tournaments (name, is_active, start_date, end_date)
+                    VALUES (%s, 1, NULL, NULL)
+                    """,
+                    (RUSSIAN_CUP_TOURNAMENT_NAME,),
+                )
+                conn.commit()
+        except psycopg2.errors.ReadOnlySqlTransaction:
+            conn.rollback()
+            logger.warning("Skipping Russian Cup tournament seed on read-only DB connection")
+            return
+
+    _russian_cup_tournament_checked = True
+
+
 def get_db():
     global db_pool
 
@@ -128,6 +187,7 @@ def get_db():
             )
 
         ensure_match_category_column(conn)
+        ensure_russian_cup_tournament(conn)
 
         return conn
 
@@ -496,6 +556,27 @@ def init_db():
             INSERT INTO tournaments (name, is_active, start_date)
             VALUES ('Кубок Матч-премьер', 1, '2026-05-06')
             """)
+
+        cur.execute(
+            """
+            INSERT INTO tournaments (name, is_active, start_date, end_date)
+            SELECT %s, 1, NULL, NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM tournaments WHERE name = %s
+            )
+            """,
+            (RUSSIAN_CUP_TOURNAMENT_NAME, RUSSIAN_CUP_TOURNAMENT_NAME),
+        )
+
+        cur.execute(
+            """
+            UPDATE tournaments
+            SET is_active = 1
+            WHERE name = %s
+              AND COALESCE(is_active, 0) <> 1
+            """,
+            (RUSSIAN_CUP_TOURNAMENT_NAME,),
+        )
 
         # =====================================================
         # BACKFILL MATCH TOURNAMENT LINKS

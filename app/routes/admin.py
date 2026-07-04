@@ -74,9 +74,14 @@ def admin_matches():
             (t for t in data.get('tournaments', []) if t.get('id') == selected_tid),
             None,
         )
+        russian_cup_tournament = next(
+            (t for t in data.get('tournaments', []) if t.get('name') == 'Кубок России'),
+            None,
+        )
         data['selected_recalc_tournament_id'] = selected_tid
         data['current_tournament_id'] = selected_tid
         data['current_tournament_name'] = selected_tournament.get('name') if selected_tournament else 'Админка'
+        data['russian_cup_tournament'] = russian_cup_tournament
         data.update(build_sync_panel_context())
     finally:
         close_db(conn, cur)
@@ -108,6 +113,31 @@ def admin_russia_2027():
     finally:
         close_db(conn, cur)
     return render_template('admin_russia_2027.html', **data)
+
+
+@admin_bp.route('/russian-cup', methods=['GET'])
+@admin_required
+def admin_russian_cup():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id
+            FROM tournaments
+            WHERE name = 'Кубок России'
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+    finally:
+        close_db(conn, cur)
+
+    if row:
+        return redirect(url_for('admin.admin_matches', tid=row[0]))
+
+    flash('Турнир Кубок России пока не найден', 'error')
+    return redirect(url_for('admin.admin_matches'))
 
 
 @admin_bp.route('/tournaments', methods=['GET'])
