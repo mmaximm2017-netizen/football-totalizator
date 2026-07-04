@@ -800,26 +800,39 @@
     }
 
     .team-name-v2 {
-        text-align: center;
-        font-size: 16px;
-        font-weight: 950;
-        line-height: 1.18;
-        white-space: normal;
-        overflow-wrap: break-word;
-        word-break: normal;
-        hyphens: none;
-    }
-
-    .match-card-v2:not(.finished) .team-name-v2 {
         display: -webkit-box;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
         line-clamp: 2;
+        -webkit-box-pack: center;
+        -webkit-box-align: center;
+        width: 100%;
+        max-width: 140px;
+        height: calc(1.15em * 2 + 12px);
+        min-height: calc(1.15em * 2 + 12px);
+        max-height: calc(1.15em * 2 + 12px);
+        padding: 6px 8px;
+        box-sizing: border-box;
         overflow: hidden;
-        min-height: calc(1.18em * 2);
-        max-height: calc(1.18em * 2);
+        text-overflow: ellipsis;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 950;
+        line-height: 1.15;
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: normal;
+        text-wrap: balance;
+        hyphens: none;
+    }
+
+    .match-card-v2:not(.finished) .team-name-v2 {
+        height: calc(1.15em * 2 + 12px);
+        min-height: calc(1.15em * 2 + 12px);
+        max-height: calc(1.15em * 2 + 12px);
         align-self: stretch;
-        max-width: 112px;
+        width: min(100%, 140px);
+        max-width: 140px;
         font-size: 15px;
         font-weight: 900;
         color: #ffffff;
@@ -1648,7 +1661,7 @@
 
         .team-name-v2 {
             font-size: 14px;
-            max-width: 104px;
+            max-width: 118px;
         }
 
         .match-card-v2:not(.finished) .team-v2 {
@@ -1659,9 +1672,11 @@
         }
 
         .match-card-v2:not(.finished) .team-name-v2 {
-            min-height: calc(1.18em * 2);
-            max-height: calc(1.18em * 2);
-            max-width: 96px;
+            height: calc(1.15em * 2 + 12px);
+            min-height: calc(1.15em * 2 + 12px);
+            max-height: calc(1.15em * 2 + 12px);
+            width: min(100%, 118px);
+            max-width: 118px;
             font-size: 13px;
         }
 
