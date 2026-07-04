@@ -520,6 +520,31 @@
         vertical-align: middle !important;
     }
 
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated {
+        background:
+            radial-gradient(circle at 50% 0%, rgba(118,128,144,0.18), transparent 42%),
+            linear-gradient(160deg, rgba(214,224,235,0.16), rgba(192,204,218,0.10)) !important;
+        border-left: 4px solid #6c757d !important;
+        opacity: 0.9;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated td,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .player-name,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .points-number,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .leader-badge,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .rank-movement {
+        filter: grayscale(0.88) saturate(0.42) contrast(0.92);
+        color: rgba(214,224,235,0.76) !important;
+        text-shadow: none !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .leader-badge {
+        background: rgba(108,117,125,0.26) !important;
+        border-color: rgba(214,224,235,0.18) !important;
+        box-shadow: none !important;
+    }
+
     body.tournament-wc2026 .empty-table {
         background: rgba(10, 20, 40, 0.6);
         backdrop-filter: blur(10px);
@@ -1589,7 +1614,7 @@
     <table class="standings-table">
         <tbody>
             {% for row in table %}
-            <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %}">
+            <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %} {% if selected_name == 'ЧМ-2026' and loop.last %}wc-eliminated{% endif %}">
                 <td class="place-cell">
                     <div class="place-box">
                         {% if row.place == 1 %}<span class="place-emoji">🥇</span>
