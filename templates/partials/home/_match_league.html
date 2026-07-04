@@ -1,9 +1,10 @@
-{% if match.match_category == 'supercup' %}
+{% set is_supercup_match = match.match_category == 'supercup' or match.event_type == 'supercup' %}
+{% if is_supercup_match %}
                 <img
-                    src="/static/clubs/Russian_Super_Cup_Logo.jpeg"
+                    src="{{ url_for('static', filename='clubs/Russian_Super_Cup_Logo.jpeg') }}"
                     alt="Суперкубок России"
                     class="tournament-logo"
-                    onerror="this.onerror=null;this.src='/static/clubs/russian-premier-league-footballlogos-org.png';"
+                    onerror="this.onerror=null;this.src='{{ url_for('static', filename='clubs/russian-premier-league-footballlogos-org.png') }}';"
                 >
             {% elif match.home_team == 'Россия' or match.away_team == 'Россия' %}
                 <img

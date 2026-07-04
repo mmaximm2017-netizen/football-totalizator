@@ -2540,6 +2540,33 @@
             inset 0 16px 38px rgba(255,255,255,0.08) !important;
     }
 
+    body.tournament-rpl .match-card-v2.match-card--supercup {
+        background:
+            radial-gradient(circle at 50% -12%, rgba(255,226,138,0.34), transparent 28%),
+            radial-gradient(circle at 86% 0%, rgba(238,210,132,0.30), transparent 30%),
+            linear-gradient(180deg, rgba(40,68,118,0.78) 0%, rgba(16,36,78,0.66) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,215,120,0.64),
+            0 0 0 3px rgba(255,215,120,0.18),
+            0 18px 40px rgba(255,190,80,0.18),
+            0 44px 96px rgba(0,0,0,0.58),
+            inset 0 2px 0 rgba(255,226,138,0.72),
+            inset 0 16px 38px rgba(255,255,255,0.09) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 18px;
+        right: 18px;
+        height: 3px;
+        border-radius: 0 0 999px 999px;
+        background: linear-gradient(90deg, transparent, rgba(255,215,120,0.88), transparent);
+        pointer-events: none;
+        z-index: 2;
+    }
+
     body.tournament-rpl .match-card-v2.rpl-event-national {
         background:
             linear-gradient(90deg, rgba(255,255,255,0.18) 0 2px, rgba(18,109,255,0.26) 2px 5px, rgba(229,39,59,0.26) 5px 8px, transparent 8px),
@@ -2619,6 +2646,12 @@
         height: 42px;
         border-radius: 12px;
         filter: drop-shadow(0 8px 16px rgba(0,0,0,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .tournament-logo {
+        filter:
+            drop-shadow(0 8px 16px rgba(0,0,0,0.34))
+            drop-shadow(0 0 10px rgba(255,215,120,0.24));
     }
 
     body.tournament-rpl .match-card-v2 .league-label,
