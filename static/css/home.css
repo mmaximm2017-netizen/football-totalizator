@@ -2879,6 +2879,138 @@
         box-shadow: none !important;
     }
 
+    body.tournament-rpl .match-card-v2.match-card--rpl {
+        color: #0f2448;
+        background:
+            radial-gradient(circle at 50% -12%, rgba(230,240,255,0.92), transparent 34%),
+            linear-gradient(180deg, #ffffff 0%, #f7fbff 58%, #edf5ff 100%) !important;
+        border: 1px solid rgba(0,57,166,0.12) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.92),
+            0 18px 44px rgba(0,38,98,0.13),
+            0 8px 20px rgba(0,57,166,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.96),
+            inset 0 -1px 0 rgba(0,57,166,0.06) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        border: 1px solid rgba(0,57,166,0.08) !important;
+        box-shadow: inset 3px 0 0 rgba(213,43,30,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .match-topline {
+        padding: 0 1px 7px;
+        box-shadow: inset 0 -1px 0 rgba(0,57,166,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .tournament-logo {
+        background: rgba(255,255,255,0.88);
+        box-shadow:
+            0 0 0 1px rgba(0,57,166,0.08),
+            0 10px 20px rgba(0,57,166,0.12);
+        filter: drop-shadow(0 8px 14px rgba(0,39,106,0.16));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .start-time-label::before,
+    body.tournament-rpl .match-card-v2.match-card--rpl .deadline-label {
+        color: rgba(15,36,72,0.58);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .start-time-label::after,
+    body.tournament-rpl .match-card-v2.match-card--rpl .deadline-helper {
+        color: #0f2448;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-name-v2 {
+        color: #10264f;
+        background: rgba(255,255,255,0.84) !important;
+        border: 1px solid rgba(0,57,166,0.10);
+        box-shadow:
+            0 8px 18px rgba(0,57,166,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.92),
+            inset 0 -1px 0 rgba(0,57,166,0.05) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--rpl .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,35,96,0.18))
+            drop-shadow(0 0 14px rgba(0,57,166,0.08));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .center-score,
+    body.tournament-rpl .match-card-v2.match-card--rpl .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--rpl .final-score,
+    body.tournament-rpl .match-card-v2.match-card--rpl .closed-prediction-center {
+        color: #0a2d7a;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .center-sub,
+    body.tournament-rpl .match-card-v2.match-card--rpl .closed-prediction-label {
+        color: rgba(15,36,72,0.58);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper {
+        background: rgba(255,255,255,0.92) !important;
+        border: 1px solid rgba(0,57,166,0.10) !important;
+        box-shadow:
+            0 10px 22px rgba(0,57,166,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.96),
+            inset 0 -1px 0 rgba(0,57,166,0.06) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="-1"] {
+        color: #0039A6;
+        border-color: rgba(0,57,166,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="-1"] {
+        color: #D52B1E;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-input-v2 {
+        color: #082b74 !important;
+        background: rgba(230,240,255,0.46) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.74) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .save-btn-v2 {
+        background: linear-gradient(135deg, #0039A6, #002b7f) !important;
+        color: #ffffff;
+        border-radius: 999px;
+        box-shadow:
+            0 14px 28px rgba(0,57,166,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.26),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--rpl .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl .bets-link-v2 {
+        color: rgba(15,36,72,0.72);
+        background: rgba(255,255,255,0.68) !important;
+        border-color: rgba(0,57,166,0.10);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.78),
+            0 8px 18px rgba(0,57,166,0.08) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.predicted .my-prediction-v2 b,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .prediction-score-finished,
+    body.tournament-rpl .match-card-v2.match-card--rpl .points-v2 {
+        color: #0039A6;
+    }
+
     body.tournament-rpl .match-card-v2.match-card--supercup {
         display: flex;
         flex-direction: column;

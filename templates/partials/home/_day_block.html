@@ -23,6 +23,7 @@
                 {% set predicted_class = '' %}
                 {% set playoff_stage_class = ('wc-playoff playoff-stage-' ~ match.playoff_stage ~ ' ' ~ (match.playoff_stage_css_class or '')) if match.playoff_stage else '' %}
                 {% set event_class = match.event_css_class or '' %}
+                {% set rpl_class = 'match-card--rpl' if match.is_rpl_category else '' %}
                 {% set supercup_class = 'match-card--supercup' if match.is_supercup else '' %}
                 {% set russia_class = 'match-card--russia' if match.is_russia_category else '' %}
                 {% set playoff_stage_title = {
@@ -44,7 +45,7 @@
                 {% endif %}
 
                 <div
-                    class="match-card-v2 {{ card_state }} {{ predicted_class }} {{ playoff_stage_class }} {{ event_class }} {{ supercup_class }} {{ russia_class }}"
+                    class="match-card-v2 {{ card_state }} {{ predicted_class }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ supercup_class }} {{ russia_class }}"
                     data-match-id="{{ match.id }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
