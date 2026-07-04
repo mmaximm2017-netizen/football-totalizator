@@ -57,6 +57,8 @@ VISIBLE_MATCH_STATUSES = (
     'FINISHED',
 )
 
+RUSSIA_TOURNAMENT_NAME = 'Чемпионат России 🇷🇺'
+
 PLAYOFF_STAGE_CARD_CLASSES = {
     "playoff": "match-card--playoff",
     "round_32": "match-card--playoff match-card--r32",
@@ -66,6 +68,29 @@ PLAYOFF_STAGE_CARD_CLASSES = {
     "third_place": "match-card--playoff match-card--third",
     "final": "match-card--playoff match-card--final",
 }
+
+
+def get_russia_match_event(home_team, away_team, stage_text, tournament_name, match_category=None):
+    if tournament_name != RUSSIA_TOURNAMENT_NAME:
+        return None, None
+
+    category = str(match_category or '').strip().lower()
+    if category == 'supercup':
+        return 'supercup', 'Суперкубок'
+    if category == 'national_team':
+        return 'national', 'Сборная России'
+    if category == 'rpl':
+        return 'league', None
+
+    teams = {str(home_team or '').strip().lower(), str(away_team or '').strip().lower()}
+    if 'россия' in teams or 'russia' in teams:
+        return 'national', 'Сборная России'
+
+    stage = str(stage_text or '').strip().lower()
+    if 'суперкуб' in stage or 'supercup' in stage or 'super cup' in stage:
+        return 'supercup', 'Суперкубок'
+
+    return 'league', None
 
 
 # =========================================================
@@ -267,7 +292,8 @@ WHERE id = %s
                    m.playoff_stage_manual,
                    m.playoff_stage_auto,
                    m.api_match_id,
-                   t.name
+                   t.name,
+                   m.match_category
             FROM matches m
             LEFT JOIN tournaments t ON t.id = m.tournament_id
             WHERE (m.kickoff_time >= %s OR m.kickoff_time IS NULL)
@@ -316,6 +342,14 @@ WHERE id = %s
             if not included_on_home:
                 continue
 
+            event_type, event_label = get_russia_match_event(
+                m[1],
+                m[2],
+                m[10] or m[11],
+                m[13],
+                m[14],
+            )
+
             raw_matches.append({
                 "id": m[0],
                 "home_team": m[1],
@@ -331,6 +365,10 @@ WHERE id = %s
                 "effective_playoff_stage": effective_stage,
                 "playoff_stage_css_class": css_class,
                 "playoff_stage_label": get_playoff_stage_label(effective_stage),
+                "match_category": m[14],
+                "event_type": event_type,
+                "event_label": event_label,
+                "event_css_class": f"rpl-event-{event_type}" if event_type else "",
             })
 
         # =================================================

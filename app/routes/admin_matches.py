@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, request, url_for
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.match_service import RPL_TOURNAMENT_NAME, run_sync_with_lock
-from app.services.rpl_admin_service import get_rpl_tournament
+from app.services.rpl_admin_service import get_rpl_tournament, normalize_rpl_match_category
 from app.services.scoring_recalculation_service import recalc_match_points
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -170,8 +170,11 @@ def admin_russia_2027_add():
         match_date = (request.form.get("match_date") or "").strip()
         match_time = (request.form.get("match_time") or "").strip()
         stage = (request.form.get("stage") or "").strip()
+        match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
         source = normalize_rpl_source(request.form.get("source"))
+        if match_category != "rpl":
+            source = "manual"
 
         if not home_team or not away_team or not match_date or not match_time:
             flash("Заполните команды, дату и время", "error")
@@ -213,12 +216,12 @@ def admin_russia_2027_add():
             """
             INSERT INTO matches (
                 api_match_id, home_team, away_team, kickoff_time, deadline,
-                status, league, tournament_id, playoff_stage_manual
+                status, league, tournament_id, playoff_stage_manual, match_category
             )
-            VALUES (%s, %s, %s, %s, %s, %s, 'rpl', %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, 'rpl', %s, %s, %s)
             RETURNING id
             """,
-            (api_match_id, home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage),
+            (api_match_id, home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage, match_category),
         )
         match_id = cur.fetchone()[0]
         conn.commit()
@@ -259,8 +262,11 @@ def admin_russia_2027_edit():
         match_date = (request.form.get("match_date") or "").strip()
         match_time = (request.form.get("match_time") or "").strip()
         stage = (request.form.get("stage") or "").strip()
+        match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), existing[1])
         source = normalize_rpl_source(request.form.get("source"))
+        if match_category != "rpl":
+            source = "manual"
         delete_score = request.form.get("delete_score") == "1"
 
         if not home_team or not away_team or not match_date or not match_time:
@@ -309,6 +315,7 @@ def admin_russia_2027_edit():
                 home_score = %s,
                 away_score = %s,
                 playoff_stage_manual = %s,
+                match_category = %s,
                 league = 'rpl',
                 tournament_id = %s
             WHERE id = %s
@@ -323,6 +330,7 @@ def admin_russia_2027_edit():
                 home_score,
                 away_score,
                 stage,
+                match_category,
                 tournament["id"],
                 match_id,
             ),

@@ -198,6 +198,7 @@ def init_db():
             playoff_stage TEXT,
             playoff_stage_manual TEXT,
             playoff_stage_auto TEXT,
+            match_category TEXT,
             api_conflict_note TEXT,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
@@ -268,6 +269,15 @@ def init_db():
             ) THEN
                 ALTER TABLE matches
                 ADD COLUMN playoff_stage_auto TEXT;
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name='matches' AND column_name='match_category'
+            ) THEN
+                ALTER TABLE matches
+                ADD COLUMN match_category TEXT;
             END IF;
 
             IF NOT EXISTS (

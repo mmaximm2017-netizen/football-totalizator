@@ -227,6 +227,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
         self.assertEqual(inserted["params"][0], "rpl_2026_1")
         self.assertEqual(inserted["params"][8], "rpl")
         self.assertEqual(inserted["params"][9], 5)
+        self.assertEqual(inserted["params"][11], "rpl")
 
 
 if __name__ == "__main__":

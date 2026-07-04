@@ -215,7 +215,8 @@ def create_match_from_understat(match, prefix, league_tag):
     }
 
     return {'id': f"{prefix}_{match['id']}", 'home_team': match['h']['title'], 'away_team': match['a']['title'],
-            'utcDate': match['datetime'], 'status': status, 'score': score, 'league': league_tag}
+            'utcDate': match['datetime'], 'status': status, 'score': score, 'league': league_tag,
+            'match_category': 'rpl' if league_tag == 'rpl' else None}
 
 def resolve_rpl_season():
     env_season = os.getenv("RPL_SEASON")
@@ -325,6 +326,7 @@ def update_matches():
             home_team = translate_name(raw_home); away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', '')).replace('Z', '')
             status = match.get('status', 'SCHEDULED'); league = match.get('league', 'other')
+            match_category = match.get('match_category') or ('rpl' if league == 'rpl' else None)
             if league == 'wc2026' and not WC2026_API_SYNC_ENABLED:
                 logger.info("[SYNC_SKIP] WC2026 API sync disabled")
                 continue
@@ -399,10 +401,10 @@ def update_matches():
             cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
             existing_row = cur.fetchone()
             if not existing_row:
-                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id, playoff_stage_auto)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id, playoff_stage_auto, match_category)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     RETURNING id""", (str(api_id), home_team, away_team,
-                    kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id, playoff_stage_auto))
+                    kickoff_utc, deadline_utc, status, home_score, away_score, league, tournament_id, playoff_stage_auto, match_category))
                 match_id = cur.fetchone()[0]
                 logger.info(
                     "[PLAYOFF_CHECK] match_id=%s api_match_id=%s is_playoff_match=%s raw_stage=%s round_raw=%s matchday=%s round_number=%s effective_stage=%s css_class=%s",
@@ -572,14 +574,14 @@ def update_matches():
                     status = 'FINISHED'
 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id)))
                     if match_id is not None and (existing_status != 'FINISHED' or finished_score_changed):
                         summary["matches_became_finished"].append(match_id)
                         _add_changed_finished_match(summary, match_id)
                 else:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s""",
+                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id)))
                 summary["matches_updated"] += 1
         conn.commit()
         return summary

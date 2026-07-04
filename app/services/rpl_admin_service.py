@@ -11,6 +11,35 @@ from app.utils import parse_datetime
 
 MSK = ZoneInfo("Europe/Moscow")
 
+RPL_MATCH_CATEGORIES = (
+    ("rpl", "Чемпионат России"),
+    ("supercup", "Суперкубок России"),
+    ("national_team", "Сборная России"),
+)
+
+RPL_MATCH_CATEGORY_LABELS = dict(RPL_MATCH_CATEGORIES)
+
+
+def normalize_rpl_match_category(value):
+    value = (value or "").strip().lower()
+    return value if value in RPL_MATCH_CATEGORY_LABELS else "rpl"
+
+
+def infer_rpl_match_category(home_team, away_team, stage, value=None):
+    normalized = normalize_rpl_match_category(value)
+    if value:
+        return normalized
+
+    teams = {str(home_team or "").strip().lower(), str(away_team or "").strip().lower()}
+    if "россия" in teams or "russia" in teams:
+        return "national_team"
+
+    stage_text = str(stage or "").strip().lower()
+    if "суперкуб" in stage_text or "supercup" in stage_text or "super cup" in stage_text:
+        return "supercup"
+
+    return "rpl"
+
 
 def check_rpl_calendar():
     checked_at = datetime.now().strftime("%d.%m.%Y %H:%M")
@@ -79,6 +108,7 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
                    home_score,
                    away_score,
                    playoff_stage_manual,
+                   match_category,
                    league
             FROM matches
             WHERE tournament_id = %s
@@ -102,7 +132,9 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
                 "home_score": row[7],
                 "away_score": row[8],
                 "stage": row[9] or "",
-                "league": row[10],
+                "match_category": infer_rpl_match_category(row[2], row[3], row[9], row[10]),
+                "match_category_label": RPL_MATCH_CATEGORY_LABELS.get(infer_rpl_match_category(row[2], row[3], row[9], row[10]), "Чемпионат России"),
+                "league": row[11],
                 "source": source,
                 "source_label": "API" if source == "api" else "Вручную",
                 "is_hidden": row[6] == "CANCELLED",
@@ -129,4 +161,5 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
         "rpl_matches_count": len(matches),
         "rpl_calendar": calendar_check,
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
+        "rpl_match_categories": RPL_MATCH_CATEGORIES,
     }
