@@ -43,6 +43,16 @@ def load_context_service_module():
 context_service = load_context_service_module()
 
 
+class MatchCategoryNormalizationTests(unittest.TestCase):
+    def test_supercup_category_is_normalized_for_ui(self):
+        from app.routes.main import normalize_match_category
+
+        self.assertEqual(normalize_match_category("supercup"), "supercup")
+        self.assertEqual(normalize_match_category(" SuperCup "), "supercup")
+        self.assertEqual(normalize_match_category("super_cup"), "supercup")
+        self.assertEqual(normalize_match_category("super cup"), "supercup")
+
+
 class FakeCursor:
     def __init__(self, fetchone_results=None, fetchall_results=None):
         self.fetchone_results = list(fetchone_results or [])

@@ -2540,33 +2540,6 @@
             inset 0 16px 38px rgba(255,255,255,0.08) !important;
     }
 
-    body.tournament-rpl .match-card-v2.match-card--supercup {
-        background:
-            radial-gradient(circle at 50% -12%, rgba(255,226,138,0.34), transparent 28%),
-            radial-gradient(circle at 86% 0%, rgba(238,210,132,0.30), transparent 30%),
-            linear-gradient(180deg, rgba(40,68,118,0.78) 0%, rgba(16,36,78,0.66) 100%) !important;
-        box-shadow:
-            0 0 0 1px rgba(255,215,120,0.64),
-            0 0 0 3px rgba(255,215,120,0.18),
-            0 18px 40px rgba(255,190,80,0.18),
-            0 44px 96px rgba(0,0,0,0.58),
-            inset 0 2px 0 rgba(255,226,138,0.72),
-            inset 0 16px 38px rgba(255,255,255,0.09) !important;
-    }
-
-    body.tournament-rpl .match-card-v2.match-card--supercup::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 18px;
-        right: 18px;
-        height: 3px;
-        border-radius: 0 0 999px 999px;
-        background: linear-gradient(90deg, transparent, rgba(255,215,120,0.88), transparent);
-        pointer-events: none;
-        z-index: 2;
-    }
-
     body.tournament-rpl .match-card-v2.rpl-event-national {
         background:
             linear-gradient(90deg, rgba(255,255,255,0.18) 0 2px, rgba(18,109,255,0.26) 2px 5px, rgba(229,39,59,0.26) 5px 8px, transparent 8px),
@@ -2904,6 +2877,165 @@
     body.tournament-rpl .match-card-v2::after {
         border: 0 !important;
         box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup {
+        isolation: isolate;
+        color: #fff7df;
+        background:
+            radial-gradient(circle at 50% 46%, rgba(255,218,128,0.13), transparent 30%),
+            radial-gradient(circle at 18% 8%, rgba(255,58,47,0.36), transparent 28%),
+            radial-gradient(circle at 88% 0%, rgba(255,203,93,0.30), transparent 24%),
+            linear-gradient(112deg, rgba(255,45,38,0.22) 0 9%, transparent 9% 17%, rgba(255,45,38,0.14) 17% 23%, transparent 23%),
+            linear-gradient(180deg, rgba(96,11,22,0.96) 0%, rgba(58,6,18,0.96) 54%, rgba(31,4,13,0.98) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,225,142,0.92),
+            0 0 0 3px rgba(138,22,24,0.80),
+            0 0 34px rgba(255,193,74,0.32),
+            0 22px 56px rgba(145,17,24,0.42),
+            0 46px 98px rgba(0,0,0,0.62),
+            inset 0 0 0 1px rgba(255,237,172,0.36),
+            inset 0 2px 0 rgba(255,230,153,0.88),
+            inset 0 -22px 48px rgba(38,0,8,0.58) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background:
+            linear-gradient(90deg, transparent 7%, rgba(255,220,126,0.84) 50%, transparent 93%) top / 100% 3px no-repeat,
+            radial-gradient(ellipse at center, transparent 48%, rgba(10,0,5,0.32) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 172px;
+        height: 172px;
+        transform: translate(-50%, -47%);
+        background: url("/static/clubs/Russian_Super_Cup_Logo.jpeg") center / contain no-repeat;
+        opacity: 0.10;
+        filter: grayscale(1) sepia(1) saturate(1.4) hue-rotate(350deg) brightness(1.45) contrast(1.12);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .match-topline {
+        box-shadow: inset 0 -1px 0 rgba(255,215,120,0.26);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .rpl-event-badge-supercup {
+        padding: 7px 12px;
+        color: #301006;
+        background: linear-gradient(135deg, #fff2b8 0%, #f1c65a 48%, #b67a22 100%);
+        border: 1px solid rgba(255,244,190,0.88);
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.34),
+            0 0 18px rgba(255,203,93,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.70),
+            inset 0 -1px 0 rgba(93,42,4,0.28);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .tournament-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        box-shadow:
+            0 0 0 1px rgba(255,230,153,0.44),
+            0 0 20px rgba(255,203,93,0.30);
+        filter:
+            drop-shadow(0 10px 18px rgba(0,0,0,0.42))
+            drop-shadow(0 0 12px rgba(255,215,120,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--supercup.finished .team-name-v2 {
+        color: #fff7df;
+        background: linear-gradient(180deg, rgba(91,9,20,0.76), rgba(45,4,14,0.72)) !important;
+        border: 1px solid rgba(255,215,120,0.42);
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.22),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--supercup .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,0,0,0.48))
+            drop-shadow(0 0 20px rgba(255,199,83,0.18));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .center-score,
+    body.tournament-rpl .match-card-v2.match-card--supercup .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--supercup .final-score,
+    body.tournament-rpl .match-card-v2.match-card--supercup .closed-prediction-center {
+        color: #fff1b5;
+        text-shadow: 0 0 16px rgba(255,203,93,0.30);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper {
+        background: rgba(39,3,13,0.86) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,215,120,0.46),
+            0 0 20px rgba(255,193,74,0.20),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 -1px 0 rgba(138,22,24,0.48),
+            0 12px 24px rgba(0,0,0,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn[data-step="-1"] {
+        color: #f3c65b;
+        border-color: rgba(255,215,120,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-input-v2 {
+        color: #fff8df !important;
+        background: rgba(20,0,7,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .save-btn-v2 {
+        background: linear-gradient(135deg, #f7d36a, #b9761e 58%, #7c2517) !important;
+        color: #240b05;
+        box-shadow:
+            0 16px 32px rgba(175,47,25,0.38),
+            0 0 18px rgba(255,203,93,0.26),
+            inset 0 1px 0 rgba(255,255,255,0.42),
+            inset 0 -1px 0 rgba(82,25,5,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .disabled-btn-v2 {
+        color: #f7d36a;
+        background: linear-gradient(180deg, rgba(78,7,19,0.78), rgba(42,3,13,0.82)) !important;
+        border: 1px solid rgba(255,215,120,0.42);
+        box-shadow:
+            0 10px 22px rgba(0,0,0,0.26),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 0 18px rgba(255,203,93,0.10) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--supercup .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--supercup .bets-link-v2 {
+        color: #ffe9a3;
+        background: rgba(47,3,14,0.56) !important;
+        border-color: rgba(255,215,120,0.30);
+        box-shadow:
+            inset 0 1px 0 rgba(255,230,153,0.12),
+            0 8px 18px rgba(0,0,0,0.18) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2:hover {

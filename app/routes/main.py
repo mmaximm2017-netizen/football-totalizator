@@ -384,22 +384,12 @@ WHERE id = %s
                 m[14],
             )
             match_category = normalize_match_category(m[14])
-            is_supercup = event_type == 'supercup'
+            is_supercup = match_category == 'supercup'
             logo_path, logo_alt, logo_fallback_path = get_match_logo(
                 m[1],
                 m[2],
                 m[6],
                 is_supercup,
-            )
-
-            logger.info(
-                "[MAIN_MATCH_CATEGORY] match_id=%s raw_category=%s normalized_category=%s event_type=%s is_supercup=%s logo=%s",
-                m[0],
-                m[14],
-                match_category,
-                event_type,
-                is_supercup,
-                logo_path,
             )
 
             raw_matches.append({
