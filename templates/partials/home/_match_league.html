@@ -25,7 +25,9 @@
             {% endif %}
 
             <div class="league-label">
-                {% if match.home_team == 'Россия' or match.away_team == 'Россия' %}
+                {% if match.event_label %}
+                    {{ match.event_label }}
+                {% elif match.home_team == 'Россия' or match.away_team == 'Россия' %}
                     Сборная России
                 {% elif match.league == 'wc2026' %}
                     {{ match.playoff_stage_label or '' }}
