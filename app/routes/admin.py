@@ -24,6 +24,10 @@ from app.services.admin_view_service import (
     prepare_admin_matches_data,
     prepare_admin_view_data,
 )
+from app.services.rpl_admin_service import (
+    check_rpl_calendar,
+    prepare_rpl_admin_data,
+)
 
 
 # =========================================================
@@ -90,6 +94,20 @@ def admin_wc_playoff():
     finally:
         close_db(conn, cur)
     return render_template('admin_wc_playoff.html', **data)
+
+
+@admin_bp.route('/russia-2027', methods=['GET', 'POST'])
+@admin_required
+def admin_russia_2027():
+    calendar_check = check_rpl_calendar() if request.method == 'POST' else None
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        data = prepare_rpl_admin_data(cur, calendar_check=calendar_check)
+        data['current_tournament_name'] = 'Чемпионат России 2027'
+    finally:
+        close_db(conn, cur)
+    return render_template('admin_russia_2027.html', **data)
 
 
 @admin_bp.route('/tournaments', methods=['GET'])

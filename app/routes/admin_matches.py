@@ -5,6 +5,8 @@ from flask import Blueprint, flash, redirect, request, url_for
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
+from app.services.match_service import RPL_TOURNAMENT_NAME, run_sync_with_lock
+from app.services.rpl_admin_service import get_rpl_tournament
 from app.services.scoring_recalculation_service import recalc_match_points
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -22,6 +24,8 @@ MANUAL_MATCH_STATUSES = {
     "LIVE",
     "FINISHED",
 }
+
+RPL_ADMIN_REDIRECT = "admin.admin_russia_2027"
 
 
 def normalize_manual_match_status(value, fallback="SCHEDULED"):
@@ -116,6 +120,298 @@ def build_wc_kickoff_and_deadline(match_date, match_time):
     kickoff_utc = kickoff_msk.astimezone(timezone.utc)
     deadline_utc = (kickoff_msk - timedelta(hours=6)).astimezone(timezone.utc)
     return kickoff_utc, deadline_utc
+
+
+def get_required_rpl_tournament(cur):
+    tournament = get_rpl_tournament(cur)
+    if not tournament:
+        raise ValueError(f"Турнир {RPL_TOURNAMENT_NAME} не найден")
+    return tournament
+
+
+def normalize_rpl_source(value):
+    return "api" if (value or "").strip().lower() == "api" else "manual"
+
+
+def build_rpl_api_match_id(source, raw_api_match_id):
+    if source != "api":
+        return None
+    return (raw_api_match_id or "").strip() or None
+
+
+@admin_matches_bp.route("/russia_2027_import", methods=["POST"])
+@admin_required
+def admin_russia_2027_import():
+    try:
+        summary = run_sync_with_lock()
+        sync_summary = summary.get("sync") if isinstance(summary, dict) else summary
+        flash(
+            "Импорт завершён: добавлено {inserted}, обновлено {updated}, пропущено без турнира {skipped}".format(
+                inserted=(sync_summary or {}).get("matches_inserted", 0),
+                updated=(sync_summary or {}).get("matches_updated", 0),
+                skipped=(sync_summary or {}).get("matches_skipped_missing_tournament", 0),
+            ),
+            "success",
+        )
+    except Exception as e:
+        flash(f"Ошибка импорта РПЛ: {e}", "error")
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia_2027_add", methods=["POST"])
+@admin_required
+def admin_russia_2027_add():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        home_team = (request.form.get("home_team") or "").strip()
+        away_team = (request.form.get("away_team") or "").strip()
+        match_date = (request.form.get("match_date") or "").strip()
+        match_time = (request.form.get("match_time") or "").strip()
+        stage = (request.form.get("stage") or "").strip()
+        status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
+        source = normalize_rpl_source(request.form.get("source"))
+
+        if not home_team or not away_team or not match_date or not match_time:
+            flash("Заполните команды, дату и время", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+        if home_team == away_team:
+            flash("Команды должны отличаться", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+        if status == "FINISHED":
+            flash("Для finished сначала создайте матч, затем внесите счёт", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            match_date,
+            match_time,
+            request.form.get("deadline_date", "").strip(),
+            request.form.get("deadline_time", "").strip(),
+        )
+        api_match_id = build_rpl_api_match_id(source, request.form.get("api_match_id"))
+        if source == "api" and not api_match_id:
+            flash("Для источника API укажите API ID", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s
+              AND home_team = %s
+              AND away_team = %s
+              AND kickoff_time = %s
+            """,
+            (tournament["id"], home_team, away_team, kickoff_utc),
+        )
+        if cur.fetchone():
+            flash("Такой матч уже существует", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        cur.execute(
+            """
+            INSERT INTO matches (
+                api_match_id, home_team, away_team, kickoff_time, deadline,
+                status, league, tournament_id, playoff_stage_manual
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, 'rpl', %s, %s)
+            RETURNING id
+            """,
+            (api_match_id, home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage),
+        )
+        match_id = cur.fetchone()[0]
+        conn.commit()
+        flash("Матч чемпионата России создан", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка создания матча: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia_2027_edit", methods=["POST"])
+@admin_required
+def admin_russia_2027_edit():
+    match_id = request.form.get("match_id", type=int)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        cur.execute(
+            """
+            SELECT id, status
+            FROM matches
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rpl'
+            """,
+            (match_id, tournament["id"]),
+        )
+        existing = cur.fetchone()
+        if not existing:
+            flash("Матч РПЛ не найден", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        home_team = (request.form.get("home_team") or "").strip()
+        away_team = (request.form.get("away_team") or "").strip()
+        match_date = (request.form.get("match_date") or "").strip()
+        match_time = (request.form.get("match_time") or "").strip()
+        stage = (request.form.get("stage") or "").strip()
+        status = normalize_manual_match_status(request.form.get("status"), existing[1])
+        source = normalize_rpl_source(request.form.get("source"))
+        delete_score = request.form.get("delete_score") == "1"
+
+        if not home_team or not away_team or not match_date or not match_time:
+            flash("Заполните команды, дату и время", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+        if home_team == away_team:
+            flash("Команды должны отличаться", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            match_date,
+            match_time,
+            request.form.get("deadline_date", "").strip(),
+            request.form.get("deadline_time", "").strip(),
+        )
+        api_match_id = build_rpl_api_match_id(source, request.form.get("api_match_id"))
+        if source == "api" and not api_match_id:
+            flash("Для источника API укажите API ID", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        home_score = away_score = None
+        result_home = (request.form.get("home_score") or "").strip()
+        result_away = (request.form.get("away_score") or "").strip()
+        has_score = bool(result_home or result_away)
+        if delete_score:
+            status = "SCHEDULED" if status == "FINISHED" else status
+        elif has_score:
+            home_score, away_score = validate_score(result_home, result_away)
+            if home_score is None:
+                flash("Укажите корректный счёт", "error")
+                return redirect(url_for(RPL_ADMIN_REDIRECT))
+            status = "FINISHED"
+        elif status == "FINISHED":
+            flash("Для finished укажите счёт", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET api_match_id = %s,
+                home_team = %s,
+                away_team = %s,
+                kickoff_time = %s,
+                deadline = %s,
+                status = %s,
+                home_score = %s,
+                away_score = %s,
+                playoff_stage_manual = %s,
+                league = 'rpl',
+                tournament_id = %s
+            WHERE id = %s
+            """,
+            (
+                api_match_id,
+                home_team,
+                away_team,
+                kickoff_utc,
+                deadline_utc,
+                status,
+                home_score,
+                away_score,
+                stage,
+                tournament["id"],
+                match_id,
+            ),
+        )
+        if status == "FINISHED":
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+        else:
+            cur.execute(
+                """
+                UPDATE predictions
+                SET points = 0
+                WHERE match_id = %s
+                  AND tournament_id = %s
+                """,
+                (match_id, tournament["id"]),
+            )
+        conn.commit()
+        flash("Матч сохранён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка сохранения матча: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia_2027_visibility", methods=["POST"])
+@admin_required
+def admin_russia_2027_visibility():
+    match_id = request.form.get("match_id", type=int)
+    action = request.form.get("visibility_action")
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        new_status = "CANCELLED" if action == "hide" else "SCHEDULED"
+        cur.execute(
+            """
+            UPDATE matches
+            SET status = %s
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rpl'
+            """,
+            (new_status, match_id, tournament["id"]),
+        )
+        conn.commit()
+        flash("Матч скрыт" if action == "hide" else "Матч восстановлен", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка изменения видимости: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia_2027_delete", methods=["POST"])
+@admin_required
+def admin_russia_2027_delete():
+    match_id = request.form.get("match_id", type=int)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        cur.execute(
+            """
+            DELETE FROM predictions
+            WHERE match_id = %s
+              AND tournament_id = %s
+            """,
+            (match_id, tournament["id"]),
+        )
+        cur.execute(
+            """
+            DELETE FROM matches
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rpl'
+            """,
+            (match_id, tournament["id"]),
+        )
+        conn.commit()
+        flash("Матч удалён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка удаления матча: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
 
 
 def handle_add_match(conn, cur):
