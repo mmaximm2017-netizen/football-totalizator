@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # =========================================================
 
 db_pool = None
+_match_category_column_checked = False
 
 
 def init_pool():
@@ -64,6 +65,44 @@ def is_connection_alive(conn):
         return False
 
 
+def ensure_match_category_column(conn):
+    global _match_category_column_checked
+
+    if _match_category_column_checked:
+        return
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_name='matches'
+        """)
+        if not cur.fetchone():
+            return
+
+        cur.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='matches'
+              AND column_name='match_category'
+        """)
+        exists = cur.fetchone()
+
+        if not exists:
+            try:
+                cur.execute("""
+                    ALTER TABLE matches
+                    ADD COLUMN IF NOT EXISTS match_category VARCHAR(32) DEFAULT 'rpl'
+                """)
+                conn.commit()
+            except psycopg2.errors.ReadOnlySqlTransaction:
+                conn.rollback()
+                logger.warning("Skipping match_category migration on read-only DB connection")
+                return
+
+    _match_category_column_checked = True
+
+
 def get_db():
     global db_pool
 
@@ -87,6 +126,8 @@ def get_db():
                 keepalives_interval=10,
                 keepalives_count=5,
             )
+
+        ensure_match_category_column(conn)
 
         return conn
 
@@ -198,7 +239,7 @@ def init_db():
             playoff_stage TEXT,
             playoff_stage_manual TEXT,
             playoff_stage_auto TEXT,
-            match_category TEXT,
+            match_category VARCHAR(32) DEFAULT 'rpl',
             api_conflict_note TEXT,
             league TEXT DEFAULT 'other',
             tournament_id INTEGER REFERENCES tournaments(id)
@@ -277,7 +318,7 @@ def init_db():
                 WHERE table_name='matches' AND column_name='match_category'
             ) THEN
                 ALTER TABLE matches
-                ADD COLUMN match_category TEXT;
+                ADD COLUMN match_category VARCHAR(32) DEFAULT 'rpl';
             END IF;
 
             IF NOT EXISTS (
