@@ -23,7 +23,7 @@
                 {% set predicted_class = '' %}
                 {% set playoff_stage_class = ('wc-playoff playoff-stage-' ~ match.playoff_stage ~ ' ' ~ (match.playoff_stage_css_class or '')) if match.playoff_stage else '' %}
                 {% set event_class = match.event_css_class or '' %}
-                {% set supercup_class = 'match-card--supercup' if match.match_category == 'supercup' or match.event_type == 'supercup' else '' %}
+                {% set supercup_class = 'match-card--supercup' if match.is_supercup else '' %}
                 {% set playoff_stage_title = {
                     'playoff': 'ПЛЕЙ-ОФФ',
                     'round_32': '1/16 ФИНАЛА',

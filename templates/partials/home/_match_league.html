@@ -1,34 +1,9 @@
-{% set is_supercup_match = match.match_category == 'supercup' or match.event_type == 'supercup' %}
-{% if is_supercup_match %}
+{% if match.tournament_logo_path %}
                 <img
-                    src="{{ url_for('static', filename='clubs/Russian_Super_Cup_Logo.jpeg') }}"
-                    alt="Суперкубок России"
+                    src="{{ url_for('static', filename=match.tournament_logo_path) }}"
+                    alt="{{ match.tournament_logo_alt }}"
                     class="tournament-logo"
-                    onerror="this.onerror=null;this.src='{{ url_for('static', filename='clubs/russian-premier-league-footballlogos-org.png') }}';"
-                >
-            {% elif match.home_team == 'Россия' or match.away_team == 'Россия' %}
-                <img
-                    src="/static/clubs/Russian_Football_Union_Logo.svg"
-                    alt="Сборная России"
-                    class="tournament-logo"
-                >
-            {% elif match.league == 'rpl' %}
-                <img
-                    src="/static/clubs/russian-premier-league-footballlogos-org.png"
-                    alt="РПЛ"
-                    class="tournament-logo"
-                >
-            {% elif match.league == 'rcup' %}
-                <img
-                    src="/static/clubs/Fonbet_Russian_Cup.png"
-                    alt="Кубок России"
-                    class="tournament-logo"
-                >
-            {% elif match.league == 'wc2026' %}
-                <img
-                    src="/static/clubs/wc2026-logo.png"
-                    alt="Турнир"
-                    class="tournament-logo"
+                    {% if match.tournament_logo_fallback_path %}onerror="this.onerror=null;this.src='{{ url_for('static', filename=match.tournament_logo_fallback_path) }}';"{% endif %}
                 >
             {% endif %}
 

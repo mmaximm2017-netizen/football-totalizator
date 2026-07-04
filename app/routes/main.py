@@ -58,6 +58,11 @@ VISIBLE_MATCH_STATUSES = (
 )
 
 RUSSIA_TOURNAMENT_NAME = 'Чемпионат России 🇷🇺'
+SUPERCUP_LOGO_STATIC_PATH = 'clubs/Russian_Super_Cup_Logo.jpeg'
+RPL_LOGO_STATIC_PATH = 'clubs/russian-premier-league-footballlogos-org.png'
+RFU_LOGO_STATIC_PATH = 'clubs/Russian_Football_Union_Logo.svg'
+RCUP_LOGO_STATIC_PATH = 'clubs/Fonbet_Russian_Cup.png'
+WC2026_LOGO_STATIC_PATH = 'clubs/wc2026-logo.png'
 
 PLAYOFF_STAGE_CARD_CLASSES = {
     "playoff": "match-card--playoff",
@@ -70,11 +75,41 @@ PLAYOFF_STAGE_CARD_CLASSES = {
 }
 
 
+def normalize_match_category(value):
+    category = str(value or '').strip().lower().replace('-', '_').replace(' ', '_')
+    if category in {'supercup', 'super_cup'}:
+        return 'supercup'
+    if category in {'national_team', 'national', 'russia'}:
+        return 'national_team'
+    if category == 'rpl':
+        return 'rpl'
+    return category
+
+
+def is_russia_team_match(home_team, away_team):
+    teams = {str(home_team or '').strip().lower(), str(away_team or '').strip().lower()}
+    return 'россия' in teams or 'russia' in teams
+
+
+def get_match_logo(home_team, away_team, league, is_supercup=False):
+    if is_supercup:
+        return SUPERCUP_LOGO_STATIC_PATH, 'Суперкубок России', RPL_LOGO_STATIC_PATH
+    if is_russia_team_match(home_team, away_team):
+        return RFU_LOGO_STATIC_PATH, 'Сборная России', None
+    if league == 'rpl':
+        return RPL_LOGO_STATIC_PATH, 'РПЛ', None
+    if league == 'rcup':
+        return RCUP_LOGO_STATIC_PATH, 'Кубок России', None
+    if league == 'wc2026':
+        return WC2026_LOGO_STATIC_PATH, 'Турнир', None
+    return None, None, None
+
+
 def get_russia_match_event(home_team, away_team, stage_text, tournament_name, match_category=None):
     if tournament_name != RUSSIA_TOURNAMENT_NAME:
         return None, None
 
-    category = str(match_category or '').strip().lower()
+    category = normalize_match_category(match_category)
     if category == 'supercup':
         return 'supercup', 'Суперкубок'
     if category == 'national_team':
@@ -82,8 +117,7 @@ def get_russia_match_event(home_team, away_team, stage_text, tournament_name, ma
     if category == 'rpl':
         return 'league', None
 
-    teams = {str(home_team or '').strip().lower(), str(away_team or '').strip().lower()}
-    if 'россия' in teams or 'russia' in teams:
+    if is_russia_team_match(home_team, away_team):
         return 'national', 'Сборная России'
 
     stage = str(stage_text or '').strip().lower()
@@ -349,6 +383,24 @@ WHERE id = %s
                 m[13],
                 m[14],
             )
+            match_category = normalize_match_category(m[14])
+            is_supercup = event_type == 'supercup'
+            logo_path, logo_alt, logo_fallback_path = get_match_logo(
+                m[1],
+                m[2],
+                m[6],
+                is_supercup,
+            )
+
+            logger.info(
+                "[MAIN_MATCH_CATEGORY] match_id=%s raw_category=%s normalized_category=%s event_type=%s is_supercup=%s logo=%s",
+                m[0],
+                m[14],
+                match_category,
+                event_type,
+                is_supercup,
+                logo_path,
+            )
 
             raw_matches.append({
                 "id": m[0],
@@ -366,6 +418,11 @@ WHERE id = %s
                 "playoff_stage_css_class": css_class,
                 "playoff_stage_label": get_playoff_stage_label(effective_stage),
                 "match_category": m[14],
+                "match_category_normalized": match_category,
+                "is_supercup": is_supercup,
+                "tournament_logo_path": logo_path,
+                "tournament_logo_alt": logo_alt,
+                "tournament_logo_fallback_path": logo_fallback_path,
                 "event_type": event_type,
                 "event_label": event_label,
                 "event_css_class": f"rpl-event-{event_type}" if event_type else "",
