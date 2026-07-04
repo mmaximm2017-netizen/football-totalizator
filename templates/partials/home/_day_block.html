@@ -26,6 +26,7 @@
                 {% set rpl_class = 'match-card--rpl' if match.is_rpl_category else '' %}
                 {% set supercup_class = 'match-card--supercup' if match.is_supercup else '' %}
                 {% set russia_class = 'match-card--russia' if match.is_russia_category else '' %}
+                {% set russian_cup_class = 'match-card--russian-cup' if match.is_russian_cup else '' %}
                 {% set playoff_stage_title = {
                     'playoff': 'ПЛЕЙ-ОФФ',
                     'round_32': '1/16 ФИНАЛА',
@@ -45,7 +46,7 @@
                 {% endif %}
 
                 <div
-                    class="match-card-v2 {{ card_state }} {{ predicted_class }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ supercup_class }} {{ russia_class }}"
+                    class="match-card-v2 {{ card_state }} {{ predicted_class }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ supercup_class }} {{ russia_class }} {{ russian_cup_class }}"
                     data-match-id="{{ match.id }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
@@ -58,6 +59,10 @@
 {% if match.event_label %}
 <div class="rpl-event-badge rpl-event-badge-{{ match.event_type }}">
     <span>{{ match.event_label }}</span>
+</div>
+{% elif match.is_russian_cup %}
+<div class="rpl-event-badge rpl-event-badge-russian-cup">
+    <span>КУБОК РОССИИ</span>
 </div>
 {% endif %}
 <div class="match-topline">

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .rc-admin{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#242B35;color:#fff;font-weight:800;font-size:13px}.admin-nav a.active{background:#E80024;color:#fff}.rc-hero{padding:18px;border-radius:26px;background:radial-gradient(circle at 88% 0%,rgba(232,0,36,.38),transparent 30%),linear-gradient(145deg,#242B35,#000005 58%,#4a0010);color:#fff;box-shadow:0 18px 38px rgba(0,0,5,.34),0 0 24px rgba(232,0,36,.20)}.rc-title{font-size:26px;font-weight:1000;line-height:1.06}.rc-subtitle{margin-top:6px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800;line-height:1.35}.rc-card{border-radius:22px;padding:14px;background:linear-gradient(160deg,rgba(36,43,53,.94),rgba(0,0,5,.92));border:1px solid rgba(232,0,36,.28);box-shadow:0 14px 32px rgba(0,0,5,.28)}.rc-card summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}.rc-card summary::-webkit-details-marker{display:none}.rc-card-title{font-size:18px;font-weight:1000;color:#fff}.rc-card-note{margin-top:3px;color:rgba(255,255,255,.62);font-size:12px;font-weight:800}.rc-chevron{font-size:13px;color:rgba(255,255,255,.62)}.rc-card[open] .rc-chevron{transform:rotate(90deg)}.rc-body{margin-top:12px;display:grid;gap:10px}.rc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rc-field{display:grid;gap:5px}.rc-field label{font-size:12px;font-weight:900;color:rgba(255,255,255,.70)}.rc-field input,.rc-field select{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 11px;background:rgba(255,255,255,.08);color:#fff;font-weight:800}.rc-field input::placeholder{color:rgba(255,255,255,.38)}.rc-btn{width:100%;min-height:44px;border:0;border-radius:999px;padding:10px 12px;background:linear-gradient(135deg,#E80024,#9e0018);color:#fff;font-size:14px;font-weight:1000;box-shadow:0 12px 24px rgba(232,0,36,.24)}.rc-btn.dark{background:linear-gradient(135deg,#242B35,#000005)}.rc-btn.red{background:linear-gradient(135deg,#E80024,#68000f)}.rc-btn.small{min-height:36px;font-size:12px}.rc-empty{padding:14px;border-radius:14px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.62);font-size:13px;font-weight:800;text-align:center}.rc-match-list{display:grid;gap:10px}.rc-match{padding:12px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}.rc-match.hidden{opacity:.58}.rc-match-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.rc-teams{font-size:15px;font-weight:1000;color:#fff;line-height:1.22}.rc-meta{margin-top:4px;color:rgba(255,255,255,.62);font-size:12px;font-weight:800}.rc-stage{display:inline-flex;padding:5px 8px;border-radius:999px;background:#E80024;color:#fff;font-size:11px;font-weight:1000;white-space:nowrap}.rc-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.inline-check{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.74);font-size:12px;font-weight:900}.inline-check input{width:auto!important}.rc-alert{padding:12px;border-radius:14px;background:rgba(232,0,36,.14);border:1px solid rgba(232,0,36,.30);color:#fff;font-weight:900}@media(max-width:520px){.rc-grid,.rc-actions{grid-template-columns:1fr}.rc-match-head{flex-direction:column}.rc-stage{white-space:normal}}
+</style>
+
+<div class="rc-admin">
+    <div class="admin-nav">
+        <a href="{{ url_for('admin.admin') }}">← Админка</a>
+        <a href="{{ url_for('admin.admin_matches') }}">Матчи</a>
+        <a href="{{ url_for('admin.admin_wc_playoff') }}">Плей-офф ЧМ-2026</a>
+        <a href="{{ url_for('admin.admin_russia_2027') }}">Чемпионат России 2027</a>
+        <a class="active" href="{{ url_for('admin.admin_russian_cup') }}">Кубок России</a>
+        <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
+    </div>
+
+    <section class="rc-hero">
+        <div class="rc-title">Кубок России</div>
+        <div class="rc-subtitle">ФОНБЕТ Кубок России. Только ручное управление матчами, без API-синхронизации.</div>
+    </section>
+
+    {% if not russian_cup_tournament %}
+        <div class="rc-alert">Турнир «Кубок России» не найден. Он будет создан автоматически при следующем подключении к БД.</div>
+    {% endif %}
+
+    <details class="rc-card" open>
+        <summary><div><div class="rc-card-title">Матчи</div><div class="rc-card-note">{{ russian_cup_matches_count }} матчей в турнире</div></div><span class="rc-chevron">▶</span></summary>
+        <div class="rc-body">
+            {% if russian_cup_matches %}
+                <div class="rc-match-list">
+                    {% for m in russian_cup_matches %}
+                    <div class="rc-match {% if m.is_hidden %}hidden{% endif %}">
+                        <div class="rc-match-head">
+                            <div><div class="rc-teams">{{ m.home_team }} — {{ m.away_team }}</div><div class="rc-meta">{{ m.match_date_msk }} {{ m.match_time_msk }} · {{ m.status }}{% if m.home_score is not none and m.away_score is not none %} · {{ m.home_score }}:{{ m.away_score }}{% endif %}</div></div>
+                            <span class="rc-stage">{{ m.stage or 'Стадия не указана' }}</span>
+                        </div>
+                        <details class="rc-body">
+                            <summary><div class="rc-card-note">Редактировать матч</div><span class="rc-chevron">▶</span></summary>
+                            <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}" class="rc-body">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                <div class="rc-grid"><div class="rc-field"><label>Команда 1</label><input name="home_team" value="{{ m.home_team }}" required></div><div class="rc-field"><label>Команда 2</label><input name="away_team" value="{{ m.away_team }}" required></div></div>
+                                <div class="rc-grid"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
+                                <div class="rc-grid"><div class="rc-field"><label>Статус</label><select name="status">{% for s in russian_cup_statuses %}<option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select></div><div class="rc-field"><label>Стадия</label><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}" {% if m.stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
+                                <div class="rc-field"><label>Другая стадия</label><input name="stage_custom" value="{% if m.stage and m.stage not in russian_cup_stages|map(attribute=0)|list %}{{ m.stage }}{% endif %}" placeholder="Например: Путь регионов"></div>
+                                <div class="rc-grid"><div class="rc-field"><label>Счёт 1</label><input type="number" min="0" name="home_score" value="{{ m.home_score if m.home_score is not none else '' }}"></div><div class="rc-field"><label>Счёт 2</label><input type="number" min="0" name="away_score" value="{{ m.away_score if m.away_score is not none else '' }}"></div></div>
+                                <label class="inline-check"><input type="checkbox" name="delete_score" value="1"> Удалить результат</label>
+                                <div class="rc-grid"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                                <button class="rc-btn" type="submit">Сохранить матч</button>
+                            </form>
+                        </details>
+                        <div class="rc-actions">
+                            <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.is_hidden %}restore{% else %}hide{% endif %}"><button class="rc-btn small dark" type="submit">{% if m.is_hidden %}Восстановить{% else %}Скрыть{% endif %}</button></form>
+                            <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rc-btn small red" type="submit">Удалить</button></form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="rc-empty">Матчей пока нет. Добавьте первый матч вручную.</div>
+            {% endif %}
+        </div>
+    </details>
+
+    <details class="rc-card" open>
+        <summary><div><div class="rc-card-title">Добавить матч</div><div class="rc-card-note">Матчи Кубка России создаются только вручную</div></div><span class="rc-chevron">▶</span></summary>
+        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="rc-grid"><div class="rc-field"><label>Команда 1</label><input name="home_team" required></div><div class="rc-field"><label>Команда 2</label><input name="away_team" required></div></div>
+            <div class="rc-grid"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="19:00" required></div></div>
+            <div class="rc-grid"><div class="rc-field"><label>Статус</label><select name="status"><option value="SCHEDULED">scheduled</option><option value="TIMED">timed</option><option value="LIVE">live</option></select></div><div class="rc-field"><label>Стадия</label><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div></div>
+            <div class="rc-field"><label>Другая стадия</label><input name="stage_custom" placeholder="Например: Путь РПЛ"></div>
+            <div class="rc-grid"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time"></div></div>
+            <button class="rc-btn" type="submit">Добавить матч</button>
+        </form>
+    </details>
+
+    <details class="rc-card">
+        <summary><div><div class="rc-card-title">Пересчитать очки</div><div class="rc-card-note">Для всех завершённых матчей Кубка России</div></div><span class="rc-chevron">▶</span></summary>
+        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_recalc') }}" class="rc-body" onsubmit="return confirm('Пересчитать очки Кубка России?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="rc-btn dark" type="submit">Пересчитать очки турнира</button>
+        </form>
+    </details>
+</div>
+
+{% endblock %}

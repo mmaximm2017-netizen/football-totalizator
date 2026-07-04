@@ -28,6 +28,7 @@ from app.services.rpl_admin_service import (
     check_rpl_calendar,
     prepare_rpl_admin_data,
 )
+from app.services.russian_cup_admin_service import prepare_russian_cup_admin_data
 
 
 # =========================================================
@@ -121,23 +122,11 @@ def admin_russian_cup():
     conn = get_db()
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
-            SELECT id
-            FROM tournaments
-            WHERE name = 'Кубок России'
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
+        data = prepare_russian_cup_admin_data(cur)
+        data['current_tournament_name'] = 'Кубок России'
     finally:
         close_db(conn, cur)
-
-    if row:
-        return redirect(url_for('admin.admin_matches', tid=row[0]))
-
-    flash('Турнир Кубок России пока не найден', 'error')
-    return redirect(url_for('admin.admin_matches'))
+    return render_template('admin_russian_cup.html', **data)
 
 
 @admin_bp.route('/tournaments', methods=['GET'])

@@ -58,6 +58,7 @@ VISIBLE_MATCH_STATUSES = (
 )
 
 RUSSIA_TOURNAMENT_NAME = 'Чемпионат России 🇷🇺'
+RUSSIAN_CUP_TOURNAMENT_NAME = 'Кубок России'
 SUPERCUP_LOGO_STATIC_PATH = 'clubs/Russian_Super_Cup_Logo.jpeg'
 RPL_LOGO_STATIC_PATH = 'clubs/russian-premier-league-footballlogos-org.png'
 RFU_LOGO_STATIC_PATH = 'clubs/Russian_Football_Union_Logo.svg'
@@ -384,7 +385,8 @@ WHERE id = %s
                 m[14],
             )
             match_category = normalize_match_category(m[14])
-            is_rpl_category = match_category == 'rpl'
+            is_russian_cup = m[13] == RUSSIAN_CUP_TOURNAMENT_NAME or m[6] == 'rcup'
+            is_rpl_category = match_category == 'rpl' and not is_russian_cup
             is_supercup = match_category == 'supercup'
             is_russia_category = match_category == 'national_team'
             logo_path, logo_alt, logo_fallback_path = get_match_logo(
@@ -414,6 +416,7 @@ WHERE id = %s
                 "is_rpl_category": is_rpl_category,
                 "is_supercup": is_supercup,
                 "is_russia_category": is_russia_category,
+                "is_russian_cup": is_russian_cup,
                 "tournament_logo_path": logo_path,
                 "tournament_logo_alt": logo_alt,
                 "tournament_logo_fallback_path": logo_fallback_path,
