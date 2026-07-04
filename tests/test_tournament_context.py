@@ -52,6 +52,12 @@ class MatchCategoryNormalizationTests(unittest.TestCase):
         self.assertEqual(normalize_match_category("super_cup"), "supercup")
         self.assertEqual(normalize_match_category("super cup"), "supercup")
 
+    def test_russia_category_is_normalized_for_ui(self):
+        from app.routes.main import normalize_match_category
+
+        self.assertEqual(normalize_match_category("russia"), "national_team")
+        self.assertEqual(normalize_match_category(" national_team "), "national_team")
+
 
 class FakeCursor:
     def __init__(self, fetchone_results=None, fetchall_results=None):

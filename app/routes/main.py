@@ -385,6 +385,7 @@ WHERE id = %s
             )
             match_category = normalize_match_category(m[14])
             is_supercup = match_category == 'supercup'
+            is_russia_category = match_category == 'national_team'
             logo_path, logo_alt, logo_fallback_path = get_match_logo(
                 m[1],
                 m[2],
@@ -410,6 +411,7 @@ WHERE id = %s
                 "match_category": m[14],
                 "match_category_normalized": match_category,
                 "is_supercup": is_supercup,
+                "is_russia_category": is_russia_category,
                 "tournament_logo_path": logo_path,
                 "tournament_logo_alt": logo_alt,
                 "tournament_logo_fallback_path": logo_fallback_path,

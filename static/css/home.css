@@ -3076,6 +3076,157 @@
             0 8px 18px rgba(0,0,0,0.18) !important;
     }
 
+    body.tournament-rpl .match-card-v2.match-card--russia {
+        isolation: isolate;
+        color: #ffffff;
+        background:
+            radial-gradient(circle at 20% 5%, rgba(230,240,255,0.72), transparent 24%),
+            radial-gradient(circle at 88% 26%, rgba(0,57,166,0.34), transparent 28%),
+            linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(230,240,255,0.88) 18%, rgba(0,57,166,0.94) 19%, rgba(0,40,124,0.96) 70%, rgba(213,43,30,0.94) 71%, rgba(146,24,19,0.96) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.70),
+            0 0 0 3px rgba(0,57,166,0.26),
+            0 22px 54px rgba(0,57,166,0.28),
+            0 36px 82px rgba(213,43,30,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.78),
+            inset 0 -18px 42px rgba(121,14,12,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background:
+            linear-gradient(90deg, #ffffff 0 33.333%, #0039A6 33.333% 66.666%, #D52B1E 66.666% 100%) top / 100% 4px no-repeat,
+            radial-gradient(ellipse at center, transparent 46%, rgba(0,18,63,0.20) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 48%;
+        width: 174px;
+        height: 174px;
+        transform: translate(-50%, -50%);
+        background: url("/static/clubs/Russian_Football_Union_Logo.svg") center / contain no-repeat;
+        opacity: 0.07;
+        filter: grayscale(1) brightness(2.2) contrast(0.85);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .match-topline {
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,0.28);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .rpl-event-badge-national {
+        color: #00245f;
+        background: linear-gradient(90deg, #ffffff 0%, #ffffff 30%, #E6F0FF 31%, #0039A6 62%, #D52B1E 100%);
+        border: 1px solid rgba(255,255,255,0.74);
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.72),
+            inset 0 -1px 0 rgba(0,57,166,0.18);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .tournament-logo {
+        background: rgba(255,255,255,0.82);
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.74),
+            0 10px 20px rgba(0,57,166,0.24);
+        filter:
+            drop-shadow(0 8px 16px rgba(0,0,0,0.30))
+            drop-shadow(0 0 12px rgba(230,240,255,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label::before,
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-label {
+        color: rgba(0,32,92,0.72);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label::after,
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-helper {
+        color: #0039A6;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia.finished .team-name-v2 {
+        color: #ffffff;
+        background: rgba(255,255,255,0.16) !important;
+        border: 1px solid rgba(255,255,255,0.34);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.22),
+            inset 0 -1px 0 rgba(0,0,0,0.10),
+            0 8px 18px rgba(0,32,92,0.18) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--russia .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,0,0,0.38))
+            drop-shadow(0 0 18px rgba(230,240,255,0.24));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .center-score,
+    body.tournament-rpl .match-card-v2.match-card--russia .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--russia .final-score,
+    body.tournament-rpl .match-card-v2.match-card--russia .closed-prediction-center {
+        color: #ffffff;
+        text-shadow: 0 0 14px rgba(230,240,255,0.32);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper {
+        background: rgba(0,30,100,0.88) !important;
+        box-shadow:
+            0 0 0 1px rgba(230,240,255,0.42),
+            0 0 20px rgba(0,57,166,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(213,43,30,0.36),
+            0 12px 24px rgba(0,0,0,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn[data-step="-1"] {
+        color: #ffffff;
+        border-color: rgba(230,240,255,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-input-v2 {
+        color: #ffffff !important;
+        background: rgba(0,18,74,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .save-btn-v2 {
+        background: linear-gradient(135deg, #0039A6, #002875) !important;
+        color: #ffffff;
+        box-shadow:
+            0 16px 32px rgba(0,57,166,0.36),
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--russia .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .bets-link-v2 {
+        color: #ffffff;
+        background: rgba(213,43,30,0.44) !important;
+        border-color: rgba(255,255,255,0.26);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 8px 18px rgba(90,10,10,0.16) !important;
+    }
+
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2:hover {
         transform: translateY(-3px);
         box-shadow:
