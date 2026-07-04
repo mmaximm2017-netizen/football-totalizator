@@ -800,25 +800,24 @@
     }
 
     .team-name-v2 {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
+        display: grid;
+        place-items: center;
         -webkit-line-clamp: 2;
         line-clamp: 2;
-        -webkit-box-pack: center;
-        -webkit-box-align: center;
+        align-content: center;
         width: 100%;
         max-width: 140px;
-        height: calc(1.15em * 2 + 12px);
-        min-height: calc(1.15em * 2 + 12px);
-        max-height: calc(1.15em * 2 + 12px);
-        padding: 6px 8px;
+        height: 2.4em;
+        min-height: 2.4em;
+        max-height: 2.4em;
+        padding: 0 8px;
         box-sizing: border-box;
         overflow: hidden;
         text-overflow: ellipsis;
         text-align: center;
         font-size: 16px;
         font-weight: 950;
-        line-height: 1.15;
+        line-height: 1.1;
         white-space: normal;
         overflow-wrap: break-word;
         word-break: normal;
@@ -827,9 +826,11 @@
     }
 
     .match-card-v2:not(.finished) .team-name-v2 {
-        height: calc(1.15em * 2 + 12px);
-        min-height: calc(1.15em * 2 + 12px);
-        max-height: calc(1.15em * 2 + 12px);
+        display: grid;
+        place-items: center;
+        height: 2.4em;
+        min-height: 2.4em;
+        max-height: 2.4em;
         align-self: stretch;
         width: min(100%, 140px);
         max-width: 140px;
@@ -1672,9 +1673,9 @@
         }
 
         .match-card-v2:not(.finished) .team-name-v2 {
-            height: calc(1.15em * 2 + 12px);
-            min-height: calc(1.15em * 2 + 12px);
-            max-height: calc(1.15em * 2 + 12px);
+            height: 2.4em;
+            min-height: 2.4em;
+            max-height: 2.4em;
             width: min(100%, 118px);
             max-width: 118px;
             font-size: 13px;
@@ -3485,6 +3486,230 @@
         box-shadow:
             inset 0 1px 0 rgba(255,255,255,0.16),
             0 8px 18px rgba(90,10,10,0.16) !important;
+    }
+
+    /* Match Card Layout System V2: one layout, theme tokens per match category. */
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) {
+        --mc-card-bg: linear-gradient(180deg, rgba(24,61,126,0.70), rgba(12,35,84,0.62));
+        --mc-card-color: #ffffff;
+        --mc-card-border: 0;
+        --mc-card-shadow: 0 44px 96px rgba(0,0,0,0.58);
+        --mc-topline-divider: rgba(255,255,255,0.16);
+        --mc-meta-muted: rgba(255,255,255,0.66);
+        --mc-meta-strong: rgba(255,255,255,0.94);
+        --mc-logo-bg: transparent;
+        --mc-logo-shadow: 0 8px 16px rgba(0,0,0,0.34);
+        --mc-logo-filter: drop-shadow(0 8px 16px rgba(0,0,0,0.34));
+        --mc-team-name-color: #ffffff;
+        --mc-team-name-bg: rgba(255,255,255,0.08);
+        --mc-team-name-border: transparent;
+        --mc-team-name-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.08);
+        --mc-team-logo-filter: drop-shadow(0 18px 24px rgba(0,0,0,0.42));
+        --mc-score-color: #ffffff;
+        --mc-score-shadow: none;
+        --mc-stepper-bg: rgba(4,13,37,0.76);
+        --mc-stepper-border: transparent;
+        --mc-stepper-shadow: 0 12px 24px rgba(0,0,0,0.34);
+        --mc-stepper-plus: #39b4ff;
+        --mc-stepper-minus: #ff3852;
+        --mc-stepper-plus-border: rgba(57,180,255,0.30);
+        --mc-stepper-minus-border: rgba(255,56,82,0.30);
+        --mc-input-bg: rgba(0,0,0,0.18);
+        --mc-input-color: #ffffff;
+        --mc-button-bg: linear-gradient(135deg, #126dff, #0a4ee8);
+        --mc-button-color: #ffffff;
+        --mc-button-shadow: 0 16px 32px rgba(18,109,255,0.40);
+        --mc-panel-bg: rgba(255,255,255,0.06);
+        --mc-panel-color: rgba(255,255,255,0.70);
+        --mc-panel-border: transparent;
+        --mc-panel-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+
+        color: var(--mc-card-color);
+        background: var(--mc-card-bg) !important;
+        border: var(--mc-card-border) !important;
+        box-shadow: var(--mc-card-shadow) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl {
+        --mc-card-bg: radial-gradient(circle at 50% -12%, rgba(230,240,255,0.92), transparent 34%), linear-gradient(180deg, #ffffff 0%, #f7fbff 58%, #edf5ff 100%);
+        --mc-card-color: #0f2448;
+        --mc-card-border: 1px solid rgba(0,57,166,0.12);
+        --mc-card-shadow: 0 0 0 1px rgba(255,255,255,0.92), 0 18px 44px rgba(0,38,98,0.13), 0 8px 20px rgba(0,57,166,0.08), inset 0 1px 0 rgba(255,255,255,0.96), inset 0 -1px 0 rgba(0,57,166,0.06);
+        --mc-topline-divider: rgba(0,57,166,0.10);
+        --mc-meta-muted: rgba(15,36,72,0.58);
+        --mc-meta-strong: #0f2448;
+        --mc-logo-bg: rgba(255,255,255,0.88);
+        --mc-logo-shadow: 0 0 0 1px rgba(0,57,166,0.08), 0 10px 20px rgba(0,57,166,0.12);
+        --mc-logo-filter: drop-shadow(0 8px 14px rgba(0,39,106,0.16));
+        --mc-team-name-color: #10264f;
+        --mc-team-name-bg: rgba(255,255,255,0.84);
+        --mc-team-name-border: rgba(0,57,166,0.10);
+        --mc-team-name-shadow: 0 8px 18px rgba(0,57,166,0.08), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,57,166,0.05);
+        --mc-team-logo-filter: drop-shadow(0 18px 24px rgba(0,35,96,0.18)) drop-shadow(0 0 14px rgba(0,57,166,0.08));
+        --mc-score-color: #0a2d7a;
+        --mc-stepper-bg: rgba(255,255,255,0.92);
+        --mc-stepper-border: rgba(0,57,166,0.10);
+        --mc-stepper-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.96), inset 0 -1px 0 rgba(0,57,166,0.06);
+        --mc-stepper-plus: #0039A6;
+        --mc-stepper-minus: #D52B1E;
+        --mc-stepper-plus-border: rgba(0,57,166,0.10);
+        --mc-stepper-minus-border: rgba(213,43,30,0.18);
+        --mc-input-bg: rgba(230,240,255,0.46);
+        --mc-input-color: #082b74;
+        --mc-button-bg: linear-gradient(135deg, #0039A6, #002b7f);
+        --mc-button-shadow: 0 14px 28px rgba(0,57,166,0.28), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.20);
+        --mc-panel-bg: rgba(255,255,255,0.68);
+        --mc-panel-color: rgba(15,36,72,0.72);
+        --mc-panel-border: rgba(0,57,166,0.10);
+        --mc-panel-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 8px 18px rgba(0,57,166,0.08);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup {
+        --mc-card-bg: radial-gradient(circle at 50% 46%, rgba(255,218,128,0.13), transparent 30%), radial-gradient(circle at 18% 8%, rgba(255,58,47,0.36), transparent 28%), radial-gradient(circle at 88% 0%, rgba(255,203,93,0.30), transparent 24%), linear-gradient(112deg, rgba(255,45,38,0.22) 0 9%, transparent 9% 17%, rgba(255,45,38,0.14) 17% 23%, transparent 23%), linear-gradient(180deg, rgba(96,11,22,0.96) 0%, rgba(58,6,18,0.96) 54%, rgba(31,4,13,0.98) 100%);
+        --mc-card-color: #fff7df;
+        --mc-card-shadow: 0 0 0 1px rgba(255,225,142,0.92), 0 0 0 3px rgba(138,22,24,0.80), 0 0 34px rgba(255,193,74,0.32), 0 22px 56px rgba(145,17,24,0.42), 0 46px 98px rgba(0,0,0,0.62), inset 0 0 0 1px rgba(255,237,172,0.36), inset 0 2px 0 rgba(255,230,153,0.88), inset 0 -22px 48px rgba(38,0,8,0.58);
+        --mc-topline-divider: rgba(255,215,120,0.26);
+        --mc-meta-muted: rgba(255,241,195,0.72);
+        --mc-meta-strong: #fff1b5;
+        --mc-logo-shadow: 0 0 0 1px rgba(255,230,153,0.44), 0 0 20px rgba(255,203,93,0.30);
+        --mc-logo-filter: drop-shadow(0 10px 18px rgba(0,0,0,0.42)) drop-shadow(0 0 12px rgba(255,215,120,0.34));
+        --mc-team-name-color: #fff7df;
+        --mc-team-name-bg: linear-gradient(180deg, rgba(91,9,20,0.76), rgba(45,4,14,0.72));
+        --mc-team-name-border: rgba(255,215,120,0.42);
+        --mc-team-name-shadow: 0 8px 18px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,230,153,0.18), inset 0 -1px 0 rgba(0,0,0,0.20);
+        --mc-team-logo-filter: drop-shadow(0 18px 24px rgba(0,0,0,0.48)) drop-shadow(0 0 20px rgba(255,199,83,0.18));
+        --mc-score-color: #fff1b5;
+        --mc-score-shadow: 0 0 16px rgba(255,203,93,0.30);
+        --mc-stepper-bg: rgba(39,3,13,0.86);
+        --mc-stepper-border: rgba(255,215,120,0.46);
+        --mc-stepper-shadow: 0 0 20px rgba(255,193,74,0.20), inset 0 1px 0 rgba(255,230,153,0.18), inset 0 -1px 0 rgba(138,22,24,0.48), 0 12px 24px rgba(0,0,0,0.34);
+        --mc-stepper-plus: #f3c65b;
+        --mc-stepper-minus: #f3c65b;
+        --mc-stepper-plus-border: rgba(243,198,91,0.24);
+        --mc-stepper-minus-border: rgba(243,198,91,0.24);
+        --mc-input-bg: rgba(20,0,7,0.34);
+        --mc-input-color: #fff8df;
+        --mc-button-bg: linear-gradient(135deg, #f7d36a, #b9761e 58%, #7c2517);
+        --mc-button-color: #240b05;
+        --mc-button-shadow: 0 16px 32px rgba(175,47,25,0.38), 0 0 18px rgba(255,203,93,0.26), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(82,25,5,0.30);
+        --mc-panel-bg: rgba(47,3,14,0.56);
+        --mc-panel-color: #ffe9a3;
+        --mc-panel-border: rgba(255,215,120,0.30);
+        --mc-panel-shadow: inset 0 1px 0 rgba(255,230,153,0.12), 0 8px 18px rgba(0,0,0,0.18);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia {
+        --mc-card-bg: radial-gradient(circle at 20% 5%, rgba(230,240,255,0.72), transparent 24%), radial-gradient(circle at 88% 26%, rgba(0,57,166,0.34), transparent 28%), linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(230,240,255,0.88) 18%, rgba(0,57,166,0.94) 19%, rgba(0,40,124,0.96) 70%, rgba(213,43,30,0.94) 71%, rgba(146,24,19,0.96) 100%);
+        --mc-card-color: #ffffff;
+        --mc-card-shadow: 0 0 0 1px rgba(255,255,255,0.70), 0 0 0 3px rgba(0,57,166,0.26), 0 22px 54px rgba(0,57,166,0.28), 0 36px 82px rgba(213,43,30,0.20), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -18px 42px rgba(121,14,12,0.34);
+        --mc-meta-muted: rgba(255,255,255,0.72);
+        --mc-meta-strong: #ffffff;
+        --mc-logo-bg: rgba(255,255,255,0.18);
+        --mc-logo-shadow: 0 0 0 1px rgba(255,255,255,0.42), 0 8px 18px rgba(0,57,166,0.20), inset 0 1px 0 rgba(255,255,255,0.26);
+        --mc-logo-filter: drop-shadow(0 8px 16px rgba(0,0,0,0.30)) drop-shadow(0 0 12px rgba(230,240,255,0.34));
+        --mc-team-name-color: #ffffff;
+        --mc-team-name-bg: rgba(255,255,255,0.16);
+        --mc-team-name-border: rgba(255,255,255,0.34);
+        --mc-team-name-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.10), 0 8px 18px rgba(0,32,92,0.18);
+        --mc-team-logo-filter: drop-shadow(0 18px 24px rgba(0,0,0,0.38)) drop-shadow(0 0 18px rgba(230,240,255,0.24));
+        --mc-score-color: #ffffff;
+        --mc-score-shadow: 0 0 14px rgba(230,240,255,0.32);
+        --mc-stepper-bg: rgba(0,30,100,0.88);
+        --mc-stepper-border: rgba(230,240,255,0.42);
+        --mc-stepper-shadow: 0 0 20px rgba(0,57,166,0.28), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(213,43,30,0.36), 0 12px 24px rgba(0,0,0,0.30);
+        --mc-stepper-plus: #ffffff;
+        --mc-stepper-minus: #ffffff;
+        --mc-stepper-plus-border: rgba(230,240,255,0.24);
+        --mc-stepper-minus-border: rgba(230,240,255,0.24);
+        --mc-input-bg: rgba(0,18,74,0.30);
+        --mc-input-color: #ffffff;
+        --mc-button-bg: linear-gradient(135deg, #0039A6, #002875);
+        --mc-button-shadow: 0 16px 32px rgba(0,57,166,0.36), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.20);
+        --mc-panel-bg: rgba(213,43,30,0.44);
+        --mc-panel-color: #ffffff;
+        --mc-panel-border: rgba(255,255,255,0.26);
+        --mc-panel-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 18px rgba(90,10,10,0.16);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia):not(.match-card--russia) .match-topline {
+        box-shadow: inset 0 -1px 0 var(--mc-topline-divider);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .start-time-label::before,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .deadline-label,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .center-sub,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .closed-prediction-label {
+        color: var(--mc-meta-muted);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .start-time-label::after,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .deadline-helper {
+        color: var(--mc-meta-strong);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .tournament-logo {
+        background: var(--mc-logo-bg);
+        box-shadow: var(--mc-logo-shadow);
+        filter: var(--mc-logo-filter);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia):not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia).finished .team-name-v2 {
+        color: var(--mc-team-name-color);
+        background: var(--mc-team-name-bg) !important;
+        border: 1px solid var(--mc-team-name-border);
+        box-shadow: var(--mc-team-name-shadow) !important;
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .team-logo-v2 .flag-icon {
+        filter: var(--mc-team-logo-filter);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .center-score,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .vs-badge,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .final-score,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .closed-prediction-center {
+        color: var(--mc-score-color);
+        text-shadow: var(--mc-score-shadow);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .score-stepper {
+        background: var(--mc-stepper-bg) !important;
+        border: 1px solid var(--mc-stepper-border) !important;
+        box-shadow: var(--mc-stepper-shadow) !important;
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .score-stepper .stepper-btn[data-step="1"] {
+        color: var(--mc-stepper-plus);
+        border-color: var(--mc-stepper-plus-border);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .score-stepper .stepper-btn[data-step="-1"] {
+        color: var(--mc-stepper-minus);
+        border-color: var(--mc-stepper-minus-border);
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .score-input-v2 {
+        color: var(--mc-input-color) !important;
+        background: var(--mc-input-bg) !important;
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .save-btn-v2 {
+        color: var(--mc-button-color);
+        background: var(--mc-button-bg) !important;
+        box-shadow: var(--mc-button-shadow) !important;
+    }
+
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .prediction-box,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .my-prediction-v2,
+    body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) .bets-link-v2 {
+        color: var(--mc-panel-color);
+        background: var(--mc-panel-bg) !important;
+        border-color: var(--mc-panel-border);
+        box-shadow: var(--mc-panel-shadow) !important;
     }
 
     body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2:hover {
