@@ -1,4 +1,11 @@
-{% if match.home_team == 'Россия' or match.away_team == 'Россия' %}
+{% if match.match_category == 'supercup' %}
+                <img
+                    src="/static/clubs/Russian_Super_Cup_Logo.jpeg"
+                    alt="Суперкубок России"
+                    class="tournament-logo"
+                    onerror="this.onerror=null;this.src='/static/clubs/russian-premier-league-footballlogos-org.png';"
+                >
+            {% elif match.home_team == 'Россия' or match.away_team == 'Россия' %}
                 <img
                     src="/static/clubs/Russian_Football_Union_Logo.svg"
                     alt="Сборная России"
