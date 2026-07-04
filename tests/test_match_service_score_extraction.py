@@ -167,6 +167,67 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
         self.assertEqual(calls, ["https://api.football-data.org/v4/competitions/9999/matches"])
         self.assertEqual(matches, [{"id": 11, "league": "other"}])
 
+    def test_update_matches_binds_rpl_to_russian_championship_tournament(self):
+        inserted = {}
+
+        class Cursor:
+            def __init__(self):
+                self.fetchone_result = None
+
+            def execute(self, query, params=None):
+                normalized = " ".join(query.split())
+                if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
+                    name = params[0]
+                    self.fetchone_result = (5,) if name == "Чемпионат России 🇷🇺" else None
+                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                    self.fetchone_result = None
+                elif normalized.startswith("INSERT INTO matches"):
+                    inserted["params"] = params
+                    self.fetchone_result = (42,)
+                else:
+                    self.fetchone_result = None
+
+            def fetchone(self):
+                return self.fetchone_result
+
+        class Conn:
+            def __init__(self):
+                self.cur = Cursor()
+                self.committed = False
+
+            def cursor(self):
+                return self.cur
+
+            def commit(self):
+                self.committed = True
+
+            def rollback(self):
+                raise AssertionError("rollback should not be called")
+
+        conn = Conn()
+        rpl_match = {
+            "id": "rpl_2026_1",
+            "home_team": "Zenit St. Petersburg",
+            "away_team": "Spartak Moscow",
+            "utcDate": "2026-07-18 17:30:00",
+            "status": "SCHEDULED",
+            "score": {"fullTime": {"home": None, "away": None}},
+            "league": "rpl",
+        }
+
+        with patch.object(service, "fetch_matches", return_value=[]), \
+             patch.object(service, "fetch_rpl_matches", return_value=[rpl_match]), \
+             patch.object(service, "get_db", return_value=conn), \
+             patch.object(service, "close_db", lambda conn_arg, cur_arg=None: None):
+            summary = service.update_matches()
+
+        self.assertEqual(summary["matches_inserted"], 1)
+        self.assertEqual(summary["matches_skipped_missing_tournament"], 0)
+        self.assertTrue(conn.committed)
+        self.assertEqual(inserted["params"][0], "rpl_2026_1")
+        self.assertEqual(inserted["params"][8], "rpl")
+        self.assertEqual(inserted["params"][9], 5)
+
 
 if __name__ == "__main__":
     unittest.main()

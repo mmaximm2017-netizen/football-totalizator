@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 SYNC_LOCK_KEY = 88422031
-RPL_TOURNAMENT_NAME = "РПЛ 2026/27"
+RPL_TOURNAMENT_NAME = "Чемпионат России 🇷🇺"
 
 # Пробуем импортировать Understat
 try:
