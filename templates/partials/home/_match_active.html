@@ -24,6 +24,35 @@
                                     {% else %}
                                         <div class="score-input-row">
                                             <div class="score-stepper" data-stepper>
+                                                {% if is_rcup_match %}
+                                                <button
+                                                    type="button"
+                                                    class="stepper-btn"
+                                                    data-step="1"
+                                                    aria-label="Увеличить голы {{ home_team_label }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >+</button>
+
+                                                <input
+                                                    class="score-input-v2"
+                                                    type="number"
+                                                    name="home_goals"
+                                                    value="{{ match.pred_home if match.pred_home != '' else 0 }}"
+                                                    min="0"
+                                                    max="99"
+                                                    inputmode="numeric"
+                                                    form="predict-form-{{ match.id }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >
+
+                                                <button
+                                                    type="button"
+                                                    class="stepper-btn"
+                                                    data-step="-1"
+                                                    aria-label="Уменьшить голы {{ home_team_label }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >−</button>
+                                                {% else %}
                                                 <button
                                                     type="button"
                                                     class="stepper-btn"
@@ -51,11 +80,41 @@
                                                     aria-label="Увеличить голы {{ home_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >+</button>
+                                                {% endif %}
                                             </div>
 
-                                            <span class="score-divider">—</span>
+                                            <span class="score-divider">{% if is_rcup_match %}:{% else %}—{% endif %}</span>
 
                                             <div class="score-stepper" data-stepper>
+                                                {% if is_rcup_match %}
+                                                <button
+                                                    type="button"
+                                                    class="stepper-btn"
+                                                    data-step="1"
+                                                    aria-label="Увеличить голы {{ away_team_label }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >+</button>
+
+                                                <input
+                                                    class="score-input-v2"
+                                                    type="number"
+                                                    name="away_goals"
+                                                    value="{{ match.pred_away if match.pred_away != '' else 0 }}"
+                                                    min="0"
+                                                    max="99"
+                                                    inputmode="numeric"
+                                                    form="predict-form-{{ match.id }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >
+
+                                                <button
+                                                    type="button"
+                                                    class="stepper-btn"
+                                                    data-step="-1"
+                                                    aria-label="Уменьшить голы {{ away_team_label }}"
+                                                    {% if match.deadline_passed %}disabled{% endif %}
+                                                >−</button>
+                                                {% else %}
                                                 <button
                                                     type="button"
                                                     class="stepper-btn"
@@ -83,6 +142,7 @@
                                                     aria-label="Увеличить голы {{ away_team_label }}"
                                                     {% if match.deadline_passed %}disabled{% endif %}
                                                 >+</button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     {% endif %}

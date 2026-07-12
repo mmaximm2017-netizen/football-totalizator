@@ -67,6 +67,57 @@
     <span>КУБОК РОССИИ</span>
 </div>
 {% endif %}
+{% if is_rcup_match %}
+{% set kickoff_plain = to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] %}
+{% set kickoff_date = kickoff_plain.rsplit(' ', 1)[0] if ' ' in kickoff_plain else kickoff_plain %}
+{% set kickoff_time = kickoff_plain.rsplit(' ', 1)[1] if ' ' in kickoff_plain else '' %}
+{% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
+{% set deadline_time = deadline_plain.rsplit(' ', 1)[1] if ' ' in deadline_plain else deadline_plain %}
+<div class="match-topline">
+    <div class="league-row">
+        {% include 'partials/home/_match_league.html' %}
+    </div>
+
+    <div class="topline-right">
+        {% if match.finished %}
+            <div class="status-pill-v2 status-done">Завершён</div>
+        {% elif match.status == 'LIVE' or match.status == 'IN_PLAY' %}
+            <div class="status-pill-v2 status-live">LIVE</div>
+        {% elif match.status == 'POSTPONED' %}
+            <div class="status-pill-v2 status-postponed">Перенесён</div>
+        {% elif match.status == 'CANCELLED' %}
+            <div class="status-pill-v2 status-cancelled">Отменён</div>
+        {% elif match.deadline_passed %}
+            <div class="status-pill-v2 status-closed">Закрыто</div>
+        {% else %}
+            <div class="status-pill-v2 status-open">Открыто</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="rcup-match-info">
+    <div class="time-label start-time-label" data-start-text="{{ kickoff_plain.replace(' ', ' • ', 1) }}">
+        <span class="rcup-info-label">{{ kickoff_date }}</span>
+        <span class="rcup-info-value">{{ kickoff_time }}</span>
+    </div>
+
+    <div class="time-label deadline-row" title="Приём до: {{ to_msk(match.deadline) }}">
+        <div class="deadline-box">
+            <span class="deadline-full">Приём до: {{ to_msk(match.deadline) }}</span>
+            <span class="deadline-label">Прогноз до {{ deadline_time }}</span>
+            <span class="deadline-helper">{{ deadline_plain.replace(' ', ' • ', 1) }}</span>
+            <span
+                class="deadline-timer"
+                data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}"
+                aria-hidden="true"
+            >
+                —
+            </span>
+            <span class="deadline-cue"></span>
+        </div>
+    </div>
+</div>
+{% else %}
 <div class="match-topline">
     <div class="league-row">
         {% include 'partials/home/_match_league.html' %}
@@ -114,6 +165,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 
                     {% if match.finished %}
                         {% include 'partials/home/_match_finished.html' %}
