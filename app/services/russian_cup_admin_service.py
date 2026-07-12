@@ -25,6 +25,22 @@ def normalize_russian_cup_stage(value, custom_value=None):
     return value if value in known else (custom_value or value)
 
 
+def build_russian_cup_match_form_data(form, normalize_status, fallback_status="SCHEDULED"):
+    return {
+        "home_team": (form.get("home_team") or "").strip(),
+        "away_team": (form.get("away_team") or "").strip(),
+        "match_date": (form.get("match_date") or "").strip(),
+        "match_time": (form.get("match_time") or "").strip(),
+        "deadline_date": form.get("deadline_date", "").strip(),
+        "deadline_time": form.get("deadline_time", "").strip(),
+        "stage": normalize_russian_cup_stage(
+            form.get("stage"),
+            form.get("stage_custom"),
+        ),
+        "status": normalize_status(form.get("status"), fallback_status),
+    }
+
+
 def get_russian_cup_tournament(cur):
     cur.execute(
         """
@@ -50,6 +66,7 @@ def get_russian_cup_tournament(cur):
 def prepare_russian_cup_admin_data(cur):
     tournament = get_russian_cup_tournament(cur)
     matches = []
+    stage_map = {}
 
     if tournament:
         cur.execute(
@@ -62,7 +79,9 @@ def prepare_russian_cup_admin_data(cur):
                    status,
                    home_score,
                    away_score,
-                   playoff_stage_manual
+                   playoff_stage_manual,
+                   api_match_id,
+                   league
             FROM matches
             WHERE tournament_id = %s
               AND league = 'rcup'
@@ -73,7 +92,7 @@ def prepare_russian_cup_admin_data(cur):
         for row in cur.fetchall():
             kickoff = parse_datetime(row[3])
             deadline = parse_datetime(row[4])
-            matches.append({
+            match = {
                 "id": row[0],
                 "home_team": row[1],
                 "away_team": row[2],
@@ -83,17 +102,55 @@ def prepare_russian_cup_admin_data(cur):
                 "home_score": row[6],
                 "away_score": row[7],
                 "stage": row[8] or "",
+                "api_match_id": row[9] or "",
+                "league": row[10] or "rcup",
+                "round_label": row[8] or "Раунд не указан",
+                "extra_time_home": "",
+                "extra_time_away": "",
+                "penalty_home": "",
+                "penalty_away": "",
                 "is_hidden": row[5] == "CANCELLED",
                 "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
                 "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
                 "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
                 "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
+            }
+            matches.append(match)
+
+            stage_key = match["stage"] or "Стадия не указана"
+            date_key = match["match_date_msk"] or "Дата не указана"
+            stage_group = stage_map.setdefault(stage_key, {
+                "stage": stage_key,
+                "matches_count": 0,
+                "finished_count": 0,
+                "date_map": {},
+                "dates": [],
             })
+            date_group = stage_group["date_map"].setdefault(date_key, {
+                "date": date_key,
+                "matches": [],
+                "matches_count": 0,
+                "finished_count": 0,
+            })
+            date_group["matches"].append(match)
+            date_group["matches_count"] += 1
+            stage_group["matches_count"] += 1
+            if match["status"] == "FINISHED":
+                date_group["finished_count"] += 1
+                stage_group["finished_count"] += 1
+
+    stage_groups = list(stage_map.values())
+    for group in stage_groups:
+        group["dates"] = list(group["date_map"].values())
+        group.pop("date_map", None)
 
     return {
         "russian_cup_tournament": tournament,
         "russian_cup_matches": matches,
+        "russian_cup_stage_groups": stage_groups,
         "russian_cup_matches_count": len(matches),
-        "russian_cup_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
+        "russian_cup_finished_count": sum(1 for match in matches if match["status"] == "FINISHED"),
+        "russian_cup_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"),
         "russian_cup_stages": RUSSIAN_CUP_STAGES,
+        "russian_cup_stage_values": [stage for stage, _ in RUSSIAN_CUP_STAGES],
     }

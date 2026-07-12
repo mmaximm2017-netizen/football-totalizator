@@ -6,7 +6,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
-
     <title>ТОТИШ БРАТИШЕК</title>
 
     <link rel="manifest" href="/static/manifest.json?v=4">
@@ -1221,9 +1220,13 @@ body {
         color: rgba(255,255,255,0.72);
     }
 	</style>
+    {% block extra_styles %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tournaments/russian-cup.css', v='20260712') }}">
 </head>
 
-<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% elif current_tournament_name == 'Чемпионат России 🇷🇺' %}tournament-rpl{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
+{% set current_tournament_key = (current_tournament_slug|default(current_tournament_type|default('')))|lower %}
+{% set is_rcup_tournament = current_tournament_name == 'Кубок России' or current_tournament_key == 'rcup' %}
+<body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% elif is_rcup_tournament %}tournament-rcup{% elif current_tournament_name == 'Чемпионат России 🇷🇺' %}tournament-rpl{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
     {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set active_items = active_tournaments|default([]) %}

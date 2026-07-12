@@ -87,6 +87,21 @@ def normalize_match_category(value):
     return category
 
 
+def normalize_tournament_slug(name=None, slug=None, tournament_type=None):
+    raw = (slug or tournament_type or '').strip().lower()
+    if raw == 'rcup' or name == RUSSIAN_CUP_TOURNAMENT_NAME:
+        return 'rcup'
+    return raw
+
+
+def is_russian_cup_match(league=None, tournament_name=None, tournament_slug=None, tournament_type=None):
+    return (
+        (league or '').strip().lower() == 'rcup'
+        or tournament_name == RUSSIAN_CUP_TOURNAMENT_NAME
+        or normalize_tournament_slug(tournament_name, tournament_slug, tournament_type) == 'rcup'
+    )
+
+
 def is_russia_team_match(home_team, away_team):
     teams = {str(home_team or '').strip().lower(), str(away_team or '').strip().lower()}
     return 'россия' in teams or 'russia' in teams
@@ -385,7 +400,7 @@ WHERE id = %s
                 m[14],
             )
             match_category = normalize_match_category(m[14])
-            is_russian_cup = m[13] == RUSSIAN_CUP_TOURNAMENT_NAME or m[6] == 'rcup'
+            is_russian_cup = is_russian_cup_match(m[6], m[13])
             is_rpl_category = match_category == 'rpl' and not is_russian_cup
             is_supercup = match_category == 'supercup'
             is_russia_category = match_category == 'national_team'
@@ -412,6 +427,9 @@ WHERE id = %s
                 "playoff_stage_css_class": css_class,
                 "playoff_stage_label": get_playoff_stage_label(effective_stage),
                 "match_category": m[14],
+                "stage": m[10] or "",
+                "tournament_name": m[13],
+                "tournament_slug": normalize_tournament_slug(m[13]),
                 "match_category_normalized": match_category,
                 "is_rpl_category": is_rpl_category,
                 "is_supercup": is_supercup,
@@ -602,6 +620,11 @@ WHERE id = %s
     tournament_state = get_tournament_state_flags(tournaments)
     selected_tournament = get_tournament_by_id(tid) if tid else None
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+    current_tournament_slug = normalize_tournament_slug(current_tournament_name)
+    russian_cup_header_stage = next(
+        (m.get("stage") for m in raw_matches if m.get("is_russian_cup") and m.get("stage")),
+        None,
+    )
 
     return render_template(
         "index.html",
@@ -617,6 +640,9 @@ WHERE id = %s
         **tournament_state,
         current_tournament_id=tid,
         current_tournament_name=current_tournament_name,
+        current_tournament_slug=current_tournament_slug,
+        russian_cup_header_stage=russian_cup_header_stage,
+        russian_cup_header_season="Сезон 2025/26" if current_tournament_slug == "rcup" else None,
     )
 
 

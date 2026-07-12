@@ -7,6 +7,10 @@ from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
 from app.services.match_service import RPL_TOURNAMENT_NAME, run_sync_with_lock
 from app.services.rpl_admin_service import get_rpl_tournament, normalize_rpl_match_category
+from app.services.russian_cup_admin_service import (
+    build_russian_cup_match_form_data,
+    get_russian_cup_tournament,
+)
 from app.services.scoring_recalculation_service import recalc_match_points
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -23,9 +27,12 @@ MANUAL_MATCH_STATUSES = {
     "TIMED",
     "LIVE",
     "FINISHED",
+    "POSTPONED",
+    "CANCELLED",
 }
 
 RPL_ADMIN_REDIRECT = "admin.admin_russia_2027"
+RUSSIAN_CUP_ADMIN_REDIRECT = "admin.admin_russian_cup"
 
 
 def normalize_manual_match_status(value, fallback="SCHEDULED"):
@@ -126,6 +133,13 @@ def get_required_rpl_tournament(cur):
     tournament = get_rpl_tournament(cur)
     if not tournament:
         raise ValueError(f"Турнир {RPL_TOURNAMENT_NAME} не найден")
+    return tournament
+
+
+def get_required_russian_cup_tournament(cur):
+    tournament = get_russian_cup_tournament(cur)
+    if not tournament:
+        raise ValueError("Турнир Кубок России не найден")
     return tournament
 
 
@@ -420,6 +434,286 @@ def admin_russia_2027_delete():
     finally:
         close_db(conn, cur)
     return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian_cup_add", methods=["POST"])
+@admin_required
+def admin_russian_cup_add():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        form_data = build_russian_cup_match_form_data(request.form, normalize_manual_match_status)
+        home_team = form_data["home_team"]
+        away_team = form_data["away_team"]
+        match_date = form_data["match_date"]
+        match_time = form_data["match_time"]
+        stage = form_data["stage"]
+        status = form_data["status"]
+
+        if not home_team or not away_team or not match_date or not match_time:
+            flash("Заполните команды, дату и время", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+        if home_team == away_team:
+            flash("Команды должны отличаться", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+        if status == "FINISHED":
+            flash("Для finished сначала создайте матч, затем внесите счёт", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            match_date,
+            match_time,
+            form_data["deadline_date"],
+            form_data["deadline_time"],
+        )
+
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = 'rcup'
+              AND home_team = %s
+              AND away_team = %s
+              AND kickoff_time = %s
+            """,
+            (tournament["id"], home_team, away_team, kickoff_utc),
+        )
+        if cur.fetchone():
+            flash("Такой матч уже существует", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+        cur.execute(
+            """
+            INSERT INTO matches (
+                api_match_id, home_team, away_team, kickoff_time, deadline,
+                status, league, tournament_id, playoff_stage_manual, match_category
+            )
+            VALUES (NULL, %s, %s, %s, %s, %s, 'rcup', %s, %s, 'russian_cup')
+            """,
+            (home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage),
+        )
+        conn.commit()
+        flash("Матч Кубка России создан", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка создания матча Кубка России: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian_cup_edit", methods=["POST"])
+@admin_required
+def admin_russian_cup_edit():
+    match_id = request.form.get("match_id", type=int)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        cur.execute(
+            """
+            SELECT id, status
+            FROM matches
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rcup'
+            """,
+            (match_id, tournament["id"]),
+        )
+        existing = cur.fetchone()
+        if not existing:
+            flash("Матч Кубка России не найден", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+        form_data = build_russian_cup_match_form_data(request.form, normalize_manual_match_status, existing[1])
+        home_team = form_data["home_team"]
+        away_team = form_data["away_team"]
+        match_date = form_data["match_date"]
+        match_time = form_data["match_time"]
+        stage = form_data["stage"]
+        status = form_data["status"]
+        delete_score = request.form.get("delete_score") == "1"
+
+        if not home_team or not away_team or not match_date or not match_time:
+            flash("Заполните команды, дату и время", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+        if home_team == away_team:
+            flash("Команды должны отличаться", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            match_date,
+            match_time,
+            form_data["deadline_date"],
+            form_data["deadline_time"],
+        )
+
+        home_score = away_score = None
+        result_home = (request.form.get("home_score") or "").strip()
+        result_away = (request.form.get("away_score") or "").strip()
+        has_score = bool(result_home or result_away)
+        if delete_score:
+            status = "SCHEDULED" if status == "FINISHED" else status
+        elif has_score:
+            home_score, away_score = validate_score(result_home, result_away)
+            if home_score is None:
+                flash("Укажите корректный счёт", "error")
+                return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+            status = "FINISHED"
+        elif status == "FINISHED":
+            flash("Для finished укажите счёт", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET api_match_id = NULL,
+                home_team = %s,
+                away_team = %s,
+                kickoff_time = %s,
+                deadline = %s,
+                status = %s,
+                home_score = %s,
+                away_score = %s,
+                playoff_stage_manual = %s,
+                match_category = 'russian_cup',
+                league = 'rcup',
+                tournament_id = %s
+            WHERE id = %s
+            """,
+            (
+                home_team,
+                away_team,
+                kickoff_utc,
+                deadline_utc,
+                status,
+                home_score,
+                away_score,
+                stage,
+                tournament["id"],
+                match_id,
+            ),
+        )
+        if status == "FINISHED":
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+        else:
+            cur.execute(
+                """
+                UPDATE predictions
+                SET points = 0
+                WHERE match_id = %s
+                  AND tournament_id = %s
+                """,
+                (match_id, tournament["id"]),
+            )
+        conn.commit()
+        flash("Матч Кубка России сохранён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка сохранения матча Кубка России: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian_cup_visibility", methods=["POST"])
+@admin_required
+def admin_russian_cup_visibility():
+    match_id = request.form.get("match_id", type=int)
+    action = request.form.get("visibility_action")
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        new_status = "CANCELLED" if action == "hide" else "SCHEDULED"
+        cur.execute(
+            """
+            UPDATE matches
+            SET status = %s
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rcup'
+            """,
+            (new_status, match_id, tournament["id"]),
+        )
+        conn.commit()
+        flash("Матч скрыт" if action == "hide" else "Матч восстановлен", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка изменения видимости: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian_cup_delete", methods=["POST"])
+@admin_required
+def admin_russian_cup_delete():
+    match_id = request.form.get("match_id", type=int)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        cur.execute(
+            """
+            DELETE FROM predictions
+            WHERE match_id = %s
+              AND tournament_id = %s
+            """,
+            (match_id, tournament["id"]),
+        )
+        cur.execute(
+            """
+            DELETE FROM matches
+            WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rcup'
+            """,
+            (match_id, tournament["id"]),
+        )
+        conn.commit()
+        flash("Матч Кубка России удалён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка удаления матча Кубка России: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian_cup_recalc", methods=["POST"])
+@admin_required
+def admin_russian_cup_recalc():
+    conn = get_db()
+    cur = conn.cursor()
+    recalculated = 0
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = 'rcup'
+              AND status = 'FINISHED'
+            ORDER BY kickoff_time NULLS LAST, id
+            """,
+            (tournament["id"],),
+        )
+        match_ids = [row[0] for row in cur.fetchall()]
+        for match_id in match_ids:
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+            recalculated += 1
+        conn.commit()
+        flash(f"Очки Кубка России пересчитаны: {recalculated}", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка пересчёта Кубка России: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
 
 def handle_add_match(conn, cur):

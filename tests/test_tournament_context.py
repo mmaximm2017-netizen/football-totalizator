@@ -223,6 +223,45 @@ except ModuleNotFoundError:
 
 
 @unittest.skipUnless(FLASK_AVAILABLE, "Flask is not installed in this runtime")
+class BaseTournamentThemeTests(unittest.TestCase):
+    def make_template_app(self):
+        app = Flask(
+            __name__,
+            template_folder=str(ROOT / "templates"),
+            static_folder=str(ROOT / "static"),
+        )
+        app.secret_key = "test-secret"
+        return app
+
+    def render_base(self, tournament_name):
+        from flask import render_template
+
+        app = self.make_template_app()
+        with app.test_request_context("/"):
+            return render_template(
+                "base.html",
+                current_tournament_name=tournament_name,
+                current_tournament_id=42,
+                tournaments=[],
+                active_tournaments=[],
+                csrf_token="test-csrf",
+            )
+
+    def test_russian_cup_uses_rcup_body_class_and_stylesheet(self):
+        html = self.render_base("Кубок России")
+
+        self.assertIn('class="tournament-rcup', html)
+        self.assertIn("css/tournaments/russian-cup.css", html)
+        self.assertNotIn('class="tournament-cup', html)
+
+    def test_rpl_body_class_is_unchanged(self):
+        html = self.render_base("Чемпионат России 🇷🇺")
+
+        self.assertIn('class="tournament-rpl', html)
+        self.assertNotIn('class="tournament-rcup', html)
+
+
+@unittest.skipUnless(FLASK_AVAILABLE, "Flask is not installed in this runtime")
 class TournamentRouteSmokeTests(unittest.TestCase):
     def make_test_app(self, *blueprints):
         app = Flask(__name__)

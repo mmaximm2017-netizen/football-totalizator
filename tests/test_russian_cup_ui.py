@@ -1,0 +1,376 @@
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+
+from flask import Flask, render_template
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class RecordingCursor:
+    def __init__(self, tournament_row=None, match_rows=None):
+        self.tournament_row = tournament_row
+        self.match_rows = match_rows or []
+        self.executed = []
+
+    def execute(self, query, params=None):
+        self.executed.append((query, params))
+
+    def fetchone(self):
+        return self.tournament_row
+
+    def fetchall(self):
+        return self.match_rows
+
+
+class SequenceCursor:
+    def __init__(self, fetchone_results=None, fetchall_results=None):
+        self.fetchone_results = list(fetchone_results or [])
+        self.fetchall_results = list(fetchall_results or [])
+        self.executed = []
+
+    def execute(self, query, params=None):
+        self.executed.append((query, params))
+
+    def fetchone(self):
+        return self.fetchone_results.pop(0) if self.fetchone_results else None
+
+    def fetchall(self):
+        return self.fetchall_results.pop(0) if self.fetchall_results else []
+
+
+class SequenceConnection:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.commits = 0
+        self.rollbacks = 0
+
+    def cursor(self):
+        return self._cursor
+
+    def commit(self):
+        self.commits += 1
+
+    def rollback(self):
+        self.rollbacks += 1
+
+
+class RussianCupUiTests(unittest.TestCase):
+    def make_app(self):
+        from app.routes.admin import admin_bp
+        from app.routes.admin_matches import admin_matches_bp
+
+        app = Flask(
+            __name__,
+            template_folder=str(ROOT / "templates"),
+            static_folder=str(ROOT / "static"),
+        )
+        app.secret_key = "test-secret"
+        app.register_blueprint(admin_bp)
+        app.register_blueprint(admin_matches_bp)
+        return app
+
+    def make_full_page_app(self):
+        from app.routes.main import main_bp
+        from app.routes.predictions import predictions_bp
+        from app.routes.table import table_bp
+
+        app = Flask(
+            __name__,
+            template_folder=str(ROOT / "templates"),
+            static_folder=str(ROOT / "static"),
+        )
+        app.secret_key = "test-secret"
+        app.register_blueprint(main_bp)
+        app.register_blueprint(table_bp)
+        app.register_blueprint(predictions_bp)
+        app.add_url_rule("/logout", "auth.logout", lambda: "")
+        app.add_url_rule("/login", "auth.login", lambda: "")
+        return app
+
+    def render_day_block(self, match):
+        app = self.make_app()
+        with app.test_request_context("/"):
+            return render_template(
+                "partials/home/_day_block.html",
+                month_idx=1,
+                day_idx=1,
+                day_is_open=True,
+                day={"type": "future", "label": "12 июля", "count": 1, "matches": [match]},
+                has_prediction=False,
+                csrf_token="test-csrf",
+                get_flag=lambda team: "",
+                get_club_logo=lambda team: "",
+                to_msk=lambda value: "12.07 19:00 МСК",
+            )
+
+    def base_match(self, **overrides):
+        match = {
+            "id": 10,
+            "home_team": "Спартак",
+            "away_team": "Зенит",
+            "kickoff_time": datetime(2026, 7, 12, 16, 0, tzinfo=timezone.utc),
+            "deadline": datetime(2026, 7, 12, 8, 0, tzinfo=timezone.utc),
+            "status": "SCHEDULED",
+            "league": "rpl",
+            "finished": False,
+            "deadline_passed": False,
+            "pred_home": "",
+            "pred_away": "",
+            "playoff_stage": "",
+            "playoff_stage_css_class": "",
+            "event_css_class": "",
+            "event_label": "",
+            "event_type": "",
+            "is_rpl_category": True,
+            "is_supercup": False,
+            "is_russia_category": False,
+            "is_russian_cup": False,
+            "tournament_name": "Чемпионат России 🇷🇺",
+            "tournament_slug": "",
+            "tournament_logo_path": "",
+            "tournament_logo_alt": "",
+            "tournament_logo_fallback_path": "",
+        }
+        match.update(overrides)
+        return match
+
+    def test_rcup_league_match_gets_russian_cup_class(self):
+        html = self.render_day_block(self.base_match(league="rcup", is_russian_cup=True, tournament_name="Кубок России", tournament_slug="rcup"))
+
+        self.assertIn("match-card match-card--russian-cup", html)
+        self.assertIn('data-league="rcup"', html)
+
+    def test_regular_match_does_not_get_russian_cup_class(self):
+        html = self.render_day_block(self.base_match())
+
+        self.assertNotIn("match-card--russian-cup", html)
+
+    def test_russian_cup_class_appears_by_tournament_name_without_league(self):
+        html = self.render_day_block(self.base_match(league="", tournament_name="Кубок России", is_russian_cup=True))
+
+        self.assertIn("match-card match-card--russian-cup", html)
+
+    def test_russian_cup_class_appears_by_rcup_league_only(self):
+        html = self.render_day_block(self.base_match(league="rcup", tournament_name="Other", is_russian_cup=False))
+
+        self.assertIn("match-card match-card--russian-cup", html)
+
+    def test_admin_russian_cup_forms_point_to_new_endpoints(self):
+        app = self.make_app()
+        match = {
+            "id": 10,
+            "home_team": "Спартак",
+            "away_team": "Зенит",
+            "match_date_msk": "2026-07-12",
+            "match_time_msk": "19:00",
+            "deadline_date_msk": "2026-07-12",
+            "deadline_time_msk": "11:00",
+            "status": "SCHEDULED",
+            "home_score": None,
+            "away_score": None,
+            "stage": "Групповой этап",
+            "round_label": "Групповой этап",
+            "is_hidden": False,
+            "api_match_id": "",
+            "league": "rcup",
+            "extra_time_home": "",
+            "extra_time_away": "",
+            "penalty_home": "",
+            "penalty_away": "",
+        }
+        context = {
+            "russian_cup_tournament": {"id": 1, "name": "Кубок России"},
+            "russian_cup_matches": [match],
+            "russian_cup_stage_groups": [{
+                "stage": "Групповой этап",
+                "matches_count": 1,
+                "finished_count": 0,
+                "dates": [{"date": "2026-07-12", "matches_count": 1, "finished_count": 0, "matches": [match]}],
+            }],
+            "russian_cup_matches_count": 1,
+            "russian_cup_finished_count": 0,
+            "russian_cup_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"),
+            "russian_cup_stages": (("Групповой этап", "Групповой этап"),),
+            "russian_cup_stage_values": ["Групповой этап"],
+            "current_tournament_name": "Кубок России",
+            "current_tournament_slug": "rcup",
+            "current_tournament_id": 1,
+            "tournaments": [],
+            "active_tournaments": [],
+            "csrf_token": "test-csrf",
+        }
+        with app.test_request_context("/admin/russian-cup"):
+            html = render_template("admin_russian_cup.html", **context)
+
+        self.assertIn('action="/admin/russian_cup_add"', html)
+        self.assertIn('action="/admin/russian_cup_edit"', html)
+        self.assertIn('action="/admin/russian_cup_visibility"', html)
+        self.assertIn('action="/admin/russian_cup_delete"', html)
+        self.assertIn('action="/admin/russian_cup_recalc"', html)
+        self.assertIn("clubs/Fonbet_Russian_Cup.png", html)
+        self.assertIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
+        self.assertNotIn('placeholder="Нет колонки БД"', html)
+
+    def test_russian_cup_service_filters_by_tournament_and_league(self):
+        from app.services.russian_cup_admin_service import prepare_russian_cup_admin_data
+
+        cursor = RecordingCursor(tournament_row=(5, "Кубок России", 1, None), match_rows=[])
+
+        data = prepare_russian_cup_admin_data(cursor)
+
+        query = "\n".join(q for q, _ in cursor.executed)
+        self.assertIn("WHERE tournament_id = %s", query)
+        self.assertIn("AND league = 'rcup'", query)
+        self.assertEqual(data["russian_cup_matches"], [])
+
+    def test_russian_cup_css_is_connected_once(self):
+        app = self.make_app()
+        with app.test_request_context("/"):
+            html = render_template(
+                "base.html",
+                current_tournament_name="Кубок России",
+                current_tournament_slug="rcup",
+                current_tournament_id=1,
+                tournaments=[],
+                active_tournaments=[],
+                csrf_token="test-csrf",
+            )
+
+        self.assertEqual(html.count("css/tournaments/russian-cup.css"), 1)
+
+    def test_home_table_and_my_predictions_render_rcup_body_and_single_css(self):
+        app = self.make_full_page_app()
+        tournaments = [{"id": 5, "name": "Кубок России", "is_active": 1, "start_date": "—"}]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+
+            home_cursor = SequenceCursor(fetchall_results=[[]])
+            with (
+                patch("app.routes.main.get_db", return_value=SequenceConnection(home_cursor)),
+                patch("app.routes.main.close_db"),
+                patch("app.routes.main.get_all_tournaments", return_value=tournaments),
+                patch("app.routes.main.get_selected_tournament_id", return_value=5),
+                patch("app.routes.main.get_tournament_by_id", return_value={"id": 5, "name": "Кубок России"}),
+            ):
+                home = client.get("/?tid=5")
+
+            table_cursor = SequenceCursor(
+                fetchone_results=[("Кубок России", 1, None)],
+                fetchall_results=[[(5, "Кубок России", 1, None)]],
+            )
+            with (
+                patch("app.routes.table.get_db", return_value=SequenceConnection(table_cursor)),
+                patch("app.routes.table.close_db"),
+                patch("app.routes.table.get_selected_tournament_id", return_value=5),
+                patch("app.routes.table.get_tournament_status", return_value="current"),
+                patch("app.routes.table.get_tournament_ranking", return_value=[]),
+                patch("app.routes.table.get_tournament_top_scorers", return_value=[]),
+            ):
+                table = client.get("/table?tid=5")
+
+            predictions_cursor = SequenceCursor(fetchall_results=[[], [], []])
+            with (
+                patch("app.routes.predictions.get_db", return_value=SequenceConnection(predictions_cursor)),
+                patch("app.routes.predictions.close_db"),
+                patch("app.routes.predictions.get_all_tournaments", return_value=tournaments),
+                patch("app.routes.predictions.get_selected_tournament_id", return_value=5),
+                patch("app.routes.predictions.get_tournament_by_id", return_value={"id": 5, "name": "Кубок России"}),
+            ):
+                my_predictions = client.get("/my-predictions?tid=5")
+
+        for response in (home, table, my_predictions):
+            html = response.get_data(as_text=True)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('class="tournament-rcup', html)
+            self.assertEqual(html.count("css/tournaments/russian-cup.css"), 1)
+
+    def test_admin_russian_cup_post_endpoints_are_scoped_and_redirect(self):
+        app = self.make_app()
+        endpoints = [
+            (
+                "/admin/russian_cup_add",
+                {
+                    "home_team": "Спартак",
+                    "away_team": "Зенит",
+                    "match_date": "2026-07-12",
+                    "match_time": "19:00",
+                    "status": "SCHEDULED",
+                    "stage": "Групповой этап",
+                },
+                [(5, "Кубок России", 1, None), None],
+                [],
+            ),
+            (
+                "/admin/russian_cup_edit",
+                {
+                    "match_id": "10",
+                    "home_team": "Спартак",
+                    "away_team": "Зенит",
+                    "match_date": "2026-07-12",
+                    "match_time": "19:00",
+                    "status": "SCHEDULED",
+                    "stage": "Групповой этап",
+                },
+                [(5, "Кубок России", 1, None), (10, "SCHEDULED")],
+                [],
+            ),
+            (
+                "/admin/russian_cup_visibility",
+                {"match_id": "10", "visibility_action": "hide"},
+                [(5, "Кубок России", 1, None)],
+                [],
+            ),
+            (
+                "/admin/russian_cup_recalc",
+                {},
+                [(5, "Кубок России", 1, None)],
+                [[(10,)]],
+            ),
+            (
+                "/admin/russian_cup_delete",
+                {"match_id": "10"},
+                [(5, "Кубок России", 1, None)],
+                [],
+            ),
+        ]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+
+            for url, payload, fetchone_results, fetchall_results in endpoints:
+                user_conn = SequenceConnection(SequenceCursor(fetchone_results=[(1, 0)]))
+                route_cursor = SequenceCursor(fetchone_results=fetchone_results, fetchall_results=fetchall_results)
+                route_conn = SequenceConnection(route_cursor)
+
+                with (
+                    patch("app.routes.admin_common.get_db", return_value=user_conn),
+                    patch("app.routes.admin_common.close_db"),
+                    patch("app.routes.admin_matches.get_db", return_value=route_conn),
+                    patch("app.routes.admin_matches.close_db"),
+                    patch("app.routes.admin_matches.recalc_match_points"),
+                ):
+                    response = client.post(url, data=payload)
+
+                self.assertEqual(response.status_code, 302, url)
+                self.assertEqual(response.headers["Location"], "/admin/russian-cup")
+                sql = "\n".join(query for query, _ in route_cursor.executed)
+                self.assertIn("Кубок России", str(route_cursor.executed))
+                if url.endswith("add"):
+                    self.assertIn("'rcup'", sql)
+                    self.assertIn("'russian_cup'", sql)
+                elif url.endswith("recalc"):
+                    self.assertIn("AND league = 'rcup'", sql)
+                    self.assertIn("WHERE tournament_id = %s", sql)
+                else:
+                    self.assertIn("AND tournament_id = %s", sql)
+                    self.assertIn("AND league = 'rcup'", sql)
+
+
+if __name__ == "__main__":
+    unittest.main()

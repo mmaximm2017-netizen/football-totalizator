@@ -1607,6 +1607,57 @@
         }
 
     }
+
+    body.tournament-rcup .table-shell,
+    body.tournament-rcup .top-scorers-card {
+        background: rgba(36, 43, 53, 0.88);
+        border: 1px solid rgba(232, 0, 36, 0.22);
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .standings-table,
+    body.tournament-rcup .top-scorers-table {
+        background: transparent;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .standings-table thead tr,
+    body.tournament-rcup .standings-table th {
+        background: #000005;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .standings-table tbody tr,
+    body.tournament-rcup .top-scorers-table tbody tr {
+        background: rgba(0, 0, 5, 0.42);
+        border-bottom-color: rgba(232, 0, 36, 0.16);
+    }
+
+    body.tournament-rcup .standings-table tbody tr.top-1,
+    body.tournament-rcup .standings-table tbody tr.top-2,
+    body.tournament-rcup .standings-table tbody tr.top-3 {
+        background: linear-gradient(135deg, rgba(232, 0, 36, 0.22), rgba(36, 43, 53, 0.72));
+    }
+
+    body.tournament-rcup .player-name,
+    body.tournament-rcup .top-scorer-name,
+    body.tournament-rcup .place-box {
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .points-number,
+    body.tournament-rcup .top-scorer-goals,
+    body.tournament-rcup .leader-badge {
+        background: #E80024;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-title,
+    body.tournament-rcup .top-scorer-place {
+        color: #ffffff;
+        text-shadow: none;
+    }
 </style>
 
 {% if table %}

@@ -124,6 +124,9 @@ def admin_russian_cup():
     try:
         data = prepare_russian_cup_admin_data(cur)
         data['current_tournament_name'] = 'Кубок России'
+        data['current_tournament_slug'] = 'rcup'
+        if data.get('russian_cup_tournament'):
+            data['current_tournament_id'] = data['russian_cup_tournament']['id']
     finally:
         close_db(conn, cur)
     return render_template('admin_russian_cup.html', **data)
