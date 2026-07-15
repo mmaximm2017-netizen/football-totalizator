@@ -62,11 +62,27 @@
 <div class="rpl-event-badge rpl-event-badge-{{ match.event_type }}">
     <span>{{ match.event_label }}</span>
 </div>
-{% elif is_rcup_match %}
-<div class="rpl-event-badge rpl-event-badge-russian-cup">
-    <span>КУБОК РОССИИ</span>
-</div>
 {% endif %}
+{% if is_rcup_match %}
+{% set kickoff_plain = to_msk(match.kickoff_time).split(' МСК')[0].split(' (')[0] %}
+{% set deadline_plain = to_msk(match.deadline).split(' МСК')[0].split(' (')[0] %}
+<div class="rcup-match-info">
+    <div class="rcup-match-start">
+        <span class="rcup-match-info-label">НАЧАЛО</span>
+        <span class="rcup-match-info-value">{{ kickoff_plain.replace(' ', ' · ') }}</span>
+    </div>
+
+    <div class="rcup-card-logo">
+        <img src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="Кубок России">
+    </div>
+
+    <div class="rcup-match-deadline">
+        <span class="rcup-match-info-label">ПРОГНОЗ ДО</span>
+        <span class="rcup-match-info-value">{{ deadline_plain.replace(' ', ' · ') }}</span>
+        <span class="deadline-timer" data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}" aria-hidden="true">—</span>
+    </div>
+</div>
+{% else %}
 <div class="match-topline">
     <div class="league-row">
         {% include 'partials/home/_match_league.html' %}
@@ -114,6 +130,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 
                     {% if match.finished %}
                         {% include 'partials/home/_match_finished.html' %}

@@ -121,16 +121,6 @@
 
 <div class="home-screen">
 
-{% if current_tournament_name == 'Кубок России' or current_tournament_slug|default(current_tournament_type|default('')) == 'rcup' %}
-<section class="rcup-tournament-header" aria-label="Кубок России">
-    <img src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="FONBET Кубок России" class="rcup-page-logo">
-    <div class="rcup-tournament-copy">
-        <h1>КУБОК РОССИИ</h1>
-        <p>{{ russian_cup_header_season or 'СЕЗОН 2025/26' }}</p>
-    </div>
-</section>
-{% endif %}
-
 {% for month in months %}
 {% set month_idx = loop.index %}
 {% set month_is_open = month.days | selectattr('key', 'equalto', open_day) | list | length > 0 %}
