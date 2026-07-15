@@ -825,169 +825,6 @@
         hyphens: none;
     }
 
-    /* Shared WC2026 geometry reused by the Russian Cup theme. */
-    body.tournament-rcup .match-card-v2 .teams-center {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-        align-items: center;
-        justify-items: center;
-        gap: 8px;
-        width: 100%;
-        margin: 12px auto 2px;
-        padding: 0;
-        overflow: visible;
-    }
-
-    body.tournament-rcup .match-card-v2 .team-v2 {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        justify-self: center;
-        width: 100%;
-        max-width: 105px;
-        min-width: 0;
-        gap: 6px;
-        padding: 0;
-        text-align: center;
-        height: 152px;
-    }
-
-    body.tournament-rcup .match-card-v2 .team-logo-v2 {
-        width: 94px;
-        height: 94px;
-        min-width: 94px;
-        min-height: 94px;
-        max-width: 94px;
-        max-height: 94px;
-        margin: 0 auto 2px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: visible;
-        flex-shrink: 0;
-    }
-
-    body.tournament-rcup .match-card-v2 .team-logo-v2 .flag-icon,
-    body.tournament-rcup .match-card-v2 .team-logo-v2 img {
-        width: 106px;
-        height: 106px;
-        min-width: 106px;
-        min-height: 106px;
-        max-width: 106px;
-        max-height: 106px;
-        object-fit: cover;
-        overflow: hidden;
-    }
-
-    body.tournament-rcup .match-card-v2 .team-name-v2 {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        min-width: 0;
-        width: 100%;
-        margin: 0 auto;
-        overflow: hidden;
-        overflow-wrap: normal;
-        word-break: normal;
-        hyphens: none;
-        text-align: center;
-        font-size: clamp(10.5px, 2vw, 12px);
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    body.tournament-rcup .match-card-v2 .center-score {
-        align-self: center;
-        justify-self: center;
-        width: auto;
-        min-width: 0;
-        min-height: 68px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        margin: 6px 4px 0;
-        padding: 0;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-input-row {
-        width: auto;
-        min-height: 68px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        flex-wrap: nowrap;
-        min-width: auto;
-        margin: 0 auto;
-        padding: 0;
-        border: 0;
-        box-shadow: none;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-stepper {
-        flex: 0 0 auto;
-        width: auto;
-        min-width: 60px;
-        height: auto;
-        min-height: 112px;
-        display: grid;
-        grid-template-columns: 1fr;
-        grid-template-rows: 30px 44px 30px;
-        align-items: center;
-        justify-items: center;
-        gap: 0;
-        overflow: visible;
-        border-radius: 16px;
-        padding: 2px;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-stepper .stepper-btn {
-        width: 36px;
-        height: 30px;
-        min-height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 17px;
-        line-height: 1;
-        border-radius: 10px;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
-        grid-row: 1;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
-        grid-row: 3;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-input-v2 {
-        grid-row: 2;
-        width: 58px;
-        height: 34px;
-        padding: 0;
-        font-size: 31px;
-        font-weight: 900;
-        text-align: center;
-        border: 0;
-        outline: none;
-    }
-
-    body.tournament-rcup .match-card-v2 .score-divider,
-    body.tournament-rcup .match-card-v2 .vs-badge {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        margin: 0 -2px;
-        font-size: 12px;
-        line-height: 1;
-    }
-
     .match-card-v2:not(.finished) .team-name-v2 {
         display: grid;
         place-items: center;
@@ -4506,8 +4343,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         -webkit-backdrop-filter: none;
     }
 
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
-    body.tournament-wc2026 .match-card-v2 .teams-center {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .teams-center {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center;  /* Center vertically for perfect alignment */
@@ -4524,10 +4361,10 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         -webkit-backdrop-filter: none;
     }
 
-    body.tournament-wc2026 .match-card-v2 .team-v2,
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2,
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:first-child,
-    body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center > .team-v2:last-child {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .team-v2,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center > .team-v2,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center > .team-v2:first-child,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center > .team-v2:last-child {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -4542,7 +4379,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         height: 152px;  /* Fixed height for uniform grid */
     }
     
-    body.tournament-wc2026 .team-logo-v2 {
+    :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 {
         width: 94px !important;
         height: 94px !important;
         min-width: 94px;
@@ -4554,14 +4391,17 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        overflow: visible;
+        flex-shrink: 0;
+    }
+
+    body.tournament-wc2026 .team-logo-v2 {
         border-radius: 50%;
         background: rgba(255,255,255,0.08) !important;
         border: 0 !important;
         box-shadow: none !important;
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        overflow: visible;
-        flex-shrink: 0;
         transition: all 0.2s ease;
     }
 
@@ -4573,17 +4413,21 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         -webkit-backdrop-filter: blur(10px);
     }
 
-    body.tournament-wc2026 .team-logo-v2 .flag-icon,
-    body.tournament-wc2026 .team-logo-v2 img {
+    :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 .flag-icon,
+    :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 img {
         width: 106px !important;
         height: 106px !important;
         min-width: 106px;
         min-height: 106px;
         max-width: 106px;
         max-height: 106px;
-        border-radius: 50%;
         object-fit: cover;
         overflow: hidden;
+    }
+
+    body.tournament-wc2026 .team-logo-v2 .flag-icon,
+    body.tournament-wc2026 .team-logo-v2 img {
+        border-radius: 50%;
         background-color: rgba(255,255,255,0.08);
         border: 0 !important;
         outline: 0 !important;
@@ -4621,7 +4465,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         -webkit-backdrop-filter: blur(10px);
     }
 
-    body.tournament-wc2026 .team-name-v2 {
+    :is(body.tournament-wc2026, body.tournament-rcup) .team-name-v2 {
         display: -webkit-box !important;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
@@ -4640,7 +4484,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         line-height: 1.2;
     }
 
-    body.tournament-wc2026 .match-card-v2 .center-score {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .center-score {
         align-self: center;
         justify-self: center;
         width: auto;
@@ -4655,7 +4499,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         padding: 0;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-input-row {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-input-row {
         position: relative !important;
         z-index: 3 !important;
         width: auto;
@@ -4674,7 +4518,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         box-shadow: none;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-stepper {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper {
         flex: 0 0 auto;
         width: auto;
         min-width: 60px;
@@ -4689,6 +4533,9 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         overflow: visible;
         border-radius: 16px;
         padding: 2px;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper {
         background: rgba(255,255,255,0.15) !important;
         border: 1px solid rgba(255,255,255,0.24) !important;
         color: rgba(255,255,255,0.72);
@@ -4721,7 +4568,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             0 14px 30px rgba(0,0,0,0.36) !important;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper .stepper-btn {
         position: relative;
         width: 36px !important;
         height: 30px !important;
@@ -4729,6 +4576,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 17px !important;
+        line-height: 1;
+        border-radius: 10px;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn {
         background: transparent !important;
         color: rgba(255,255,255,0.82) !important;
         font-size: 17px !important;
@@ -4752,20 +4605,27 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         transform: scale(0.92);
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
         grid-row: 1;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
         grid-row: 3;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2,
-    body.tournament-wc2026 .match-card-v2 .score-input-v2 {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper .score-input-v2,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-input-v2 {
         grid-row: 2;
         height: 34px !important;
         width: 58px !important;
         padding: 0 !important;
+        font-size: 31px !important;
+        font-weight: 900 !important;
+        text-align: center;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2,
+    body.tournament-wc2026 .match-card-v2 .score-input-v2 {
         background: rgba(0,0,0,0.10) !important;
         border-radius: 6px !important;
         color: #ffffff !important;
@@ -4867,19 +4727,23 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         line-height: 1;
     }
 
-    body.tournament-wc2026 .match-card-v2 .score-divider,
-    body.tournament-wc2026 .match-card-v2 .vs-badge {
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-divider,
+    :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .vs-badge {
         flex: 0 0 auto;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: rgba(255,255,255,0.16) !important;
         font-size: 12px;
-        font-weight: 600;
         line-height: 1;
-        text-shadow: none;
         width: 24px;
         margin: 0 -2px;
+    }
+
+    body.tournament-wc2026 .match-card-v2 .score-divider,
+    body.tournament-wc2026 .match-card-v2 .vs-badge {
+        color: rgba(255,255,255,0.16) !important;
+        font-weight: 600;
+        text-shadow: none;
     }
 
     body.tournament-wc2026 .match-card-v2 .closed-prediction-center {
@@ -5928,15 +5792,15 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     }
 
     @media (max-width: 390px) {
-        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
-        body.tournament-wc2026 .match-card-v2 .teams-center {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center,
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 3px;
         }
 
-        body.tournament-wc2026 .team-logo-v2,
-        body.tournament-wc2026 .team-logo-v2 .flag-icon,
-        body.tournament-wc2026 .team-logo-v2 img {
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2,
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 .flag-icon,
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 img {
             width: 98px !important;
             height: 98px !important;
             min-width: 98px;
@@ -5945,18 +5809,18 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             max-height: 98px;
         }
 
-        body.tournament-wc2026 .match-card-v2 .score-input-row {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-input-row {
             gap: 3px;
             padding: 0 2px;
             min-width: 102px;
         }
 
-        body.tournament-wc2026 .team-name-v2 {
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-name-v2 {
             width: 90px !important;
             max-width: 90px !important;
         }
 
-        body.tournament-wc2026 .match-card-v2 .score-stepper {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
             min-width: 58px;
@@ -5988,15 +5852,15 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             padding: 9px 9px 10px;
         }
 
-        body.tournament-wc2026 .match-card-v2:not(.finished) .teams-center,
-        body.tournament-wc2026 .match-card-v2 .teams-center {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2:not(.finished) .teams-center,
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .teams-center {
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             column-gap: 2px;
         }
 
-        body.tournament-wc2026 .team-logo-v2,
-        body.tournament-wc2026 .team-logo-v2 .flag-icon,
-        body.tournament-wc2026 .team-logo-v2 img {
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2,
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 .flag-icon,
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-logo-v2 img {
             width: 96px !important;
             height: 96px !important;
             min-width: 96px;
@@ -6005,7 +5869,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             max-height: 96px;
         }
 
-        body.tournament-wc2026 .team-name-v2 {
+        :is(body.tournament-wc2026, body.tournament-rcup) .team-name-v2 {
             width: 78px !important;
             max-width: 78px !important;
             font-size: 10.5px;
@@ -6053,12 +5917,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             flex-basis: auto;
         }
 
-        body.tournament-wc2026 .match-card-v2 .center-score,
-        body.tournament-wc2026 .match-card-v2 .score-input-row {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .center-score,
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-input-row {
             min-height: 68px;
         }
 
-        body.tournament-wc2026 .match-card-v2 .score-stepper {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper {
             flex-basis: auto;
             width: auto;
             min-width: 56px;
@@ -6067,185 +5931,17 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             grid-template-rows: 30px 38px 30px;
         }
 
-        body.tournament-wc2026 .match-card-v2 .stepper-btn {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .stepper-btn {
             width: 36px !important;
             height: 30px !important;
             min-height: 30px;
             font-size: 15px !important;
         }
 
-        body.tournament-wc2026 .match-card-v2 .score-input-v2,
-        body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2 {
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-input-v2,
+        :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper .score-input-v2 {
             width: 54px !important;
             height: 32px !important;
             font-size: 29px !important;
-        }
-    }
-
-    @media (max-width: 430px) {
-        body.tournament-rcup .match-card-v2 .teams-center {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-            align-items: center;
-            justify-items: center;
-            gap: 8px;
-            width: 100%;
-            margin: 12px auto 2px;
-            padding: 0;
-            overflow: visible;
-        }
-
-        body.tournament-rcup .match-card-v2 .team-v2 {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            justify-self: center;
-            width: 100%;
-            max-width: 105px;
-            min-width: 0;
-            gap: 6px;
-            padding: 0;
-            text-align: center;
-            height: 152px;
-        }
-
-        body.tournament-rcup .match-card-v2 .team-logo-v2 {
-            width: 94px;
-            height: 94px;
-            min-width: 94px;
-            min-height: 94px;
-            max-width: 94px;
-            max-height: 94px;
-            margin: 0 auto 2px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: visible;
-            flex-shrink: 0;
-        }
-
-        body.tournament-rcup .match-card-v2 .team-logo-v2 .flag-icon,
-        body.tournament-rcup .match-card-v2 .team-logo-v2 img {
-            width: 106px;
-            height: 106px;
-            min-width: 106px;
-            min-height: 106px;
-            max-width: 106px;
-            max-height: 106px;
-            object-fit: cover;
-            overflow: hidden;
-        }
-
-        body.tournament-rcup .match-card-v2 .team-name-v2 {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            min-width: 0;
-            width: 100%;
-            margin: 0 auto;
-            overflow: hidden;
-            overflow-wrap: normal;
-            word-break: normal;
-            hyphens: none;
-            text-align: center;
-            font-size: clamp(10.5px, 2vw, 12px);
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        body.tournament-rcup .match-card-v2 .center-score,
-        body.tournament-rcup .match-card-v2 .score-input-row {
-            min-height: 68px;
-        }
-
-        body.tournament-rcup .match-card-v2 .center-score {
-            align-self: center;
-            justify-self: center;
-            width: auto;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 6px 4px 0;
-            padding: 0;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-input-row {
-            width: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            flex-wrap: nowrap;
-            min-width: auto;
-            margin: 0 auto;
-            padding: 0;
-            border: 0;
-            box-shadow: none;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-stepper {
-            flex: 0 0 auto;
-            width: auto;
-            min-width: 56px;
-            height: auto;
-            min-height: 104px;
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: 30px 38px 30px;
-            align-items: center;
-            justify-items: center;
-            gap: 0;
-            overflow: visible;
-            border-radius: 16px;
-            padding: 2px;
-        }
-
-        body.tournament-rcup .match-card-v2 .stepper-btn {
-            width: 36px;
-            height: 30px;
-            min-height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 15px;
-            line-height: 1;
-            border-radius: 10px;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-input-v2,
-        body.tournament-rcup .match-card-v2 .score-stepper .score-input-v2 {
-            grid-row: 2;
-            width: 54px;
-            height: 32px;
-            padding: 0;
-            font-size: 29px;
-            font-weight: 900;
-            text-align: center;
-            border: 0;
-            outline: none;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
-            grid-row: 1;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
-            grid-row: 3;
-        }
-
-        body.tournament-rcup .match-card-v2 .score-divider,
-        body.tournament-rcup .match-card-v2 .vs-badge {
-            flex: 0 0 auto;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            margin: 0 -2px;
-            font-size: 12px;
-            line-height: 1;
         }
     }
