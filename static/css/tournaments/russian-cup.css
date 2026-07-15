@@ -88,6 +88,7 @@ body.tournament-rcup .day-arrow {
 }
 
 body.tournament-rcup .match-card--russian-cup {
+    padding-top: 10px;
     color: var(--rcup-white);
     background: #3A0A32;
     border-color: rgba(255, 255, 255, 0.20);
@@ -149,7 +150,9 @@ body.tournament-rcup .match-card--russian-cup .rcup-match-info {
     column-gap: 10px;
     width: 100%;
     min-height: auto;
-    padding-block: 10px;
+    margin: 0 0 10px;
+    padding-block: 4px 8px;
+    row-gap: 2px;
     color: var(--rcup-white);
     border-color: var(--rcup-divider);
     background: transparent;
@@ -161,7 +164,7 @@ body.tournament-rcup .match-card--russian-cup .rcup-match-deadline {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    row-gap: 4px;
+    row-gap: 2px;
     color: var(--rcup-white);
 }
 
@@ -172,7 +175,8 @@ body.tournament-rcup .match-card--russian-cup .rcup-match-deadline {
 
 body.tournament-rcup .match-card--russian-cup .rcup-match-info-label {
     color: rgba(255, 255, 255, 0.68);
-    font-size: 11px;
+    margin-bottom: 3px;
+    font-size: 10px;
     font-weight: 500;
     line-height: 1;
     letter-spacing: 0.02em;
@@ -180,14 +184,14 @@ body.tournament-rcup .match-card--russian-cup .rcup-match-info-label {
 
 body.tournament-rcup .match-card--russian-cup .rcup-match-info-value {
     color: var(--rcup-white);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1.15;
+    line-height: 1.05;
 }
 
 body.tournament-rcup .match-card--russian-cup .rcup-card-logo {
-    width: 40px;
-    height: 44px;
+    width: 36px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,10 +208,11 @@ body.tournament-rcup .match-card--russian-cup .deadline-timer {
     color: var(--rcup-white);
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(232, 0, 36, 0.65);
-    height: 30px;
-    padding: 0 8px;
+    height: 28px;
+    padding: 0 7px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 11px;
+    margin-top: 4px;
     box-shadow: none;
 }
 
