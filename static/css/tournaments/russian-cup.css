@@ -61,30 +61,17 @@ body.tournament-rcup .save-btn-v2:active {
     background: var(--rcup-red-2);
 }
 
-body.tournament-rcup .rcup-tournament-header {
+body.tournament-rcup .month-header-v2 {
     color: var(--rcup-white);
-    background: #31052B;
-    border-bottom-color: var(--rcup-red);
+    background: #280126;
+    border-color: rgba(155, 0, 36, 0.65);
     box-shadow: none;
 }
 
-body.tournament-rcup .rcup-page-logo {
-    width: auto;
-    max-width: 120px;
-    max-height: 48px;
-    object-fit: contain;
-}
-
-body.tournament-rcup .rcup-tournament-copy h1,
-body.tournament-rcup .rcup-tournament-copy p {
-    color: var(--rcup-white);
-}
-
-body.tournament-rcup .month-header-v2,
 body.tournament-rcup .day-header-v2 {
     color: var(--rcup-white);
-    background: rgba(57, 8, 47, 0.92);
-    border-color: var(--rcup-divider);
+    background: #4A0A3B;
+    border-color: rgba(232, 0, 36, 0.75);
     box-shadow: none;
 }
 
@@ -148,7 +135,6 @@ body.tournament-rcup .match-card--russian-cup .team-logo-v2 .flag-icon {
     filter: none;
 }
 
-body.tournament-rcup .match-card--russian-cup .rpl-event-badge-russian-cup,
 body.tournament-rcup .match-card--russian-cup .status-pill-v2 {
     color: var(--rcup-white);
     background: var(--rcup-red);
@@ -156,13 +142,58 @@ body.tournament-rcup .match-card--russian-cup .status-pill-v2 {
     box-shadow: none;
 }
 
-body.tournament-rcup .match-card--russian-cup .deadline-box,
-body.tournament-rcup .match-card--russian-cup .deadline-timer,
-body.tournament-rcup .match-card--russian-cup .start-time-label,
-body.tournament-rcup .match-card--russian-cup .deadline-label {
-    color: var(--rcup-text-dark);
-    background: var(--rcup-lime);
-    border-color: transparent;
+body.tournament-rcup .match-card--russian-cup .rcup-match-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    width: 100%;
+    color: var(--rcup-white);
+    border-color: var(--rcup-divider);
+    background: transparent;
+    box-shadow: none;
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-match-start,
+body.tournament-rcup .match-card--russian-cup .rcup-match-deadline {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--rcup-white);
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-match-deadline {
+    align-items: flex-end;
+    text-align: right;
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-match-info-label {
+    color: rgba(255, 255, 255, 0.68);
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-match-info-value {
+    color: var(--rcup-white);
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-card-logo {
+    width: 48px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+}
+
+body.tournament-rcup .match-card--russian-cup .rcup-card-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+body.tournament-rcup .match-card--russian-cup .deadline-timer {
+    color: var(--rcup-white);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(232, 0, 36, 0.65);
     box-shadow: none;
 }
 
@@ -201,7 +232,7 @@ body.tournament-rcup .match-card--russian-cup .score-input-v2[disabled] {
 
 body.tournament-rcup .match-card--russian-cup .score-divider,
 body.tournament-rcup .match-card--russian-cup .vs-badge {
-    color: var(--rcup-lime);
+    color: var(--rcup-white);
     text-shadow: none;
 }
 
@@ -226,8 +257,8 @@ body.tournament-rcup .match-card--russian-cup .disabled-btn-v2 {
 
 body.tournament-rcup .points-v2,
 body.tournament-rcup .bets-compact-points {
-    color: var(--rcup-text-dark);
-    background: var(--rcup-lime);
+    color: var(--rcup-white);
+    background: var(--rcup-red);
     border-color: transparent;
     box-shadow: none;
 }
@@ -288,24 +319,10 @@ body.tournament-rcup .empty-home {
 
     body.tournament-rcup .month-block,
     body.tournament-rcup .day-block,
-    body.tournament-rcup .match-card--russian-cup,
-    body.tournament-rcup .rcup-tournament-header {
+    body.tournament-rcup .match-card--russian-cup {
         width: 100%;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
-    }
-
-    body.tournament-rcup .rcup-tournament-header {
-        min-height: 52px;
-        max-height: 64px;
-        overflow: visible;
-    }
-
-    body.tournament-rcup .rcup-page-logo {
-        width: auto;
-        max-width: 120px;
-        max-height: 48px;
-        object-fit: contain;
     }
 }
