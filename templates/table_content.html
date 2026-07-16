@@ -1881,6 +1881,187 @@
             font-size: 13px;
         }
     }
+
+    /* RPL scorer table: scoped glass statistics layer. */
+    body.tournament-rpl .top-scorers-card {
+        position: relative;
+        overflow: hidden;
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 20px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(231, 243, 255, 0.62));
+        box-shadow: 0 14px 30px rgba(0, 57, 166, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+        backdrop-filter: blur(16px) saturate(125%);
+        -webkit-backdrop-filter: blur(16px) saturate(125%);
+    }
+
+    body.tournament-rpl .top-scorers-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        color: #082b74;
+        font-size: 19px;
+        font-weight: 900;
+        line-height: 1.1;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorers-title::after {
+        content: "";
+        flex: 1;
+        min-width: 24px;
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.94), #1f90ff 56%, #d52b1e 100%);
+    }
+
+    body.tournament-rpl .top-scorers-table {
+        width: 100%;
+        border-spacing: 0 7px;
+        color: #082b74;
+    }
+
+    body.tournament-rpl .top-scorers-table th {
+        padding: 0 8px 4px;
+        color: rgba(8, 43, 116, 0.58);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.35px;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr,
+    body.tournament-rpl .top-scorers-table tbody tr:first-child {
+        background: rgba(255, 255, 255, 0.58);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td {
+        padding: 10px 8px;
+        border-top: 1px solid rgba(10, 108, 194, 0.08);
+        border-bottom: 1px solid rgba(10, 108, 194, 0.08);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td:first-child {
+        border-left: 1px solid rgba(10, 108, 194, 0.08);
+        border-radius: 14px 0 0 14px;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td:last-child {
+        border-right: 1px solid rgba(10, 108, 194, 0.08);
+        border-radius: 0 14px 14px 0;
+    }
+
+    body.tournament-rpl .top-scorer-place {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 11px;
+        background: rgba(31, 144, 255, 0.12);
+        border-color: rgba(31, 144, 255, 0.26);
+        color: #0a4ea8;
+        box-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr:first-child .top-scorer-place {
+        background: #1f90ff;
+        border-color: #1f90ff;
+        color: #ffffff;
+    }
+
+    body.tournament-rpl .top-scorer-name {
+        color: #082b74;
+        font-weight: 700;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorer-goals {
+        min-width: 56px;
+        min-height: 36px;
+        padding: 5px 8px;
+        border: 1px solid rgba(31, 144, 255, 0.30);
+        border-radius: 12px;
+        background: rgba(31, 144, 255, 0.12);
+        color: #082b74;
+        font-size: 16px;
+        font-weight: 900;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr:first-child .top-scorer-goals {
+        border-color: #d52b1e;
+        box-shadow: inset 3px 0 0 #d52b1e, inset 0 1px 0 rgba(255, 255, 255, 0.64);
+    }
+
+    body.tournament-rpl .top-scorers-empty {
+        padding: 20px 10px;
+        border: 1px dashed rgba(10, 108, 194, 0.22);
+        border-radius: 14px;
+        color: rgba(8, 43, 116, 0.62);
+        font-weight: 700;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .top-scorers-table,
+        body.tournament-rpl .top-scorers-table tbody {
+            display: block;
+        }
+
+        body.tournament-rpl .top-scorers-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+        }
+
+        body.tournament-rpl .top-scorers-table tbody tr,
+        body.tournament-rpl .top-scorers-table tbody tr:first-child {
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr) 68px;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid rgba(10, 108, 194, 0.10);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.62);
+        }
+
+        body.tournament-rpl .top-scorers-table tbody td,
+        body.tournament-rpl .top-scorers-table tbody td:first-child,
+        body.tournament-rpl .top-scorers-table tbody td:last-child {
+            display: block;
+            width: auto;
+            min-width: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            text-align: left;
+        }
+
+        body.tournament-rpl .top-scorers-table tbody td:last-child {
+            text-align: right;
+        }
+
+        body.tournament-rpl .top-scorer-name {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        body.tournament-rpl .top-scorer-goals {
+            min-width: 60px;
+            min-height: 42px;
+            font-size: 17px;
+        }
+    }
 </style>
 
 {% if table %}
@@ -1936,7 +2117,7 @@
 </div>
 
 <section class="top-scorers-card">
-    <div class="top-scorers-title">⚽ Лучшие бомбардиры</div>
+    <div class="top-scorers-title">⚽ {% if selected_name == 'Чемпионат России 🇷🇺' %}Бомбардиры{% else %}Лучшие бомбардиры{% endif %}</div>
     {% if top_scorers %}
         <table class="top-scorers-table">
             <thead>
@@ -1957,7 +2138,7 @@
             </tbody>
         </table>
     {% else %}
-        <div class="top-scorers-empty">Пока никто не забил</div>
+        <div class="top-scorers-empty">{% if selected_name == 'Чемпионат России 🇷🇺' %}Данные о бомбардирах пока недоступны{% else %}Пока никто не забил{% endif %}</div>
     {% endif %}
 </section>
 {% else %}
