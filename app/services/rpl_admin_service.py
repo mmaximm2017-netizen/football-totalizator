@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -18,6 +19,10 @@ RPL_MATCH_CATEGORIES = (
 )
 
 RPL_MATCH_CATEGORY_LABELS = dict(RPL_MATCH_CATEGORIES)
+RUSSIAN_MONTHS = (
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+)
 
 
 def normalize_rpl_match_category(value):
@@ -39,6 +44,100 @@ def infer_rpl_match_category(home_team, away_team, stage, value=None):
         return "supercup"
 
     return "rpl"
+
+
+def _tour_number(stage):
+    match = re.search(r"(?:тур|round)\s*(\d+)", str(stage or ""), re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def _match_local_date(match):
+    kickoff = match.get("kickoff_time")
+    return kickoff.astimezone(MSK).date() if kickoff else None
+
+
+def _match_sort_key(match, reverse=False):
+    kickoff = match.get("kickoff_time")
+    return (kickoff is None, kickoff or datetime.max.replace(tzinfo=MSK), match.get("id", 0))
+
+
+def _group_matches_within_section(matches, reverse_dates=False):
+    tours = {}
+    dates = {}
+    for match in matches:
+        tour = _tour_number(match.get("stage"))
+        if tour is not None:
+            tours.setdefault(tour, []).append(match)
+            continue
+        local_date = _match_local_date(match)
+        dates.setdefault(local_date, []).append(match)
+
+    sections = []
+    for tour, tour_matches in sorted(tours.items()):
+        sections.append({
+            "kind": "tour",
+            "label": f"Тур {tour}",
+            "matches": tour_matches,
+            "date_groups": [],
+        })
+
+    months = {}
+    for local_date, date_matches in dates.items():
+        if local_date:
+            months.setdefault((local_date.year, local_date.month), []).append((local_date, date_matches))
+        else:
+            months.setdefault((9999, 12), []).append((local_date, date_matches))
+    for (year, month), month_dates in sorted(months.items(), reverse=reverse_dates):
+        date_groups = []
+        for local_date, date_matches in sorted(
+            month_dates,
+            key=lambda item: item[0] or datetime.max.date(),
+            reverse=reverse_dates,
+        ):
+            label = (
+                f"{local_date.day} {RUSSIAN_MONTHS[local_date.month - 1]}"
+                if local_date else "Дата не указана"
+            )
+            date_groups.append({"label": label, "matches": date_matches})
+        month_label = f"{RUSSIAN_MONTHS[month - 1].capitalize()} {year}" if year != 9999 else "Без даты"
+        sections.append({"kind": "month", "label": month_label, "matches": [], "date_groups": date_groups})
+    return sections
+
+
+def build_rpl_match_groups(matches, today=None):
+    today = today or datetime.now(MSK).date()
+    buckets = {"today": [], "upcoming": [], "finished": []}
+    for match in matches:
+        local_date = _match_local_date(match)
+        if local_date == today:
+            buckets["today"].append(match)
+        elif str(match.get("status") or "").upper() == "FINISHED":
+            buckets["finished"].append(match)
+        else:
+            buckets["upcoming"].append(match)
+
+    buckets["today"].sort(key=_match_sort_key)
+    buckets["upcoming"].sort(key=_match_sort_key)
+    buckets["finished"].sort(key=_match_sort_key, reverse=True)
+
+    definitions = (
+        ("today", "Сегодня"),
+        ("upcoming", "Предстоящие"),
+        ("finished", "Завершённые"),
+    )
+    groups = []
+    for key, label in definitions:
+        matches_in_group = buckets[key]
+        if not matches_in_group:
+            continue
+        groups.append({
+            "key": key,
+            "label": label,
+            "count": len(matches_in_group),
+            "open": key == "today" or (key == "upcoming" and not buckets["today"]),
+            "sections": _group_matches_within_section(matches_in_group, reverse_dates=key == "finished"),
+        })
+    return groups
 
 
 def check_rpl_calendar():
@@ -158,6 +257,7 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
     return {
         "rpl_tournament": tournament,
         "rpl_matches": matches,
+        "rpl_match_groups": build_rpl_match_groups(matches),
         "rpl_matches_count": len(matches),
         "rpl_calendar": calendar_check,
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),

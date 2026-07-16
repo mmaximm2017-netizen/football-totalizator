@@ -4,6 +4,9 @@
 <style>
     .rpl-admin{display:flex;flex-direction:column;gap:14px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.rpl-hero{padding:18px;border-radius:26px;background:radial-gradient(circle at 92% 0%,rgba(227,6,19,.22),transparent 30%),linear-gradient(145deg,rgba(7,22,52,.94),rgba(4,10,28,.9));color:#fff;box-shadow:0 18px 38px rgba(0,6,28,.32)}.rpl-title{font-size:26px;font-weight:1000;line-height:1.08}.rpl-subtitle{margin-top:6px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800;line-height:1.35}.rpl-card{border-radius:22px;padding:14px;background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(232,246,255,.82));border:1px solid rgba(255,255,255,.7);box-shadow:0 14px 32px rgba(0,78,140,.13)}.rpl-card summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}.rpl-card summary::-webkit-details-marker{display:none}.rpl-card-title{font-size:18px;font-weight:1000;color:#063b73}.rpl-card-note{margin-top:3px;color:#5d7894;font-size:12px;font-weight:800}.rpl-chevron{font-size:13px;color:#5d7894}.rpl-card[open] .rpl-chevron{transform:rotate(90deg)}.rpl-body{margin-top:12px;display:grid;gap:10px}.rpl-status{display:inline-flex;width:max-content;max-width:100%;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:1000}.rpl-status.ok{background:#e4f7e9;color:#176b2c}.rpl-status.wait{background:#fff7df;color:#8a5b00}.rpl-status.err{background:#fde8e8;color:#9f1d1d}.rpl-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rpl-fact{padding:10px;border-radius:14px;background:rgba(255,255,255,.72);border:1px solid rgba(10,108,194,.10);color:#5d7894;font-size:12px;font-weight:800}.rpl-fact strong{display:block;margin-top:3px;color:#063b73;font-size:15px}.rpl-btn{width:100%;min-height:46px;border:0;border-radius:14px;padding:10px 12px;background:linear-gradient(135deg,#1565c0,#2aa8ff);color:#fff;font-size:14px;font-weight:1000}.rpl-btn.red{background:linear-gradient(135deg,#b71c1c,#d32f2f)}.rpl-btn.dark{background:linear-gradient(135deg,#071634,#203a68)}.rpl-btn.small{min-height:38px;font-size:12px;border-radius:12px}.rpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rpl-field label{display:block;margin-bottom:4px;color:#5d7894;font-size:12px;font-weight:900}.rpl-field input,.rpl-field select{width:100%;box-sizing:border-box;border:1px solid rgba(10,108,194,.18);border-radius:13px;padding:10px;background:#fff;color:#063b73;font-size:14px;font-weight:800}.rpl-match-list{display:grid;gap:12px}.rpl-match{padding:12px;border-radius:18px;background:#fff;border:1px solid rgba(10,108,194,.10);box-shadow:0 8px 22px rgba(0,78,140,.08)}.rpl-match.hidden{opacity:.68;background:#f8fafc}.rpl-match-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}.rpl-teams{font-size:16px;font-weight:1000;color:#063b73;line-height:1.24}.rpl-meta{margin-top:4px;color:#5d7894;font-size:12px;font-weight:800}.source-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#e4f7e9;color:#176b2c;font-size:11px;font-weight:1000;white-space:nowrap}.source-badge.api{background:#e8f4ff;color:#0a4e8d}.rpl-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.rpl-danger{margin-top:10px;padding:10px;border-radius:14px;background:rgba(183,28,28,.08);border:1px solid rgba(183,28,28,.18)}.rpl-check-list{display:grid;gap:7px;max-height:340px;overflow:auto}.rpl-check-row{padding:9px;border-radius:12px;background:rgba(255,255,255,.7);font-size:12px;color:#063b73;font-weight:800}.rpl-empty{padding:14px;text-align:center;color:#5d7894;font-size:13px;font-weight:800}.inline-check{display:flex;align-items:center;gap:7px;color:#063b73;font-size:12px;font-weight:900}.inline-check input{width:auto}.technical{display:none}.show-technical .technical{display:block}@media(max-width:520px){.rpl-grid,.rpl-facts,.rpl-actions{grid-template-columns:1fr}.rpl-hero{padding:16px}.rpl-title{font-size:23px}.rpl-match-head{flex-direction:column}.source-badge{width:max-content}}
 </style>
+<style>
+.rpl-match-filters{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px}.rpl-match-filter{flex:0 0 auto;min-height:42px;padding:0 12px;border:1px solid rgba(10,108,194,.2);border-radius:12px;background:#f4f9ff;color:#063b73;font:inherit;font-size:13px;font-weight:900}.rpl-match-filter.active{background:#0a6cc2;color:#fff;border-color:#0a6cc2}.rpl-match-group{border:1px solid rgba(10,108,194,.12);border-radius:16px;background:rgba(255,255,255,.62);overflow:hidden}.rpl-match-group+ .rpl-match-group{margin-top:10px}.rpl-match-group>summary,.rpl-match-section>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 12px;list-style:none;cursor:pointer}.rpl-match-group>summary::-webkit-details-marker,.rpl-match-section>summary::-webkit-details-marker{display:none}.rpl-match-group-title{font-size:16px;font-weight:1000;color:#063b73}.rpl-match-count{color:#5d7894;font-size:13px;font-weight:900}.rpl-match-section{margin:0 10px 10px;border:1px solid rgba(10,108,194,.1);border-radius:13px;background:#fff}.rpl-match-section>summary{min-height:44px;font-size:14px;font-weight:1000;color:#063b73}.rpl-date-label{padding:8px 10px 2px;color:#5d7894;font-size:12px;font-weight:900}.rpl-match-list{display:grid;gap:8px;padding:0 10px 10px}.rpl-match{min-width:0}.rpl-match.hidden-by-filter{display:none}.rpl-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rpl-actions form{min-width:0}.rpl-actions .rpl-btn{min-height:42px}.rpl-teams{overflow-wrap:anywhere}@media(max-width:430px){.rpl-match-filters{margin:0 -2px}.rpl-match-group>summary{min-height:52px}.rpl-match-section{margin:0 8px 8px}.rpl-match-list{padding:0 8px 8px}.rpl-match-head{align-items:flex-start}.rpl-meta{line-height:1.35}.rpl-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 
 <div class="rpl-admin">
     <div class="admin-nav">
@@ -68,35 +71,46 @@
         <summary><div><div class="rpl-card-title">Матчи</div><div class="rpl-card-note">{{ rpl_matches_count }} матчей в турнире</div></div><span class="rpl-chevron">▶</span></summary>
         <div class="rpl-body">
             {% if rpl_matches %}
-                <div class="rpl-match-list">
-                    {% for m in rpl_matches %}
-                        <div class="rpl-match {% if m.is_hidden %}hidden{% endif %}">
-                            <div class="rpl-match-head">
-                                <div><div class="rpl-teams">{{ m.home_team }} — {{ m.away_team }}</div><div class="rpl-meta">{{ m.match_category_label }} · {{ m.match_date_msk }} {{ m.match_time_msk }} · {{ m.status }}{% if m.home_score is not none and m.away_score is not none %} · {{ m.home_score }}:{{ m.away_score }}{% endif %}</div></div>
-                                <span class="source-badge {% if m.source == 'api' %}api{% endif %}">{{ m.source_label }}</span>
-                            </div>
-                            <details>
-                                <summary class="rpl-card-note">Редактировать</summary>
-                                <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_edit') }}" class="rpl-body">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Команда 1</label><input name="home_team" value="{{ m.home_team }}" required></div><div class="rpl-field"><label>Команда 2</label><input name="away_team" value="{{ m.away_team }}" required></div></div>
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div class="rpl-field"><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Статус</label><select name="status">{% for s in rpl_statuses %}<option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select></div><div class="rpl-field"><label>Стадия</label><input name="stage" value="{{ m.stage }}" placeholder="Например: Тур 1"></div></div>
-                                    <div class="rpl-field"><label>Категория матча</label><select name="match_category">{% for value, label in rpl_match_categories %}<option value="{{ value }}" {% if m.match_category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Счёт 1</label><input type="number" min="0" name="home_score" value="{{ m.home_score if m.home_score is not none else '' }}"></div><div class="rpl-field"><label>Счёт 2</label><input type="number" min="0" name="away_score" value="{{ m.away_score if m.away_score is not none else '' }}"></div></div>
-                                    <label class="inline-check"><input type="checkbox" name="delete_score" value="1"> Удалить счёт и не считать матч завершённым</label>
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Источник</label><select name="source"><option value="api" {% if m.source == 'api' %}selected{% endif %}>API</option><option value="manual" {% if m.source == 'manual' %}selected{% endif %}>Вручную</option></select></div><div class="rpl-field"><label>API ID</label><input name="api_match_id" value="{{ m.api_match_id or '' }}" placeholder="не показывается пользователям"></div></div>
-                                    <div class="rpl-grid"><div class="rpl-field"><label>Дедлайн дата</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div class="rpl-field"><label>Дедлайн время</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
-                                    <button class="rpl-btn" type="submit">Сохранить матч</button>
-                                </form>
-                            </details>
-                            <div class="rpl-actions">
-                                <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.is_hidden %}restore{% else %}hide{% endif %}"><button class="rpl-btn small" type="submit">{% if m.is_hidden %}Восстановить{% else %}Скрыть{% endif %}</button></form>
-                                <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rpl-btn red small" type="submit">Удалить</button></form>
-                            </div>
-                        </div>
-                    {% endfor %}
+                {% macro render_match(m) %}
+                <div class="rpl-match {% if m.is_hidden %}hidden{% endif %}">
+                    <div class="rpl-match-head">
+                        <div><div class="rpl-teams">{{ m.home_team }} — {{ m.away_team }}</div><div class="rpl-meta">{{ m.match_category_label }} · {{ m.match_date_msk }} {{ m.match_time_msk }} · {{ m.status }}{% if m.home_score is not none and m.away_score is not none %} · {{ m.home_score }}:{{ m.away_score }}{% endif %}</div></div>
+                        <span class="source-badge {% if m.source == 'api' %}api{% endif %}">{{ m.source_label }}</span>
+                    </div>
+                    <details><summary class="rpl-card-note">Редактировать</summary>
+                        <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_edit') }}" class="rpl-body">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
+                            <div class="rpl-grid"><div class="rpl-field"><label>Команда 1</label><input name="home_team" value="{{ m.home_team }}" required></div><div class="rpl-field"><label>Команда 2</label><input name="away_team" value="{{ m.away_team }}" required></div></div>
+                            <div class="rpl-grid"><div class="rpl-field"><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div class="rpl-field"><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
+                            <div class="rpl-grid"><div class="rpl-field"><label>Статус</label><select name="status">{% for s in rpl_statuses %}<option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select></div><div class="rpl-field"><label>Стадия</label><input name="stage" value="{{ m.stage }}" placeholder="Например: Тур 1"></div></div>
+                            <div class="rpl-field"><label>Категория матча</label><select name="match_category">{% for value, label in rpl_match_categories %}<option value="{{ value }}" {% if m.match_category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                            <div class="rpl-grid"><div class="rpl-field"><label>Счёт 1</label><input type="number" min="0" name="home_score" value="{{ m.home_score if m.home_score is not none else '' }}"></div><div class="rpl-field"><label>Счёт 2</label><input type="number" min="0" name="away_score" value="{{ m.away_score if m.away_score is not none else '' }}"></div></div>
+                            <label class="inline-check"><input type="checkbox" name="delete_score" value="1"> Удалить счёт и не считать матч завершённым</label>
+                            <div class="rpl-grid"><div class="rpl-field"><label>Источник</label><select name="source"><option value="api" {% if m.source == 'api' %}selected{% endif %}>API</option><option value="manual" {% if m.source == 'manual' %}selected{% endif %}>Вручную</option></select></div><div class="rpl-field"><label>API ID</label><input name="api_match_id" value="{{ m.api_match_id or '' }}" placeholder="не показывается пользователям"></div></div>
+                            <div class="rpl-grid"><div class="rpl-field"><label>Дедлайн дата</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div class="rpl-field"><label>Дедлайн время</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                            <button class="rpl-btn" type="submit">Сохранить матч</button>
+                        </form>
+                    </details>
+                    <div class="rpl-actions">
+                        <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.is_hidden %}restore{% else %}hide{% endif %}"><button class="rpl-btn small" type="submit">{% if m.is_hidden %}Восстановить{% else %}Скрыть{% endif %}</button></form>
+                        <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rpl-btn red small" type="submit">Удалить</button></form>
+                    </div>
                 </div>
+                {% endmacro %}
+                <div class="rpl-match-filters" role="group" aria-label="Фильтр матчей">
+                    <button type="button" class="rpl-match-filter active" data-rpl-filter="all">Все</button><button type="button" class="rpl-match-filter" data-rpl-filter="today">Сегодня</button><button type="button" class="rpl-match-filter" data-rpl-filter="upcoming">Предстоящие</button><button type="button" class="rpl-match-filter" data-rpl-filter="finished">Завершённые</button>
+                </div>
+                {% for group in rpl_match_groups %}
+                <details class="rpl-match-group" data-rpl-group="{{ group.key }}" {% if group.open %}open{% endif %}>
+                    <summary><span class="rpl-match-group-title">{{ group.label }}</span><span class="rpl-match-count">{{ group.count }}</span></summary>
+                    {% for section in group.sections %}
+                    <details class="rpl-match-section" {% if loop.first and group.open %}open{% endif %}>
+                        <summary>{{ section.label }}</summary>
+                        {% if section.kind == 'tour' %}<div class="rpl-match-list">{% for m in section.matches %}{{ render_match(m) }}{% endfor %}</div>{% else %}{% for date_group in section.date_groups %}<div class="rpl-date-label">{{ date_group.label }}</div><div class="rpl-match-list">{% for m in date_group.matches %}{{ render_match(m) }}{% endfor %}</div>{% endfor %}{% endif %}
+                    </details>
+                    {% endfor %}
+                </details>
+                {% endfor %}
             {% else %}<div class="rpl-empty">Матчей пока нет. Проверьте календарь или добавьте матч вручную.</div>{% endif %}
         </div>
     </details>
@@ -115,5 +129,28 @@
         </form>
     </details>
 </div>
+
+<script>
+document.querySelectorAll('[data-rpl-filter]').forEach(function(button) {
+    button.addEventListener('click', function() {
+        var filter = button.dataset.rplFilter;
+        document.querySelectorAll('[data-rpl-filter]').forEach(function(item) {
+            item.classList.toggle('active', item === button);
+        });
+        document.querySelectorAll('[data-rpl-group]').forEach(function(group) {
+            group.classList.toggle('hidden-by-filter', filter !== 'all' && group.dataset.rplGroup !== filter);
+        });
+    });
+});
+
+document.querySelectorAll('[data-rpl-group]').forEach(function(group) {
+    var key = 'rpl-admin-group-' + group.dataset.rplGroup;
+    var saved = localStorage.getItem(key);
+    if (saved !== null) group.open = saved === 'open';
+    group.addEventListener('toggle', function() {
+        localStorage.setItem(key, group.open ? 'open' : 'closed');
+    });
+});
+</script>
 
 {% endblock %}
