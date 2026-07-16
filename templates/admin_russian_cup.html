@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="rc-admin">
+<div class="rc-admin admin-russian-cup-page">
     <div class="admin-nav">
         <a href="{{ url_for('admin.admin') }}">Админка</a>
         <a href="{{ url_for('admin.admin_matches') }}">Матчи</a>
@@ -11,7 +11,7 @@
         <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
     </div>
 
-    <section class="rc-admin-hero">
+    <section class="rc-admin-hero admin-russian-cup-hero">
         <img src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="FONBET Кубок России" class="rc-admin-logo">
         <div>
             <div class="rc-admin-title">Кубок России</div>
@@ -25,7 +25,7 @@
         <div class="rc-alert">Турнир «Кубок России» не найден. Он будет создан автоматически при следующем подключении к БД.</div>
     {% endif %}
 
-    <details class="rc-card" open>
+    <details class="rc-card admin-section" open>
         <summary>
             <div>
                 <div class="rc-card-title">Добавить матч</div>
@@ -33,21 +33,21 @@
             </div>
             <span class="rc-chevron">▶</span>
         </summary>
-        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body">
+        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body admin-russian-cup-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="league" value="rcup">
             <input type="hidden" name="api_match_id" value="">
             <div class="rc-grid"><div class="rc-field"><label>Команда 1</label><input name="home_team" required></div><div class="rc-field"><label>Команда 2</label><input name="away_team" required></div></div>
-            <div class="rc-grid"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="19:00" required></div></div>
+            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="19:00" required></div></div>
             <div class="rc-grid"><div class="rc-field"><label>Стадия</label><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div><div class="rc-field"><label>Тур / раунд</label><input name="round_number" placeholder="Например: 3 тур"></div></div>
             <div class="rc-grid"><div class="rc-field"><label>Статус</label><select name="status">{% for s in russian_cup_statuses %}<option value="{{ s }}">{{ s|lower }}</option>{% endfor %}</select></div><div class="rc-field"><label>Другая стадия</label><input name="stage_custom" placeholder="Например: Путь РПЛ"></div></div>
-            <div class="rc-grid"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time"></div></div>
+            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time"></div></div>
             <div class="rc-grid"><div class="rc-field"><label>Доп. время</label><input name="extra_time_score" placeholder="Не поддерживается текущей схемой БД" disabled></div><div class="rc-field"><label>Пенальти</label><input name="penalty_score" placeholder="Не поддерживается текущей схемой БД" disabled></div></div>
             <button class="rc-btn" type="submit">Добавить матч</button>
         </form>
     </details>
 
-    <details class="rc-card" open>
+    <details class="rc-card admin-section" open>
         <summary>
             <div>
                 <div class="rc-card-title">Матчи по стадиям</div>
@@ -88,12 +88,12 @@
                                     </div>
                                     <details class="rc-editor">
                                         <summary><div class="rc-card-note">Редактировать матч</div><span class="rc-chevron">▶</span></summary>
-                                        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}" class="rc-body">
+                                        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}" class="rc-body admin-russian-cup-form">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                             <input type="hidden" name="match_id" value="{{ m.id }}">
                                             <input type="hidden" name="league" value="rcup">
                                             <div class="rc-grid"><div class="rc-field"><label>Команда 1</label><input name="home_team" value="{{ m.home_team }}" required></div><div class="rc-field"><label>Команда 2</label><input name="away_team" value="{{ m.away_team }}" required></div></div>
-                                            <div class="rc-grid"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
+                                            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
                                             <div class="rc-grid"><div class="rc-field"><label>Стадия</label><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}" {% if m.stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="rc-field"><label>Тур / раунд</label><input name="round_number" value="{{ m.round_label }}"></div></div>
                                             <div class="rc-grid"><div class="rc-field"><label>Статус</label><select name="status">{% for s in russian_cup_statuses %}<option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select></div><div class="rc-field"><label>Другая стадия</label><input name="stage_custom" value="{% if m.stage and m.stage not in russian_cup_stage_values %}{{ m.stage }}{% endif %}"></div></div>
                                             <div class="rc-grid"><div class="rc-field"><label>Основной счёт 1</label><input type="number" min="0" name="home_score" value="{{ m.home_score if m.home_score is not none else '' }}"></div><div class="rc-field"><label>Основной счёт 2</label><input type="number" min="0" name="away_score" value="{{ m.away_score if m.away_score is not none else '' }}"></div></div>
@@ -101,7 +101,7 @@
                                             <div class="rc-grid"><div class="rc-field"><label>Пенальти 1</label><input name="penalty_home" value="{{ m.penalty_home }}" placeholder="Не поддерживается текущей схемой БД" disabled></div><div class="rc-field"><label>Пенальти 2</label><input name="penalty_away" value="{{ m.penalty_away }}" placeholder="Не поддерживается текущей схемой БД" disabled></div></div>
                                             <div class="rc-grid"><div class="rc-field"><label>api_match_id</label><input name="api_match_id" value="{{ m.api_match_id }}" readonly></div><div class="rc-field"><label>league</label><input name="league_visible" value="{{ m.league }}" readonly></div></div>
                                             <label class="inline-check"><input type="checkbox" name="delete_score" value="1"> Удалить результат</label>
-                                            <div class="rc-grid"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
+                                            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
                                             <button class="rc-btn" type="submit">Сохранить матч</button>
                                         </form>
                                     </details>
@@ -123,7 +123,7 @@
         </div>
     </details>
 
-    <details class="rc-card">
+    <details class="rc-card admin-section">
         <summary><div><div class="rc-card-title">Пересчитать очки</div><div class="rc-card-note">Для всех завершённых матчей Кубка России</div></div><span class="rc-chevron">▶</span></summary>
         <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_recalc') }}" class="rc-body" onsubmit="return confirm('Пересчитать очки Кубка России?')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
