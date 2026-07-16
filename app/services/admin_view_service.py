@@ -333,7 +333,20 @@ def prepare_admin_view_data(cur):
             'archive_predictions': u[7] or 0,
         })
         if u[2] == 0 and (u[4] or 0) == 0:
-            title_users.append({'id': u[0], 'username': u[1]})
+            title_users.append({'id': u[0], 'username': u[1], 'titles': []})
+
+    cur.execute(
+        """
+        SELECT user_id, title
+        FROM user_titles
+        ORDER BY awarded_at DESC, title
+        """
+    )
+    titles_by_user = {}
+    for user_id, title in cur.fetchall():
+        titles_by_user.setdefault(user_id, []).append(title)
+    for user in title_users:
+        user['titles'] = titles_by_user.get(user['id'], [])
 
     return {
         'free_months': free_months_list,

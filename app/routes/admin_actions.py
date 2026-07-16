@@ -1,3 +1,5 @@
+import re
+
 from flask import flash, redirect, request, session, url_for
 
 from app.routes.admin_matches import (
@@ -12,38 +14,62 @@ ALLOWED_TITLES = (
     "Чемпион Мира 2026",
 )
 
+CUSTOM_TITLE_RE = re.compile(r"[A-Za-zА-Яа-яЁё0-9 .,!?;:()\"'«»—–-]+")
+
+
+def _admin_redirect():
+    return redirect(url_for("admin.admin_users"))
+
+
+def _resolve_title():
+    custom_title = (request.form.get("custom_title") or "").strip()
+    selected_title = (request.form.get("title") or "").strip()
+
+    if custom_title:
+        if len(custom_title) > 40:
+            flash("Свой титул не должен быть длиннее 40 символов", "error")
+            return None
+        if not CUSTOM_TITLE_RE.fullmatch(custom_title):
+            flash("Свой титул содержит недопустимые символы", "error")
+            return None
+        return custom_title
+
+    if selected_title not in ALLOWED_TITLES:
+        flash("Выберите готовый титул или введите свой", "error")
+        return None
+    return selected_title
+
+
+def _validate_title_user(cur, user_id):
+    if not user_id:
+        flash("Выберите пользователя", "error")
+        return False
+
+    cur.execute(
+        """
+        SELECT is_admin
+        FROM users
+        WHERE id = %s
+        """,
+        (user_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        flash("Пользователь не найден", "error")
+        return False
+    if row[0] == 1:
+        flash("Нельзя назначать титулы администраторам", "error")
+        return False
+    return True
+
 
 def handle_award_title(conn, cur):
     user_id = request.form.get("user_id", type=int)
-    title = (request.form.get("title") or "").strip()
-
-    if not user_id or not title:
-        flash("������� ������������ � �����", "error")
-        return redirect(url_for("admin.admin"))
-
-    if title not in ALLOWED_TITLES:
-        flash("������������ �����", "error")
-        return redirect(url_for("admin.admin"))
+    title = _resolve_title()
+    if title is None or not _validate_title_user(cur, user_id):
+        return _admin_redirect()
 
     try:
-        cur.execute(
-            """
-            SELECT is_admin
-            FROM users
-            WHERE id = %s
-            """,
-            (user_id,),
-        )
-        row = cur.fetchone()
-
-        if not row:
-            flash("������������ �� ������", "error")
-            return redirect(url_for("admin.admin"))
-
-        if row[0] == 1:
-            flash("������ �������� ����� ��������������", "error")
-            return redirect(url_for("admin.admin"))
-
         cur.execute(
             """
             INSERT INTO user_titles (user_id, title, awarded_by)
@@ -55,17 +81,69 @@ def handle_award_title(conn, cur):
 
         if cur.rowcount == 0:
             conn.rollback()
-            flash("� ������������ ��� ���� ���� �����", "error")
-            return redirect(url_for("admin.admin"))
+            flash("У пользователя уже есть этот титул", "error")
+            return _admin_redirect()
 
         conn.commit()
-        flash("����� �����", "success")
+        flash("Титул успешно выдан", "success")
 
     except Exception as e:
         conn.rollback()
-        flash(f"������ ������ ������: {e}", "error")
+        flash(f"Ошибка выдачи титула: {e}", "error")
 
-    return redirect(url_for("admin.admin"))
+    return _admin_redirect()
+
+
+def handle_replace_title(conn, cur):
+    user_id = request.form.get("user_id", type=int)
+    old_title = (request.form.get("old_title") or "").strip()
+    title = _resolve_title()
+    if title is None or not old_title or not _validate_title_user(cur, user_id):
+        return _admin_redirect()
+
+    try:
+        cur.execute(
+            "DELETE FROM user_titles WHERE user_id = %s AND title = %s",
+            (user_id, old_title),
+        )
+        if cur.rowcount == 0:
+            conn.rollback()
+            flash("Титул для замены не найден", "error")
+            return _admin_redirect()
+
+        cur.execute(
+            "INSERT INTO user_titles (user_id, title, awarded_by) VALUES (%s, %s, %s)",
+            (user_id, title, session.get("user_id")),
+        )
+        conn.commit()
+        flash("Титул успешно заменён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка замены титула: {e}", "error")
+    return _admin_redirect()
+
+
+def handle_remove_title(conn, cur):
+    user_id = request.form.get("user_id", type=int)
+    title = (request.form.get("title") or "").strip()
+    if not title or not _validate_title_user(cur, user_id):
+        return _admin_redirect()
+
+    try:
+        cur.execute(
+            "DELETE FROM user_titles WHERE user_id = %s AND title = %s",
+            (user_id, title),
+        )
+        if cur.rowcount == 0:
+            conn.rollback()
+            flash("Титул не найден", "error")
+            return _admin_redirect()
+        conn.commit()
+        flash("Титул удалён", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка удаления титула: {e}", "error")
+    return _admin_redirect()
 
 
 ACTION_HANDLERS = {
@@ -73,6 +151,8 @@ ACTION_HANDLERS = {
     "add_match": handle_add_match,
     "set_result": handle_set_result,
     "award_title": handle_award_title,
+    "replace_title": handle_replace_title,
+    "remove_title": handle_remove_title,
 }
 
 
