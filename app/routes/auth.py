@@ -17,6 +17,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.config import INVITE_CODE
 from app.db import close_db, get_db
+from app.services.tournament_context_service import get_session_start_tournament_id
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -80,9 +81,15 @@ def login():
                 return render_template('login.html')
 
             session['user_id'] = user_id
+            session.pop('selected_tournament_id', None)
+            session.pop('tournament_selection_initialized', None)
+            selected_tournament_id = get_session_start_tournament_id(cur)
+            if selected_tournament_id:
+                session['selected_tournament_id'] = selected_tournament_id
+                session['tournament_selection_initialized'] = True
             session.permanent = True
             current_app.permanent_session_lifetime = timedelta(days=7)
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.index', tid=selected_tournament_id) if selected_tournament_id else url_for('main.index'))
         finally:
             close_db(conn, cur)
 
@@ -132,5 +139,7 @@ def register():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
+    session.pop('selected_tournament_id', None)
+    session.pop('tournament_selection_initialized', None)
     flash("Вы вышли из аккаунта", "success")
     return redirect(url_for('auth.login'))

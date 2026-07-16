@@ -6,6 +6,43 @@ from app.services.tournament_service import (
 )
 
 
+def get_session_start_tournament_id(cur):
+    """Choose one active tournament for a new authenticated session."""
+    cur.execute(
+        """
+        SELECT m.tournament_id
+        FROM matches m
+        JOIN tournaments t ON t.id = m.tournament_id
+        WHERE t.is_active = 1
+          AND m.tournament_id IS NOT NULL
+          AND m.kickoff_time >= NOW()
+          AND COALESCE(UPPER(m.status), 'SCHEDULED')
+              NOT IN ('FINISHED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'LIVE', 'IN_PLAY', 'PAUSED', 'HALFTIME')
+        ORDER BY
+          CASE WHEN m.deadline > NOW() THEN 0 ELSE 1 END,
+          CASE WHEN m.deadline > NOW() THEN m.deadline END ASC NULLS LAST,
+          m.kickoff_time ASC,
+          m.id ASC
+        LIMIT 1
+        """
+    )
+    row = cur.fetchone()
+    if row and row[0]:
+        return row[0]
+
+    cur.execute(
+        """
+        SELECT id
+        FROM tournaments
+        WHERE is_active = 1
+        ORDER BY id
+        LIMIT 1
+        """
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def get_nearest_upcoming_tournament_id():
     """
     Historical default used by the main page and table:
@@ -14,22 +51,7 @@ def get_nearest_upcoming_tournament_id():
     conn = get_db()
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
-            SELECT m.tournament_id
-            FROM matches m
-            JOIN tournaments t
-              ON t.id = m.tournament_id
-            WHERE m.kickoff_time >= NOW()
-              AND m.tournament_id IS NOT NULL
-              AND t.is_active = 1
-            GROUP BY m.tournament_id
-            ORDER BY MIN(m.kickoff_time) ASC
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
-        return row[0] if row and row[0] else None
+        return get_session_start_tournament_id(cur)
     finally:
         close_db(conn, cur)
 

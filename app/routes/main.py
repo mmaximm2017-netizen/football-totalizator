@@ -29,6 +29,7 @@ from app.utils import (
 from app.config import START_DATE
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
+    get_session_start_tournament_id,
     get_tournament_state_flags,
 )
 from app.services.tournament_service import (
@@ -205,10 +206,25 @@ def index():
     try:
 
         league = request.args.get('league', 'all')
-        tid = request.args.get('tid', type=int)
+        requested_tid = request.args.get('tid', type=int)
+        if requested_tid is None:
+            session_tid = session.get('selected_tournament_id')
+            if not session_tid:
+                session_tid = get_session_start_tournament_id(cur)
+                if session_tid:
+                    session['selected_tournament_id'] = session_tid
+                    session['tournament_selection_initialized'] = True
+            if session_tid:
+                redirect_args = {'tid': session_tid}
+                if league != 'all':
+                    redirect_args['league'] = league
+                return redirect(url_for('main.index', **redirect_args))
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
-        tid = get_selected_tournament_id(tid)
+        tid = get_selected_tournament_id(requested_tid)
+        if requested_tid and tid == requested_tid:
+            session['selected_tournament_id'] = tid
+            session['tournament_selection_initialized'] = True
 
         start = START_DATE.strftime("%Y-%m-%dT%H:%M:%S")
 
