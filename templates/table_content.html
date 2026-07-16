@@ -1658,6 +1658,229 @@
         color: #ffffff;
         text-shadow: none;
     }
+
+    /* Russian Cup table theme. Keeps ranking data and status markup unchanged. */
+    body.tournament-rcup .table-shell {
+        margin-top: 0;
+        overflow: hidden;
+        border: 1px solid rgba(232, 0, 36, 0.60);
+        border-radius: 18px;
+        background: #310027;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .standings-table {
+        display: block;
+        background: transparent;
+        font-size: 14px;
+    }
+
+    body.tournament-rcup .standings-table tbody {
+        display: block;
+    }
+
+    body.tournament-rcup .standings-table .player-row {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr) 60px;
+        align-items: center;
+        column-gap: 10px;
+        min-height: 68px;
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: #310027;
+    }
+
+    body.tournament-rcup .standings-table .player-row:last-child {
+        border-bottom: 0;
+    }
+
+    body.tournament-rcup .standings-table .player-row.top-1,
+    body.tournament-rcup .standings-table .player-row.top-2,
+    body.tournament-rcup .standings-table .player-row.top-3 {
+        background: #3A0A32;
+    }
+
+    body.tournament-rcup .standings-table .player-row td {
+        display: block;
+        width: auto !important;
+        min-width: 0;
+        margin: 0;
+        padding: 0 !important;
+        text-align: left;
+    }
+
+    body.tournament-rcup .standings-table .player-row .place-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.tournament-rcup .standings-table .place-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(232, 0, 36, 0.18);
+        border: 1px solid rgba(232, 0, 36, 0.55);
+        color: #ffffff;
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    body.tournament-rcup .player-row.top-1 .place-box,
+    body.tournament-rcup .player-row.top-2 .place-box,
+    body.tournament-rcup .player-row.top-3 .place-box {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.16);
+        font-size: 24px;
+    }
+
+    body.tournament-rcup .shared-place {
+        color: rgba(255, 255, 255, 0.52);
+        font-size: 8px;
+        text-align: center;
+    }
+
+    body.tournament-rcup .player-line {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    body.tournament-rcup .player-name {
+        display: -webkit-box;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        text-overflow: clip;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    body.tournament-rcup .leader-badge {
+        flex: 0 0 auto;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 3px 7px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px;
+        background: #E80024;
+        color: #ffffff;
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .leader-badge.outsider-badge,
+    body.tournament-rcup .leader-badge.outsider-badge.confident,
+    body.tournament-rcup .leader-badge.outsider-badge.dominant,
+    body.tournament-rcup .leader-badge.outsider-badge.absolute {
+        background: #771126 !important;
+        color: rgba(255, 255, 255, 0.82) !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rcup .points-cell {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.tournament-rcup .points-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 44px;
+        border: 1px solid rgba(232, 0, 36, 0.70);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #ffffff;
+        font-size: 21px;
+        font-weight: 800;
+        line-height: 1;
+        box-sizing: border-box;
+    }
+
+    body.tournament-rcup .player-row.top-1 .points-number {
+        background: #E80024;
+        border-color: #E80024;
+        color: #ffffff !important;
+    }
+
+    body.tournament-rcup .top-scorers-card {
+        margin-top: 14px;
+        padding: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(232, 0, 36, 0.55);
+        border-radius: 18px;
+        background: #310027;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-title {
+        color: #ffffff;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    body.tournament-rcup .top-scorers-table {
+        border-spacing: 0;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .top-scorers-table tbody tr,
+    body.tournament-rcup .top-scorers-table tbody tr:first-child {
+        background: #3A0A32;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-table tbody td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.tournament-rcup .top-scorers-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    body.tournament-rcup .top-scorer-goals {
+        background: #E80024;
+        border-color: transparent;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-empty {
+        color: rgba(255, 255, 255, 0.66);
+    }
+
+    @media (max-width: 390px) {
+        body.tournament-rcup .standings-table .player-row {
+            grid-template-columns: 52px minmax(0, 1fr) 60px;
+            column-gap: 8px;
+            min-height: 66px;
+            padding: 8px;
+        }
+
+        body.tournament-rcup .player-name {
+            font-size: 13px;
+        }
+    }
 </style>
 
 {% if table %}

@@ -229,6 +229,63 @@
         text-transform: uppercase;
     }
 
+    body.tournament-rcup #rcup-standings-header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 72px;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        overflow: hidden;
+        border: 1px solid rgba(232, 0, 36, 0.65);
+        border-radius: 18px;
+        background: #310027;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup #rcup-standings-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 72px;
+        height: 3px;
+        background: #E80024;
+    }
+
+    body.tournament-rcup #rcup-standings-header img {
+        position: relative;
+        z-index: 1;
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        flex: 0 0 auto;
+    }
+
+    body.tournament-rcup #rcup-standings-header > div {
+        position: relative;
+        z-index: 1;
+        min-width: 0;
+    }
+
+    body.tournament-rcup #rcup-standings-header > div > div:first-child {
+        color: #ffffff;
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.1;
+        text-transform: uppercase;
+    }
+
+    body.tournament-rcup #rcup-standings-header > div > div:last-child {
+        margin-top: 3px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.15;
+        text-transform: uppercase;
+    }
+
     @media (max-width: 430px) {
         body.tournament-wc2026 #wc-standings-header {
             min-height: 72px;
@@ -259,6 +316,14 @@
     <div style="text-align: left;">
         <div style="font-size: 20px; font-weight: 700; color: #ffffff;">Турнирная таблица</div>
         <div style="font-size: 16px; font-weight: 600; color: #7fd3ff;">чемпионата России</div>
+    </div>
+</div>
+{% elif current_tournament_name == 'Кубок России' %}
+<div id="rcup-standings-header">
+    <img src="/static/clubs/Fonbet_Russian_Cup.png" alt="Кубок России">
+    <div>
+        <div>Турнирная таблица</div>
+        <div>Кубок России · Сезон 2025/26</div>
     </div>
 </div>
 {% else %}
@@ -322,11 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const body = document.body;
             if (body) {
-                body.classList.remove('tournament-cup', 'tournament-wc2026', 'tournament-rpl');
+                body.classList.remove('tournament-cup', 'tournament-wc2026', 'tournament-rpl', 'tournament-rcup');
                 if (data.tournament_key === 'wc2026') {
                     body.classList.add('tournament-wc2026');
                 } else if (data.tournament_key === 'rpl') {
                     body.classList.add('tournament-rpl');
+                } else if (data.tournament_name === 'Кубок России') {
+                    body.classList.add('tournament-rcup');
                 } else {
                     body.classList.add('tournament-cup');
                 }
@@ -348,9 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const wcHeader = document.getElementById('wc-standings-header');
             const cupHeader = document.getElementById('cup-standings-header');
             const rplHeader = document.getElementById('rpl-standings-header');
+            const rcupHeader = document.getElementById('rcup-standings-header');
 
             if (data.tournament_key === 'wc2026') {
-                const currentHeader = cupHeader || rplHeader;
+                const currentHeader = cupHeader || rplHeader || rcupHeader;
                 if (currentHeader) {
                     currentHeader.outerHTML = `
 <div id="wc-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
@@ -363,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>`;
                 }
             } else if (data.tournament_key === 'rpl') {
-                const currentHeader = wcHeader || cupHeader;
+                const currentHeader = wcHeader || cupHeader || rcupHeader;
                 if (currentHeader) {
                     currentHeader.outerHTML = `
 <div id="rpl-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
@@ -374,8 +442,20 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>`;
                 }
+            } else if (data.tournament_name === 'Кубок России') {
+                const currentHeader = wcHeader || rplHeader || cupHeader;
+                if (currentHeader) {
+                    currentHeader.outerHTML = `
+<div id="rcup-standings-header">
+    <img src="/static/clubs/Fonbet_Russian_Cup.png" alt="Кубок России">
+    <div>
+        <div>Турнирная таблица</div>
+        <div>Кубок России · Сезон 2025/26</div>
+    </div>
+</div>`;
+                }
             } else {
-                const currentHeader = wcHeader || rplHeader;
+                const currentHeader = wcHeader || rplHeader || rcupHeader;
                 if (currentHeader) {
                     currentHeader.outerHTML = `
 <div id="cup-standings-header" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
