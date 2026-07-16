@@ -819,6 +819,171 @@
             font-size: 27px;
         }
     }
+
+    /* Russian Cup profile theme. Data and profile structure stay shared. */
+    body.tournament-rcup .profile-screen {
+        position: relative;
+        isolation: isolate;
+        padding-bottom: 88px;
+    }
+
+    body.tournament-rcup .profile-screen::before,
+    body.tournament-rcup .profile-screen::after {
+        content: "";
+        position: fixed;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0.32;
+    }
+
+    body.tournament-rcup .profile-screen::before {
+        top: 92px;
+        right: -88px;
+        width: 250px;
+        height: 250px;
+        background: linear-gradient(135deg, transparent 0 43%, rgba(232, 0, 36, 0.72) 43% 56%, transparent 56%);
+        transform: rotate(16deg);
+    }
+
+    body.tournament-rcup .profile-screen::after {
+        bottom: 56px;
+        left: -108px;
+        width: 290px;
+        height: 210px;
+        background: linear-gradient(28deg, transparent 0 42%, rgba(183, 0, 43, 0.74) 42% 56%, transparent 56%);
+        transform: rotate(-12deg);
+    }
+
+    body.tournament-rcup .profile-hero,
+    body.tournament-rcup .stat-card,
+    body.tournament-rcup .section-card {
+        border: 1px solid rgba(232, 0, 36, 0.56);
+        background: #310027;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    body.tournament-rcup .profile-hero {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    body.tournament-rcup .profile-name,
+    body.tournament-rcup .section-title,
+    body.tournament-rcup .match-teams {
+        color: #ffffff;
+        text-shadow: none;
+    }
+
+    body.tournament-rcup .profile-subtitle,
+    body.tournament-rcup .stat-label,
+    body.tournament-rcup .accuracy-label,
+    body.tournament-rcup .match-bottom,
+    body.tournament-rcup .profile-race-cue,
+    body.tournament-rcup .titles-inline-empty,
+    body.tournament-rcup .empty-box {
+        color: rgba(255, 255, 255, 0.66);
+    }
+
+    body.tournament-rcup .place-pill {
+        min-height: 38px;
+        margin-top: 10px;
+        background: #E80024;
+        border-color: #E80024;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .titles-list {
+        margin-top: 8px;
+    }
+
+    body.tournament-rcup .title-item,
+    body.tournament-rcup .accuracy-item,
+    body.tournament-rcup .match-row,
+    body.tournament-rcup .empty-box {
+        border: 1px solid rgba(232, 0, 36, 0.34);
+        background: #3A0A32;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .title-item {
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.tournament-rcup .stat-card {
+        min-height: 104px;
+        padding: 14px 10px;
+        border-radius: 16px;
+    }
+
+    body.tournament-rcup .stat-value,
+    body.tournament-rcup .stat-value.blue,
+    body.tournament-rcup .stat-value.gray,
+    body.tournament-rcup .accuracy-value,
+    body.tournament-rcup .accuracy-value.green,
+    body.tournament-rcup .accuracy-value.blue,
+    body.tournament-rcup .accuracy-value.orange,
+    body.tournament-rcup .accuracy-value.red {
+        color: #ffffff;
+        text-shadow: none;
+    }
+
+    body.tournament-rcup .section-card {
+        padding: 15px;
+        border-radius: 18px;
+    }
+
+    body.tournament-rcup .section-title {
+        margin-bottom: 12px;
+    }
+
+    body.tournament-rcup .match-row {
+        gap: 8px;
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    body.tournament-rcup .match-points,
+    body.tournament-rcup .points-good,
+    body.tournament-rcup .points-mid,
+    body.tournament-rcup .points-bad {
+        border: 1px solid rgba(232, 0, 36, 0.68);
+        background: #E80024;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .back-btn {
+        border: 1px solid #E80024;
+        background: #E80024;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .back-btn:active {
+        background: #9B0024;
+        box-shadow: none;
+    }
+
+    @media (max-width: 390px) {
+        body.tournament-rcup .profile-hero,
+        body.tournament-rcup .section-card {
+            padding: 14px;
+        }
+
+        body.tournament-rcup .profile-name {
+            font-size: 24px;
+        }
+
+        body.tournament-rcup .stats-grid {
+            gap: 8px;
+        }
+    }
 </style>
 
 <div class="profile-screen">
