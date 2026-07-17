@@ -136,7 +136,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         app.secret_key = "test"
         app.register_blueprint(main_bp)
         app.add_url_rule("/login", "auth.login", lambda: "login")
-        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5)])
+        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5), (42,)])
         conn = Connection(cursor)
 
         with (
@@ -170,7 +170,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         app.secret_key = "test"
         app.register_blueprint(main_bp)
         app.add_url_rule("/login", "auth.login", lambda: "login")
-        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5)])
+        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5), (42,)])
         conn = Connection(cursor)
 
         with (
@@ -284,7 +284,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         app.register_blueprint(main_bp)
         app.add_url_rule("/login", "auth.login", lambda: "login")
         match_row = (10, "Home", "Away", None, None, "SCHEDULED", 5)
-        cursor = Cursor([match_row, match_row])
+        cursor = Cursor([match_row, (42,), match_row, (42,)])
         conn = Connection(cursor)
 
         with (

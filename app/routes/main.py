@@ -348,34 +348,61 @@ WHERE m.id = %s
                 "deadline": match[4]
             }):
                 if is_ajax_request():
-                    return ajax_error("Дедлайн прошёл")
+                    return ajax_error("Время для изменения прогноза истекло", 409)
 
-                flash("Дедлайн прошёл", "error")
+                flash("Время для изменения прогноза истекло", "error")
                 return redirect(url_for('main.index'))
 
             cur.execute("""
-                INSERT INTO predictions (
-                    user_id, match_id, tournament_id,
-                    home_goals, away_goals
+                INSERT INTO predictions
+                    (user_id, match_id, tournament_id, home_goals, away_goals)
+                SELECT %s, %s, %s, %s, %s
+                WHERE (
+                    SELECT CURRENT_TIMESTAMP < m.deadline
+                    FROM matches m
+                    WHERE m.id = %s
                 )
-                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (user_id, match_id, tournament_id)
                 DO UPDATE SET
                     home_goals = EXCLUDED.home_goals,
                     away_goals = EXCLUDED.away_goals
+                WHERE (
+                    SELECT CURRENT_TIMESTAMP < m.deadline
+                    FROM matches m
+                    WHERE m.id = %s
+                )
+                RETURNING id
             """, (
                 session['user_id'],
                 match_id,
                 match_tid,
                 h,
                 a,
+                match_id,
+                match_id,
             ))
 
+            inserted_row = cur.fetchone()
             conn.commit()
+
+            if not inserted_row:
+                msg = (
+                    "Время для изменения прогноза истекло "
+                    "(проверка БД: дедлайн наступил до записи)"
+                )
+                logger.warning(
+                    "Deadline rejection user=%s match=%s",
+                    session["user_id"], match_id,
+                )
+                if is_ajax_request():
+                    return ajax_error(msg, 409)
+
+                flash(msg, "error")
+                return redirect(url_for('main.index'))
 
             if is_ajax_request():
                 return ajax_success(
-                    "������� �������",
+                    "Прогноз сохранён",
                     {
                         "match_id": int(match_id),
                         "home_goals": h,
