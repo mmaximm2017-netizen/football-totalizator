@@ -372,5 +372,89 @@ class RussianCupUiTests(unittest.TestCase):
                     self.assertIn("AND league = 'rcup'", sql)
 
 
+
+
+class RussianCupDeadlineTests(unittest.TestCase):
+
+    def setUp(self):
+        from app.routes.admin_matches import build_russian_cup_deadline_utc
+        self.build = build_russian_cup_deadline_utc
+
+    def _as_utc(self, date_str, time_str):
+        from zoneinfo import ZoneInfo
+        msk = ZoneInfo("Europe/Moscow")
+        dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        return dt.replace(tzinfo=msk).astimezone(timezone.utc)
+
+    def test_match_1930_deadline_becomes_1100_same_day(self):
+        kickoff, deadline = self.build("2026-08-18", "19:30", "", "")
+        expected_kickoff = self._as_utc("2026-08-18", "19:30")
+        expected_deadline = self._as_utc("2026-08-18", "11:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_match_1200_deadline_becomes_1100_same_day(self):
+        kickoff, deadline = self.build("2026-08-18", "12:00", "", "")
+        expected_kickoff = self._as_utc("2026-08-18", "12:00")
+        expected_deadline = self._as_utc("2026-08-18", "11:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_match_exactly_1100_rejects_auto_deadline(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.build("2026-08-18", "11:00", "", "")
+        self.assertIn("Матч начинается раньше стандартного дедлайна 11:00", str(ctx.exception))
+
+    def test_match_before_1100_rejects_auto_deadline(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.build("2026-08-18", "10:30", "", "")
+        self.assertIn("Матч начинается раньше стандартного дедлайна 11:00", str(ctx.exception))
+
+    def test_manual_deadline_is_not_replaced(self):
+        kickoff, deadline = self.build("2026-08-18", "19:30", "2026-08-18", "09:00")
+        expected_kickoff = self._as_utc("2026-08-18", "19:30")
+        expected_deadline = self._as_utc("2026-08-18", "09:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_edit_existing_match_preserves_deadline(self):
+        kickoff, deadline = self.build("2026-08-18", "19:30", "2026-08-17", "15:00")
+        expected_kickoff = self._as_utc("2026-08-18", "19:30")
+        expected_deadline = self._as_utc("2026-08-17", "15:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_date_change_gets_new_date_and_1100(self):
+        kickoff, deadline = self.build("2026-08-20", "19:30", "", "")
+        expected_kickoff = self._as_utc("2026-08-20", "19:30")
+        expected_deadline = self._as_utc("2026-08-20", "11:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_time_change_only_still_1100(self):
+        kickoff, deadline = self.build("2026-08-18", "20:00", "", "")
+        expected_kickoff = self._as_utc("2026-08-18", "20:00")
+        expected_deadline = self._as_utc("2026-08-18", "11:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+    def test_timezone_is_europe_moscow(self):
+        from zoneinfo import ZoneInfo
+        msk = ZoneInfo("Europe/Moscow")
+        kickoff, deadline = self.build("2026-08-18", "19:30", "", "")
+        kickoff_msk = kickoff.astimezone(msk)
+        deadline_msk = deadline.astimezone(msk)
+        self.assertEqual(kickoff_msk.strftime("%H:%M"), "19:30")
+        self.assertEqual(deadline_msk.strftime("%H:%M"), "11:00")
+
+    def test_other_tournaments_deadline_unchanged(self):
+        from app.routes.admin_matches import build_manual_deadline_utc
+        kickoff, deadline = build_manual_deadline_utc("2026-08-18", "19:30", "", "")
+        expected_kickoff = self._as_utc("2026-08-18", "19:30")
+        expected_deadline = self._as_utc("2026-08-18", "11:00")
+        self.assertEqual(kickoff, expected_kickoff)
+        self.assertEqual(deadline, expected_deadline)
+
+
 if __name__ == "__main__":
     unittest.main()

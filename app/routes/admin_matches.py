@@ -80,6 +80,34 @@ def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_ti
     return kickoff_utc, deadline_utc
 
 
+def build_russian_cup_deadline_utc(match_date, match_time, deadline_date, deadline_time):
+    dt_msk = datetime.strptime(
+        f"{match_date} {match_time}",
+        "%Y-%m-%d %H:%M",
+    ).replace(tzinfo=MSK)
+
+    kickoff_utc = dt_msk.astimezone(timezone.utc)
+
+    if deadline_date or deadline_time:
+        if not deadline_date or not deadline_time:
+            raise ValueError("Укажите обе дату и время дедлайна")
+
+        deadline_msk = datetime.strptime(
+            f"{deadline_date} {deadline_time}",
+            "%Y-%m-%d %H:%M",
+        ).replace(tzinfo=MSK)
+    else:
+        deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
+        if deadline_msk >= dt_msk:
+            raise ValueError(
+                "Матч начинается раньше стандартного дедлайна 11:00. "
+                "Укажите дедлайн вручную."
+            )
+
+    deadline_utc = deadline_msk.astimezone(timezone.utc)
+    return kickoff_utc, deadline_utc
+
+
 def get_match_tournament_id(cur, match_id):
     cur.execute(
         """
@@ -532,12 +560,16 @@ def admin_russian_cup_add():
             flash("Для finished сначала создайте матч, затем внесите счёт", "error")
             return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
-        kickoff_utc, deadline_utc = build_manual_deadline_utc(
-            match_date,
-            match_time,
-            form_data["deadline_date"],
-            form_data["deadline_time"],
-        )
+        try:
+            kickoff_utc, deadline_utc = build_russian_cup_deadline_utc(
+                match_date,
+                match_time,
+                form_data["deadline_date"],
+                form_data["deadline_time"],
+            )
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
         cur.execute(
             """
@@ -614,12 +646,16 @@ def admin_russian_cup_edit():
             flash("Команды должны отличаться", "error")
             return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
-        kickoff_utc, deadline_utc = build_manual_deadline_utc(
-            match_date,
-            match_time,
-            form_data["deadline_date"],
-            form_data["deadline_time"],
-        )
+        try:
+            kickoff_utc, deadline_utc = build_russian_cup_deadline_utc(
+                match_date,
+                match_time,
+                form_data["deadline_date"],
+                form_data["deadline_time"],
+            )
+        except ValueError as e:
+            flash(str(e), "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
         home_score = away_score = None
         result_home = (request.form.get("home_score") or "").strip()

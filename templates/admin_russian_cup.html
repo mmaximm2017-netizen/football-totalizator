@@ -33,7 +33,7 @@
             </div>
             <span class="rc-chevron">▶</span>
         </summary>
-        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body admin-russian-cup-form">
+        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body admin-russian-cup-form" id="rc-add-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="league" value="rcup">
             <input type="hidden" name="api_match_id" value="">
@@ -132,4 +132,31 @@
     </details>
 </div>
 
+<script>
+(function() {
+    var addForm = document.getElementById('rc-add-form');
+    if (addForm) {
+        var matchDate = addForm.querySelector('input[name="match_date"]');
+        var deadlineDate = addForm.querySelector('input[name="deadline_date"]');
+        var deadlineTime = addForm.querySelector('input[name="deadline_time"]');
+        var autoFill = true;
+
+        if (matchDate && deadlineDate && deadlineTime) {
+            matchDate.addEventListener('change', function() {
+                if (autoFill) {
+                    deadlineDate.value = matchDate.value;
+                    deadlineTime.value = '11:00';
+                }
+            });
+
+            deadlineDate.addEventListener('input', function() {
+                autoFill = false;
+            });
+            deadlineTime.addEventListener('input', function() {
+                autoFill = false;
+            });
+        }
+    }
+})();
+</script>
 {% endblock %}
