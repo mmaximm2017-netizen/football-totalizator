@@ -371,7 +371,7 @@ WHERE m.id = %s
                     FROM matches m
                     WHERE m.id = %s
                 )
-                RETURNING id
+                RETURNING 1
             """, (
                 session['user_id'],
                 match_id,

@@ -19,6 +19,15 @@ class Cursor:
         return self.results.pop(0) if self.results else None
 
 
+class ProductionPredictionsSchemaCursor(Cursor):
+    """Reject columns absent from the production predictions schema contract."""
+
+    def execute(self, query, params=None):
+        if "RETURNING id" in query:
+            raise RuntimeError('column "id" does not exist')
+        super().execute(query, params)
+
+
 class Connection:
     def __init__(self, cursor):
         self.cursor_value = cursor
@@ -110,4 +119,17 @@ class PredictionDeadlineTests(unittest.TestCase):
         self.assertEqual(len(insert_queries), 1)
         self.assertIn("ON CONFLICT", insert_queries[0])
         self.assertIn("CURRENT_TIMESTAMP < m.deadline", insert_queries[0])
-        self.assertIn("RETURNING id", insert_queries[0])
+        self.assertIn("RETURNING 1", insert_queries[0])
+        self.assertNotIn("RETURNING id", insert_queries[0])
+
+    def test_production_predictions_schema_contract_accepts_upsert(self):
+        cursor = ProductionPredictionsSchemaCursor([
+            (10, "Home", "Away", None, None, "SCHEDULED", 5),
+            (1,),
+        ])
+
+        response = self.ajax_post(cursor)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.is_json)
+        self.assertTrue(response.get_json()["ok"])
