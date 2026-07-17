@@ -659,11 +659,33 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: formData
                 });
 
-                const data = await response.json();
+                const contentType = response.headers.get('Content-Type') || '';
+                let data = null;
 
-                if (!response.ok || !data.ok) {
-                    button.textContent = data.message || 'Ошибка';
-                    const messageText = String(data.message || '').toLowerCase();
+                if (contentType.includes('application/json')) {
+                    try {
+                        data = await response.json();
+                    } catch (error) {
+                        console.error('Prediction save returned invalid JSON:', error);
+                        throw new Error('invalid-json-response');
+                    }
+                }
+
+                if (!response.ok || !data || !data.ok) {
+                    const serverMessage = data && data.message
+                        ? data.message
+                        : contentType.includes('text/html')
+                            ? 'Сервер вернул некорректный ответ'
+                            : 'Ошибка сервера (' + response.status + ')';
+                    if (!data) {
+                        console.error('Prediction save expected JSON but received:', {
+                            status: response.status,
+                            url: response.url,
+                            contentType: contentType
+                        });
+                    }
+                    button.textContent = serverMessage;
+                    const messageText = String(serverMessage).toLowerCase();
 
                     if (messageText.includes('дедлайн')) {
                         applyDeadlineClosedState(card);
@@ -756,7 +778,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 800);
 
             } catch (error) {
-                button.textContent = 'Ошибка сети';
+                console.error('Prediction save request failed:', error);
+                button.textContent = error && error.message === 'invalid-json-response'
+                    ? 'Сервер вернул некорректный ответ'
+                    : 'Ошибка сети';
 
                 setTimeout(function () {
                     if (card.dataset.deadlineClosed === '1') {

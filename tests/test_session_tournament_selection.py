@@ -10,9 +10,12 @@ class Cursor:
     def __init__(self, results):
         self.results = list(results)
         self.queries = []
+        self.rowcount = 0
 
     def execute(self, query, params=None):
         self.queries.append((query, params))
+        if query.lstrip().startswith("INSERT"):
+            self.rowcount = 1
 
     def fetchone(self):
         return self.results.pop(0) if self.results else None
@@ -21,12 +24,13 @@ class Cursor:
 class Connection:
     def __init__(self, cursor):
         self.cursor_value = cursor
+        self.commits = 0
 
     def cursor(self):
         return self.cursor_value
 
     def commit(self):
-        pass
+        self.commits += 1
 
 
 class SessionTournamentSelectionTests(unittest.TestCase):
@@ -92,3 +96,67 @@ class SessionTournamentSelectionTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/?tid=5", response.headers["Location"])
+
+    def test_ajax_prediction_post_without_tid_returns_json_not_redirect(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5)])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[]),
+            patch("app.routes.main.get_selected_tournament_id", return_value=5),
+            patch("app.routes.main.is_before_deadline", return_value=True),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = 5
+                response = client.post(
+                    "/",
+                    data={"match_id": "10", "home_goals": "1", "away_goals": "2"},
+                    headers={"X-Requested-With": "XMLHttpRequest"},
+                    follow_redirects=False,
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.is_json)
+        self.assertTrue(response.get_json()["ok"])
+        self.assertEqual(conn.commits, 1)
+        self.assertTrue(any("ON CONFLICT" in query for query, _ in cursor.queries))
+
+    def test_repeated_ajax_prediction_post_uses_existing_update_path(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        match_row = (10, "Home", "Away", None, None, "SCHEDULED", 5)
+        cursor = Cursor([match_row, match_row])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[]),
+            patch("app.routes.main.get_selected_tournament_id", return_value=5),
+            patch("app.routes.main.is_before_deadline", return_value=True),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = 5
+                first = client.post("/", data={"match_id": "10", "home_goals": "1", "away_goals": "2"}, headers={"X-Requested-With": "XMLHttpRequest"})
+                second = client.post("/", data={"match_id": "10", "home_goals": "3", "away_goals": "1"}, headers={"X-Requested-With": "XMLHttpRequest"})
+
+        self.assertTrue(first.is_json and first.get_json()["ok"])
+        self.assertTrue(second.is_json and second.get_json()["ok"])
+        self.assertEqual(second.get_json()["home_goals"], 3)
+        self.assertEqual(conn.commits, 2)

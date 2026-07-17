@@ -207,7 +207,7 @@ def index():
 
         league = request.args.get('league', 'all')
         requested_tid = request.args.get('tid', type=int)
-        if requested_tid is None:
+        if request.method == 'GET' and requested_tid is None:
             session_tid = session.get('selected_tournament_id')
             if not session_tid:
                 session_tid = get_session_start_tournament_id(cur)
