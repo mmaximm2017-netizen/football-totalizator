@@ -654,21 +654,38 @@ def try_acquire_sync_lock(lock_key=SYNC_LOCK_KEY):
         cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
         row = cur.fetchone()
         acquired = bool(row and row[0])
+        logger.info("Sync lock key=%s acquired=%s", lock_key, acquired)
         return conn, cur, acquired, None
     except Exception as e:
-        logger.warning("Sync lock unavailable: %s", e)
+        logger.error("Sync lock acquisition failed for key=%s: %s", lock_key, e)
         close_db(conn, cur)
-        return None, None, True, str(e)
+        return None, None, False, str(e)
 
 def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
     if not conn or not cur:
         return
     try:
         cur.execute("SELECT pg_advisory_unlock(%s)", (lock_key,))
-    except Exception as e:
-        logger.warning("Failed to release sync lock: %s", e)
-    finally:
+        logger.info("Sync lock key=%s released", lock_key)
         close_db(conn, cur)
+    except Exception as e:
+        logger.error("Failed to release sync lock key=%s: %s", lock_key, e)
+        if cur is not None and not cur.closed:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        from app.db import db_pool
+        if db_pool is not None:
+            try:
+                db_pool.putconn(conn, close=True)
+                return
+            except Exception:
+                pass
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def _sync_history_status(summary):
@@ -763,25 +780,23 @@ def run_sync_with_lock(strict_lock=False):
 
     try:
         lock_conn, lock_cur, acquired, lock_error = try_acquire_sync_lock()
-        summary["lock_acquired"] = acquired and not lock_error
+        summary["lock_acquired"] = acquired
         summary["lock_error"] = lock_error
-
-        if not acquired:
-            summary["status"] = "skipped_already_running"
-            logger.info("sync lock skipped: already running")
-            finish_sync_run(sync_run_id, "skipped_already_running", summary)
-            return summary
 
         if lock_error:
             summary["status"] = "lock_error"
             summary["errors"].append(lock_error)
-            if strict_lock:
-                logger.error("sync lock unavailable; strict mode stops sync: %s", lock_error)
-                finish_sync_run(sync_run_id, "lock_error", summary)
-                return summary
-            logger.warning("sync lock unavailable; continuing without lock in admin/manual mode")
-        else:
-            logger.info("sync lock acquired")
+            logger.error("Sync lock acquisition failed: %s", lock_error)
+            finish_sync_run(sync_run_id, "lock_error", summary)
+            return summary
+
+        if not acquired:
+            summary["status"] = "skipped_already_running"
+            logger.info("Sync lock busy — already running")
+            finish_sync_run(sync_run_id, "skipped_already_running", summary)
+            return summary
+
+        logger.info("Sync lock acquired key=%s", SYNC_LOCK_KEY)
 
         sync_summary = update_matches()
         summary["sync"] = sync_summary

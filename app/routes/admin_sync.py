@@ -1,5 +1,5 @@
 import logging
-from flask import Blueprint, flash, jsonify, redirect, url_for
+from flask import Blueprint, flash, jsonify, redirect, request, url_for
 
 from app.routes.admin_common import admin_required
 from app.services.sync_history_service import (
@@ -80,6 +80,13 @@ def build_sync_panel_context():
     }
 
 
+def _ajaxy(data, status_code=200):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if is_ajax:
+        return jsonify(data), status_code
+    return None
+
+
 def handle_manual_sync_update():
     from app.services.match_service import run_sync_with_lock
 
@@ -95,6 +102,16 @@ def handle_manual_sync_update():
             errors = sync_summary.get("errors", [])
             scoring = (sync_result.get("scoring") or {})
             recalc = scoring.get("predictions_recalculated", 0)
+
+            ajax_resp = _ajaxy({
+                "ok": True,
+                "inserted": inserted,
+                "updated": updated,
+                "recalculated": recalc,
+            })
+            if ajax_resp:
+                return ajax_resp
+
             if errors:
                 flash(
                     "Обновление с ошибками: +{ins} обновлено {upd}, пересчитано {rec} прогнозов. Ошибки: {err}".format(
@@ -113,19 +130,41 @@ def handle_manual_sync_update():
             sync_summary = (sync_result.get("sync") or {})
             inserted = sync_summary.get("matches_inserted", 0)
             updated = sync_summary.get("matches_updated", 0)
+
+            ajax_resp = _ajaxy({
+                "ok": True,
+                "warning": "scoring_failed",
+                "inserted": inserted,
+                "updated": updated,
+            })
+            if ajax_resp:
+                return ajax_resp
+
             flash(
                 "Матчи обновлены (+{ins} +{upd}), но пересчёт очков не удался. "
                 "Запустите пересчёт вручную.".format(ins=inserted, upd=updated),
                 "warning",
             )
-        elif status == "skipped_already_running":
-            flash("Обновление уже выполняется другим процессом", "info")
+        elif status in ("skipped_already_running", "lock_error"):
+            msg = "Синхронизация уже выполняется. Повторите позже."
+
+            ajax_resp = _ajaxy({"ok": False, "message": msg}, 423)
+            if ajax_resp:
+                return ajax_resp
+
+            flash(msg, "warning")
         else:
             flash("Обновление не выполнено (статус: {status})".format(
                 status=status or "unknown",
             ), "error")
     except Exception as e:
-        flash(f"Ошибка обновления: {e}", "error")
+        logger.exception("Manual sync update failed")
+
+        ajax_resp = _ajaxy({"ok": False, "message": "Ошибка синхронизации"}, 500)
+        if ajax_resp:
+            return ajax_resp
+
+        flash("Ошибка обновления: повторите попытку позже", "error")
 
     return redirect(url_for("admin.admin"))
 

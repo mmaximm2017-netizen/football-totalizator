@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, redirect, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, request, url_for
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
@@ -19,6 +19,8 @@ from app.services.wc_playoff_service import (
     normalize_playoff_stage,
 )
 
+import logging
+logger = logging.getLogger(__name__)
 
 admin_matches_bp = Blueprint("admin_matches", __name__, url_prefix="/admin")
 MSK = ZoneInfo("Europe/Moscow")
@@ -157,9 +159,19 @@ def build_rpl_api_match_id(source, raw_api_match_id):
 @admin_matches_bp.route("/russia_2027_import", methods=["POST"])
 @admin_required
 def admin_russia_2027_import():
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     try:
         summary = run_sync_with_lock()
         overall_status = summary.get("status") if isinstance(summary, dict) else None
+
+        if overall_status in ("skipped_already_running", "lock_error"):
+            msg = "Синхронизация уже выполняется. Повторите позже."
+            if is_ajax:
+                return jsonify({"ok": False, "message": msg}), 423
+            flash(msg, "warning")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
+
         sync_summary = summary.get("sync") if isinstance(summary, dict) else summary
         sync_summary = sync_summary or {}
         inserted = sync_summary.get("matches_inserted", 0)
@@ -170,6 +182,11 @@ def admin_russia_2027_import():
         total_changed = inserted + updated
 
         if overall_status == "scoring_failed":
+            if is_ajax:
+                return jsonify({
+                    "ok": True, "warning": "scoring_failed",
+                    "inserted": inserted, "updated": updated,
+                })
             flash(
                 "Матчи импортированы (добавлено {inserted}, обновлено {updated}), "
                 "но пересчёт очков не удался. "
@@ -180,6 +197,12 @@ def admin_russia_2027_import():
             )
         elif errors:
             error_summary = "; ".join(errors[:3])
+            if is_ajax:
+                return jsonify({
+                    "ok": True, "warning": "partial_errors",
+                    "inserted": inserted, "updated": updated,
+                    "errors": errors[:3],
+                })
             flash(
                 "Импорт с ошибками: добавлено {inserted}, обновлено {updated}. Ошибки: {errors}".format(
                     inserted=inserted, updated=updated, errors=error_summary,
@@ -187,11 +210,21 @@ def admin_russia_2027_import():
                 "error",
             )
         elif total_changed == 0 and understat_matches == 0:
+            if is_ajax:
+                return jsonify({
+                    "ok": True, "warning": "no_changes",
+                    "inserted": 0, "updated": 0,
+                })
             flash(
                 "Импорт завершён: 0 изменений. Understat не вернул матчей — возможно, сезон ещё не начался или API недоступен.",
                 "warning",
             )
         else:
+            if is_ajax:
+                return jsonify({
+                    "ok": True, "inserted": inserted,
+                    "updated": updated, "skipped": skipped_other,
+                })
             flash(
                 "Импорт завершён: добавлено {inserted}, обновлено {updated}, пропущено без турнира {skipped}".format(
                     inserted=inserted, updated=updated, skipped=skipped_other,
@@ -199,7 +232,10 @@ def admin_russia_2027_import():
                 "success",
             )
     except Exception as e:
-        flash(f"Ошибка импорта РПЛ: {e}", "error")
+        logger.exception("RPL import failed")
+        if is_ajax:
+            return jsonify({"ok": False, "message": "Ошибка импорта РПЛ"}), 500
+        flash("Ошибка импорта РПЛ: повторите попытку позже", "error")
     return redirect(url_for(RPL_ADMIN_REDIRECT))
 
 
