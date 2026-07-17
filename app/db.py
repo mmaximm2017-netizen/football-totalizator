@@ -17,8 +17,6 @@ logger = logging.getLogger(__name__)
 # =========================================================
 
 db_pool = None
-_match_category_column_checked = False
-_russian_cup_tournament_checked = False
 
 RUSSIAN_CUP_TOURNAMENT_NAME = "Кубок России"
 
@@ -68,100 +66,6 @@ def is_connection_alive(conn):
         return False
 
 
-def ensure_match_category_column(conn):
-    global _match_category_column_checked
-
-    if _match_category_column_checked:
-        return
-
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_name='matches'
-        """)
-        if not cur.fetchone():
-            return
-
-        cur.execute("""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name='matches'
-              AND column_name='match_category'
-        """)
-        exists = cur.fetchone()
-
-        if not exists:
-            try:
-                cur.execute("""
-                    ALTER TABLE matches
-                    ADD COLUMN IF NOT EXISTS match_category VARCHAR(32) DEFAULT 'rpl'
-                """)
-                conn.commit()
-            except psycopg2.errors.ReadOnlySqlTransaction:
-                conn.rollback()
-                logger.warning("Skipping match_category migration on read-only DB connection")
-                return
-
-    _match_category_column_checked = True
-
-
-def ensure_russian_cup_tournament(conn):
-    global _russian_cup_tournament_checked
-
-    if _russian_cup_tournament_checked:
-        return
-
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_name='tournaments'
-        """)
-        if not cur.fetchone():
-            return
-
-        cur.execute(
-            """
-            SELECT id
-            FROM tournaments
-            WHERE name = %s
-            LIMIT 1
-            """,
-            (RUSSIAN_CUP_TOURNAMENT_NAME,),
-        )
-        exists = cur.fetchone()
-
-        try:
-            if exists:
-                cur.execute(
-                    """
-                    UPDATE tournaments
-                    SET is_active = 1
-                    WHERE id = %s
-                      AND COALESCE(is_active, 0) <> 1
-                    """,
-                    (exists[0],),
-                )
-                if cur.rowcount:
-                    conn.commit()
-            else:
-                cur.execute(
-                    """
-                    INSERT INTO tournaments (name, is_active, start_date, end_date)
-                    VALUES (%s, 1, NULL, NULL)
-                    """,
-                    (RUSSIAN_CUP_TOURNAMENT_NAME,),
-                )
-                conn.commit()
-        except psycopg2.errors.ReadOnlySqlTransaction:
-            conn.rollback()
-            logger.warning("Skipping Russian Cup tournament seed on read-only DB connection")
-            return
-
-    _russian_cup_tournament_checked = True
-
-
 def get_db():
     global db_pool
 
@@ -185,9 +89,6 @@ def get_db():
                 keepalives_interval=10,
                 keepalives_count=5,
             )
-
-        ensure_match_category_column(conn)
-        ensure_russian_cup_tournament(conn)
 
         return conn
 
@@ -219,6 +120,20 @@ def close_db(conn, cur=None):
 # =========================================================
 # INIT DB
 # =========================================================
+
+def seed_russian_cup_tournament(cur):
+    """Create the initial Russian Cup record without changing existing settings."""
+    cur.execute(
+        """
+        INSERT INTO tournaments (name, is_active, start_date, end_date)
+        SELECT %s, 1, NULL, NULL
+        WHERE NOT EXISTS (
+            SELECT 1 FROM tournaments WHERE name = %s
+        )
+        """,
+        (RUSSIAN_CUP_TOURNAMENT_NAME, RUSSIAN_CUP_TOURNAMENT_NAME),
+    )
+
 
 def init_db():
     conn = get_db()
@@ -441,15 +356,32 @@ def init_db():
         # =====================================================
 
         cur.execute("""
-        ALTER TABLE matches
-        ALTER COLUMN kickoff_time TYPE TIMESTAMP WITH TIME ZONE
-        USING kickoff_time::timestamptz;
-        """)
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'matches'
+                  AND column_name = 'kickoff_time'
+                  AND data_type <> 'timestamp with time zone'
+            ) THEN
+                ALTER TABLE matches
+                ALTER COLUMN kickoff_time TYPE TIMESTAMP WITH TIME ZONE
+                USING kickoff_time::timestamptz;
+            END IF;
 
-        cur.execute("""
-        ALTER TABLE matches
-        ALTER COLUMN deadline TYPE TIMESTAMP WITH TIME ZONE
-        USING deadline::timestamptz;
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'matches'
+                  AND column_name = 'deadline'
+                  AND data_type <> 'timestamp with time zone'
+            ) THEN
+                ALTER TABLE matches
+                ALTER COLUMN deadline TYPE TIMESTAMP WITH TIME ZONE
+                USING deadline::timestamptz;
+            END IF;
+        END $$;
         """)
 
         # =====================================================
@@ -466,15 +398,6 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_started ON sync_runs(started_at);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_status ON sync_runs(status);")
-
-        # Fix known tournament name typo.
-        cur.execute(
-            """
-            UPDATE tournaments
-            SET name = 'Кубок Матч-премьер'
-            WHERE name = 'Курбок Матч-премьер'
-            """
-        )
 
         # Remove legacy "single active tournament" restriction if present.
         # Supports both cases:
@@ -548,7 +471,7 @@ def init_db():
         # =====================================================
 
         cur.execute("""
-        SELECT id FROM tournaments WHERE is_active = 1 LIMIT 1
+        SELECT id FROM tournaments LIMIT 1
         """)
 
         if not cur.fetchone():
@@ -557,26 +480,7 @@ def init_db():
             VALUES ('Кубок Матч-премьер', 1, '2026-05-06')
             """)
 
-        cur.execute(
-            """
-            INSERT INTO tournaments (name, is_active, start_date, end_date)
-            SELECT %s, 1, NULL, NULL
-            WHERE NOT EXISTS (
-                SELECT 1 FROM tournaments WHERE name = %s
-            )
-            """,
-            (RUSSIAN_CUP_TOURNAMENT_NAME, RUSSIAN_CUP_TOURNAMENT_NAME),
-        )
-
-        cur.execute(
-            """
-            UPDATE tournaments
-            SET is_active = 1
-            WHERE name = %s
-              AND COALESCE(is_active, 0) <> 1
-            """,
-            (RUSSIAN_CUP_TOURNAMENT_NAME,),
-        )
+        seed_russian_cup_tournament(cur)
 
         # =====================================================
         # BACKFILL MATCH TOURNAMENT LINKS
