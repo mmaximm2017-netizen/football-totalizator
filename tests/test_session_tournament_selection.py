@@ -131,6 +131,37 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         self.assertEqual(conn.commits, 1)
         self.assertTrue(any("ON CONFLICT" in query for query, _ in cursor.queries))
 
+    def test_prediction_post_rejects_selected_tournament_mismatch(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 6)])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[]),
+            patch("app.routes.main.get_selected_tournament_id", return_value=5),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = 5
+                response = client.post(
+                    "/",
+                    data={"match_id": "10", "home_goals": "1", "away_goals": "2"},
+                    headers={"X-Requested-With": "XMLHttpRequest"},
+                )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response.is_json)
+        self.assertEqual(conn.commits, 0)
+        self.assertFalse(any("ON CONFLICT" in query for query, _ in cursor.queries))
+
     def test_repeated_ajax_prediction_post_uses_existing_update_path(self):
         from app.routes.main import main_bp
 

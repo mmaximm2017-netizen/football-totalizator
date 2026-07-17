@@ -54,7 +54,8 @@ def match_predictions(match_id):
 
         tournament_id = match['tournament_id']
         if tournament_id is None:
-            tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
+            flash("Турнир для матча не определён", "error")
+            return redirect(url_for('main.index'))
 
         # ������ �����: ������� ������� � deadline
         deadline_passed = not is_before_deadline({
@@ -154,6 +155,7 @@ def my_predictions():
                    m.kickoff_time, m.deadline
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.deadline::timestamptz > %s
@@ -181,6 +183,7 @@ def my_predictions():
                    p.home_goals, p.away_goals
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.deadline <= %s
@@ -213,6 +216,7 @@ def my_predictions():
                    COALESCE(p.points, 0)
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status = 'FINISHED'
@@ -244,6 +248,7 @@ def my_predictions():
                    COALESCE(p.points, 0)
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status IN ('POSTPONED','CANCELLED')

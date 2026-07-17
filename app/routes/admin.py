@@ -184,20 +184,9 @@ def deactivate_user(user_id):
                 return redirect(url_for('admin.admin_users'))
 
         cur.execute("UPDATE users SET is_deleted = 1 WHERE id = %s", (user_id,))
-        cur.execute(
-            """
-            DELETE FROM predictions p
-            USING tournaments t
-            WHERE p.tournament_id = t.id
-              AND t.is_active = 1
-              AND p.user_id = %s
-            """,
-            (user_id,),
-        )
-        deleted_predictions = cur.rowcount
         conn.commit()
 
-        flash(f"Пользователь деактивирован. Удалено прогнозов: {deleted_predictions}", "success")
+        flash("Пользователь деактивирован. Прогнозы сохранены.", "success")
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка деактивации пользователя: {e}", "error")

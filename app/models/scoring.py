@@ -1,6 +1,20 @@
 import logging
 
 logger = logging.getLogger(__name__)
+MAX_MATCH_SCORE = 99
+
+
+def has_valid_finished_score(status, home_score, away_score):
+    """Return whether a finished match has a complete usable result."""
+    return (
+        status == "FINISHED"
+        and all(
+            isinstance(score, int)
+            and not isinstance(score, bool)
+            and 0 <= score <= MAX_MATCH_SCORE
+            for score in (home_score, away_score)
+        )
+    )
 
 
 # =========================================================

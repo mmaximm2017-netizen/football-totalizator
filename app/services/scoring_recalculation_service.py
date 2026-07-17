@@ -1,5 +1,10 @@
 from app.db import close_db, get_db
-from app.models.scoring import calculate_points
+import logging
+
+from app.models.scoring import calculate_points, has_valid_finished_score
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_cursor(conn=None, cur=None):
@@ -22,7 +27,7 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
     try:
         cur.execute(
             """
-            SELECT id, home_score, away_score
+            SELECT id, status, home_score, away_score, tournament_id
             FROM matches
             WHERE id = %s
             """,
@@ -37,27 +42,48 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
                 "found": False,
             }
 
-        params = [match_id]
-        tournament_filter = ""
-        if tournament_id is not None:
-            tournament_filter = "AND tournament_id = %s"
-            params.append(tournament_id)
+        if not has_valid_finished_score(match[1], match[2], match[3]) or match[4] is None:
+            logger.warning(
+                "Skipping points recalculation for match_id=%s status=%s home_score=%r away_score=%r: incomplete or invalid finished score",
+                match_id,
+                match[1],
+                match[2],
+                match[3],
+            )
+            return {
+                "match_id": match_id,
+                "tournament_id": tournament_id,
+                "updated": 0,
+                "found": True,
+                "skipped": True,
+                "reason": "incomplete_or_invalid_finished_score",
+            }
+
+        if tournament_id is not None and tournament_id != match[4]:
+            return {
+                "match_id": match_id,
+                "tournament_id": tournament_id,
+                "updated": 0,
+                "found": True,
+                "skipped": True,
+                "reason": "match_tournament_mismatch",
+            }
 
         cur.execute(
             f"""
             SELECT user_id, home_goals, away_goals, tournament_id
             FROM predictions
             WHERE match_id = %s
-            {tournament_filter}
+              AND tournament_id = %s
             """,
-            tuple(params),
+            (match_id, match[4]),
         )
 
         updated = 0
         for p in cur.fetchall():
             pts = calculate_points(
-                match[1],
                 match[2],
+                match[3],
                 p[1],
                 p[2],
             )
@@ -110,6 +136,7 @@ def recalc_tournament_points(tournament_id, conn=None, cur=None):
             FROM matches m
             JOIN predictions p
               ON p.match_id = m.id
+             AND p.tournament_id = m.tournament_id
             WHERE m.status = 'FINISHED'
               AND p.tournament_id = %s
             ORDER BY m.id
@@ -119,6 +146,7 @@ def recalc_tournament_points(tournament_id, conn=None, cur=None):
 
         match_ids = [r[0] for r in cur.fetchall()]
         total_updated = 0
+        skipped = 0
 
         for match_id in match_ids:
             result = recalc_match_points(
@@ -128,6 +156,7 @@ def recalc_tournament_points(tournament_id, conn=None, cur=None):
                 cur=cur,
             )
             total_updated += result.get("updated", 0)
+            skipped += int(result.get("skipped", False))
 
         if owns_connection:
             conn.commit()
@@ -136,6 +165,7 @@ def recalc_tournament_points(tournament_id, conn=None, cur=None):
             "tournament_id": tournament_id,
             "matches": len(match_ids),
             "updated": total_updated,
+            "skipped": skipped,
         }
     except Exception:
         if owns_connection:
@@ -164,10 +194,12 @@ def recalc_all_points(conn=None, cur=None):
 
         match_ids = [r[0] for r in cur.fetchall()]
         total_updated = 0
+        skipped = 0
 
         for match_id in match_ids:
             result = recalc_match_points(match_id, conn=conn, cur=cur)
             total_updated += result.get("updated", 0)
+            skipped += int(result.get("skipped", False))
 
         if owns_connection:
             conn.commit()
@@ -175,6 +207,7 @@ def recalc_all_points(conn=None, cur=None):
         return {
             "matches": len(match_ids),
             "updated": total_updated,
+            "skipped": skipped,
         }
     except Exception:
         if owns_connection:

@@ -15,6 +15,7 @@ def load_match_service_module():
     fake_config = types.ModuleType("app.config")
     fake_db = types.ModuleType("app.db")
     fake_services = types.ModuleType("app.services")
+    fake_scoring = types.ModuleType("app.models.scoring")
     fake_sync_history = types.ModuleType("app.services.sync_history_service")
     fake_utils = types.ModuleType("app.utils")
     fake_wc_playoff = types.ModuleType("app.services.wc_playoff_service")
@@ -32,6 +33,15 @@ def load_match_service_module():
     fake_utils.utc_now = lambda: None
     fake_wc_playoff.infer_playoff_stage_from_api = lambda match: None
     fake_wc_playoff.is_wc2026_playoff_match = lambda *args, **kwargs: False
+    fake_scoring.has_valid_finished_score = lambda status, home, away: (
+        status == "FINISHED"
+        and isinstance(home, int)
+        and not isinstance(home, bool)
+        and isinstance(away, int)
+        and not isinstance(away, bool)
+        and 0 <= home <= 99
+        and 0 <= away <= 99
+    )
 
     module_name = "match_service_score_under_test"
     spec = importlib.util.spec_from_file_location(module_name, SERVICE_PATH)
@@ -44,6 +54,7 @@ def load_match_service_module():
             "app.config": fake_config,
             "app.db": fake_db,
             "app.services": fake_services,
+            "app.models.scoring": fake_scoring,
             "app.services.sync_history_service": fake_sync_history,
             "app.utils": fake_utils,
             "app.services.wc_playoff_service": fake_wc_playoff,
@@ -228,6 +239,118 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
         self.assertEqual(inserted["params"][8], "rpl")
         self.assertEqual(inserted["params"][9], 5)
         self.assertEqual(inserted["params"][11], "rpl")
+
+    def test_finished_api_match_without_full_score_is_saved_as_scheduled(self):
+        inserted = {}
+
+        class Cursor:
+            def __init__(self):
+                self.fetchone_result = None
+
+            def execute(self, query, params=None):
+                normalized = " ".join(query.split())
+                if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
+                    self.fetchone_result = (5,)
+                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                    self.fetchone_result = None
+                elif normalized.startswith("INSERT INTO matches"):
+                    inserted["params"] = params
+                    self.fetchone_result = (42,)
+
+            def fetchone(self):
+                return self.fetchone_result
+
+        class Conn:
+            def __init__(self):
+                self.cur = Cursor()
+
+            def cursor(self):
+                return self.cur
+
+            def commit(self):
+                pass
+
+            def rollback(self):
+                raise AssertionError("rollback should not be called")
+
+        match = {
+            "id": "api-1",
+            "homeTeam": {"name": "Home"},
+            "awayTeam": {"name": "Away"},
+            "utcDate": "2026-07-18T17:30:00Z",
+            "status": "FINISHED",
+            "score": {"fullTime": {"home": None, "away": None}},
+            "league": "other",
+        }
+
+        with (
+            patch.object(service, "fetch_matches", return_value=[match]),
+            patch.object(service, "fetch_rpl_matches", return_value=[]),
+            patch.object(service, "get_db", return_value=Conn()),
+            patch.object(service, "close_db"),
+            self.assertLogs(service.logger, level="WARNING") as logs,
+        ):
+            summary = service.update_matches()
+
+        self.assertEqual(inserted["params"][5], "SCHEDULED")
+        self.assertEqual(inserted["params"][6:8], (None, None))
+        self.assertEqual(summary["changed_finished_match_ids"], [])
+        self.assertEqual(summary["matches_skipped_invalid_finished_score"], 1)
+        self.assertIn("Skipping incomplete API result", "\n".join(logs.output))
+
+    def test_finished_api_nil_nil_score_is_queued_for_recalculation(self):
+        inserted = {}
+
+        class Cursor:
+            def __init__(self):
+                self.fetchone_result = None
+
+            def execute(self, query, params=None):
+                normalized = " ".join(query.split())
+                if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
+                    self.fetchone_result = (5,)
+                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                    self.fetchone_result = None
+                elif normalized.startswith("INSERT INTO matches"):
+                    inserted["params"] = params
+                    self.fetchone_result = (42,)
+
+            def fetchone(self):
+                return self.fetchone_result
+
+        class Conn:
+            def __init__(self):
+                self.cur = Cursor()
+
+            def cursor(self):
+                return self.cur
+
+            def commit(self):
+                pass
+
+            def rollback(self):
+                raise AssertionError("rollback should not be called")
+
+        match = {
+            "id": "api-2",
+            "homeTeam": {"name": "Home"},
+            "awayTeam": {"name": "Away"},
+            "utcDate": "2026-07-18T17:30:00Z",
+            "status": "FINISHED",
+            "score": {"fullTime": {"home": 0, "away": 0}},
+            "league": "other",
+        }
+
+        with (
+            patch.object(service, "fetch_matches", return_value=[match]),
+            patch.object(service, "fetch_rpl_matches", return_value=[]),
+            patch.object(service, "get_db", return_value=Conn()),
+            patch.object(service, "close_db"),
+        ):
+            summary = service.update_matches()
+
+        self.assertEqual(inserted["params"][5:8], ("FINISHED", 0, 0))
+        self.assertEqual(summary["changed_finished_match_ids"], [42])
 
 
 if __name__ == "__main__":

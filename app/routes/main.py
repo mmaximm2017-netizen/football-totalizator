@@ -273,19 +273,12 @@ SELECT
     kickoff_time,
     deadline,
     status,
-    COALESCE(
-        tournament_id,
-        (
-            SELECT t.id
-            FROM tournaments t
-            WHERE t.start_date::date <= DATE(matches.kickoff_time)
-            ORDER BY t.start_date DESC, t.id DESC
-            LIMIT 1
-        )
-    ) AS tournament_id
+    tournament_id
 FROM matches
-WHERE id = %s
-            """, (match_id,))
+JOIN tournaments ON tournaments.id = matches.tournament_id
+JOIN users ON users.id = %s AND COALESCE(users.is_deleted, 0) = 0
+WHERE matches.id = %s
+            """, (session['user_id'], match_id))
 
             match = cur.fetchone()
 
@@ -296,11 +289,17 @@ WHERE id = %s
                 flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
 
-            match_tid = match[6] or tid
+            match_tid = match[6]
             if not match_tid:
                 if is_ajax_request():
                     return ajax_error("Турнир для матча не определён", 400)
                 flash("Турнир для матча не определён", "error")
+                return redirect(url_for('main.index', league=league, tid=tid))
+
+            if match_tid != tid:
+                if is_ajax_request():
+                    return ajax_error("Матч относится к другому турниру", 400)
+                flash("Матч относится к другому турниру", "error")
                 return redirect(url_for('main.index', league=league, tid=tid))
 
             if not is_before_deadline({

@@ -56,7 +56,10 @@ def debug_match():
             FROM predictions p
             JOIN users u
             ON p.user_id = u.id
-            WHERE p.match_id = %s
+            JOIN matches m
+            ON m.id = p.match_id
+            AND m.tournament_id = p.tournament_id
+            WHERE m.id = %s
             """,
             (match_id,),
         )
@@ -354,6 +357,14 @@ def delete_tournament():
 
         if row[0] == 1:
             flash("������ ������� �������� ������", "error")
+            return redirect(url_for("admin.admin_tournaments"))
+
+        cur.execute(
+            "SELECT 1 FROM predictions WHERE tournament_id = %s LIMIT 1",
+            (tid,),
+        )
+        if cur.fetchone():
+            flash("Нельзя удалить турнир: существуют связанные прогнозы", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
         cur.execute(

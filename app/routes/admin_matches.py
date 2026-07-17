@@ -12,6 +12,7 @@ from app.services.russian_cup_admin_service import (
     get_russian_cup_tournament,
 )
 from app.services.scoring_recalculation_service import recalc_match_points
+from app.models.scoring import has_valid_finished_score
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
     is_wc2026_playoff_match,
@@ -45,12 +46,12 @@ def validate_score(home_score, away_score):
         home_score = int(home_score)
         away_score = int(away_score)
 
-        if home_score < 0 or away_score < 0:
+        if not has_valid_finished_score("FINISHED", home_score, away_score):
             return None, None
 
         return home_score, away_score
 
-    except ValueError:
+    except (TypeError, ValueError):
         return None, None
 
 
@@ -411,12 +412,16 @@ def admin_russia_2027_delete():
         tournament = get_required_rpl_tournament(cur)
         cur.execute(
             """
-            DELETE FROM predictions
+            SELECT 1 FROM predictions
             WHERE match_id = %s
               AND tournament_id = %s
+            LIMIT 1
             """,
             (match_id, tournament["id"]),
         )
+        if cur.fetchone():
+            flash("Нельзя удалить матч: существуют связанные прогнозы", "error")
+            return redirect(url_for(RPL_ADMIN_REDIRECT))
         cur.execute(
             """
             DELETE FROM matches
@@ -658,12 +663,16 @@ def admin_russian_cup_delete():
         tournament = get_required_russian_cup_tournament(cur)
         cur.execute(
             """
-            DELETE FROM predictions
+            SELECT 1 FROM predictions
             WHERE match_id = %s
               AND tournament_id = %s
+            LIMIT 1
             """,
             (match_id, tournament["id"]),
         )
+        if cur.fetchone():
+            flash("Нельзя удалить матч: существуют связанные прогнозы", "error")
+            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
         cur.execute(
             """
             DELETE FROM matches
@@ -872,8 +881,7 @@ def handle_set_result(conn, cur):
 @admin_required
 def force_finish():
     match_id = request.form.get("match_id", type=int)
-    h = request.form.get("home_score", type=int)
-    a = request.form.get("away_score", type=int)
+    h, a = validate_score(request.form.get("home_score"), request.form.get("away_score"))
 
     if match_id is None or h is None or a is None:
         flash("������������ ������ �����", "error")
@@ -883,10 +891,6 @@ def force_finish():
     cur = conn.cursor()
 
     try:
-        if h < 0 or a < 0:
-            flash("���� �� ����� ���� �������������", "error")
-            return redirect(url_for("admin.admin"))
-
         tournament_id, match_found = get_match_tournament_id(cur, match_id)
 
         if not match_found:
@@ -1135,6 +1139,12 @@ def admin_wc_playoff_override():
             home_score = match[13]
             away_score = match[14]
 
+        if submitted_status == "FINISHED" and not has_valid_finished_score(
+            submitted_status, home_score, away_score
+        ):
+            flash("Укажите корректный итоговый счёт", "error")
+            return redirect(redirect_target)
+
         if manual_result_override:
             cur.execute(
                 """
@@ -1364,7 +1374,9 @@ def admin_edit_match():
             playoff_stage = normalize_playoff_stage(request.form.get("playoff_stage"))
 
         is_wc2026_match = tournament_name == "ЧМ-2026" or league == "wc2026"
-        if submitted_status == "FINISHED" and (home_score is None or away_score is None):
+        if submitted_status == "FINISHED" and not has_valid_finished_score(
+            submitted_status, home_score, away_score
+        ):
             flash("Для статуса FINISHED сначала укажите результат матча", "error")
             return redirect(url_for("admin.admin"))
 
@@ -1464,11 +1476,15 @@ def admin_delete_match():
     try:
         cur.execute(
             """
-            DELETE FROM predictions
+            SELECT 1 FROM predictions
             WHERE match_id = %s
+            LIMIT 1
             """,
             (match_id,),
         )
+        if cur.fetchone():
+            flash("Нельзя удалить матч: существуют связанные прогнозы", "error")
+            return redirect(redirect_target)
 
         cur.execute(
             """

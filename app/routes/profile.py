@@ -114,6 +114,7 @@ def profile():
                 COALESCE(SUM(p.points), 0)
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status = 'FINISHED'
@@ -145,6 +146,7 @@ def profile():
                 p.points
             FROM predictions p
             JOIN matches m ON p.match_id = m.id
+                         AND p.tournament_id = m.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status = 'FINISHED'

@@ -135,6 +135,117 @@ def seed_russian_cup_tournament(cur):
     )
 
 
+def ensure_prediction_integrity_constraints(cur):
+    """Add prediction FKs only after a non-destructive integrity preflight."""
+    cur.execute(
+        "LOCK TABLE predictions, users, matches, tournaments IN SHARE ROW EXCLUSIVE MODE"
+    )
+    cur.execute(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM predictions
+             WHERE user_id IS NULL OR match_id IS NULL OR tournament_id IS NULL),
+            (SELECT COUNT(*) FROM (
+                SELECT user_id, match_id, tournament_id
+                FROM predictions
+                GROUP BY user_id, match_id, tournament_id
+                HAVING COUNT(*) > 1
+             ) duplicates),
+            (SELECT COUNT(*) FROM predictions p
+             LEFT JOIN users u ON u.id = p.user_id
+             WHERE u.id IS NULL),
+            (SELECT COUNT(*) FROM predictions p
+             LEFT JOIN matches m ON m.id = p.match_id
+             WHERE m.id IS NULL),
+            (SELECT COUNT(*) FROM predictions p
+             LEFT JOIN tournaments t ON t.id = p.tournament_id
+             WHERE t.id IS NULL),
+            (SELECT COUNT(*) FROM predictions p
+             JOIN matches m ON m.id = p.match_id
+             WHERE p.tournament_id IS DISTINCT FROM m.tournament_id)
+        """
+    )
+    nulls, duplicates, orphan_users, orphan_matches, orphan_tournaments, mismatches = cur.fetchone()
+    problems = {
+        "null_keys": nulls,
+        "duplicate_keys": duplicates,
+        "orphan_users": orphan_users,
+        "orphan_matches": orphan_matches,
+        "orphan_tournaments": orphan_tournaments,
+        "tournament_mismatches": mismatches,
+    }
+    invalid = {name: count for name, count in problems.items() if count}
+    if invalid:
+        cur.execute(
+            """
+            SELECT user_id, match_id, tournament_id, reason
+            FROM (
+                SELECT p.user_id, p.match_id, p.tournament_id, 'orphan_user' AS reason
+                FROM predictions p LEFT JOIN users u ON u.id = p.user_id
+                WHERE u.id IS NULL
+                UNION ALL
+                SELECT p.user_id, p.match_id, p.tournament_id, 'orphan_match'
+                FROM predictions p LEFT JOIN matches m ON m.id = p.match_id
+                WHERE m.id IS NULL
+                UNION ALL
+                SELECT p.user_id, p.match_id, p.tournament_id, 'orphan_tournament'
+                FROM predictions p LEFT JOIN tournaments t ON t.id = p.tournament_id
+                WHERE t.id IS NULL
+                UNION ALL
+                SELECT p.user_id, p.match_id, p.tournament_id, 'tournament_mismatch'
+                FROM predictions p JOIN matches m ON m.id = p.match_id
+                WHERE p.tournament_id IS DISTINCT FROM m.tournament_id
+            ) problems
+            LIMIT 20
+            """
+        )
+        samples = cur.fetchall()
+        raise RuntimeError(
+            "Prediction integrity preflight failed; no constraints were added: "
+            + ", ".join(f"{name}={count}" for name, count in invalid.items())
+            + f"; samples={samples}"
+        )
+
+    constraints = (
+        ("predictions_user_fk", "FOREIGN KEY (user_id) REFERENCES users(id) NOT VALID"),
+        ("predictions_match_fk", "FOREIGN KEY (match_id) REFERENCES matches(id) NOT VALID"),
+        ("predictions_tournament_fk", "FOREIGN KEY (tournament_id) REFERENCES tournaments(id) NOT VALID"),
+    )
+    for name, definition in constraints:
+        cur.execute(
+            """
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = %s
+              AND conrelid = 'predictions'::regclass
+            """,
+            (name,),
+        )
+        if not cur.fetchone():
+            cur.execute(f"ALTER TABLE predictions ADD CONSTRAINT {name} {definition}")
+
+        cur.execute(f"ALTER TABLE predictions VALIDATE CONSTRAINT {name}")
+
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_predictions_match_tournament "
+        "ON predictions(match_id, tournament_id)"
+    )
+
+
+def migrate_prediction_integrity():
+    """Run only the additive prediction-integrity migration in one transaction."""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        ensure_prediction_integrity_constraints(cur)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        close_db(conn, cur)
+
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()

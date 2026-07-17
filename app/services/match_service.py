@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import requests
 from app.config import API_KEY, LEAGUE_IDS, WC2026_API_SYNC_ENABLED
 from app.db import get_db, close_db
+from app.models.scoring import has_valid_finished_score
 from app.services.sync_history_service import (
     create_sync_run,
     finish_sync_run,
@@ -42,6 +43,7 @@ def _empty_sync_summary():
         "matches_updated": 0,
         "matches_skipped_finished": 0,
         "matches_skipped_missing_tournament": 0,
+        "matches_skipped_invalid_finished_score": 0,
         "matches_became_finished": [],
         "changed_finished_match_ids": [],
         "changed_finished_matches_count": 0,
@@ -204,7 +206,7 @@ def create_match_from_understat(match, prefix, league_tag):
     away_goal = parse_optional_int(goals.get('a'))
 
     is_result = bool(match.get('isResult'))
-    is_finished = is_result and home_goal is not None and away_goal is not None
+    is_finished = is_result and has_valid_finished_score("FINISHED", home_goal, away_goal)
 
     status = 'FINISHED' if is_finished else 'SCHEDULED'
     score = {
@@ -366,6 +368,16 @@ def update_matches():
             api_tournament_name = "ЧМ-2026" if tournament_id == wc_tournament_id else None
             is_playoff_api_match = is_wc2026_playoff_match(api_tournament_name, league, kickoff_utc)
             home_score, away_score, score_source = extract_api_match_score(match, is_playoff_api_match)
+            if status == 'FINISHED' and not has_valid_finished_score(status, home_score, away_score):
+                logger.warning(
+                    "Skipping incomplete API result api_match_id=%s status=%s home_score=%r away_score=%r",
+                    api_id,
+                    status,
+                    home_score,
+                    away_score,
+                )
+                summary["matches_skipped_invalid_finished_score"] += 1
+                status = 'SCHEDULED'
             if is_playoff_api_match and score_source == "penalty_unreliable_120min_score":
                 logger.warning(
                     "[API_SCORE_WARNING] penalty shootout without reliable 120min score api_match_id=%s stage=%s home_team=%s away_team=%s raw_score=%s",
