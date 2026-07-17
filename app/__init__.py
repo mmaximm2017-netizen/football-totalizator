@@ -5,7 +5,7 @@ import secrets
 from flask import Flask, g, session, request, abort, jsonify
 
 from app.config import SECRET_KEY
-from app.db import get_db, close_db
+from app.db import get_db, close_db, PoolExhausted
 from app.services.ranking_service import get_tournament_ranking
 from app.services.tournament_service import (
     ensure_single_active_tournament,
@@ -90,6 +90,16 @@ def create_app():
                 return jsonify({"ok": False, "message": "CSRF token invalid"}), 400
 
             abort(400)
+
+    # =====================================================
+    # POOL EXHAUSTED HANDLER
+    # =====================================================
+    @app.errorhandler(PoolExhausted)
+    def handle_pool_exhausted(e):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "message": str(e)}), 503
+
+        return "Service temporarily unavailable. Please try again later.", 503
 
     # =====================================================
     # BEFORE REQUEST (user context)

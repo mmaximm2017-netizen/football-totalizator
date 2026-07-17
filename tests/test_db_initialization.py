@@ -9,12 +9,21 @@ class Connection:
     def __init__(self, closed=False):
         self.closed = closed
         self.queries = []
+        self._rolled_back = False
+        self.info = _ConnectionInfo()
 
     def cursor(self):
         return Cursor(self.queries)
 
     def close(self):
         self.closed = True
+
+    def rollback(self):
+        self._rolled_back = True
+
+
+class _ConnectionInfo:
+    transaction_status = 0
 
 
 class Cursor:
@@ -143,7 +152,7 @@ class DbInitializationTests(unittest.TestCase):
         pool = Pool([dead])
         db.db_pool = pool
 
-        with patch.object(db.psycopg2, "connect", return_value=replacement) as connect:
+        with patch("app.db.psycopg2.connect", return_value=replacement) as connect:
             returned = db.get_db()
 
         self.assertIs(returned, replacement)

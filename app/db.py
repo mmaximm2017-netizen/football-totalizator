@@ -1,15 +1,22 @@
 # app/db.py
 
 import logging
+import threading
 
 import psycopg2
-from psycopg2.pool import SimpleConnectionPool
+from psycopg2.pool import ThreadedConnectionPool, PoolError
 from psycopg2 import OperationalError, InterfaceError
 
 from app.config import DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD
 
 
 logger = logging.getLogger(__name__)
+
+_init_lock = threading.Lock()
+
+
+class PoolExhausted(Exception):
+    pass
 
 
 # =========================================================
@@ -24,8 +31,14 @@ RUSSIAN_CUP_TOURNAMENT_NAME = "Кубок России"
 def init_pool():
     global db_pool
 
-    if db_pool is None:
-        db_pool = SimpleConnectionPool(
+    if db_pool is not None:
+        return
+
+    with _init_lock:
+        if db_pool is not None:
+            return
+
+        db_pool = ThreadedConnectionPool(
             minconn=1,
             maxconn=5,
             dsn=DATABASE_URL,
@@ -35,6 +48,11 @@ def init_pool():
             keepalives_interval=10,
             keepalives_count=5,
         )
+
+    logger.info(
+        "DB pool initialized: type=ThreadedConnectionPool min=%d max=%d",
+        db_pool.minconn, db_pool.maxconn,
+    )
 
 
 def reset_pool():
@@ -48,11 +66,15 @@ def reset_pool():
 
     db_pool = None
     init_pool()
+    logger.info("DB pool reset complete")
 
 
 def is_connection_alive(conn):
     try:
         if conn is None or conn.closed:
+            return False
+
+        if conn.info.transaction_status == 4:
             return False
 
         cur = conn.cursor()
@@ -81,6 +103,7 @@ def get_db():
             except Exception:
                 pass
 
+            logger.info("Dead pool connection replaced; creating direct connect")
             conn = psycopg2.connect(
                 DATABASE_URL,
                 connect_timeout=10,
@@ -92,8 +115,12 @@ def get_db():
 
         return conn
 
+    except PoolError:
+        logger.error("DB pool exhausted (max=%d)", db_pool.maxconn)
+        raise PoolExhausted("All database connections are in use")
+
     except (OperationalError, InterfaceError) as e:
-        logger.warning(f"DB pool connection failed, resetting pool: {e}")
+        logger.warning("DB pool connection failed, resetting pool: %s", e)
         reset_pool()
         return db_pool.getconn()
 
@@ -101,20 +128,26 @@ def get_db():
 def close_db(conn, cur=None):
     global db_pool
 
-    if cur and not cur.closed:
+    if cur is not None and not cur.closed:
         cur.close()
 
-    if conn and not conn.closed:
-        if db_pool is None:
-            init_pool()
-
+    if conn is not None and not conn.closed:
         try:
-            db_pool.putconn(conn)
+            conn.rollback()
         except Exception:
+            pass
+
+        if db_pool is not None:
             try:
-                conn.close()
+                db_pool.putconn(conn)
+                return
             except Exception:
                 pass
+
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 # =========================================================

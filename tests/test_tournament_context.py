@@ -322,6 +322,8 @@ class TournamentRouteSmokeTests(unittest.TestCase):
             patch("app.routes.table.get_tournament_status", return_value="current"),
             patch("app.routes.table.get_tournament_ranking", return_value=[]),
             patch("app.routes.table.render_template", side_effect=fake_render_template),
+            patch("app.services.top_scorer_service.get_db", return_value=FakeConnection(cursor)),
+            patch("app.services.top_scorer_service.close_db"),
         ):
             response = client.get("/table?tid=42")
 
