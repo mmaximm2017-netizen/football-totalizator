@@ -163,6 +163,88 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         self.assertEqual(conn.commits, 1)
         self.assertTrue(any("ON CONFLICT" in query for query, _ in cursor.queries))
 
+    def test_ajax_prediction_post_uses_string_session_tournament_without_tid(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        cursor = Cursor([(10, "Home", "Away", None, None, "SCHEDULED", 5)])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
+            patch("app.routes.main.get_selected_tournament_id", return_value=6),
+            patch("app.routes.main.is_before_deadline", return_value=True),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = "5"
+                response = client.post(
+                    "/",
+                    data={"match_id": "10", "home_goals": "2", "away_goals": "1"},
+                    headers={"X-Requested-With": "XMLHttpRequest"},
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.is_json)
+        self.assertTrue(response.get_json()["ok"])
+        self.assertEqual(conn.commits, 1)
+        self.assertFalse(response.headers.get("Location"))
+
+    def test_ajax_prediction_database_error_returns_json(self):
+        from app.routes.main import main_bp
+
+        class FailingCursor(Cursor):
+            def execute(self, query, params=None):
+                raise RuntimeError("database failure")
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        conn = Connection(FailingCursor([]))
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = 5
+                response = client.post(
+                    "/",
+                    data={"match_id": "10", "home_goals": "2", "away_goals": "1"},
+                    headers={"X-Requested-With": "XMLHttpRequest"},
+                )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertTrue(response.is_json)
+        self.assertFalse(response.get_json()["ok"])
+
+    def test_create_app_returns_json_for_ajax_csrf_failure(self):
+        from app import create_app
+
+        app = create_app()
+        with app.test_client() as client:
+            with client.session_transaction() as current_session:
+                current_session["user_id"] = 11
+            response = client.post(
+                "/",
+                data={"match_id": "10", "home_goals": "2", "away_goals": "1"},
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response.is_json)
+        self.assertEqual(response.get_json()["message"], "CSRF token invalid")
+
     def test_prediction_post_rejects_selected_tournament_mismatch(self):
         from app.routes.main import main_bp
 

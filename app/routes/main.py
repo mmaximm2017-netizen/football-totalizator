@@ -238,7 +238,25 @@ def index():
                 if league != 'all':
                     redirect_args['league'] = league
                 return redirect(url_for('main.index', **redirect_args))
-        tid = get_selected_tournament_id(requested_tid)
+        session_tid = session.get('selected_tournament_id')
+        try:
+            session_tid = int(session_tid)
+        except (TypeError, ValueError):
+            session_tid = None
+
+        session_tournament = next(
+            (
+                tournament
+                for tournament in all_tournaments
+                if tournament.get("id") == session_tid and tournament.get("is_active")
+            ),
+            None,
+        )
+        tid = (
+            session_tid
+            if request.method == 'POST' and requested_tid is None and session_tournament
+            else get_selected_tournament_id(requested_tid)
+        )
         requested_tournament = next(
             (tournament for tournament in all_tournaments if tournament.get("id") == requested_tid),
             None,
@@ -288,17 +306,17 @@ def index():
 
             cur.execute("""
 SELECT
-    id,
-    home_team,
-    away_team,
-    kickoff_time,
-    deadline,
-    status,
-    tournament_id
-FROM matches
-JOIN tournaments ON tournaments.id = matches.tournament_id
-JOIN users ON users.id = %s AND COALESCE(users.is_deleted, 0) = 0
-WHERE matches.id = %s
+    m.id,
+    m.home_team,
+    m.away_team,
+    m.kickoff_time,
+    m.deadline,
+    m.status,
+    m.tournament_id
+FROM matches m
+JOIN tournaments t ON t.id = m.tournament_id
+JOIN users u ON u.id = %s AND COALESCE(u.is_deleted, 0) = 0
+WHERE m.id = %s
             """, (session['user_id'], match_id))
 
             match = cur.fetchone()
@@ -310,7 +328,10 @@ WHERE matches.id = %s
                 flash("Матч не найден", "error")
                 return redirect(url_for('main.index'))
 
-            match_tid = match[6]
+            try:
+                match_tid = int(match[6])
+            except (TypeError, ValueError):
+                match_tid = None
             if not match_tid:
                 if is_ajax_request():
                     return ajax_error("Турнир для матча не определён", 400)
@@ -648,6 +669,19 @@ WHERE matches.id = %s
                 'count': sum(d['count'] for d in months[mk])
             })
 
+    except Exception:
+        if request.method == 'POST' and is_ajax_request():
+            logger.exception(
+                "Prediction save failed method=%s path=%s user_id=%s match_id=%s session_tournament_id=%s selected_tournament_id=%s",
+                request.method,
+                request.path,
+                session.get('user_id'),
+                request.form.get('match_id'),
+                session.get('selected_tournament_id'),
+                tid if 'tid' in locals() else None,
+            )
+            return ajax_error("Не удалось сохранить прогноз", 500)
+        raise
     finally:
         close_db(conn, cur)
 
