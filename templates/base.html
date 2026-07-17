@@ -1227,7 +1227,6 @@ body {
 {% set current_tournament_key = (current_tournament_slug|default(current_tournament_type|default('')))|lower %}
 {% set is_rcup_tournament = current_tournament_name == 'Кубок России' or current_tournament_key == 'rcup' %}
 <body class="{% if current_tournament_name == 'ЧМ-2026' %}tournament-wc2026{% elif is_rcup_tournament %}tournament-rcup{% elif current_tournament_name == 'Чемпионат России 🇷🇺' %}tournament-rpl{% else %}tournament-cup{% endif %}{% if g.is_admin %} admin-user{% endif %}">
-    {% set current_tid = current_tournament_id %}
     {% set current_t_name = current_tournament_name|default(selected_name|default('Турнир')) %}
     {% set active_items = active_tournaments|default([]) %}
     {% set all_items = tournaments|default([]) %}
@@ -1235,7 +1234,7 @@ body {
     {% set tournament_items = all_items %}
     {% set current_archive = namespace(value=false) %}
     {% for t in all_items %}
-        {% if current_tid == t.id and not t.is_active %}
+        {% if current_tournament_id == t.id and not t.is_active %}
             {% set current_archive.value = true %}
         {% endif %}
     {% endfor %}
@@ -1299,7 +1298,7 @@ body {
     <nav class="bottom-nav">
 
         <a
-            href="/{% if current_tid %}?tid={{ current_tid }}{% endif %}"
+            href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/' %}active{% endif %}"
         >
             <img src="/static/icons/matches.svg" class="nav-icon">
@@ -1307,7 +1306,7 @@ body {
         </a>
 
         <a
-            href="/table{% if current_tid %}?tid={{ current_tid }}{% endif %}"
+            href="/table{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/table' %}active{% endif %}"
         >
             <img src="/static/icons/table.svg" class="nav-icon">
@@ -1324,7 +1323,7 @@ body {
         </a>
         {% else %}
         <a
-            href="/profile{% if current_tid %}?tid={{ current_tid }}{% endif %}"
+            href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/profile' %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
@@ -1355,7 +1354,7 @@ body {
             {% if active_items %}
             <div class="tournament-section-label">Активные турниры</div>
             {% for t in active_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="active-badge">Активный</span>
             </a>
@@ -1365,7 +1364,7 @@ body {
             {% if archive_items %}
             <div class="tournament-section-label">Архив</div>
             {% for t in archive_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tid == t.id %}active{% endif %}">
+            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="archive-badge">Архив</span>
             </a>

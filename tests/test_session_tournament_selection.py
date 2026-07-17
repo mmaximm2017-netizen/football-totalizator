@@ -87,7 +87,11 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         cursor = Cursor([])
         conn = Connection(cursor)
 
-        with patch("app.routes.main.get_db", return_value=conn), patch("app.routes.main.close_db"):
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
+        ):
             with app.test_client() as client:
                 with client.session_transaction() as current_session:
                     current_session["user_id"] = 11
@@ -96,6 +100,34 @@ class SessionTournamentSelectionTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/?tid=5", response.headers["Location"])
+
+    def test_bare_main_request_ignores_archived_session_tournament(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        cursor = Cursor([])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 0}, {"id": 6, "is_active": 1}]),
+            patch("app.routes.main.get_session_start_tournament_id", return_value=6),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                    current_session["selected_tournament_id"] = "5"
+                response = client.get("/")
+                with client.session_transaction() as current_session:
+                    selected = current_session.get("selected_tournament_id")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/?tid=6", response.headers["Location"])
+        self.assertEqual(selected, 6)
 
     def test_ajax_prediction_post_without_tid_returns_json_not_redirect(self):
         from app.routes.main import main_bp

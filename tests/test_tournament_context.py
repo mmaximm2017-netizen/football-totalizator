@@ -260,6 +260,14 @@ class BaseTournamentThemeTests(unittest.TestCase):
         self.assertIn('class="tournament-rpl', html)
         self.assertNotIn('class="tournament-rcup', html)
 
+    def test_navigation_uses_canonical_tournament_id_without_current_tid_alias(self):
+        source = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+
+        self.assertIn('href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
+        self.assertIn('href="/table{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
+        self.assertIn('href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
+        self.assertNotIn('{% set current_tid', source)
+
 
 @unittest.skipUnless(FLASK_AVAILABLE, "Flask is not installed in this runtime")
 class TournamentRouteSmokeTests(unittest.TestCase):
