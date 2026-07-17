@@ -200,13 +200,35 @@ def get_tournament_id_by_name(cur, name):
 
     return None
 
+UNDERSTAT_FINISHED_STATUSES = frozenset({
+    "Match Finished",
+    "Finished",
+    "After Pen.",
+    "After Pen",
+    "Awarded",
+})
+
 def create_match_from_understat(match, prefix, league_tag):
     goals = match.get('goals', {}) or {}
     home_goal = parse_optional_int(goals.get('h'))
     away_goal = parse_optional_int(goals.get('a'))
 
     is_result = bool(match.get('isResult'))
-    is_finished = is_result and has_valid_finished_score("FINISHED", home_goal, away_goal)
+    raw_status = match.get('status')
+    status_known = raw_status is not None
+    status_allowed_finished = not status_known or raw_status in UNDERSTAT_FINISHED_STATUSES
+
+    if status_known and raw_status not in UNDERSTAT_FINISHED_STATUSES:
+        logger.info(
+            "Understat match id=%s status=%s isResult=%s — treating as SCHEDULED",
+            match.get("id"), raw_status, is_result,
+        )
+
+    is_finished = (
+        is_result
+        and status_allowed_finished
+        and has_valid_finished_score("FINISHED", home_goal, away_goal)
+    )
 
     status = 'FINISHED' if is_finished else 'SCHEDULED'
     score = {
@@ -232,7 +254,7 @@ def resolve_rpl_season():
 
 def fetch_rpl_matches():
     if not UNDERSTAT_AVAILABLE:
-        return []
+        return {"matches": [], "api_error": "understat_not_installed"}
 
     season = resolve_rpl_season()
     max_attempts = 3
@@ -242,6 +264,7 @@ def fetch_rpl_matches():
     logger.info("RPL selected season: %s", season)
 
     all_matches = []
+    api_error = None
 
     for attempt in range(1, max_attempts + 1):
         try:
@@ -274,15 +297,16 @@ def fetch_rpl_matches():
                 scheduled_mapped,
                 invalid_score_rows
             )
-            return all_matches
+            return {"matches": all_matches, "api_error": None}
 
         except Exception as e:
+            api_error = str(e)
             logger.warning("RPL attempt failed (%s/%s): %s", attempt, max_attempts, e)
             if attempt < max_attempts:
                 time.sleep(retry_delay_sec)
 
-    logger.error("RPL sync failed")
-    return all_matches
+    logger.error("RPL sync failed: %s", api_error)
+    return {"matches": all_matches, "api_error": api_error}
 
 def should_update():
     conn = get_db(); cur = conn.cursor()
@@ -304,9 +328,20 @@ def update_matches():
     summary["football_data_matches"] = len(matches_data)
 
     try:
-        rpl_matches = fetch_rpl_matches()
+        rpl_result = fetch_rpl_matches()
+        rpl_matches = rpl_result.get("matches", [])
+        rpl_api_error = rpl_result.get("api_error")
         summary["understat_matches"] = len(rpl_matches)
-        if rpl_matches: matches_data.extend(rpl_matches)
+        if rpl_matches:
+            matches_data.extend(rpl_matches)
+        elif not rpl_api_error:
+            msg = "Understat API returned 0 RPL matches (possible API error or no matches for season)"
+            logger.warning(msg)
+            summary["errors"].append(msg)
+        elif rpl_api_error and rpl_api_error != "understat_not_installed":
+            msg = f"Understat sync failed: {rpl_api_error}"
+            logger.warning(msg)
+            summary["errors"].append(msg)
     except Exception as e:
         msg = f"Understat sync failed during update_matches: {e}"
         logger.warning(msg)
@@ -410,8 +445,17 @@ def update_matches():
                     away_score,
                 )
             
-            cur.execute("SELECT id FROM matches WHERE api_match_id = %s", (str(api_id),))
+            cur.execute("SELECT id, tournament_id FROM matches WHERE api_match_id = %s", (str(api_id),))
             existing_row = cur.fetchone()
+            if existing_row and existing_row[1] != tournament_id:
+                msg = (
+                    f"api_match_id={api_id} belongs to tournament_id={existing_row[1]}, "
+                    f"cannot update for tournament_id={tournament_id}; skipping"
+                )
+                logger.warning(msg)
+                summary["errors"].append(msg)
+                summary["matches_skipped_missing_tournament"] += 1
+                continue
             if not existing_row:
                 cur.execute("""INSERT INTO matches (api_match_id, home_team, away_team, kickoff_time, deadline, status, home_score, away_score, league, tournament_id, playoff_stage_auto, match_category)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
@@ -454,9 +498,9 @@ def update_matches():
                            m.playoff_stage_auto
                     FROM matches m
                     LEFT JOIN tournaments t ON t.id = m.tournament_id
-                    WHERE m.api_match_id = %s
+                    WHERE m.api_match_id = %s AND m.tournament_id = %s
                     """,
-                    (str(api_id),),
+                    (str(api_id), tournament_id),
                 )
                 existing_match = cur.fetchone()
                 match_id = existing_match[0] if existing_match else None
@@ -586,14 +630,14 @@ def update_matches():
                     status = 'FINISHED'
 
                 if status == 'FINISHED' and home_score is not None and away_score is not None:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, home_score=%s, away_score=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s AND tournament_id=%s""",
+                        (home_team, away_team, status, home_score, away_score, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id), tournament_id))
                     if match_id is not None and (existing_status != 'FINISHED' or finished_score_changed):
                         summary["matches_became_finished"].append(match_id)
                         _add_changed_finished_match(summary, match_id)
                 else:
-                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s""",
-                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id)))
+                    cur.execute("""UPDATE matches SET home_team=%s, away_team=%s, status=%s, kickoff_time=%s, deadline=%s, league=%s, tournament_id=%s, playoff_stage_auto=%s, match_category=%s WHERE api_match_id=%s AND tournament_id=%s""",
+                        (home_team, away_team, status, kickoff_utc, deadline_utc, league, tournament_id, playoff_stage_auto, match_category, str(api_id), tournament_id))
                 summary["matches_updated"] += 1
         conn.commit()
         return summary
@@ -630,6 +674,8 @@ def release_sync_lock(conn, cur, lock_key=SYNC_LOCK_KEY):
 def _sync_history_status(summary):
     if summary.get("lock_error"):
         return "lock_error"
+    if summary.get("status") == "scoring_failed":
+        return "scoring_failed"
     if summary.get("errors") or (summary.get("sync") or {}).get("errors"):
         return "partial_success"
     return "success"
@@ -740,8 +786,23 @@ def run_sync_with_lock(strict_lock=False):
         sync_summary = update_matches()
         summary["sync"] = sync_summary
 
-        summary["scoring"] = _recalculate_points_after_sync(sync_summary)
-        logger.info("sync scoring summary: %s", summary["scoring"])
+        try:
+            summary["scoring"] = _recalculate_points_after_sync(sync_summary)
+            logger.info("sync scoring summary: %s", summary["scoring"])
+        except Exception as scoring_error:
+            msg = f"Scoring recalculation failed after match sync: {scoring_error}"
+            logger.exception(msg)
+            summary["errors"].append(msg)
+            summary["scoring"] = {
+                "scoring_mode": "failed",
+                "matches_recalculated": 0,
+                "predictions_recalculated": 0,
+                "error": str(scoring_error),
+            }
+            summary["status"] = "scoring_failed"
+            logger.info("sync end with scoring failure: %s", summary)
+            finish_sync_run(sync_run_id, "scoring_failed", summary)
+            return summary
 
         summary["status"] = "completed"
         logger.info("sync end: %s", summary)

@@ -2,6 +2,7 @@ import importlib.util
 import sys
 import types
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -66,6 +67,61 @@ def load_match_service_module():
 
 
 service = load_match_service_module()
+
+
+class ResolveRplSeasonTests(unittest.TestCase):
+    def setUp(self):
+        self._env_backup = {}
+        self._saved_env = None
+
+    def tearDown(self):
+        import os
+        for key, old in self._env_backup.items():
+            if old is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = old
+        if self._saved_env is not None:
+            os.environ["RPL_SEASON"] = self._saved_env
+
+    def _unset_env(self):
+        import os
+        self._saved_env = os.environ.pop("RPL_SEASON", None)
+
+    def _call_with_date(self, year, month, day):
+        self._unset_env()
+        fake_now = datetime(year, month, day, 12, 0, 0)
+        with patch.object(service, "datetime") as mock_dt:
+            mock_dt.now.return_value = fake_now
+            return service.resolve_rpl_season()
+
+    def test_june_2026_returns_2025(self):
+        self.assertEqual(self._call_with_date(2026, 6, 15), "2025")
+
+    def test_july_2026_returns_2026(self):
+        self.assertEqual(self._call_with_date(2026, 7, 1), "2026")
+
+    def test_december_2026_returns_2026(self):
+        self.assertEqual(self._call_with_date(2026, 12, 25), "2026")
+
+    def test_env_override_returns_env_value(self):
+        with patch.object(service, "datetime") as mock_dt:
+            mock_dt.now.return_value = datetime(2026, 7, 1, 12, 0, 0)
+            result = service.resolve_rpl_season()
+        self.assertEqual(result, "2026")
+
+    def test_env_override_returns_custom_value(self):
+        import os as os_mod
+        saved = os_mod.environ.get("RPL_SEASON")
+        os_mod.environ["RPL_SEASON"] = "2026"
+        try:
+            result = service.resolve_rpl_season()
+            self.assertEqual(result, "2026")
+        finally:
+            if saved is None:
+                os_mod.environ.pop("RPL_SEASON", None)
+            else:
+                os_mod.environ["RPL_SEASON"] = saved
 
 
 class MatchServiceScoreExtractionTests(unittest.TestCase):
@@ -190,7 +246,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
                 if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
                     name = params[0]
                     self.fetchone_result = (5,) if name == "Чемпионат России 🇷🇺" else None
-                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                elif normalized.startswith("SELECT id, tournament_id FROM matches WHERE api_match_id = %s"):
                     self.fetchone_result = None
                 elif normalized.startswith("INSERT INTO matches"):
                     inserted["params"] = params
@@ -227,7 +283,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
         }
 
         with patch.object(service, "fetch_matches", return_value=[]), \
-             patch.object(service, "fetch_rpl_matches", return_value=[rpl_match]), \
+             patch.object(service, "fetch_rpl_matches", return_value={"matches": [rpl_match], "api_error": None}), \
              patch.object(service, "get_db", return_value=conn), \
              patch.object(service, "close_db", lambda conn_arg, cur_arg=None: None):
             summary = service.update_matches()
@@ -251,7 +307,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
                 normalized = " ".join(query.split())
                 if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
                     self.fetchone_result = (5,)
-                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                elif normalized.startswith("SELECT id, tournament_id FROM matches WHERE api_match_id = %s"):
                     self.fetchone_result = None
                 elif normalized.startswith("INSERT INTO matches"):
                     inserted["params"] = params
@@ -285,7 +341,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
 
         with (
             patch.object(service, "fetch_matches", return_value=[match]),
-            patch.object(service, "fetch_rpl_matches", return_value=[]),
+            patch.object(service, "fetch_rpl_matches", return_value={"matches": [], "api_error": None}),
             patch.object(service, "get_db", return_value=Conn()),
             patch.object(service, "close_db"),
             self.assertLogs(service.logger, level="WARNING") as logs,
@@ -309,7 +365,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
                 normalized = " ".join(query.split())
                 if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
                     self.fetchone_result = (5,)
-                elif normalized.startswith("SELECT id FROM matches WHERE api_match_id = %s"):
+                elif normalized.startswith("SELECT id, tournament_id FROM matches WHERE api_match_id = %s"):
                     self.fetchone_result = None
                 elif normalized.startswith("INSERT INTO matches"):
                     inserted["params"] = params
@@ -343,7 +399,7 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
 
         with (
             patch.object(service, "fetch_matches", return_value=[match]),
-            patch.object(service, "fetch_rpl_matches", return_value=[]),
+            patch.object(service, "fetch_rpl_matches", return_value={"matches": [], "api_error": None}),
             patch.object(service, "get_db", return_value=Conn()),
             patch.object(service, "close_db"),
         ):
@@ -351,6 +407,83 @@ class MatchServiceScoreExtractionTests(unittest.TestCase):
 
         self.assertEqual(inserted["params"][5:8], ("FINISHED", 0, 0))
         self.assertEqual(summary["changed_finished_match_ids"], [42])
+
+
+    def test_fetch_rpl_matches_returns_dict_with_matches_and_api_error(self):
+        result = service.fetch_rpl_matches()
+        self.assertIsInstance(result, dict)
+        self.assertIn("matches", result)
+        self.assertIn("api_error", result)
+
+    def test_cross_tournament_api_match_id_conflict_is_skipped(self):
+        skipped = {}
+
+        class Cursor:
+            def __init__(self):
+                self.fetchone_result = None
+                self.call_log = []
+
+            def execute(self, query, params=None):
+                normalized = " ".join(query.split())
+                self.call_log.append((normalized, params))
+                if normalized.startswith("SELECT id FROM tournaments WHERE name = %s"):
+                    name = params[0]
+                    if name == "Чемпионат России 🇷🇺":
+                        self.fetchone_result = (5,)
+                    elif name == "Кубок Матч-премьер":
+                        self.fetchone_result = (3,)
+                    else:
+                        self.fetchone_result = None
+                elif normalized.startswith("SELECT id, tournament_id FROM matches WHERE api_match_id = %s"):
+                    self.fetchone_result = (42, 3)
+                elif normalized.startswith("SELECT m.id, m.status"):
+                    self.fetchone_result = None
+                else:
+                    self.fetchone_result = None
+
+            def fetchone(self):
+                return self.fetchone_result
+
+            def fetchall(self):
+                return []
+
+        class Conn:
+            def __init__(self):
+                self.cur = Cursor()
+
+            def cursor(self):
+                return self.cur
+
+            def commit(self):
+                pass
+
+            def rollback(self):
+                pass
+
+        match = {
+            "id": "rpl_some_id",
+            "home_team": "Team A",
+            "away_team": "Team B",
+            "utcDate": "2026-07-18 17:30:00",
+            "status": "SCHEDULED",
+            "score": {"fullTime": {"home": None, "away": None}},
+            "league": "rpl",
+        }
+
+        with (
+            patch.object(service, "fetch_matches", return_value=[]),
+            patch.object(service, "fetch_rpl_matches", return_value={"matches": [match], "api_error": None}),
+            patch.object(service, "get_db", return_value=Conn()),
+            patch.object(service, "close_db"),
+        ):
+            summary = service.update_matches()
+
+        self.assertIn(
+            "api_match_id=rpl_some_id belongs to tournament_id=3",
+            "; ".join(summary.get("errors", [])),
+        )
+        self.assertEqual(summary["matches_inserted"], 0)
+        self.assertEqual(summary["matches_updated"], 0)
 
 
 if __name__ == "__main__":

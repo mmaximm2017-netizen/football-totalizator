@@ -86,12 +86,46 @@ def handle_manual_sync_update():
     try:
         sync_result = run_sync_with_lock()
         logger.info("admin sync summary: %s", sync_result)
-        if sync_result.get("status") == "completed":
-            flash("����� � ���� ���������", "success")
+        status = sync_result.get("status") if isinstance(sync_result, dict) else None
+
+        if status == "completed":
+            sync_summary = (sync_result.get("sync") or {})
+            inserted = sync_summary.get("matches_inserted", 0)
+            updated = sync_summary.get("matches_updated", 0)
+            errors = sync_summary.get("errors", [])
+            scoring = (sync_result.get("scoring") or {})
+            recalc = scoring.get("predictions_recalculated", 0)
+            if errors:
+                flash(
+                    "Обновление с ошибками: +{ins} обновлено {upd}, пересчитано {rec} прогнозов. Ошибки: {err}".format(
+                        ins=inserted, upd=updated, rec=recalc, err=errors[0],
+                    ),
+                    "warning",
+                )
+            else:
+                flash(
+                    "Матчи и очки обновлены: +{ins} обновлено {upd}, пересчитано {rec}".format(
+                        ins=inserted, upd=updated, rec=recalc,
+                    ),
+                    "success",
+                )
+        elif status == "scoring_failed":
+            sync_summary = (sync_result.get("sync") or {})
+            inserted = sync_summary.get("matches_inserted", 0)
+            updated = sync_summary.get("matches_updated", 0)
+            flash(
+                "Матчи обновлены (+{ins} +{upd}), но пересчёт очков не удался. "
+                "Запустите пересчёт вручную.".format(ins=inserted, upd=updated),
+                "warning",
+            )
+        elif status == "skipped_already_running":
+            flash("Обновление уже выполняется другим процессом", "info")
         else:
-            flash("���������� ��� �����������", "error")
+            flash("Обновление не выполнено (статус: {status})".format(
+                status=status or "unknown",
+            ), "error")
     except Exception as e:
-        flash(f"������ ����������: {e}", "error")
+        flash(f"Ошибка обновления: {e}", "error")
 
     return redirect(url_for("admin.admin"))
 

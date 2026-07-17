@@ -159,15 +159,45 @@ def build_rpl_api_match_id(source, raw_api_match_id):
 def admin_russia_2027_import():
     try:
         summary = run_sync_with_lock()
+        overall_status = summary.get("status") if isinstance(summary, dict) else None
         sync_summary = summary.get("sync") if isinstance(summary, dict) else summary
-        flash(
-            "Импорт завершён: добавлено {inserted}, обновлено {updated}, пропущено без турнира {skipped}".format(
-                inserted=(sync_summary or {}).get("matches_inserted", 0),
-                updated=(sync_summary or {}).get("matches_updated", 0),
-                skipped=(sync_summary or {}).get("matches_skipped_missing_tournament", 0),
-            ),
-            "success",
-        )
+        sync_summary = sync_summary or {}
+        inserted = sync_summary.get("matches_inserted", 0)
+        updated = sync_summary.get("matches_updated", 0)
+        skipped_other = sync_summary.get("matches_skipped_missing_tournament", 0)
+        errors = sync_summary.get("errors", [])
+        understat_matches = sync_summary.get("understat_matches", 0)
+        total_changed = inserted + updated
+
+        if overall_status == "scoring_failed":
+            flash(
+                "Матчи импортированы (добавлено {inserted}, обновлено {updated}), "
+                "но пересчёт очков не удался. "
+                "Запустите пересчёт вручную.".format(
+                    inserted=inserted, updated=updated,
+                ),
+                "warning",
+            )
+        elif errors:
+            error_summary = "; ".join(errors[:3])
+            flash(
+                "Импорт с ошибками: добавлено {inserted}, обновлено {updated}. Ошибки: {errors}".format(
+                    inserted=inserted, updated=updated, errors=error_summary,
+                ),
+                "error",
+            )
+        elif total_changed == 0 and understat_matches == 0:
+            flash(
+                "Импорт завершён: 0 изменений. Understat не вернул матчей — возможно, сезон ещё не начался или API недоступен.",
+                "warning",
+            )
+        else:
+            flash(
+                "Импорт завершён: добавлено {inserted}, обновлено {updated}, пропущено без турнира {skipped}".format(
+                    inserted=inserted, updated=updated, skipped=skipped_other,
+                ),
+                "success",
+            )
     except Exception as e:
         flash(f"Ошибка импорта РПЛ: {e}", "error")
     return redirect(url_for(RPL_ADMIN_REDIRECT))

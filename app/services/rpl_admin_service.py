@@ -144,7 +144,20 @@ def check_rpl_calendar():
     checked_at = datetime.now().strftime("%d.%m.%Y %H:%M")
     season = resolve_rpl_season()
     try:
-        matches = fetch_rpl_matches()
+        result = fetch_rpl_matches()
+        error = result.get("api_error")
+        matches = result.get("matches", [])
+        if error and error != "understat_not_installed":
+            return {
+                "source": "Understat",
+                "season": season,
+                "checked_at": checked_at,
+                "matches_count": 0,
+                "status": "error",
+                "status_label": "Ошибка проверки календаря",
+                "matches": [],
+                "error": error,
+            }
         return {
             "source": "Understat",
             "season": season,
