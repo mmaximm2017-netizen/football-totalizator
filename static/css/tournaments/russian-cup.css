@@ -465,16 +465,12 @@ body.tournament-rcup .admin-russian-cup-page .rc-btn.red {
     border-color: #E80024;
 }
 
-body.tournament-rcup .admin-russian-cup-page .rc-stage-group,
-body.tournament-rcup .admin-russian-cup-page .rc-date-group,
 body.tournament-rcup .admin-russian-cup-page .rc-editor {
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 12px;
     background: #3A0A32;
 }
 
-body.tournament-rcup .admin-russian-cup-page .rc-stage-group + .rc-stage-group,
-body.tournament-rcup .admin-russian-cup-page .rc-date-group + .rc-date-group,
 body.tournament-rcup .admin-russian-cup-page .rc-match + .rc-match {
     margin-top: 10px;
 }

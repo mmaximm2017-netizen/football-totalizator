@@ -276,3 +276,24 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
         "rpl_match_categories": RPL_MATCH_CATEGORIES,
     }
+
+
+def prepare_rpl_admin_page_data(cur, calendar_check=None):
+    """Load RPL page metadata without loading the full match list."""
+    tournament = get_rpl_tournament(cur)
+    calendar_check = calendar_check or {
+        "source": "Understat",
+        "season": resolve_rpl_season(),
+        "checked_at": "не проверялось",
+        "matches_count": 0,
+        "status": "not_checked",
+        "status_label": "Календарь ещё не проверялся",
+        "matches": [],
+        "error": None,
+    }
+    return {
+        "rpl_tournament": tournament,
+        "rpl_calendar": calendar_check,
+        "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
+        "rpl_match_categories": RPL_MATCH_CATEGORIES,
+    }

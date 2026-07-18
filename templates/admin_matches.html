@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
 
 <style>
     .admin-screen{display:flex;flex-direction:column;gap:14px}
@@ -49,19 +50,15 @@
     .sync-recent-meta strong{color:#063b73}
     .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .admin-empty{color:#5d7894;text-align:center;font-size:13px;font-weight:700;padding:14px 8px}
-    .month-group,.league-group{margin-bottom:12px}
-    .month-header,.league-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:16px;cursor:pointer;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.6);color:#063b73}
-    .month-header-left,.day-header-left,.league-header-left{display:flex;align-items:center;gap:8px;min-width:0}
-    .month-arrow,.day-arrow,.league-arrow{font-size:13px;transition:transform .25s ease;opacity:.76}
-    .month-label,.league-label{font-size:15px;font-weight:1000}
-    .month-count,.day-count,.league-count{font-size:12px;color:#5d7894;font-weight:800;white-space:nowrap}
-    .month-content,.league-content{display:none}
-    .day-group{margin-bottom:8px}
-    .day-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;margin:8px 0 6px;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.62);color:#063b73;border:1px solid rgba(0,119,200,.12);border-left:4px solid #1565c0}
-    .day-header.finished{border-left-color:#c62828}
-    .day-label{font-size:14px;font-weight:900}
-    .day-content{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;max-height:0;opacity:0}
-    .day-content.open{max-height:3000px;opacity:1}
+    .admin-match-tabs,.admin-match-filter-form,.admin-match-actions,.admin-pagination{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .admin-match-tabs{overflow-x:auto;padding:2px 0 8px}
+    .admin-match-tab,.admin-pagination a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 12px;border-radius:12px;background:#e8f4ff;color:#0a4e8d;text-decoration:none;font-size:12px;font-weight:900;white-space:nowrap}
+    .admin-match-tab.active,.admin-pagination a.active{background:#0a6cc2;color:#fff}
+    .admin-match-filter-form{display:grid;grid-template-columns:2fr repeat(3,1fr) auto auto;margin:0 0 12px}
+    .admin-match-filter-form input,.admin-match-filter-form select{min-width:0;margin:0!important}
+    .admin-btn-muted{background:#e8f4ff;color:#0a4e8d;text-align:center}
+    .admin-date-section{margin-top:14px}.admin-date-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;margin:0 0 8px;border-left:4px solid #1565c0;background:rgba(255,255,255,.64);border-radius:12px;color:#063b73;font-size:14px}.admin-date-heading span{color:#5d7894;font-size:11px}
+    .admin-match-list{display:grid;gap:8px}.admin-match-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.admin-match-status{padding:5px 8px;border-radius:999px;background:#e8f4ff;color:#0a4e8d;font-size:11px;font-weight:1000;white-space:nowrap}.admin-match-meta{line-height:1.4}.admin-match-actions{margin-top:10px}.admin-more{flex:1;min-width:160px}.admin-more summary{cursor:pointer;display:inline-flex;align-items:center;min-height:40px;padding:8px 12px;border-radius:12px;background:#f4f9ff;color:#0a4e8d;font-size:12px;font-weight:900}.admin-more .edit-form{display:grid;gap:8px;margin-top:8px;padding:10px;border-radius:12px;background:#f4f9ff}.admin-more .admin-form-row{margin:0}.admin-pagination{justify-content:center;margin-top:14px;color:#5d7894;font-size:12px;font-weight:800}
     .admin-match-card{margin:6px 0 6px 8px;padding:12px;border-radius:14px;background:rgba(255,255,255,.84);border:1px solid rgba(255,255,255,.58)}
     .admin-match-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .admin-match-main{flex:1;min-width:150px}
@@ -89,7 +86,8 @@
     .admin-danger-label{margin-bottom:8px;font-size:11px;font-weight:1000;letter-spacing:.35px;text-transform:uppercase;color:#9f1d1d}
     .admin-danger-zone .admin-btn{min-height:42px}
     @media (max-width:640px){.sync-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sync-recent-meta{grid-template-columns:1fr 1fr}}
-    @media (max-width:430px){.admin-zone-heading{align-items:flex-start;flex-direction:column}.admin-form-row,.sync-summary,.sync-status-grid,.sync-recent-row,.sync-recent-meta{grid-template-columns:1fr}.edit-fields{grid-template-columns:1fr}.edit-fields span{display:none}.score-form{width:100%;justify-content:space-between}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}}
+    @media (max-width:640px){.admin-match-filter-form{grid-template-columns:1fr 1fr}.admin-match-filter-form input{grid-column:1/-1}.admin-match-filter-form button,.admin-match-filter-form a{min-width:0}}
+    @media (max-width:430px){.admin-zone-heading{align-items:flex-start;flex-direction:column}.admin-form-row,.sync-summary,.sync-status-grid,.sync-recent-row,.sync-recent-meta{grid-template-columns:1fr}.admin-match-filter-form{grid-template-columns:1fr}.admin-match-card__head{flex-direction:column}.admin-match-actions,.score-form{width:100%}.score-input{flex:1;max-width:74px}.score-form .admin-btn-small{flex:1}.admin-pagination{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}.admin-pagination span{flex-basis:100%}}
 </style>
 
 <div class="admin-screen">
@@ -98,7 +96,7 @@
         <a class="active" href="{{ url_for('admin.admin_matches') }}">Матчи</a>
         <a href="{{ url_for('admin.admin_wc_playoff') }}">Плей-офф ЧМ-2026</a>
         <a href="{{ url_for('admin.admin_russia_2027') }}">Чемпионат России 2027</a>
-        {% if russian_cup_tournament %}<a href="{{ url_for('admin.admin_matches', tid=russian_cup_tournament.id) }}">Кубок России</a>{% endif %}
+        {% if russian_cup_tournament %}<a href="{{ url_for('admin.admin_russian_cup') }}">Кубок России</a>{% endif %}
         <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
         <a href="{{ url_for('admin.admin_users') }}">Пользователи</a>
     </div>
@@ -237,153 +235,37 @@
         </form>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">Внести/Исправить результат</div>
-        <div class="admin-subsection-title">1.3 • Внести результат</div>
-        {% if free_months %}
-            {% for month in free_months %}
-            <div class="month-group">
-                <div class="month-header" onclick="toggleMonth('free-month-{{ loop.index }}')"><div class="month-header-left"><span id="arrow-free-month-{{ loop.index }}" class="month-arrow">▶</span><span class="month-label">{{ month.label }}</span></div><span class="month-count">{{ month.total_matches }} матчей</span></div>
-                <div id="free-month-{{ loop.index }}" class="month-content">
-                    {% for day in month.days %}
-                    <div class="day-group">
-                        <div class="day-header" onclick="toggleDay('free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')"><div class="day-header-left"><span id="arrow-free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span><span class="day-label">{{ day.date }}</span></div><span class="day-count">{{ day.matches|length }} матчей</span></div>
-                        <div id="free-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
-                            {% for m in day.matches %}
-                            <div class="admin-match-card">
-                                <div class="admin-match-row">
-                                    <div class="admin-match-main"><div class="admin-match-title">{{ m.home_team }} — {{ m.away_team }}</div><div class="admin-match-meta">ID: {{ m.id }}</div></div>
-                                    <form method="post" action="{{ url_for('admin.admin') }}" class="score-form">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}">
-                                        <input class="score-input" type="number" name="home_score" min="0" required><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" required>
-                                        <button type="submit" class="admin-btn admin-btn-small">Завершить</button>
-                                    </form>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+    <div class="admin-card admin-match-list-card">
+        <div class="admin-card-header">Матчи</div>
+        <div class="admin-match-tabs" role="tablist">
+            {% for key, label in [('attention', 'Требуют внимания'), ('upcoming', 'Предстоящие'), ('finished', 'Завершённые'), ('all', 'Все')] %}
+            {% set tab_params = request.args.to_dict() %}{% set _ = tab_params.update({'view': key, 'page': 1}) %}
+            <a class="admin-match-tab {% if admin_match_filters.view == key %}active{% endif %}" href="{{ url_for('admin.admin_matches', **tab_params) }}">{{ label }}</a>
             {% endfor %}
-        {% else %}<div class="admin-empty">Нет матчей, ожидающих результата</div>{% endif %}
-    </div>
-
-    <div class="admin-card">
-        <div class="admin-subsection-title">1.3 • Исправить результат</div>
-        {% if finished_months %}
-            {% for month in finished_months %}
-            <div class="month-group">
-                <div class="month-header" onclick="toggleMonth('finished-month-{{ loop.index }}')"><div class="month-header-left"><span id="arrow-finished-month-{{ loop.index }}" class="month-arrow">▶</span><span class="month-label">{{ month.label }}</span></div><span class="month-count">{{ month.total_matches }} матчей</span></div>
-                <div id="finished-month-{{ loop.index }}" class="month-content">
-                    {% for day in month.days %}
-                    <div class="day-group">
-                        <div class="day-header finished" onclick="toggleDay('finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}')"><div class="day-header-left"><span id="arrow-finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-arrow">▶</span><span class="day-label">{{ day.date }}</span></div><span class="day-count">{{ day.matches|length }} матчей</span></div>
-                        <div id="finished-day-{{ month.key }}-{{ day.date|replace(' ', '_')|replace('.', '_')|replace('г', '') }}" class="day-content">
-                            {% for m in day.matches %}
-                            <div class="admin-match-card">
-                                <div class="admin-match-row">
-                                    <div class="admin-match-main"><div class="admin-match-title">{{ m.home_team }} — {{ m.away_team }}</div><div class="admin-match-meta">ID: {{ m.id }}</div></div>
-                                    <form method="post" action="/admin/fix_result" class="score-form">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
-                                        <input class="score-input" type="number" name="home_score" min="0" required><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" required>
-                                        <button type="submit" class="admin-btn admin-btn-blue admin-btn-small">Обновить</button>
-                                    </form>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
+        </div>
+        <form class="admin-match-filter-form" method="get">
+            <input type="search" name="q" value="{{ admin_match_filters.q }}" placeholder="Поиск команды или ID">
+            <select name="tournament_id"><option value="">Все турниры</option>{% for t in tournaments %}<option value="{{ t.id }}" {% if admin_match_filters.tournament_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
+            <select name="status"><option value="">Все статусы</option>{% for s in ['SCHEDULED','TIMED','LIVE','FINISHED','POSTPONED','CANCELLED'] %}<option value="{{ s }}" {% if admin_match_filters.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select>
+            <select name="period"><option value="all">Все даты</option><option value="7" {% if admin_match_filters.period == '7' %}selected{% endif %}>7 дней</option><option value="30" {% if admin_match_filters.period == '30' %}selected{% endif %}>30 дней</option></select>
+            <input type="hidden" name="view" value="{{ admin_match_filters.view }}"><button class="admin-btn admin-btn-small" type="submit">Фильтровать</button><a class="admin-btn admin-btn-small admin-btn-muted" href="{{ url_for('admin.admin_matches') }}">Сбросить</a>
+        </form>
+        {% if admin_match_list.total %}
+            {% for day in admin_match_list.groups %}
+            <section class="admin-date-section"><h3 class="admin-date-heading">{{ day.label }} <span>{{ day.matches|length }} матчей</span></h3><div class="admin-match-list">
+                {% for m in day.matches %}
+                <article class="admin-match-card">
+                    <div class="admin-match-card__head"><div><div class="admin-match-title">{{ m.home_team }} — {{ m.away_team }}</div><div class="admin-match-meta">{{ m.match_date_msk }} · {{ m.match_time_msk }} МСК · {{ m.tournament_name or 'Турнир не указан' }}{% if m.playoff_stage %} · {{ m.playoff_stage }}{% endif %}{% if m.deadline_time_msk %} · Дедлайн: {{ m.deadline_date_msk }} {{ m.deadline_time_msk }}{% endif %}</div></div><span class="admin-match-status">{{ m.status }}{% if m.home_score is not none and m.away_score is not none %} · {{ m.home_score }}:{{ m.away_score }}{% endif %}</span></div>
+                    <div class="admin-match-actions">
+                        <form method="post" action="{{ url_for('admin_matches.admin_fix_result') if m.status == 'FINISHED' or m.has_result else url_for('admin.admin') }}" class="score-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="set_result"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><input class="score-input" type="number" name="home_score" min="0" required><span class="score-divider">:</span><input class="score-input" type="number" name="away_score" min="0" required><button type="submit" class="admin-btn admin-btn-small">{{ 'Исправить результат' if m.status == 'FINISHED' or m.has_result else 'Внести результат' }}</button></form>
+                        {% if m.is_manual %}<details class="admin-more"><summary>Редактировать</summary><form method="post" action="{{ url_for('admin_matches.admin_edit_match') }}" class="edit-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><div class="admin-form-row"><input name="home_team" value="{{ m.home_team }}" required><input name="away_team" value="{{ m.away_team }}" required></div><div class="admin-form-row"><input type="date" name="match_date" value="{{ m.match_date_msk }}" required><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div><div class="admin-form-row"><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div><select name="status"><option value="SCHEDULED" {% if m.status == 'SCHEDULED' %}selected{% endif %}>scheduled</option><option value="TIMED" {% if m.status == 'TIMED' %}selected{% endif %}>timed</option><option value="LIVE" {% if m.status == 'LIVE' %}selected{% endif %}>live</option><option value="FINISHED" {% if m.status == 'FINISHED' %}selected{% endif %}>finished</option></select><button type="submit" class="admin-btn admin-btn-blue">Сохранить</button></form><form method="post" action="{{ url_for('admin_matches.admin_delete_match') }}" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button class="admin-btn admin-btn-red" type="submit">Удалить</button></form></details>{% endif %}
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
+                </article>
+                {% endfor %}
+            </div></section>
             {% endfor %}
-        {% else %}<div class="admin-empty">Нет завершённых матчей</div>{% endif %}
-    </div>
-
-    <div class="admin-card">
-        <div class="admin-card-header">Редактировать матч</div>
-        <div class="admin-subsection-title">1.4 • Редактирование ручных матчей</div>
-        {% if manual_grouped %}
-            {% for league in manual_grouped %}
-            {% set league_idx = loop.index %}
-            <div class="league-group">
-                <div class="league-header" onclick="toggleMonth('edit-league-{{ loop.index }}')">
-                    <div class="league-header-left">
-                        <span id="arrow-edit-league-{{ loop.index }}" class="league-arrow">▶</span>
-                        <span class="league-label">{{ league.label }}</span>
-                    </div>
-                    <span class="league-count">{{ league.total_matches }} матчей</span>
-                </div>
-                <div id="edit-league-{{ loop.index }}" class="league-content month-content">
-                    {% for month in league.months %}
-                    {% set month_idx = loop.index %}
-                    {% set month_block_id = 'edit-month-' ~ league_idx ~ '-' ~ month_idx %}
-                    <div class="month-group">
-                        <div class="month-header" onclick="toggleMonth('{{ month_block_id }}')">
-                            <div class="month-header-left">
-                                <span id="arrow-{{ month_block_id }}" class="month-arrow">▶</span>
-                                <span class="month-label">{{ month.label }}</span>
-                            </div>
-                            <span class="month-count">{{ month.total_matches }} матчей</span>
-                        </div>
-                        <div id="{{ month_block_id }}" class="month-content">
-                            {% for day in month.days %}
-                            {% set day_block_id = 'edit-day-' ~ league_idx ~ '-' ~ month_idx ~ '-' ~ (day.key|replace(' ', '_')|replace('.', '_')|replace('г', '')) %}
-                            <div class="day-group">
-                                <div class="day-header" onclick="toggleDay('{{ day_block_id }}')">
-                                    <div class="day-header-left">
-                                        <span id="arrow-{{ day_block_id }}" class="day-arrow">▶</span>
-                                        <span class="day-label">{{ day.date }}</span>
-                                    </div>
-                                    <span class="day-count">{{ day.matches|length }} матчей</span>
-                                </div>
-                                <div id="{{ day_block_id }}" class="day-content">
-                                    {% for m in day.matches %}
-                                    <div class="admin-match-card">
-                                        <form method="post" action="/admin/edit_match" class="edit-form">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}">
-                                            <div class="admin-match-title" style="margin-bottom: 10px;">[{{ m.id }}] {{ m.home_team }} — {{ m.away_team }}</div>
-                                            <div class="edit-fields"><input type="text" name="home_team" value="{{ m.home_team }}" required><span class="score-divider">—</span><input type="text" name="away_team" value="{{ m.away_team }}" required></div>
-                                            <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дата (МСК)</label><input type="date" name="match_date" value="{{ m.match_date_msk }}" required></div><div><label>Время (МСК)</label><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div></div>
-                                            {% if m.is_wc2026_playoff %}
-                                            <div style="margin-top: 10px;">
-                                                <label>Стадия турнира</label>
-                                                <select name="playoff_stage">
-                                                    <option value="">-- Не указана --</option>
-                                                    {% for value, label in playoff_stages %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                                                </select>
-                                            </div>
-                                            {% endif %}
-                                            <div class="admin-form-row" style="margin-top: 10px;"><div><label>Дедлайн дата (МСК, опционально)</label><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"></div><div><label>Дедлайн время (МСК, опционально)</label><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div></div>
-                                            <div style="margin-top: 10px;">
-                                                <label>Статус</label>
-                                                <select name="status">
-                                                    <option value="SCHEDULED" {% if m.status == 'SCHEDULED' %}selected{% endif %}>scheduled</option>
-                                                    <option value="TIMED" {% if m.status == 'TIMED' %}selected{% endif %}>timed</option>
-                                                    <option value="LIVE" {% if m.status == 'LIVE' %}selected{% endif %}>live</option>
-                                                    <option value="FINISHED" {% if m.status == 'FINISHED' %}selected{% endif %}>finished</option>
-                                                </select>
-                                            </div>
-                                            <button type="submit" class="admin-btn admin-btn-blue" style="margin-top: 10px;">Сохранить</button>
-                                        </form>
-                                        <div class="admin-danger-zone">
-                                            <div class="admin-danger-label">Опасное действие</div>
-                                            <form method="post" action="/admin/delete_match" class="delete-form" onsubmit="return confirm('Точно удалить матч #{{ m.id }} и все ставки на него?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button type="submit" class="admin-btn admin-btn-red">Удалить</button></form>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}<div class="admin-empty">Нет матчей, добавленных вручную</div>{% endif %}
+            <div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set pagination_params = request.args.to_dict() %}{% for p in range(1, admin_match_list.pages + 1) %}{% set _ = pagination_params.update({'page': p}) %}<a class="{% if p == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_matches', **pagination_params) }}">{{ p }}</a>{% endfor %}</div>
+        {% else %}<div class="admin-empty">По выбранным фильтрам матчей нет.</div>{% endif %}
     </div>
     </section>
 
@@ -418,9 +300,6 @@
 </div>
 
 <script>
-function toggleMonth(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.style.display==='none'||c.style.display===''){c.style.display='block';a.style.transform='rotate(90deg)'}else{c.style.display='none';a.style.transform='rotate(0deg)'}}
-function toggleDay(id){var c=document.getElementById(id);var a=document.getElementById('arrow-'+id);if(!c||!a)return;if(c.classList.contains('open')){c.classList.remove('open');a.style.transform='rotate(0deg)'}else{c.classList.add('open');a.style.transform='rotate(90deg)'}}
-document.addEventListener('DOMContentLoaded',function(){var m=document.querySelector('[id^="free-month-"]');if(m){var a=document.getElementById('arrow-'+m.id);m.style.display='block';if(a){a.style.transform='rotate(90deg)'}}var fm=document.querySelector('[id^="finished-month-"]');if(fm){var fa=document.getElementById('arrow-'+fm.id);fm.style.display='block';if(fa){fa.style.transform='rotate(90deg)'}}});
 document.addEventListener('DOMContentLoaded',function(){var league=document.getElementById('add-match-league');var tournament=document.getElementById('add-match-tournament');var field=document.getElementById('add-playoff-stage-field');function syncDefaults(){if(!league||!tournament)return;var selected=tournament.options[tournament.selectedIndex];var text=selected?selected.textContent:'';if(text.indexOf('Кубок России')!==-1){league.value='rcup'}}function syncStage(){if(!league||!tournament||!field)return;var selected=tournament.options[tournament.selectedIndex];var isWc=selected&&selected.textContent.indexOf('ЧМ-2026')!==-1;field.style.display=(isWc&&league.value==='wc2026')?'block':'none'}if(tournament){tournament.addEventListener('change',function(){syncDefaults();syncStage()})}if(league){league.addEventListener('change',syncStage)}syncDefaults();syncStage();});
 </script>
 

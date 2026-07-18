@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
 
 <style>
     .admin-screen{display:flex;flex-direction:column;gap:18px}.admin-nav{display:flex;flex-wrap:wrap;gap:8px}.admin-nav a{padding:8px 12px;border-radius:12px;text-decoration:none;background:#e8f4ff;color:#0a4e8d;font-weight:800;font-size:13px}.admin-nav a.active{background:#0a6cc2;color:#fff}.admin-title{font-size:26px;font-weight:1000;color:#063b73}.admin-note{color:#5d7894;font-size:13px;font-weight:800;line-height:1.35}.section-card{border-radius:24px;padding:18px;background:linear-gradient(160deg,rgba(255,255,255,.96),rgba(232,246,255,.86));border:1px solid rgba(255,255,255,.74);box-shadow:0 16px 38px rgba(0,78,140,.14)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.section-title{font-size:20px;font-weight:1000;color:#063b73}.section-subtitle{margin-top:4px;color:#5d7894;font-size:13px;font-weight:800}.match-list{display:grid;gap:12px}.match-card{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:14px;border-radius:20px;background:#fff;border:1px solid rgba(10,108,194,.10);box-shadow:0 10px 24px rgba(0,78,140,.09)}.match-main{display:grid;gap:10px}.match-title{font-size:17px;font-weight:1000;color:#063b73;line-height:1.25}.teams-line{font-size:15px;font-weight:1000;color:#0b2848}.unknown{color:#8a5b00}.match-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.fact{padding:9px 10px;border-radius:14px;background:#f4f9ff;border:1px solid rgba(10,108,194,.08);color:#5d7894;font-size:12px;font-weight:800}.fact strong{display:block;margin-top:2px;color:#063b73;font-size:13px}.source-pill{display:inline-flex;width:max-content;align-items:center;padding:6px 10px;border-radius:999px;background:#e8f4ff;color:#0a4e8d;font-size:12px;font-weight:1000}.source-pill.manual{background:#e4f7e9;color:#176b2c}.source-pill.mixed{background:#fff7df;color:#8a5b00}.action-col{display:flex;flex-direction:column;gap:8px;align-items:stretch}.admin-btn{border:0;border-radius:14px;padding:11px 16px;background:#0a6cc2;color:#fff;font-weight:1000;cursor:pointer;text-decoration:none;text-align:center}.admin-btn.secondary{background:#eef6ff;color:#0a4e8d}.admin-btn.danger{background:#fde8e8;color:#9f1d1d}.admin-btn.large{width:100%;padding:14px 18px;font-size:16px}.create-steps{display:grid;gap:14px}.step{padding:14px;border-radius:20px;background:#fff;border:1px solid rgba(10,108,194,.10)}.step-title{font-size:14px;font-weight:1000;color:#063b73;margin-bottom:8px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;font-weight:1000;color:#063b73;margin-bottom:6px}.field-help{margin-top:5px;color:#6a849d;font-size:12px;font-weight:700;line-height:1.3}.empty-state{padding:18px;border-radius:20px;background:#fff;color:#5d7894;font-weight:900;text-align:center}.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,19,42,.62);z-index:1000}.modal-backdrop.open{display:flex}.modal{width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:26px;background:#f7fbff;box-shadow:0 24px 80px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.78)}.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px;border-bottom:1px solid rgba(10,108,194,.10);background:#fff}.modal-title{font-size:20px;font-weight:1000;color:#063b73}.modal-body{padding:18px;display:grid;gap:14px}.modal-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:0 18px 18px}.close-x{border:0;background:#eef6ff;color:#0a4e8d;border-radius:12px;padding:8px 11px;font-weight:1000;cursor:pointer}.inline-delete{display:inline}.hint-box{padding:10px 12px;border-radius:16px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.15);font-size:13px;font-weight:800}@media(max-width:760px){.section-head,.match-card{grid-template-columns:1fr}.match-facts,.form-grid{grid-template-columns:1fr}.action-col{align-items:stretch}.modal-actions{justify-content:stretch}.modal-actions .admin-btn,.modal-actions form{width:100%}}
@@ -31,10 +32,14 @@
                 <div class="section-subtitle">Здесь отображаются уже созданные или полученные через API матчи плей-офф.</div>
             </div>
         </div>
+        <div class="admin-match-tabs">{% for key, label in [('attention','Требуют внимания'),('upcoming','Предстоящие'),('finished','Завершённые'),('all','Все')] %}{% set p = request.args.to_dict() %}{% set _ = p.update({'view': key, 'page': 1}) %}<a class="admin-match-tab {% if admin_match_filters.view == key %}active{% endif %}" href="{{ url_for('admin.admin_wc_playoff', **p) }}">{{ label }}</a>{% endfor %}</div>
+        <form class="admin-match-filter-form" method="get"><input type="search" name="q" value="{{ admin_match_filters.q }}" placeholder="Команда или ID"><select name="status"><option value="">Все статусы</option>{% for s in ['SCHEDULED','TIMED','LIVE','FINISHED'] %}<option value="{{ s }}" {% if admin_match_filters.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select><select name="period"><option value="all">Все даты</option><option value="7">7 дней</option><option value="30">30 дней</option></select><input type="hidden" name="view" value="{{ admin_match_filters.view }}"><button class="admin-btn" type="submit">Фильтровать</button><a class="admin-btn" href="{{ url_for('admin.admin_wc_playoff') }}">Сбросить</a></form>
 
         {% if wc_playoff_matches %}
             <div class="match-list">
+                {% set date_state = namespace(value='') %}
                 {% for m in wc_playoff_matches %}
+                    {% if m.match_date_input != date_state.value %}<h3 class="admin-date-heading">{{ m.match_date_input or 'Дата не указана' }}</h3>{% set date_state.value = m.match_date_input %}{% endif %}
                     {% set teams_missing = not m.home_team or not m.away_team or m.home_team == 'Unknown' or m.away_team == 'Unknown' %}
                     {% set any_manual = m.manual_teams_override or m.manual_kickoff_override or m.manual_result_override or m.playoff_stage_manual %}
                     {% set all_manual = m.manual_teams_override and m.manual_kickoff_override and (m.manual_result_override or (m.home_score is none and m.away_score is none)) and m.playoff_stage_manual %}
@@ -58,6 +63,7 @@
                             <form method="post" action="/admin/delete_match" onsubmit="return confirm('Удалить матч? Прогнозы на этот матч тоже будут удалены.');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <input type="hidden" name="match_id" value="{{ m.id }}">
+                                <input type="hidden" name="return_to" value="{{ request.full_path }}">
                                 <input type="hidden" name="next" value="wc_playoff">
                                 <button type="submit" class="admin-btn danger">Удалить</button>
                             </form>
@@ -76,7 +82,8 @@
                             <form method="post" action="/admin/wc_playoff_override" data-predictions="{{ m.predictions_count }}" onsubmit="return confirmTeamChange(this);">
                                 <div class="modal-body">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                    <input type="hidden" name="match_id" value="{{ m.id }}">
+                                     <input type="hidden" name="match_id" value="{{ m.id }}">
+                                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                                     <input type="hidden" name="next" value="wc_playoff">
                                     <input type="hidden" name="confirm_team_change" value="0">
 
@@ -145,6 +152,7 @@
                     </div>
                 {% endfor %}
             </div>
+            <div class="admin-pagination"><span>Показаны {{ wc_playoff_list.first }}–{{ wc_playoff_list.last }} из {{ wc_playoff_list.total }}</span>{% set p = request.args.to_dict() %}{% for n in range(1, wc_playoff_list.pages + 1) %}{% set _ = p.update({'page': n}) %}<a class="{% if n == wc_playoff_list.page %}active{% endif %}" href="{{ url_for('admin.admin_wc_playoff', **p) }}">{{ n }}</a>{% endfor %}</div>
         {% else %}
             <div class="empty-state">Матчи плей-офф пока не созданы. Создайте первый матч в блоке ниже.</div>
         {% endif %}

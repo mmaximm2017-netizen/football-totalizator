@@ -211,7 +211,7 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertIn('action="/admin/russian_cup_delete"', html)
         self.assertIn('action="/admin/russian_cup_recalc"', html)
         self.assertIn("clubs/Fonbet_Russian_Cup.png", html)
-        self.assertIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
+        self.assertNotIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
         self.assertNotIn('placeholder="Нет колонки БД"', html)
 
     def test_russian_cup_service_filters_by_tournament_and_league(self):

@@ -38,6 +38,14 @@ RPL_ADMIN_REDIRECT = "admin.admin_russia_2027"
 RUSSIAN_CUP_ADMIN_REDIRECT = "admin.admin_russian_cup"
 
 
+def admin_context_redirect(default_endpoint="admin.admin"):
+    """Return to an internal admin list while rejecting open redirects."""
+    target = (request.form.get("return_to") or "").strip()
+    if target.startswith("/admin/") and not target.startswith("//"):
+        return redirect(target)
+    return redirect(url_for(default_endpoint))
+
+
 def normalize_manual_match_status(value, fallback="SCHEDULED"):
     status = (value or fallback or "SCHEDULED").strip().upper()
     return status if status in MANUAL_MATCH_STATUSES else fallback
@@ -264,7 +272,7 @@ def admin_russia_2027_import():
         if is_ajax:
             return jsonify({"ok": False, "message": "Ошибка импорта РПЛ"}), 500
         flash("Ошибка импорта РПЛ: повторите попытку позже", "error")
-    return redirect(url_for(RPL_ADMIN_REDIRECT))
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russia_2027_add", methods=["POST"])
@@ -340,7 +348,7 @@ def admin_russia_2027_add():
         flash(f"Ошибка создания матча: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RPL_ADMIN_REDIRECT))
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russia_2027_edit", methods=["POST"])
@@ -463,7 +471,7 @@ def admin_russia_2027_edit():
         flash(f"Ошибка сохранения матча: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RPL_ADMIN_REDIRECT))
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russia_2027_visibility", methods=["POST"])
@@ -493,7 +501,7 @@ def admin_russia_2027_visibility():
         flash(f"Ошибка изменения видимости: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RPL_ADMIN_REDIRECT))
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russia_2027_delete", methods=["POST"])
@@ -515,7 +523,7 @@ def admin_russia_2027_delete():
         )
         if cur.fetchone():
             flash("Нельзя удалить матч: существуют связанные прогнозы", "error")
-            return redirect(url_for(RPL_ADMIN_REDIRECT))
+            return admin_context_redirect(RPL_ADMIN_REDIRECT)
         cur.execute(
             """
             DELETE FROM matches
@@ -532,7 +540,7 @@ def admin_russia_2027_delete():
         flash(f"Ошибка удаления матча: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RPL_ADMIN_REDIRECT))
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russian_cup_add", methods=["POST"])
@@ -604,7 +612,7 @@ def admin_russian_cup_add():
         flash(f"Ошибка создания матча Кубка России: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russian_cup_edit", methods=["POST"])
@@ -722,7 +730,7 @@ def admin_russian_cup_edit():
         flash(f"Ошибка сохранения матча Кубка России: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russian_cup_visibility", methods=["POST"])
@@ -752,7 +760,7 @@ def admin_russian_cup_visibility():
         flash(f"Ошибка изменения видимости: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russian_cup_delete", methods=["POST"])
@@ -791,7 +799,7 @@ def admin_russian_cup_delete():
         flash(f"Ошибка удаления матча Кубка России: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russian_cup_recalc", methods=["POST"])
@@ -824,7 +832,7 @@ def admin_russian_cup_recalc():
         flash(f"Ошибка пересчёта Кубка России: {e}", "error")
     finally:
         close_db(conn, cur)
-    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
 
 
 def handle_add_match(conn, cur):
@@ -869,7 +877,7 @@ def handle_add_match(conn, cur):
 
         if existing:
             flash("����� ���� ��� ����������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         if not tournament_id:
             flash("Выберите турнир для матча", "error")
@@ -924,7 +932,7 @@ def handle_add_match(conn, cur):
         conn.rollback()
         flash(f"������: {e}", "error")
 
-    return redirect(url_for("admin.admin"))
+    return admin_context_redirect()
 
 
 def handle_set_result(conn, cur):
@@ -937,7 +945,7 @@ def handle_set_result(conn, cur):
 
     if home_score is None:
         flash("������������ ����", "error")
-        return redirect(url_for("admin.admin"))
+        return admin_context_redirect()
 
     try:
         cur.execute(
@@ -961,7 +969,7 @@ def handle_set_result(conn, cur):
 
         if cur.rowcount == 0:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         recalc_match_points(match_id, conn=conn, cur=cur)
 
@@ -976,7 +984,7 @@ def handle_set_result(conn, cur):
         conn.rollback()
         flash(f"������: {e}", "error")
 
-    return redirect(url_for("admin.admin"))
+    return admin_context_redirect()
 
 
 @admin_matches_bp.route("/force_finish", methods=["POST"])
@@ -987,7 +995,7 @@ def force_finish():
 
     if match_id is None or h is None or a is None:
         flash("������������ ������ �����", "error")
-        return redirect(url_for("admin.admin"))
+        return admin_context_redirect()
 
     conn = get_db()
     cur = conn.cursor()
@@ -997,11 +1005,11 @@ def force_finish():
 
         if not match_found:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         if not tournament_id:
             flash("Турнир матча не определён", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         cur.execute(
             """
@@ -1043,7 +1051,7 @@ def force_finish():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin"))
+    return admin_context_redirect()
 
 
 @admin_matches_bp.route("/fix_result", methods=["POST"])
@@ -1058,7 +1066,7 @@ def admin_fix_result():
 
     if home_score is None:
         flash("������������ ����", "error")
-        return redirect(url_for("admin.admin"))
+        return admin_context_redirect()
 
     conn = get_db()
     cur = conn.cursor()
@@ -1068,11 +1076,11 @@ def admin_fix_result():
 
         if not match_found:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         if not tournament_id:
             flash("Турнир матча не определён", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         cur.execute(
             """
@@ -1113,7 +1121,7 @@ def admin_fix_result():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin"))
+    return admin_context_redirect()
 
 
 @admin_matches_bp.route("/wc_playoff_override", methods=["POST"])
@@ -1121,7 +1129,10 @@ def admin_fix_result():
 def admin_wc_playoff_override():
     match_id = request.form.get("match_id", type=int)
     tid = request.form.get("tid", type=int)
-    if request.form.get("next") == "wc_playoff":
+    return_to = (request.form.get("return_to") or "").strip()
+    if return_to.startswith("/admin/") and not return_to.startswith("//"):
+        redirect_target = return_to
+    elif request.form.get("next") == "wc_playoff":
         redirect_target = url_for("admin.admin_wc_playoff")
     else:
         redirect_target = url_for("admin.admin_matches", tid=tid) if tid else url_for("admin.admin_matches")
@@ -1422,7 +1433,7 @@ def admin_edit_match():
 
     if not match_id or not home_team or not away_team or not match_date or not match_time:
         flash("��������� ��� ����", "error")
-        return redirect(url_for("admin.admin"))
+        return admin_context_redirect()
 
     conn = get_db()
     cur = conn.cursor()
@@ -1447,7 +1458,7 @@ def admin_edit_match():
 
         if not row:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         status = row[0]
         league = row[1]
@@ -1466,10 +1477,10 @@ def admin_edit_match():
             )
         except ValueError as e:
             flash(str(e), "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
         except Exception:
             flash("������������ ���� ��� �����", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         playoff_stage = None
         if is_wc2026_playoff_match(tournament_name, league, kickoff_utc):
@@ -1480,7 +1491,7 @@ def admin_edit_match():
             submitted_status, home_score, away_score
         ):
             flash("Для статуса FINISHED сначала укажите результат матча", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         manual_teams_override_sql = ", manual_teams_override = 1" if is_wc2026_match else ""
         manual_kickoff_override_sql = ", manual_kickoff_override = 1" if is_wc2026_match else ""
@@ -1539,7 +1550,7 @@ def admin_edit_match():
 
         if cur.rowcount == 0:
             flash("���� �� ������", "error")
-            return redirect(url_for("admin.admin"))
+            return admin_context_redirect()
 
         conn.commit()
 
@@ -1555,7 +1566,7 @@ def admin_edit_match():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin"))
+    return admin_context_redirect()
 
 
 @admin_matches_bp.route("/delete_match", methods=["POST"])

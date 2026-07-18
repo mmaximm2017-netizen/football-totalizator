@@ -154,3 +154,29 @@ def prepare_russian_cup_admin_data(cur):
         "russian_cup_stages": RUSSIAN_CUP_STAGES,
         "russian_cup_stage_values": [stage for stage, _ in RUSSIAN_CUP_STAGES],
     }
+
+
+def prepare_russian_cup_admin_page_data(cur):
+    """Load Russian Cup metadata and counters without loading matches."""
+    tournament = get_russian_cup_tournament(cur)
+    matches_count = 0
+    finished_count = 0
+    if tournament:
+        cur.execute(
+            """
+            SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'FINISHED')
+            FROM matches
+            WHERE tournament_id = %s AND league = 'rcup'
+            """,
+            (tournament["id"],),
+        )
+        counters = cur.fetchone() or (0, 0)
+        matches_count, finished_count = counters[0] or 0, counters[1] or 0
+    return {
+        "russian_cup_tournament": tournament,
+        "russian_cup_matches_count": matches_count,
+        "russian_cup_finished_count": finished_count,
+        "russian_cup_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"),
+        "russian_cup_stages": RUSSIAN_CUP_STAGES,
+        "russian_cup_stage_values": [stage for stage, _ in RUSSIAN_CUP_STAGES],
+    }

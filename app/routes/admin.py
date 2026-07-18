@@ -21,14 +21,17 @@ from app.routes.admin_tournaments import (
     handle_archive_tournament,
 )
 from app.services.admin_view_service import (
-    prepare_admin_matches_data,
+    prepare_admin_matches_page_data,
     prepare_admin_view_data,
+    parse_admin_match_filters,
+    prepare_admin_match_list,
+    prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import (
     check_rpl_calendar,
-    prepare_rpl_admin_data,
+    prepare_rpl_admin_page_data,
 )
-from app.services.russian_cup_admin_service import prepare_russian_cup_admin_data
+from app.services.russian_cup_admin_service import prepare_russian_cup_admin_page_data
 
 
 # =========================================================
@@ -68,7 +71,7 @@ def admin_matches():
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = prepare_admin_matches_data(cur)
+        data = prepare_admin_matches_page_data(cur)
         tournament_ids = {t.get('id') for t in data.get('tournaments', [])}
         selected_tid = requested_tid if requested_tid in tournament_ids else None
         selected_tournament = next(
@@ -83,6 +86,9 @@ def admin_matches():
         data['current_tournament_id'] = selected_tid
         data['current_tournament_name'] = selected_tournament.get('name') if selected_tournament else 'Админка'
         data['russian_cup_tournament'] = russian_cup_tournament
+        filters = parse_admin_match_filters(request.args, forced_tournament_id=requested_tid or request.args.get('tournament_id', type=int))
+        data['admin_match_filters'] = filters
+        data['admin_match_list'] = prepare_admin_match_list(cur, filters)
         data.update(build_sync_panel_context())
     finally:
         close_db(conn, cur)
@@ -95,8 +101,12 @@ def admin_wc_playoff():
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = prepare_admin_matches_data(cur)
+        filters = parse_admin_match_filters(request.args)
+        data = prepare_wc_playoff_page_data(cur, filters)
+        data['admin_match_filters'] = filters
         data['current_tournament_name'] = 'Плей-офф ЧМ-2026'
+        cur.execute("SELECT DISTINCT team_name FROM (SELECT home_team AS team_name FROM matches WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026') AND home_team IS NOT NULL UNION SELECT away_team AS team_name FROM matches WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026') AND away_team IS NOT NULL) teams WHERE team_name IS NOT NULL AND team_name <> 'Unknown' ORDER BY team_name")
+        data['wc_team_options'] = [row[0] for row in cur.fetchall()]
     finally:
         close_db(conn, cur)
     return render_template('admin_wc_playoff.html', **data)
@@ -109,8 +119,11 @@ def admin_russia_2027():
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = prepare_rpl_admin_data(cur, calendar_check=calendar_check)
+        data = prepare_rpl_admin_page_data(cur, calendar_check=calendar_check)
         data['current_tournament_name'] = 'Чемпионат России 2027'
+        filters = parse_admin_match_filters(request.args, forced_tournament_id=data.get('rpl_tournament', {}).get('id') if data.get('rpl_tournament') else None)
+        data['admin_match_filters'] = filters
+        data['admin_match_list'] = prepare_admin_match_list(cur, filters, league='rpl')
     finally:
         close_db(conn, cur)
     return render_template('admin_russia_2027.html', **data)
@@ -122,11 +135,17 @@ def admin_russian_cup():
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = prepare_russian_cup_admin_data(cur)
+        data = prepare_russian_cup_admin_page_data(cur)
         data['current_tournament_name'] = 'Кубок России'
         data['current_tournament_slug'] = 'rcup'
         if data.get('russian_cup_tournament'):
             data['current_tournament_id'] = data['russian_cup_tournament']['id']
+            filters = parse_admin_match_filters(request.args, forced_tournament_id=data['russian_cup_tournament']['id'])
+            data['admin_match_filters'] = filters
+            data['admin_match_list'] = prepare_admin_match_list(cur, filters, league='rcup')
+        else:
+            data['admin_match_filters'] = parse_admin_match_filters(request.args)
+            data['admin_match_list'] = {'matches': [], 'groups': [], 'total': 0, 'page': 1, 'pages': 1, 'per_page': 30, 'first': 0, 'last': 0}
     finally:
         close_db(conn, cur)
     return render_template('admin_russian_cup.html', **data)
