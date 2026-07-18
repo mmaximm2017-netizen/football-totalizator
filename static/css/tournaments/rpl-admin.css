@@ -217,17 +217,25 @@ body.tournament-rpl .admin-rpl-page .rpl-add-trigger > summary {
 body.tournament-rpl .admin-rpl-page .rpl-add-trigger > summary::-webkit-details-marker { display: none; }
 
 body.tournament-rpl .admin-rpl-page .rpl-workspace { display: grid; gap: 10px; }
-body.tournament-rpl .admin-rpl-page .rpl-pending-note {
+body.tournament-rpl .admin-rpl-page .rpl-list-note,
+body.tournament-rpl .admin-rpl-page .rpl-pending-heading {
     padding: 10px 12px;
-    border: 1px solid rgba(255,183,77,0.34);
+    border: 1px solid rgba(255,255,255,0.20);
+    border-left: 4px solid #D52B1E;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255,183,77,0.30), rgba(255,243,214,0.62));
-    box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.60);
-    color: #5f3b00;
+    background: linear-gradient(135deg, rgba(0,57,166,0.34), rgba(2,11,39,0.82));
+    box-shadow: 0 12px 28px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.96);
     font-size: 12px;
     font-weight: 800;
 }
-body.tournament-rpl .admin-rpl-page .rpl-pending-note a { margin-left: 6px; color: #0039A6; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-preview { display: grid; gap: 8px; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-heading { margin: 0; font-size: 14px; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-heading span { color: rgba(255,255,255,0.68); font-size: 12px; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-all { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 13px; border: 1px solid rgba(255,255,255,0.20); border-radius: 999px; background: linear-gradient(135deg, rgba(18,109,255,0.34), rgba(9,50,132,0.34) 58%, rgba(8,18,50,0.40)); box-shadow: 0 10px 22px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10); color: rgba(255,255,255,0.94); font-size: 12px; font-weight: 900; text-decoration: none; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-all:hover,
+body.tournament-rpl .admin-rpl-page .rpl-pending-all:focus-visible { background: rgba(255,255,255,0.10); }
+body.tournament-rpl .admin-rpl-page .rpl-upcoming-heading { margin: 4px 0 0; padding: 10px 12px; border-left: 4px solid rgba(18,109,255,0.80); border-radius: 12px; background: rgba(8,18,50,0.46); color: rgba(255,255,255,0.90); font-size: 14px; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-list { display: grid; gap: 8px; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-card { position: relative; min-width: 0; padding: 10px 11px; border-radius: 24px; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-card::before,
@@ -243,7 +251,9 @@ body.tournament-rpl .admin-rpl-page .rpl-compact-card > *,
 body.tournament-rpl .admin-rpl-page .rpl-edit-hero > * { position: relative; z-index: 1; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-finished { border-left: 3px solid #6da57c; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-live { border-left: 3px solid #D52B1E; }
+body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-pending-result { border-left: 3px solid #D52B1E; box-shadow: 0 26px 46px rgba(0,38,98,0.16), 0 10px 24px rgba(213,43,30,0.12), inset 0 1px 0 rgba(255,255,255,0.78); }
 body.tournament-rpl .admin-rpl-page .rpl-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+body.tournament-rpl .admin-rpl-page .rpl-card-statuses { display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
 body.tournament-rpl .admin-rpl-page .rpl-card-time { color: rgba(15,36,72,0.58); font-size: 11px; font-weight: 850; }
 body.tournament-rpl .admin-rpl-page .rpl-card-teams { min-width: 0; margin: 7px 0 3px; overflow-wrap: anywhere; color: #10264f; font-size: 16px; font-weight: 950; line-height: 1.2; }
 body.tournament-rpl .admin-rpl-page .rpl-card-score { color: #0a2d7a; font-weight: 1000; }
@@ -257,6 +267,8 @@ body.tournament-rpl .admin-rpl-page .rpl-status-halftime,
 body.tournament-rpl .admin-rpl-page .rpl-status-paused { background: rgba(229,39,59,0.16); border-color: rgba(213,43,30,0.20); color: #9f1d1d; }
 body.tournament-rpl .admin-rpl-page .rpl-status-scheduled,
 body.tournament-rpl .admin-rpl-page .rpl-status-timed { background: rgba(43,169,255,0.16); color: #0039A6; }
+body.tournament-rpl .admin-rpl-page .rpl-status-pending { background: rgba(213,43,30,0.16); border-color: rgba(213,43,30,0.24); color: #D52B1E; }
+body.tournament-rpl .admin-rpl-page .rpl-pending-marker { padding: 4px 7px; border: 1px solid rgba(213,43,30,0.20); border-radius: 999px; background: rgba(213,43,30,0.10); color: #D52B1E; font-size: 9px; font-weight: 900; }
 
 body.tournament-rpl .admin-rpl-page .rpl-card-actions { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; align-items: center; min-width: 0; margin-top: 9px; }
 body.tournament-rpl .admin-rpl-page .rpl-quick-result { display: grid; grid-template-columns: 38px 12px 38px minmax(0, 1fr); gap: 4px; align-items: center; min-width: 0; }

@@ -103,10 +103,10 @@ def prepare_russian_cup_match_list(cur, tournament_id, filters):
 
 
 def prepare_rpl_match_list(cur, tournament_id, filters):
-    return prepare_tournament_match_list(cur, tournament_id, "rpl", filters)
+    return prepare_tournament_match_list(cur, tournament_id, "rpl", filters, include_pending_preview=True)
 
 
-def prepare_tournament_match_list(cur, tournament_id, league, filters):
+def prepare_tournament_match_list(cur, tournament_id, league, filters, include_pending_preview=False):
     query_filters = dict(filters, period="30" if filters["view"] == "upcoming" else "all")
     query_filters["view"] = "attention" if filters["view"] == "pending_result" else filters["view"]
     now = datetime.now(timezone.utc)
@@ -128,12 +128,42 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
 
     total = count_rows(where, params)
     pending_count = 0
+    pending_preview = []
     if filters["view"] == "upcoming":
         pending_filters = dict(filters, view="attention", period="all")
         pending_where, pending_params = _admin_match_where(pending_filters, now)
         pending_where += f" AND m.tournament_id = %s AND m.league = '{league}'"
         pending_params.append(tournament_id)
         pending_count = count_rows(pending_where, pending_params)
+        if include_pending_preview and filters["page"] == 1:
+            cur.execute(
+                f"""
+                SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
+                       m.status, m.home_score, m.away_score, m.playoff_stage_manual
+                FROM matches m
+                LEFT JOIN tournaments t ON t.id = m.tournament_id
+                WHERE {pending_where}
+                ORDER BY m.kickoff_time DESC, m.id DESC
+                LIMIT %s
+                """,
+                tuple(pending_params + [5]),
+            )
+            pending_preview = [
+                {
+                    "id": row[0], "home_team": row[1], "away_team": row[2],
+                    "kickoff_time": parse_datetime(row[3]), "deadline": parse_datetime(row[4]),
+                    "status": row[5], "home_score": row[6], "away_score": row[7],
+                    "stage": row[8] or "", "tournament_id": tournament_id,
+                    "has_result": row[6] is not None and row[7] is not None,
+                    "match_date_msk": (parse_datetime(row[3]).astimezone(MSK).strftime("%Y-%m-%d") if parse_datetime(row[3]) else ""),
+                    "match_time_msk": (parse_datetime(row[3]).astimezone(MSK).strftime("%H:%M") if parse_datetime(row[3]) else ""),
+                    "deadline_date_msk": (parse_datetime(row[4]).astimezone(MSK).strftime("%Y-%m-%d") if parse_datetime(row[4]) else ""),
+                    "deadline_time_msk": (parse_datetime(row[4]).astimezone(MSK).strftime("%H:%M") if parse_datetime(row[4]) else ""),
+                    "date_label": format_admin_match_date(parse_datetime(row[3]).astimezone(MSK)) if parse_datetime(row[3]) else "Дата не указана",
+                    "pending_result": True,
+                }
+                for row in cur.fetchall()
+            ]
     fallback_notice = False
     if filters["view"] == "upcoming" and total == 0 and query_filters["period"] == "30":
         query_filters["period"] = "all"
@@ -172,6 +202,7 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
             "home_score": row[6], "away_score": row[7], "stage": row[8] or "",
             "tournament_id": tournament_id,
             "has_result": row[6] is not None and row[7] is not None,
+            "pending_result": False,
             "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
             "date_label": format_admin_match_date(kickoff_msk) if kickoff_msk else "Дата не указана",
             "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
@@ -204,6 +235,8 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
         "last": min(offset + len(matches), total),
         "fallback_notice": fallback_notice,
         "pending_count": pending_count,
+        "pending_preview": pending_preview,
+        "pending_preview_total": pending_count if include_pending_preview and filters["view"] == "upcoming" else 0,
     }
 
 

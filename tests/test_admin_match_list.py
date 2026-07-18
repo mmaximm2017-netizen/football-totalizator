@@ -79,6 +79,38 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
         self.assertEqual(cursor.executed[-1][1][-2:], (5, 0))
 
+    def test_rpl_upcoming_has_separate_pending_preview_count_and_limit(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "upcoming"}.get(key, default))
+        cursor = Cursor(
+            2,
+            [(10, "Спартак", "Зенит", datetime(2026, 7, 18, 16, 0, tzinfo=timezone.utc), None,
+              "SCHEDULED", None, None, "Тур 1")],
+        )
+        result = prepare_rpl_match_list(cursor, 7, parse_rpl_match_filters(args))
+        self.assertEqual(result["pending_preview_total"], 2)
+        self.assertEqual(len(result["pending_preview"]), 1)
+        self.assertTrue(result["pending_preview"][0]["pending_result"])
+        self.assertGreaterEqual(len(cursor.executed), 4)
+        pending_sql, pending_params = cursor.executed[2]
+        future_sql = cursor.executed[-1][0]
+        self.assertIn("m.kickoff_time <= %s", pending_sql)
+        self.assertIn("m.home_score IS NULL", pending_sql)
+        self.assertIn("m.away_score IS NULL", pending_sql)
+        self.assertIn("m.tournament_id = %s", pending_sql)
+        self.assertIn("m.league = 'rpl'", pending_sql)
+        self.assertIn("LIMIT %s", pending_sql)
+        self.assertEqual(pending_params[-1], 5)
+        self.assertIn("m.kickoff_time > %s", future_sql)
+
+    def test_rpl_pending_preview_only_loads_on_first_upcoming_page(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "upcoming", "page": 2}.get(key, default))
+        cursor = Cursor(6, [])
+        result = prepare_rpl_match_list(cursor, 7, parse_rpl_match_filters(args))
+        self.assertEqual(result["page"], 2)
+        self.assertEqual(result["pending_preview"], [])
+        self.assertEqual(len(cursor.executed), 3)
+        self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
+
     def test_russian_cup_defaults_to_upcoming_with_five_matches(self):
         args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
         filters = parse_russian_cup_match_filters(args)
@@ -224,6 +256,20 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("m.date_label", rcup)
         self.assertNotIn("{{ m.match_date_msk }} · Чемпионат России", rpl)
         self.assertNotIn("{{ m.match_date_msk }}{% if m.stage %}", rcup)
+
+    def test_rpl_pending_preview_markup_replaces_old_alert(self):
+        root = Path(__file__).resolve().parents[1]
+        html = (root / "templates" / "admin_russia_2027.html").read_text(encoding="utf-8")
+        css = (root / "static" / "css" / "tournaments" / "rpl-admin.css").read_text(encoding="utf-8")
+        self.assertIn("pending_preview", html)
+        self.assertIn("Ожидают результата", html)
+        self.assertIn("ОЖИДАЕТ РЕЗУЛЬТАТА", html)
+        self.assertIn("Все ожидающие результата", html)
+        self.assertNotIn("Открыть", html)
+        self.assertNotIn("rpl-pending-note", html)
+        self.assertNotIn("rpl-pending-note", css)
+        self.assertNotIn("rgba(255,183,77", css)
+        self.assertIn("#D52B1E", css)
 
     def test_general_matches_page_and_navigation_are_removed(self):
         root = Path(__file__).resolve().parents[1]
