@@ -11,6 +11,19 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("predictions-sheet", partial)
         self.assertIn("predictions-sheet__header", partial)
         self.assertIn("predictions-sheet__close", partial)
+        self.assertIn("data-bets-sheet-content", partial)
+
+    def test_mobile_sheet_accounts_for_bottom_nav_safe_area_and_last_row(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        self.assertIn("@media (max-width: 640px)", css)
+        self.assertIn("box-sizing: border-box", css)
+        self.assertIn("bottom: calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)", css)
+        self.assertIn("max-height: min(72dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))))", css)
+        self.assertIn("body.tournament-wc2026 .bets-sheet", css)
+        self.assertIn("padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
+        self.assertIn("scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
+        self.assertIn(".bets-compact-list {\n            padding-bottom: 10px;", css)
+        self.assertIn("overflow-y: auto", css)
 
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
