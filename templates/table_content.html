@@ -67,8 +67,10 @@
     .player-line {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
         min-width: 0;
+        width: 100%;
+        white-space: nowrap;
     }
 
     .place-box {
@@ -78,7 +80,7 @@
     }
 
     .player-name {
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -151,9 +153,11 @@
     }
 
     .top-1 .player-name {
-        flex: 0 0 auto;
-        overflow: visible;
-        text-overflow: clip;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-weight: 800;
         font-size: 18px;
     }
@@ -511,13 +515,29 @@
     }
 
     body.tournament-wc2026 .leader-badge {
-        display: inline-block !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: max-content;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap !important;
-        margin-left: 8px !important;
-        font-size: 14px !important;
-        padding: 2px 6px !important;
+        margin-left: 1px !important;
+        font-size: 12px !important;
+        padding: 5px 9px !important;
         border-radius: 12px !important;
         vertical-align: middle !important;
+    }
+
+    .player-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     body.tournament-wc2026 .standings-table tbody tr.wc-eliminated {
@@ -902,12 +922,33 @@
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        margin-left: 7px !important;
-        padding: 4px 7px !important;
+        flex: 0 0 auto;
+        width: max-content;
+        max-width: none;
+        margin-left: 1px !important;
+        padding: 5px 9px !important;
         border-radius: 999px !important;
-        font-size: 9px !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
         line-height: 1;
+        white-space: nowrap !important;
+        overflow: visible;
+        text-overflow: clip;
         vertical-align: middle !important;
+    }
+
+    .leader-badge.confident,
+    .leader-badge.dominant {
+        font-size: 11.5px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    .leader-badge.absolute {
+        font-size: 11px !important;
+        letter-spacing: -0.15px;
+        padding-left: 7px !important;
+        padding-right: 7px !important;
     }
 
     .standings-table tbody tr.top-1,
@@ -1529,11 +1570,13 @@
 
         .player-line {
             gap: 4px;
+            flex-wrap: nowrap;
         }
 
         .leader-badge {
-            padding-left: 6px;
-            padding-right: 6px;
+            font-size: 12px !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
         }
 
         body.tournament-wc2026 .player-name {
@@ -1571,12 +1614,16 @@
         }
 
         .top-1 .player-line {
-            flex-wrap: wrap;
-            row-gap: 4px;
+            flex-wrap: nowrap;
         }
 
         .top-1 .player-name {
-            font-size: 20px !important;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 16px !important;
         }
 
         .top-1 .points-number {
@@ -1586,19 +1633,22 @@
         }
 
         .top-1 .leader-badge {
-            align-self: flex-start;
-            flex-basis: 100%;
-            padding-left: 4px;
-            padding-right: 4px;
+            align-self: center;
+            flex: 0 0 auto;
+            flex-basis: auto;
+            width: max-content;
+            max-width: none;
+            padding-left: 7px !important;
+            padding-right: 7px !important;
         }
 
     }
 
     @media (max-width: 340px) {
         .leader-badge {
-            padding-left: 5px;
-            padding-right: 5px;
-            font-size: 9px;
+            padding-left: 7px;
+            padding-right: 7px;
+            font-size: 11px !important;
         }
 
         .top-1 .leader-badge {
@@ -1747,22 +1797,20 @@
     body.tournament-rcup .player-line {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
         min-width: 0;
-        flex-wrap: wrap;
+        width: 100%;
+        white-space: nowrap;
+        flex-wrap: nowrap;
     }
 
     body.tournament-rcup .player-name {
-        display: -webkit-box;
         flex: 1 1 auto;
         min-width: 0;
+        max-width: none;
         overflow: hidden;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        text-overflow: clip;
-        white-space: normal;
-        overflow-wrap: anywhere;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: #ffffff;
         font-size: 14px;
         font-weight: 700;
@@ -1771,19 +1819,35 @@
 
     body.tournament-rcup .leader-badge {
         flex: 0 0 auto;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        width: max-content;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
-        padding: 3px 7px;
+        margin-left: 1px !important;
+        padding: 5px 9px !important;
         border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 999px;
         background: #E80024;
         color: #ffffff;
-        font-size: 9px;
-        font-weight: 800;
+        font-size: 12px !important;
+        font-weight: 900;
         line-height: 1;
         box-shadow: none;
+    }
+
+    body.tournament-rcup .leader-badge.confident,
+    body.tournament-rcup .leader-badge.dominant {
+        font-size: 11.5px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    body.tournament-rcup .leader-badge.absolute {
+        font-size: 11px !important;
+        letter-spacing: -0.15px;
+        padding-left: 7px !important;
+        padding-right: 7px !important;
     }
 
     body.tournament-rcup .leader-badge.outsider-badge,
