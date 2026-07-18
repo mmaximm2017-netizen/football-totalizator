@@ -120,8 +120,10 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("height: 40px", css)
         self.assertIn("#f6c945", css)
         self.assertIn("#1769d2", css)
-        self.assertIn("#21ad68", css)
-        self.assertIn("#2c944e", css)
+        self.assertIn("#22d88a", css)
+        self.assertIn("#07965b", css)
+        self.assertIn("#d9782d", css)
+        self.assertIn("#9a3f18", css)
         self.assertIn("#169eaa", css)
         self.assertIn("rgba(93,111,142,0.90)", css)
         self.assertIn("color: #2b1b00", css)
@@ -129,6 +131,22 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("data-points=\"{{ p.points if p.points is not none else '' }}\"", match_template)
         self.assertNotIn("data-points=\"{{ p.points or 0 }}\"", match_template)
         self.assertIn(".bets-compact-score {", css)
+
+    def test_five_and_three_point_categories_are_visually_distinct(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        near_start = css.index(".bets-compact-points.points-near")
+        outcome_start = css.index(".bets-compact-points.points-outcome")
+        near_css = css[near_start:outcome_start]
+        outcome_css = css[outcome_start:css.index(".bets-compact-points.points-fallback")]
+        self.assertIn("#22d88a", near_css)
+        self.assertIn("#07965b", near_css)
+        self.assertNotIn("#d9782d", near_css)
+        self.assertIn("#d9782d", outcome_css)
+        self.assertIn("#9a3f18", outcome_css)
+        self.assertNotIn("#21ad68", css)
+        self.assertNotIn("#2c944e", css)
+        self.assertIn("color: #ffffff", near_css)
+        self.assertIn("color: #ffffff", outcome_css)
 
     def test_unfinished_rows_keep_no_points_layout_and_order(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")

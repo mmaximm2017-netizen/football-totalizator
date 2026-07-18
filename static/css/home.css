@@ -1581,17 +1581,17 @@
     }
 
     .bets-compact-points.points-near {
-        background: linear-gradient(135deg, #21ad68, #14834d);
-        border: 1px solid rgba(105,239,171,0.38);
+        background: linear-gradient(135deg, #22d88a 0%, #07965b 100%);
+        border: 1px solid rgba(121,255,194,0.48);
         color: #ffffff;
-        box-shadow: 0 7px 18px rgba(33,173,104,0.30), inset 0 1px 0 rgba(255,255,255,0.20);
+        box-shadow: 0 7px 18px rgba(20,190,116,0.34), inset 0 1px 0 rgba(255,255,255,0.24);
     }
 
     .bets-compact-points.points-outcome {
-        background: linear-gradient(135deg, #2c944e, #206d3a);
-        border: 1px solid rgba(118,213,145,0.30);
+        background: linear-gradient(135deg, #d9782d 0%, #9a3f18 100%);
+        border: 1px solid rgba(255,178,105,0.44);
         color: #ffffff;
-        box-shadow: 0 6px 15px rgba(44,148,78,0.24), inset 0 1px 0 rgba(255,255,255,0.16);
+        box-shadow: 0 6px 16px rgba(194,83,28,0.30), inset 0 1px 0 rgba(255,255,255,0.20);
     }
 
     .bets-compact-points.points-fallback {
