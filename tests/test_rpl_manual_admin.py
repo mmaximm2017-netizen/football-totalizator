@@ -260,10 +260,21 @@ class RplManualAdminTests(unittest.TestCase):
     def test_rpl_admin_css_is_scoped_and_mobile_safe(self):
         css = (ROOT / "static" / "css" / "tournaments" / "rpl-admin.css").read_text(encoding="utf-8")
         self.assertIn("body.tournament-rpl .admin-rpl-page", css)
+        self.assertIn("#020b27", css)
+        self.assertIn("#0039A6", css)
+        self.assertIn("#D52B1E", css)
+        self.assertIn("rgba(255,255,255,0.82)", css)
+        self.assertIn("backdrop-filter: blur(18px) saturate(145%)", css)
+        self.assertNotIn("--rpl-admin-", css)
+        self.assertNotIn("body.tournament-rcup", css)
+        self.assertNotIn("#edf5ff", css)
         self.assertIn("width: 44px;", css)
         self.assertIn("height: 44px;", css)
         self.assertIn("@media (max-width: 430px)", css)
-        self.assertNotIn("body.tournament-rcup", css)
+
+        edit_html = (ROOT / "templates" / "admin_rpl_edit.html").read_text(encoding="utf-8")
+        self.assertIn('css/tournaments/rpl-admin.css', edit_html)
+        self.assertNotIn('style="', edit_html)
 
     def test_rpl_api_functions_and_season_are_absent(self):
         service = (ROOT / "app" / "services" / "match_service.py").read_text(encoding="utf-8")

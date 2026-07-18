@@ -1,45 +1,126 @@
 body.tournament-rpl:has(.admin-rpl-page) {
-    background: #edf5ff;
+    overflow-x: clip;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(43,169,255,0.14), transparent 16%),
+        conic-gradient(from 246deg at 50% 42%,
+            transparent 0deg 12deg,
+            rgba(255,255,255,0.10) 12deg 16deg,
+            transparent 16deg 31deg,
+            rgba(229,39,59,0.12) 31deg 37deg,
+            transparent 37deg 58deg,
+            rgba(43,169,255,0.13) 58deg 66deg,
+            transparent 66deg 91deg,
+            rgba(255,255,255,0.09) 91deg 98deg,
+            transparent 98deg 128deg,
+            rgba(229,39,59,0.10) 128deg 135deg,
+            transparent 135deg 164deg,
+            rgba(43,169,255,0.11) 164deg 173deg,
+            transparent 173deg 211deg,
+            rgba(255,255,255,0.08) 211deg 218deg,
+            transparent 218deg 255deg,
+            rgba(229,39,59,0.09) 255deg 264deg,
+            transparent 264deg 360deg),
+        linear-gradient(180deg, #020b27 0%, #041235 58%, #020817 100%);
+    background-attachment: fixed;
 }
 
 body.tournament-rpl:has(.admin-rpl-page) .header {
-    background: rgba(255, 255, 255, 0.88);
-    border-bottom: 1px solid rgba(20, 111, 209, 0.12);
-    color: #102a56;
+    background: rgba(8,18,50,0.46);
+    border-bottom: 0;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18), inset 0 -1px 0 rgba(255,255,255,0.04);
+    backdrop-filter: blur(18px) saturate(112%);
+    -webkit-backdrop-filter: blur(18px) saturate(112%);
+    color: rgba(255,255,255,0.96);
 }
 
 body.tournament-rpl:has(.admin-rpl-page) .app-title,
-body.tournament-rpl:has(.admin-rpl-page) .tournament-trigger {
-    color: #102a56;
-}
+body.tournament-rpl:has(.admin-rpl-page) .tournament-trigger { color: rgba(255,255,255,0.96); }
 
 body.tournament-rpl:has(.admin-rpl-page) .bottom-nav {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(20, 111, 209, 0.12);
+    background: rgba(8,18,50,0.58);
+    border: 0;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -1px 0 rgba(255,255,255,0.04);
+    backdrop-filter: blur(22px) saturate(116%);
+    -webkit-backdrop-filter: blur(22px) saturate(116%);
 }
 
 body.tournament-rpl .admin-rpl-page {
-    --rpl-admin-bg: #edf5ff;
-    --rpl-admin-surface: rgba(255, 255, 255, 0.88);
-    --rpl-admin-surface-strong: #ffffff;
-    --rpl-admin-text: #102a56;
-    --rpl-admin-muted: #64748b;
-    --rpl-admin-primary: #146fd1;
-    --rpl-admin-primary-dark: #0c4f9d;
-    --rpl-admin-accent: #e53935;
-    --rpl-admin-border: rgba(20, 111, 209, 0.16);
-    --rpl-admin-shadow: 0 12px 30px rgba(21, 75, 130, 0.12);
+    position: relative;
+    isolation: isolate;
     width: 100%;
     max-width: 800px;
     min-width: 0;
     margin: 0 auto;
     padding: 12px 16px calc(110px + env(safe-area-inset-bottom));
     box-sizing: border-box;
-    color: var(--rpl-admin-text);
-    background: var(--rpl-admin-bg);
+    color: #10264f;
 }
 
-body.tournament-rpl .admin-rpl-page .admin-nav {
+body.tournament-rpl .admin-rpl-page::before,
+body.tournament-rpl .admin-rpl-page::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+}
+
+body.tournament-rpl .admin-rpl-page::before {
+    width: max(150vw, 1120px);
+    height: max(140vh, 900px);
+    opacity: 0.58;
+    filter: blur(0.5px);
+    background:
+        conic-gradient(from 252deg at 50% 50%,
+            transparent 0deg 7deg,
+            rgba(43,169,255,0.38) 7deg 12deg,
+            transparent 12deg 21deg,
+            rgba(255,255,255,0.34) 21deg 27deg,
+            transparent 27deg 43deg,
+            rgba(229,39,59,0.42) 43deg 50deg,
+            transparent 50deg 67deg,
+            rgba(43,169,255,0.30) 67deg 74deg,
+            transparent 74deg 96deg,
+            rgba(255,255,255,0.28) 96deg 102deg,
+            transparent 102deg 126deg,
+            rgba(229,39,59,0.34) 126deg 132deg,
+            transparent 132deg 156deg,
+            rgba(43,169,255,0.34) 156deg 164deg,
+            transparent 164deg 190deg,
+            rgba(255,255,255,0.30) 190deg 198deg,
+            transparent 198deg 224deg,
+            rgba(229,39,59,0.36) 224deg 232deg,
+            transparent 232deg 257deg,
+            rgba(43,169,255,0.28) 257deg 266deg,
+            transparent 266deg 292deg,
+            rgba(255,255,255,0.26) 292deg 300deg,
+            transparent 300deg 326deg,
+            rgba(229,39,59,0.30) 326deg 334deg,
+            transparent 334deg 360deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
+    mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
+}
+
+body.tournament-rpl .admin-rpl-page::after {
+    width: max(132vw, 980px);
+    height: max(120vh, 760px);
+    opacity: 0.42;
+    background: repeating-conic-gradient(from 250deg at 50% 50%,
+        transparent 0deg 3.8deg,
+        rgba(255,255,255,0.22) 3.8deg 4.3deg,
+        transparent 4.3deg 7.2deg,
+        rgba(43,169,255,0.20) 7.2deg 7.8deg,
+        transparent 7.8deg 12deg,
+        rgba(229,39,59,0.22) 12deg 12.7deg,
+        transparent 12.7deg 17deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
+    mask-image: radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
+}
+
+body.tournament-rpl .admin-rpl-page .admin-nav,
+body.tournament-rpl .admin-rpl-page .admin-match-tabs {
     display: flex;
     gap: 8px;
     overflow-x: auto;
@@ -47,28 +128,60 @@ body.tournament-rpl .admin-rpl-page .admin-nav {
     scrollbar-width: none;
 }
 
-body.tournament-rpl .admin-rpl-page .admin-nav::-webkit-scrollbar { display: none; }
+body.tournament-rpl .admin-rpl-page .admin-nav::-webkit-scrollbar,
+body.tournament-rpl .admin-rpl-page .admin-match-tabs::-webkit-scrollbar { display: none; }
 
-body.tournament-rpl .admin-rpl-page .admin-nav a {
+body.tournament-rpl .admin-rpl-page .admin-nav a,
+body.tournament-rpl .admin-rpl-page .admin-match-tab {
     flex: 0 0 auto;
-    min-height: 38px;
-    padding: 0 12px;
+    min-height: 40px;
     display: inline-flex;
     align-items: center;
-    border: 1px solid var(--rpl-admin-border);
-    border-radius: 10px;
-    background: var(--rpl-admin-surface);
-    color: var(--rpl-admin-primary-dark);
-    font-size: 13px;
-    font-weight: 800;
+    padding: 9px 13px;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(18,109,255,0.34), rgba(9,50,132,0.34) 58%, rgba(8,18,50,0.40));
+    box-shadow: 0 10px 22px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    font-weight: 900;
     text-decoration: none;
     white-space: nowrap;
 }
 
-body.tournament-rpl .admin-rpl-page .admin-nav a.active {
-    background: var(--rpl-admin-primary);
-    border-color: var(--rpl-admin-primary);
-    color: #fff;
+body.tournament-rpl .admin-rpl-page .admin-nav a.active,
+body.tournament-rpl .admin-rpl-page .admin-match-tab.active {
+    background: linear-gradient(135deg, rgba(18,109,255,0.68), rgba(10,64,170,0.56) 50%, rgba(229,39,59,0.32));
+    border-color: rgba(255,255,255,0.18);
+    box-shadow: 0 15px 32px rgba(0,0,0,0.32), inset 3px 0 0 rgba(229,39,59,0.88), inset 0 1px 0 rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.96);
+}
+
+body.tournament-rpl .admin-rpl-page .admin-nav a:hover,
+body.tournament-rpl .admin-rpl-page .admin-match-tab:hover { border-color: rgba(255,255,255,0.30); }
+
+body.tournament-rpl .admin-rpl-page .admin-nav a:focus-visible,
+body.tournament-rpl .admin-rpl-page .admin-match-tab:focus-visible,
+body.tournament-rpl .admin-rpl-page button:focus-visible,
+body.tournament-rpl .admin-rpl-page input:focus-visible,
+body.tournament-rpl .admin-rpl-page select:focus-visible,
+body.tournament-rpl .admin-rpl-page summary:focus-visible {
+    outline: 2px solid rgba(255,255,255,0.72);
+    outline-offset: 2px;
+}
+
+body.tournament-rpl .admin-rpl-page .rpl-admin-hero,
+body.tournament-rpl .admin-rpl-page .rpl-compact-card,
+body.tournament-rpl .admin-rpl-page .rpl-edit-hero,
+body.tournament-rpl .admin-rpl-page .rpl-edit-section {
+    border: 1px solid rgba(255,255,255,0.34);
+    background:
+        radial-gradient(circle at 50% -18%, rgba(255,255,255,0.92), transparent 34%),
+        radial-gradient(circle at 88% 4%, rgba(230,240,255,0.40), transparent 26%),
+        linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.64) 54%, rgba(232,242,255,0.58) 100%);
+    box-shadow: 0 26px 46px rgba(0,38,98,0.16), 0 10px 24px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 0 rgba(0,57,166,0.06);
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
 }
 
 body.tournament-rpl .admin-rpl-page .rpl-admin-hero {
@@ -79,41 +192,20 @@ body.tournament-rpl .admin-rpl-page .rpl-admin-hero {
     min-height: 82px;
     margin: 8px 0 12px;
     padding: 12px 14px;
-    border: 1px solid var(--rpl-admin-border);
-    border-radius: 16px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(224, 239, 255, 0.82));
-    box-shadow: var(--rpl-admin-shadow);
+    border-radius: 24px;
 }
 
-body.tournament-rpl .admin-rpl-page .rpl-admin-logo {
-    width: 52px;
-    height: 52px;
-    object-fit: contain;
-}
+body.tournament-rpl .admin-rpl-page .rpl-admin-logo { width: 52px; height: 52px; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(0,39,106,0.16)); }
+body.tournament-rpl .admin-rpl-page .rpl-admin-title { color: #10264f; font-size: 22px; font-weight: 1000; line-height: 1.1; }
+body.tournament-rpl .admin-rpl-page .rpl-admin-subtitle { margin-top: 5px; color: rgba(15,36,72,0.58); font-size: 12px; font-weight: 800; }
 
-body.tournament-rpl .admin-rpl-page .rpl-admin-title {
-    color: var(--rpl-admin-text);
-    font-size: 22px;
-    font-weight: 1000;
-    line-height: 1.1;
-}
-
-body.tournament-rpl .admin-rpl-page .rpl-admin-subtitle {
-    margin-top: 5px;
-    color: var(--rpl-admin-muted);
-    font-size: 12px;
-    font-weight: 800;
-}
-
-body.tournament-rpl .admin-rpl-page .rpl-add-trigger {
-    min-width: 0;
-}
-
+body.tournament-rpl .admin-rpl-page .rpl-add-trigger { min-width: 0; }
 body.tournament-rpl .admin-rpl-page .rpl-add-trigger > summary {
     min-height: 42px;
-    padding: 10px 12px;
-    border-radius: 11px;
-    background: var(--rpl-admin-primary);
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0039A6, #002b7f);
+    box-shadow: 0 14px 28px rgba(0,57,166,0.28), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.20);
     color: #fff;
     font-size: 13px;
     font-weight: 900;
@@ -121,86 +213,118 @@ body.tournament-rpl .admin-rpl-page .rpl-add-trigger > summary {
     list-style: none;
     white-space: nowrap;
 }
-
 body.tournament-rpl .admin-rpl-page .rpl-add-trigger > summary::-webkit-details-marker { display: none; }
 
 body.tournament-rpl .admin-rpl-page .rpl-workspace { display: grid; gap: 10px; }
 body.tournament-rpl .admin-rpl-page .rpl-pending-note {
     padding: 10px 12px;
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    border-radius: 11px;
-    background: #fff8e6;
-    color: #8a5b00;
+    border: 1px solid rgba(255,183,77,0.34);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,183,77,0.30), rgba(255,243,214,0.62));
+    box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.60);
+    color: #5f3b00;
     font-size: 12px;
     font-weight: 800;
 }
-
-body.tournament-rpl .admin-rpl-page .rpl-pending-note a {
-    margin-left: 6px;
-    color: var(--rpl-admin-primary-dark);
-}
-
+body.tournament-rpl .admin-rpl-page .rpl-pending-note a { margin-left: 6px; color: #0039A6; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-list { display: grid; gap: 8px; }
-body.tournament-rpl .admin-rpl-page .rpl-compact-card {
-    position: relative;
-    min-width: 0;
-    padding: 10px 11px;
-    border: 1px solid var(--rpl-admin-border);
-    border-radius: 14px;
-    background: var(--rpl-admin-surface-strong);
-    box-shadow: 0 6px 18px rgba(21, 75, 130, 0.08);
+body.tournament-rpl .admin-rpl-page .rpl-compact-card { position: relative; min-width: 0; padding: 10px 11px; border-radius: 24px; }
+body.tournament-rpl .admin-rpl-page .rpl-compact-card::before,
+body.tournament-rpl .admin-rpl-page .rpl-edit-hero::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.34), transparent 28%), radial-gradient(circle at 12% 0%, rgba(255,255,255,0.28), transparent 24%);
 }
-
+body.tournament-rpl .admin-rpl-page .rpl-compact-card > *,
+body.tournament-rpl .admin-rpl-page .rpl-edit-hero > * { position: relative; z-index: 1; }
 body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-finished { border-left: 3px solid #6da57c; }
-body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-live { border-left: 3px solid var(--rpl-admin-accent); }
+body.tournament-rpl .admin-rpl-page .rpl-compact-card.is-live { border-left: 3px solid #D52B1E; }
 body.tournament-rpl .admin-rpl-page .rpl-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-body.tournament-rpl .admin-rpl-page .rpl-card-time { color: var(--rpl-admin-muted); font-size: 11px; font-weight: 900; }
-body.tournament-rpl .admin-rpl-page .rpl-status-badge { padding: 4px 7px; border-radius: 999px; background: #e8f4ff; color: var(--rpl-admin-primary-dark); font-size: 10px; font-weight: 900; }
-body.tournament-rpl .admin-rpl-page .rpl-status-finished { background: #e5f5e9; color: #176b2c; }
+body.tournament-rpl .admin-rpl-page .rpl-card-time { color: rgba(15,36,72,0.58); font-size: 11px; font-weight: 850; }
+body.tournament-rpl .admin-rpl-page .rpl-card-teams { min-width: 0; margin: 7px 0 3px; overflow-wrap: anywhere; color: #10264f; font-size: 16px; font-weight: 950; line-height: 1.2; }
+body.tournament-rpl .admin-rpl-page .rpl-card-score { color: #0a2d7a; font-weight: 1000; }
+body.tournament-rpl .admin-rpl-page .rpl-card-meta { color: rgba(15,36,72,0.58); font-size: 11px; line-height: 1.35; }
+
+body.tournament-rpl .admin-rpl-page .rpl-status-badge { padding: 5px 8px; border: 1px solid rgba(0,57,166,0.10); border-radius: 999px; background: rgba(230,240,255,0.64); color: #0039A6; font-size: 10px; font-weight: 900; }
+body.tournament-rpl .admin-rpl-page .rpl-status-finished { background: rgba(118,183,138,0.22); border-color: rgba(46,125,50,0.18); color: #28683a; }
 body.tournament-rpl .admin-rpl-page .rpl-status-live,
 body.tournament-rpl .admin-rpl-page .rpl-status-in_play,
 body.tournament-rpl .admin-rpl-page .rpl-status-halftime,
-body.tournament-rpl .admin-rpl-page .rpl-status-paused { background: #fde8e8; color: #9f1d1d; }
+body.tournament-rpl .admin-rpl-page .rpl-status-paused { background: rgba(229,39,59,0.16); border-color: rgba(213,43,30,0.20); color: #9f1d1d; }
 body.tournament-rpl .admin-rpl-page .rpl-status-scheduled,
-body.tournament-rpl .admin-rpl-page .rpl-status-timed { background: #fff8e6; color: #8a5b00; }
-body.tournament-rpl .admin-rpl-page .rpl-card-teams { min-width: 0; margin: 7px 0 3px; overflow-wrap: anywhere; color: var(--rpl-admin-text); font-size: 16px; font-weight: 950; line-height: 1.2; }
-body.tournament-rpl .admin-rpl-page .rpl-card-score { color: var(--rpl-admin-primary-dark); font-weight: 1000; }
-body.tournament-rpl .admin-rpl-page .rpl-card-meta { color: var(--rpl-admin-muted); font-size: 11px; line-height: 1.35; }
+body.tournament-rpl .admin-rpl-page .rpl-status-timed { background: rgba(43,169,255,0.16); color: #0039A6; }
 
 body.tournament-rpl .admin-rpl-page .rpl-card-actions { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; align-items: center; min-width: 0; margin-top: 9px; }
 body.tournament-rpl .admin-rpl-page .rpl-quick-result { display: grid; grid-template-columns: 38px 12px 38px minmax(0, 1fr); gap: 4px; align-items: center; min-width: 0; }
-body.tournament-rpl .admin-rpl-page .rpl-quick-result input { width: 100%; height: 38px; box-sizing: border-box; padding: 4px; border: 1px solid var(--rpl-admin-border); border-radius: 8px; color: var(--rpl-admin-text); text-align: center; }
-body.tournament-rpl .admin-rpl-page .rpl-quick-result span { color: var(--rpl-admin-muted); font-weight: 900; text-align: center; }
-body.tournament-rpl .admin-rpl-page .rpl-btn { min-width: 0; min-height: 38px; width: auto; padding: 8px 10px; border: 1px solid var(--rpl-admin-primary); border-radius: 10px; background: var(--rpl-admin-primary); color: #fff; font-size: 11px; font-weight: 900; white-space: nowrap; }
-body.tournament-rpl .admin-rpl-page .rpl-more { width: 44px; }
-body.tournament-rpl .admin-rpl-page .rpl-more > summary { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; box-sizing: border-box; border-radius: 10px; background: #e8f4ff; color: var(--rpl-admin-primary-dark); font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; list-style: none; }
-body.tournament-rpl .admin-rpl-page .rpl-more > summary::-webkit-details-marker { display: none; }
-body.tournament-rpl .admin-rpl-page .rpl-more-menu { position: absolute; right: 10px; z-index: 5; display: grid; gap: 4px; min-width: 190px; margin-top: 5px; padding: 7px; border: 1px solid var(--rpl-admin-border); border-radius: 12px; background: #fff; box-shadow: var(--rpl-admin-shadow); }
-body.tournament-rpl .admin-rpl-page .rpl-more-menu button,
-body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-menu-link { display: block; width: 100%; min-height: 38px; box-sizing: border-box; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--rpl-admin-text); text-align: left; font: inherit; font-size: 12px; line-height: 22px; text-decoration: none; cursor: pointer; }
-body.tournament-rpl .admin-rpl-page .rpl-more-menu button:hover,
-body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-menu-link:hover { background: #edf5ff; }
-body.tournament-rpl .admin-rpl-page .rpl-technical { display: grid; gap: 3px; padding: 7px 8px; border-top: 1px solid var(--rpl-admin-border); border-bottom: 1px solid var(--rpl-admin-border); color: var(--rpl-admin-muted); font-size: 10px; }
-body.tournament-rpl .admin-rpl-page .rpl-danger-form { border-top: 1px solid rgba(229, 57, 53, 0.22); padding-top: 4px; }
-body.tournament-rpl .admin-rpl-page .rpl-danger-form button { color: #b42318; }
-body.tournament-rpl .admin-rpl-page .rpl-technical-operations { margin-top: 6px; padding: 11px 12px; border: 1px solid var(--rpl-admin-border); border-radius: 13px; background: var(--rpl-admin-surface); }
-body.tournament-rpl .admin-rpl-page .rpl-technical-operations summary { color: var(--rpl-admin-muted); font-size: 12px; font-weight: 900; cursor: pointer; }
-body.tournament-rpl .admin-rpl-page .rpl-add-form { display: grid; gap: 10px; margin-top: 10px; }
-body.tournament-rpl .admin-rpl-page .rpl-add-form .rpl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
-body.tournament-rpl .admin-rpl-page .rpl-add-form label,
-body.tournament-rpl .admin-rpl-page .rpl-edit-section label { display: grid; gap: 4px; color: var(--rpl-admin-muted); font-size: 12px; font-weight: 800; }
+body.tournament-rpl .admin-rpl-page .rpl-quick-result input,
 body.tournament-rpl .admin-rpl-page .rpl-add-form input,
 body.tournament-rpl .admin-rpl-page .rpl-add-form select,
 body.tournament-rpl .admin-rpl-page .rpl-edit-section input,
-body.tournament-rpl .admin-rpl-page .rpl-edit-section select { min-width: 0; box-sizing: border-box; width: 100%; border: 1px solid var(--rpl-admin-border); border-radius: 10px; padding: 10px; background: #fff; color: var(--rpl-admin-text); }
-body.tournament-rpl .admin-rpl-page.rpl-edit-page { max-width: 760px; }
-body.tournament-rpl .admin-rpl-page .rpl-back-link { display: inline-block; margin-bottom: 10px; color: var(--rpl-admin-primary-dark); font-size: 13px; font-weight: 800; text-decoration: none; }
-body.tournament-rpl .admin-rpl-page .rpl-edit-hero { padding: 15px; border: 1px solid var(--rpl-admin-border); border-radius: 16px; background: var(--rpl-admin-surface-strong); box-shadow: var(--rpl-admin-shadow); }
-body.tournament-rpl .admin-rpl-page .rpl-edit-hero h1 { margin: 3px 0; color: var(--rpl-admin-text); font-size: 21px; line-height: 1.2; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-section select {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    border: 1px solid rgba(0,57,166,0.10);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.92);
+    color: #082b74;
+    box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.96), inset 0 -1px 0 rgba(0,57,166,0.06);
+}
+body.tournament-rpl .admin-rpl-page .rpl-quick-result input { height: 38px; padding: 4px; text-align: center; background: rgba(230,240,255,0.46); }
+body.tournament-rpl .admin-rpl-page .rpl-quick-result span { color: #0039A6; font-weight: 900; text-align: center; }
+body.tournament-rpl .admin-rpl-page .rpl-btn,
+body.tournament-rpl .admin-rpl-page .rpl-edit-save {
+    min-width: 0;
+    min-height: 38px;
+    width: auto;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0039A6, #002b7f);
+    box-shadow: 0 14px 28px rgba(0,57,166,0.28), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.20);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+body.tournament-rpl .admin-rpl-page .rpl-btn:hover,
+body.tournament-rpl .admin-rpl-page .rpl-edit-save:hover { background: linear-gradient(135deg, #0039A6, #002570); }
+body.tournament-rpl .admin-rpl-page .rpl-btn:active,
+body.tournament-rpl .admin-rpl-page .rpl-edit-save:active { transform: translateY(1px); }
+body.tournament-rpl .admin-rpl-page .rpl-more { width: 44px; }
+body.tournament-rpl .admin-rpl-page .rpl-more > summary { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid rgba(0,57,166,0.10); border-radius: 999px; background: rgba(255,255,255,0.68); box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.78); color: #0039A6; font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; list-style: none; }
+body.tournament-rpl .admin-rpl-page .rpl-more > summary::-webkit-details-marker { display: none; }
+body.tournament-rpl .admin-rpl-page .rpl-more-menu { position: absolute; right: 10px; z-index: 5; display: grid; gap: 4px; min-width: 190px; margin-top: 5px; padding: 7px; border: 1px solid rgba(255,255,255,0.34); border-radius: 16px; background: rgba(255,255,255,0.88); box-shadow: 0 26px 46px rgba(0,38,98,0.22), 0 10px 24px rgba(0,57,166,0.14), inset 0 1px 0 rgba(255,255,255,0.78); backdrop-filter: blur(18px) saturate(145%); -webkit-backdrop-filter: blur(18px) saturate(145%); }
+body.tournament-rpl .admin-rpl-page .rpl-more-menu button,
+body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-menu-link { display: block; width: 100%; min-height: 38px; box-sizing: border-box; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: #10264f; text-align: left; font: inherit; font-size: 12px; line-height: 22px; text-decoration: none; cursor: pointer; }
+body.tournament-rpl .admin-rpl-page .rpl-more-menu button:hover,
+body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-menu-link:hover { background: rgba(230,240,255,0.72); }
+body.tournament-rpl .admin-rpl-page .rpl-technical { display: grid; gap: 3px; padding: 7px 8px; border-top: 1px solid rgba(0,57,166,0.12); border-bottom: 1px solid rgba(0,57,166,0.12); color: rgba(15,36,72,0.58); font-size: 10px; }
+body.tournament-rpl .admin-rpl-page .rpl-danger-form { border-top: 1px solid rgba(213,43,30,0.18); padding-top: 4px; }
+body.tournament-rpl .admin-rpl-page .rpl-danger-form button { color: #D52B1E; }
+
+body.tournament-rpl .admin-rpl-page .admin-pagination { color: rgba(255,255,255,0.72); }
+body.tournament-rpl .admin-rpl-page .admin-pagination a { min-width: 36px; min-height: 36px; background: linear-gradient(135deg, rgba(18,109,255,0.34), rgba(9,50,132,0.34) 58%, rgba(8,18,50,0.40)); border-color: rgba(255,255,255,0.16); color: rgba(255,255,255,0.84); }
+body.tournament-rpl .admin-rpl-page .admin-pagination a.active { background: linear-gradient(135deg, #0039A6, #002b7f); border-color: rgba(255,255,255,0.24); color: #fff; }
+body.tournament-rpl .admin-rpl-page .rpl-technical-operations { margin-top: 6px; padding: 11px 12px; border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; background: rgba(8,18,50,0.46); box-shadow: 0 14px 28px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.08); }
+body.tournament-rpl .admin-rpl-page .rpl-technical-operations summary { color: rgba(255,255,255,0.78); font-size: 12px; font-weight: 900; cursor: pointer; }
+body.tournament-rpl .admin-rpl-page .rpl-technical-operations form { margin-top: 9px; }
+body.tournament-rpl .admin-rpl-page .rpl-card-note { color: rgba(15,36,72,0.58); font-size: 12px; font-weight: 800; }
+body.tournament-rpl .admin-rpl-page .rpl-add-form { display: grid; gap: 10px; margin-top: 10px; padding: 13px; border: 1px solid rgba(0,57,166,0.10); border-radius: 16px; background: rgba(255,255,255,0.68); box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.78); }
+body.tournament-rpl .admin-rpl-page .rpl-add-form .rpl-grid,
+body.tournament-rpl .admin-rpl-page .rpl-edit-section .rpl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+body.tournament-rpl .admin-rpl-page .rpl-add-form label,
+body.tournament-rpl .admin-rpl-page .rpl-edit-section label { display: grid; gap: 4px; color: rgba(15,36,72,0.72); font-size: 12px; font-weight: 800; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-page { max-width: 760px; }
+body.tournament-rpl .admin-rpl-page .rpl-back-link { display: inline-block; margin-bottom: 10px; color: rgba(255,255,255,0.88); font-size: 13px; font-weight: 800; text-decoration: none; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-hero { position: relative; padding: 15px; border-radius: 24px; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-hero h1 { margin: 3px 0; color: #10264f; font-size: 21px; line-height: 1.2; }
 body.tournament-rpl .admin-rpl-page .rpl-edit-form { display: grid; gap: 10px; margin-top: 10px; }
-body.tournament-rpl .admin-rpl-page .rpl-edit-section { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--rpl-admin-border); border-radius: 14px; background: var(--rpl-admin-surface-strong); }
-body.tournament-rpl .admin-rpl-page .rpl-edit-section h2 { margin: 0; color: var(--rpl-admin-text); font-size: 14px; }
-body.tournament-rpl .admin-rpl-page .rpl-edit-section .rpl-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-section { display: grid; gap: 9px; padding: 13px; border-radius: 24px; }
+body.tournament-rpl .admin-rpl-page .rpl-edit-section h2 { margin: 0; color: #10264f; font-size: 14px; }
 body.tournament-rpl .admin-rpl-page .rpl-edit-save { width: 100%; min-height: 46px; }
 body.tournament-rpl .admin-rpl-page .rpl-check { display: flex; align-items: center; gap: 8px; }
 body.tournament-rpl .admin-rpl-page .rpl-check input { width: auto; }
