@@ -300,6 +300,8 @@ document.addEventListener('DOMContentLoaded', function () {
         awayName.textContent = teamNames[1] || 'Участник определится';
         vsNode.textContent = score && score !== 'VS' ? score : '—';
 
+        matchLine.className = 'bets-compact-match predictions-sheet__teams';
+
         const hasLongHomeName = applyTeamNameLengthClass(homeName, homeName.textContent);
         const hasLongAwayName = applyTeamNameLengthClass(awayName, awayName.textContent);
 
@@ -307,7 +309,6 @@ document.addEventListener('DOMContentLoaded', function () {
             matchLine.classList.add('has-long-team-name');
         }
 
-        matchLine.className = 'bets-compact-match predictions-sheet__teams';
         matchLine.appendChild(homeIcon);
         matchLine.appendChild(homeName);
         matchLine.appendChild(vsNode);

@@ -1474,11 +1474,13 @@
 
     .bets-compact-match {
         display: grid;
-        grid-template-columns: 36px minmax(0, 1fr) auto minmax(0, 1fr) 36px;
+        --bets-team-logo-size: clamp(48px, 5vw, 54px);
+        grid-template-columns: var(--bets-team-logo-size) minmax(0, 1fr) minmax(18px, max-content) minmax(0, 1fr) var(--bets-team-logo-size);
         align-items: center;
-        gap: 8px;
+        gap: 7px;
         min-width: 0;
-        padding: 9px 11px;
+        min-height: 78px;
+        padding: 11px 9px;
         border-radius: 14px;
         background:
             linear-gradient(145deg, rgba(0,119,200,0.10), rgba(255,255,255,0.72));
@@ -1620,16 +1622,18 @@
 
     @media (max-width: 430px) {
         .bets-compact-match {
-            grid-template-columns: 30px minmax(0, 1fr) 20px minmax(0, 1fr) 30px;
-            gap: 5px;
-            padding: 8px 7px;
+            --bets-team-logo-size: clamp(44px, 12.3vw, 50px);
+            grid-template-columns: var(--bets-team-logo-size) minmax(0, 1fr) minmax(18px, max-content) minmax(0, 1fr) var(--bets-team-logo-size);
+            gap: 7px;
+            min-height: 78px;
+            padding: 11px 9px;
         }
 
-        .bets-compact-team-icon { width: 30px; height: 30px; min-width: 30px; border-radius: 9px; }
+        .bets-compact-team-icon { width: var(--bets-team-logo-size); height: var(--bets-team-logo-size); min-width: var(--bets-team-logo-size); border-radius: 13px; }
         .bets-compact-team-icon img,
-        .bets-compact-team-icon .flag-icon { width: 23px !important; height: 23px !important; }
-        .bets-compact-team-name { font-size: 12px; line-height: 1.12; }
-        .bets-compact-vs { font-size: 12px; }
+        .bets-compact-team-icon .flag-icon { width: clamp(36px, 10.25vw, 40px) !important; height: clamp(36px, 10.25vw, 40px) !important; max-width: 40px; max-height: 40px; }
+        .bets-compact-team-name { font-size: 16px; line-height: 1.08; }
+        .bets-compact-vs { min-width: 18px; font-size: 17px; line-height: 1; }
 
         .match-topline {
             align-items: flex-start;
@@ -4663,35 +4667,48 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
+        width: var(--bets-team-logo-size, 52px);
+        height: var(--bets-team-logo-size, 52px);
+        min-width: var(--bets-team-logo-size, 52px);
         overflow: hidden;
         border-radius: 11px;
         background: rgba(255,255,255,0.78);
         color: rgba(93,120,148,0.82);
-        font-size: 19px;
+        font-size: 23px;
         line-height: 1;
     }
 
     .bets-compact-team-icon img,
     .bets-compact-team-icon .flag-icon {
         display: block;
-        width: 28px !important;
-        height: 28px !important;
-        max-width: 100%;
-        max-height: 100%;
+        width: 42px !important;
+        height: 42px !important;
+        max-width: 46px;
+        max-height: 46px;
         object-fit: contain !important;
         border-radius: 7px !important;
     }
 
     .bets-compact-team-name {
         min-width: 0;
-        overflow-wrap: anywhere;
-        color: #063b73;
-        font-size: 13px;
+        color: inherit;
+        font-size: 16px;
         font-weight: 950;
+        line-height: 1.08;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: normal;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        text-wrap: balance;
+        overflow: hidden;
     }
+
+    .bets-compact-team-name.is-long-team-name { font-size: 14px; }
+    .bets-compact-team-name.is-very-long-team-name { font-size: 12.5px; line-height: 1.05; }
 
     .bets-compact-team-name.is-home { text-align: right; }
     .bets-compact-team-name.is-away { text-align: left; }
@@ -5479,13 +5496,18 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-wc2026 .bets-compact-team-name {
         min-width: 0;
         overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: break-word;
+        word-break: normal;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        text-wrap: balance;
         color: rgba(255,255,255,0.88);
-        font-size: clamp(22px, 6vw, 28px);
-        font-weight: 900;
-        line-height: 0.88;
-        letter-spacing: -0.55px;
+        font-size: 16px;
+        font-weight: 950;
+        line-height: 1.08;
         text-shadow: 0 3px 12px rgba(0,0,0,0.26);
     }
 
@@ -5627,20 +5649,22 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     @media (max-width: 430px) {
         body.tournament-wc2026 .bets-compact-match {
-            grid-template-columns: 38px minmax(0, 1fr) auto minmax(0, 1fr) 38px;
+            --bets-team-logo-size: clamp(44px, 12.3vw, 50px);
+            grid-template-columns: var(--bets-team-logo-size) minmax(0, 1fr) minmax(18px, max-content) minmax(0, 1fr) var(--bets-team-logo-size);
             gap: 7px;
-            padding: 12px 10px;
+            min-height: 78px;
+            padding: 11px 9px;
         }
 
         body.tournament-wc2026 .bets-compact-team-icon,
         body.tournament-wc2026 .bets-compact-team-icon img,
         body.tournament-wc2026 .bets-compact-team-icon .flag-icon {
-            width: 38px !important;
-            height: 38px !important;
+            width: var(--bets-team-logo-size) !important;
+            height: var(--bets-team-logo-size) !important;
         }
 
         body.tournament-wc2026 .bets-compact-team-name {
-            font-size: clamp(19px, 5.6vw, 22px);
+            font-size: 16px;
         }
 
         body.tournament-wc2026 .bets-compact-match.has-long-team-name {
@@ -5648,11 +5672,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
 
         body.tournament-wc2026 .bets-compact-team-name.is-long-team-name {
-            font-size: clamp(16px, 4.6vw, 19px);
+            font-size: 14px;
         }
 
         body.tournament-wc2026 .bets-compact-team-name.is-very-long-team-name {
-            font-size: clamp(14px, 4.1vw, 17px);
+            font-size: 12.5px;
+            line-height: 1.05;
         }
     }
 
