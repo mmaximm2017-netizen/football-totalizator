@@ -270,21 +270,35 @@ document.addEventListener('DOMContentLoaded', function () {
         matchLine.className = 'bets-compact-match';
         list.className = 'bets-compact-list';
 
-        const homeIcon = teamNodes[0]?.querySelector('.team-logo-box')?.cloneNode(true) || document.createElement('span');
-        const awayIcon = teamNodes[1]?.querySelector('.team-logo-box')?.cloneNode(true) || document.createElement('span');
+        function buildTeamIcon(teamNode, fallbackName) {
+            const icon = document.createElement('span');
+            const source = teamNode?.querySelector('.team-logo-box img, .team-logo-box .flag-icon');
+            icon.className = 'bets-compact-team-icon predictions-sheet__logo';
+            if (source) {
+                const image = source.cloneNode(true);
+                image.removeAttribute('width');
+                image.removeAttribute('height');
+                icon.appendChild(image);
+            } else {
+                icon.textContent = '⚽';
+                icon.setAttribute('aria-label', fallbackName || 'Команда');
+            }
+            return icon;
+        }
+
+        const homeIcon = buildTeamIcon(teamNodes[0], teamNames[0]);
+        const awayIcon = buildTeamIcon(teamNodes[1], teamNames[1]);
         const homeName = document.createElement('span');
         const awayName = document.createElement('span');
         const vsNode = document.createElement('span');
 
-        homeIcon.className = 'bets-compact-team-icon';
-        awayIcon.className = 'bets-compact-team-icon';
-        homeName.className = 'bets-compact-team-name';
-        awayName.className = 'bets-compact-team-name';
-        vsNode.className = 'bets-compact-vs';
+        homeName.className = 'bets-compact-team-name predictions-sheet__name is-home';
+        awayName.className = 'bets-compact-team-name predictions-sheet__name is-away';
+        vsNode.className = 'bets-compact-vs predictions-sheet__vs';
 
         homeName.textContent = teamNames[0] || 'Участник определится';
         awayName.textContent = teamNames[1] || 'Участник определится';
-        vsNode.textContent = score || 'VS';
+        vsNode.textContent = score && score !== 'VS' ? score : '—';
 
         const hasLongHomeName = applyTeamNameLengthClass(homeName, homeName.textContent);
         const hasLongAwayName = applyTeamNameLengthClass(awayName, awayName.textContent);
@@ -293,6 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
             matchLine.classList.add('has-long-team-name');
         }
 
+        matchLine.className = 'bets-compact-match predictions-sheet__teams';
         matchLine.appendChild(homeIcon);
         matchLine.appendChild(homeName);
         matchLine.appendChild(vsNode);

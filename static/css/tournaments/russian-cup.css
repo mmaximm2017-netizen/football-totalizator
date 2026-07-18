@@ -576,6 +576,23 @@ body.tournament-rcup .empty-home {
     box-shadow: none;
 }
 
+body.tournament-rcup .bets-sheet {
+    background: linear-gradient(160deg, #3A0A32, #260521);
+    border-color: rgba(232, 0, 36, 0.42);
+    box-shadow: 0 -16px 34px rgba(12, 0, 10, 0.34), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+body.tournament-rcup .bets-sheet-title,
+body.tournament-rcup .bets-compact-team-name,
+body.tournament-rcup .bets-compact-name { color: var(--rcup-white); }
+body.tournament-rcup .bets-sheet-close { background: rgba(232, 0, 36, 0.18); color: var(--rcup-white); }
+body.tournament-rcup .bets-sheet-handle { background: rgba(255,255,255,0.34); }
+body.tournament-rcup .bets-compact-match { background: linear-gradient(145deg, rgba(232,0,36,0.24), rgba(58,10,50,0.92)); border-color: rgba(232,0,36,0.46); color: var(--rcup-white); }
+body.tournament-rcup .bets-compact-team-icon { background: rgba(255,255,255,0.10); }
+body.tournament-rcup .bets-compact-vs { color: rgba(255,255,255,0.72); }
+body.tournament-rcup .bets-compact-row { background: rgba(58,10,50,0.92); border-color: var(--rcup-divider); box-shadow: none; }
+body.tournament-rcup .bets-compact-score { background: rgba(232,0,36,0.16); border-color: rgba(232,0,36,0.30); color: var(--rcup-white); }
+
 @media (max-width: 768px) {
     html:has(body.tournament-rcup),
     body.tournament-rcup,

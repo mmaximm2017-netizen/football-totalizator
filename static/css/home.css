@@ -1473,6 +1473,11 @@
     }
 
     .bets-compact-match {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) auto minmax(0, 1fr) 36px;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
         padding: 9px 11px;
         border-radius: 14px;
         background:
@@ -1572,6 +1577,24 @@
         font-weight: 800;
     }
 
+    body.tournament-rpl .bets-sheet {
+        background: linear-gradient(160deg, rgba(8,18,50,0.98), rgba(4,10,28,0.98));
+        border-color: rgba(255,255,255,0.12);
+        box-shadow: 0 -16px 36px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.94);
+    }
+
+    body.tournament-rpl .bets-sheet-title,
+    body.tournament-rpl .bets-compact-team-name { color: #fff; }
+    body.tournament-rpl .bets-sheet-close { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.86); }
+    body.tournament-rpl .bets-sheet-handle { background: rgba(255,255,255,0.28); }
+    body.tournament-rpl .bets-compact-match { background: linear-gradient(145deg, rgba(31,123,255,0.22), rgba(255,255,255,0.06)); border-color: rgba(31,231,255,0.18); }
+    body.tournament-rpl .bets-compact-team-icon { background: rgba(255,255,255,0.12); }
+    body.tournament-rpl .bets-compact-vs { color: rgba(255,255,255,0.66); }
+    body.tournament-rpl .bets-compact-row { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); box-shadow: none; }
+    body.tournament-rpl .bets-compact-name { color: rgba(255,255,255,0.92); }
+    body.tournament-rpl .bets-compact-score { background: rgba(31,231,255,0.12); border-color: rgba(31,231,255,0.18); color: #7defff; }
+
     body.bets-sheet-lock {
         overflow: hidden;
     }
@@ -1596,6 +1619,18 @@
     }
 
     @media (max-width: 430px) {
+        .bets-compact-match {
+            grid-template-columns: 30px minmax(0, 1fr) 20px minmax(0, 1fr) 30px;
+            gap: 5px;
+            padding: 8px 7px;
+        }
+
+        .bets-compact-team-icon { width: 30px; height: 30px; min-width: 30px; border-radius: 9px; }
+        .bets-compact-team-icon img,
+        .bets-compact-team-icon .flag-icon { width: 23px !important; height: 23px !important; }
+        .bets-compact-team-name { font-size: 12px; line-height: 1.12; }
+        .bets-compact-vs { font-size: 12px; }
+
         .match-topline {
             align-items: flex-start;
             gap: 8px;
@@ -4622,6 +4657,53 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         font-size: 31px !important;
         font-weight: 900 !important;
         text-align: center;
+    }
+
+    .bets-compact-team-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        overflow: hidden;
+        border-radius: 11px;
+        background: rgba(255,255,255,0.78);
+        color: rgba(93,120,148,0.82);
+        font-size: 19px;
+        line-height: 1;
+    }
+
+    .bets-compact-team-icon img,
+    .bets-compact-team-icon .flag-icon {
+        display: block;
+        width: 28px !important;
+        height: 28px !important;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain !important;
+        border-radius: 7px !important;
+    }
+
+    .bets-compact-team-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        color: #063b73;
+        font-size: 13px;
+        font-weight: 950;
+    }
+
+    .bets-compact-team-name.is-home { text-align: right; }
+    .bets-compact-team-name.is-away { text-align: left; }
+
+    .bets-compact-vs {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        color: rgba(93,120,148,0.84);
+        font-size: 13px;
+        font-weight: 1000;
     }
 
     body.tournament-wc2026 .match-card-v2 .score-stepper .score-input-v2,
