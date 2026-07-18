@@ -36,7 +36,6 @@ Add these repository secrets in GitHub:
 
 Optional:
 
-- `RPL_SEASON`
 
 The application expects `API_KEY`, so the workflow maps `FOOTBALL_DATA_API_KEY` into the `API_KEY` environment variable. Secrets are referenced by name only and are not stored in the workflow file.
 

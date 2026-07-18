@@ -29,10 +29,7 @@ from app.services.admin_view_service import (
     prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
 )
-from app.services.rpl_admin_service import (
-    check_rpl_calendar,
-    prepare_rpl_admin_page_data,
-)
+from app.services.rpl_admin_service import prepare_rpl_admin_page_data
 from app.services.russian_cup_admin_service import prepare_russian_cup_admin_page_data
 
 
@@ -114,14 +111,13 @@ def admin_wc_playoff():
     return render_template('admin_wc_playoff.html', **data)
 
 
-@admin_bp.route('/russia-2027', methods=['GET', 'POST'])
+@admin_bp.route('/russia-2027', methods=['GET'])
 @admin_required
 def admin_russia_2027():
-    calendar_check = check_rpl_calendar() if request.method == 'POST' else None
     conn = get_db()
     cur = conn.cursor()
     try:
-        data = prepare_rpl_admin_page_data(cur, calendar_check=calendar_check)
+        data = prepare_rpl_admin_page_data(cur)
         data['current_tournament_name'] = 'Чемпионат России 2027'
         filters = parse_admin_match_filters(request.args, forced_tournament_id=data.get('rpl_tournament', {}).get('id') if data.get('rpl_tournament') else None)
         data['admin_match_filters'] = filters

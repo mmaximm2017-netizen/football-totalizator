@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
-from app.services.match_service import RPL_TOURNAMENT_NAME, run_sync_with_lock
-from app.services.rpl_admin_service import get_rpl_tournament, normalize_rpl_match_category
+from app.services.rpl_admin_service import (
+    RPL_TOURNAMENT_NAME,
+    get_rpl_tournament,
+    normalize_rpl_match_category,
+)
 from app.services.russian_cup_admin_service import (
     build_russian_cup_match_form_data,
     get_russian_cup_tournament,
@@ -183,99 +186,6 @@ def get_required_russian_cup_tournament(cur):
     return tournament
 
 
-def normalize_rpl_source(value):
-    return "api" if (value or "").strip().lower() == "api" else "manual"
-
-
-def build_rpl_api_match_id(source, raw_api_match_id):
-    if source != "api":
-        return None
-    return (raw_api_match_id or "").strip() or None
-
-
-@admin_matches_bp.route("/russia_2027_import", methods=["POST"])
-@admin_required
-def admin_russia_2027_import():
-    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
-
-    try:
-        summary = run_sync_with_lock()
-        overall_status = summary.get("status") if isinstance(summary, dict) else None
-
-        if overall_status in ("skipped_already_running", "lock_error"):
-            msg = "Синхронизация уже выполняется. Повторите позже."
-            if is_ajax:
-                return jsonify({"ok": False, "message": msg}), 423
-            flash(msg, "warning")
-            return redirect(url_for(RPL_ADMIN_REDIRECT))
-
-        sync_summary = summary.get("sync") if isinstance(summary, dict) else summary
-        sync_summary = sync_summary or {}
-        inserted = sync_summary.get("matches_inserted", 0)
-        updated = sync_summary.get("matches_updated", 0)
-        skipped_other = sync_summary.get("matches_skipped_missing_tournament", 0)
-        errors = sync_summary.get("errors", [])
-        understat_matches = sync_summary.get("understat_matches", 0)
-        total_changed = inserted + updated
-
-        if overall_status == "scoring_failed":
-            if is_ajax:
-                return jsonify({
-                    "ok": True, "warning": "scoring_failed",
-                    "inserted": inserted, "updated": updated,
-                })
-            flash(
-                "Матчи импортированы (добавлено {inserted}, обновлено {updated}), "
-                "но пересчёт очков не удался. "
-                "Запустите пересчёт вручную.".format(
-                    inserted=inserted, updated=updated,
-                ),
-                "warning",
-            )
-        elif errors:
-            error_summary = "; ".join(errors[:3])
-            if is_ajax:
-                return jsonify({
-                    "ok": True, "warning": "partial_errors",
-                    "inserted": inserted, "updated": updated,
-                    "errors": errors[:3],
-                })
-            flash(
-                "Импорт с ошибками: добавлено {inserted}, обновлено {updated}. Ошибки: {errors}".format(
-                    inserted=inserted, updated=updated, errors=error_summary,
-                ),
-                "error",
-            )
-        elif total_changed == 0 and understat_matches == 0:
-            if is_ajax:
-                return jsonify({
-                    "ok": True, "warning": "no_changes",
-                    "inserted": 0, "updated": 0,
-                })
-            flash(
-                "Импорт завершён: 0 изменений. Understat не вернул матчей — возможно, сезон ещё не начался или API недоступен.",
-                "warning",
-            )
-        else:
-            if is_ajax:
-                return jsonify({
-                    "ok": True, "inserted": inserted,
-                    "updated": updated, "skipped": skipped_other,
-                })
-            flash(
-                "Импорт завершён: добавлено {inserted}, обновлено {updated}, пропущено без турнира {skipped}".format(
-                    inserted=inserted, updated=updated, skipped=skipped_other,
-                ),
-                "success",
-            )
-    except Exception as e:
-        logger.exception("RPL import failed")
-        if is_ajax:
-            return jsonify({"ok": False, "message": "Ошибка импорта РПЛ"}), 500
-        flash("Ошибка импорта РПЛ: повторите попытку позже", "error")
-    return admin_context_redirect(RPL_ADMIN_REDIRECT)
-
-
 @admin_matches_bp.route("/russia_2027_add", methods=["POST"])
 @admin_required
 def admin_russia_2027_add():
@@ -290,9 +200,6 @@ def admin_russia_2027_add():
         stage = (request.form.get("stage") or "").strip()
         match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
-        source = normalize_rpl_source(request.form.get("source"))
-        if match_category != "rpl":
-            source = "manual"
 
         if not home_team or not away_team or not match_date or not match_time:
             flash("Заполните команды, дату и время", "error")
@@ -310,11 +217,6 @@ def admin_russia_2027_add():
             request.form.get("deadline_date", "").strip(),
             request.form.get("deadline_time", "").strip(),
         )
-        api_match_id = build_rpl_api_match_id(source, request.form.get("api_match_id"))
-        if source == "api" and not api_match_id:
-            flash("Для источника API укажите API ID", "error")
-            return redirect(url_for(RPL_ADMIN_REDIRECT))
-
         cur.execute(
             """
             SELECT id
@@ -336,10 +238,10 @@ def admin_russia_2027_add():
                 api_match_id, home_team, away_team, kickoff_time, deadline,
                 status, league, tournament_id, playoff_stage_manual, match_category
             )
-            VALUES (%s, %s, %s, %s, %s, %s, 'rpl', %s, %s, %s)
+            VALUES (NULL, %s, %s, %s, %s, %s, 'rpl', %s, %s, %s)
             RETURNING id
             """,
-            (api_match_id, home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage, match_category),
+            (home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage, match_category),
         )
         match_id = cur.fetchone()[0]
         conn.commit()
@@ -382,9 +284,6 @@ def admin_russia_2027_edit():
         stage = (request.form.get("stage") or "").strip()
         match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), existing[1])
-        source = normalize_rpl_source(request.form.get("source"))
-        if match_category != "rpl":
-            source = "manual"
         delete_score = request.form.get("delete_score") == "1"
 
         if not home_team or not away_team or not match_date or not match_time:
@@ -400,11 +299,6 @@ def admin_russia_2027_edit():
             request.form.get("deadline_date", "").strip(),
             request.form.get("deadline_time", "").strip(),
         )
-        api_match_id = build_rpl_api_match_id(source, request.form.get("api_match_id"))
-        if source == "api" and not api_match_id:
-            flash("Для источника API укажите API ID", "error")
-            return redirect(url_for(RPL_ADMIN_REDIRECT))
-
         home_score = away_score = None
         result_home = (request.form.get("home_score") or "").strip()
         result_away = (request.form.get("away_score") or "").strip()
@@ -424,8 +318,7 @@ def admin_russia_2027_edit():
         cur.execute(
             """
             UPDATE matches
-            SET api_match_id = %s,
-                home_team = %s,
+            SET home_team = %s,
                 away_team = %s,
                 kickoff_time = %s,
                 deadline = %s,
@@ -437,9 +330,10 @@ def admin_russia_2027_edit():
                 league = 'rpl',
                 tournament_id = %s
             WHERE id = %s
+              AND tournament_id = %s
+              AND league = 'rpl'
             """,
             (
-                api_match_id,
                 home_team,
                 away_team,
                 kickoff_utc,
@@ -451,8 +345,13 @@ def admin_russia_2027_edit():
                 match_category,
                 tournament["id"],
                 match_id,
+                tournament["id"],
             ),
         )
+        if getattr(cur, "rowcount", 1) == 0:
+            conn.rollback()
+            flash("Матч РПЛ не найден", "error")
+            return admin_context_redirect(RPL_ADMIN_REDIRECT)
         if status == "FINISHED":
             recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
         else:

@@ -21,7 +21,6 @@ The script creates the Flask app, enters an app context, and calls `run_sync_wit
 
 Optional:
 
-- `RPL_SEASON`
 
 The deployed service also needs the normal Python dependencies from `requirements.txt`.
 

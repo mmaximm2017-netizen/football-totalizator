@@ -26,7 +26,6 @@ jobs:
       INVITE_CODE: ${{ secrets.INVITE_CODE }}
       ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-      RPL_SEASON: ${{ secrets.RPL_SEASON }}
 
     steps:
       - name: Check out repository

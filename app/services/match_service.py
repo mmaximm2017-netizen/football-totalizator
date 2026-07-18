@@ -1,7 +1,6 @@
 # app/services/match_service.py
 import json
 import logging
-import os
 import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -21,16 +20,6 @@ logger = logging.getLogger(__name__)
 
 MSK = ZoneInfo("Europe/Moscow")
 SYNC_LOCK_KEY = 88422031
-RPL_TOURNAMENT_NAME = "Чемпионат России 🇷🇺"
-
-# Пробуем импортировать Understat
-try:
-    from understatapi import UnderstatClient
-    UNDERSTAT_AVAILABLE = True
-except ImportError:
-    UNDERSTAT_AVAILABLE = False
-    logger.info("Understat не установлен. РПЛ будет недоступна.")
-
 # Кеширование матчей
 _last_update_time = 0
 _cache_duration = 60  # секунд (1 минута)
@@ -38,7 +27,6 @@ _cache_duration = 60  # секунд (1 минута)
 def _empty_sync_summary():
     return {
         "football_data_matches": 0,
-        "understat_matches": 0,
         "matches_inserted": 0,
         "matches_updated": 0,
         "matches_skipped_finished": 0,
@@ -149,19 +137,6 @@ def fetch_matches(errors=None):
                 errors.append(msg)
     return all_matches
 
-def parse_optional_int(value):
-    try:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            value = value.strip()
-            if value == "":
-                return None
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def get_tournament_id_by_name(cur, name):
     cur.execute("SELECT id FROM tournaments WHERE name = %s ORDER BY id DESC LIMIT 1", (name,))
     row = cur.fetchone()
@@ -200,114 +175,6 @@ def get_tournament_id_by_name(cur, name):
 
     return None
 
-UNDERSTAT_FINISHED_STATUSES = frozenset({
-    "Match Finished",
-    "Finished",
-    "After Pen.",
-    "After Pen",
-    "Awarded",
-})
-
-def create_match_from_understat(match, prefix, league_tag):
-    goals = match.get('goals', {}) or {}
-    home_goal = parse_optional_int(goals.get('h'))
-    away_goal = parse_optional_int(goals.get('a'))
-
-    is_result = bool(match.get('isResult'))
-    raw_status = match.get('status')
-    status_known = raw_status is not None
-    status_allowed_finished = not status_known or raw_status in UNDERSTAT_FINISHED_STATUSES
-
-    if status_known and raw_status not in UNDERSTAT_FINISHED_STATUSES:
-        logger.info(
-            "Understat match id=%s status=%s isResult=%s — treating as SCHEDULED",
-            match.get("id"), raw_status, is_result,
-        )
-
-    is_finished = (
-        is_result
-        and status_allowed_finished
-        and has_valid_finished_score("FINISHED", home_goal, away_goal)
-    )
-
-    status = 'FINISHED' if is_finished else 'SCHEDULED'
-    score = {
-        'fullTime': {
-            'home': home_goal if is_finished else None,
-            'away': away_goal if is_finished else None
-        }
-    }
-
-    return {'id': f"{prefix}_{match['id']}", 'home_team': match['h']['title'], 'away_team': match['a']['title'],
-            'utcDate': match['datetime'], 'status': status, 'score': score, 'league': league_tag,
-            'match_category': 'rpl' if league_tag == 'rpl' else None}
-
-def resolve_rpl_season():
-    env_season = os.getenv("RPL_SEASON")
-    if env_season:
-        return str(env_season).strip()
-
-    now_msk = datetime.now(MSK)
-    # Russian league season usually starts in summer and is labeled by start year.
-    season_start_year = now_msk.year if now_msk.month >= 7 else now_msk.year - 1
-    return str(season_start_year)
-
-def fetch_rpl_matches():
-    if not UNDERSTAT_AVAILABLE:
-        return {"matches": [], "api_error": "understat_not_installed"}
-
-    season = resolve_rpl_season()
-    max_attempts = 3
-    retry_delay_sec = 1.5
-
-    logger.info("RPL sync start")
-    logger.info("RPL selected season: %s", season)
-
-    all_matches = []
-    api_error = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            understat = UnderstatClient()
-            league_data = understat.league(league="RFPL").get_match_data(season=season)
-
-            finished_mapped = 0
-            scheduled_mapped = 0
-            invalid_score_rows = 0
-
-            for match in league_data:
-                mapped = create_match_from_understat(match, "rpl", "rpl")
-                all_matches.append(mapped)
-
-                if mapped.get('status') == 'FINISHED':
-                    finished_mapped += 1
-                else:
-                    scheduled_mapped += 1
-
-                if (
-                    match.get('isResult')
-                    and mapped.get('status') != 'FINISHED'
-                ):
-                    invalid_score_rows += 1
-
-            logger.info("RPL matches fetched: %s", len(all_matches))
-            logger.info(
-                "RPL mapping summary: finished=%s scheduled=%s invalid_score_rows=%s",
-                finished_mapped,
-                scheduled_mapped,
-                invalid_score_rows
-            )
-            return {"matches": all_matches, "api_error": None}
-
-        except Exception as e:
-            api_error = str(e)
-            logger.warning("RPL attempt failed (%s/%s): %s", attempt, max_attempts, e)
-            if attempt < max_attempts:
-                time.sleep(retry_delay_sec)
-
-    logger.error("RPL sync failed: %s", api_error)
-    return {"matches": all_matches, "api_error": api_error}
-
 def should_update():
     conn = get_db(); cur = conn.cursor()
     try:
@@ -327,25 +194,6 @@ def update_matches():
     matches_data = fetch_matches(summary["errors"])
     summary["football_data_matches"] = len(matches_data)
 
-    try:
-        rpl_result = fetch_rpl_matches()
-        rpl_matches = rpl_result.get("matches", [])
-        rpl_api_error = rpl_result.get("api_error")
-        summary["understat_matches"] = len(rpl_matches)
-        if rpl_matches:
-            matches_data.extend(rpl_matches)
-        elif not rpl_api_error:
-            msg = "Understat API returned 0 RPL matches (possible API error or no matches for season)"
-            logger.warning(msg)
-            summary["errors"].append(msg)
-        elif rpl_api_error and rpl_api_error != "understat_not_installed":
-            msg = f"Understat sync failed: {rpl_api_error}"
-            logger.warning(msg)
-            summary["errors"].append(msg)
-    except Exception as e:
-        msg = f"Understat sync failed during update_matches: {e}"
-        logger.warning(msg)
-        summary["errors"].append(msg)
     if not matches_data:
         logger.warning("Match sync received no matches from external sources")
         return summary
@@ -353,7 +201,6 @@ def update_matches():
     try:
         cup_tournament_id = get_tournament_id_by_name(cur, "Кубок Матч-премьер")
         wc_tournament_id = get_tournament_id_by_name(cur, "ЧМ-2026")
-        rpl_tournament_id = get_tournament_id_by_name(cur, RPL_TOURNAMENT_NAME)
         missing_tournament_leagues = set()
 
         for match in matches_data:
@@ -363,14 +210,12 @@ def update_matches():
             home_team = translate_name(raw_home); away_team = translate_name(raw_away)
             utc_time = match.get('utcDate', match.get('datetime', '')).replace('Z', '')
             status = match.get('status', 'SCHEDULED'); league = match.get('league', 'other')
-            match_category = match.get('match_category') or ('rpl' if league == 'rpl' else None)
+            match_category = match.get('match_category')
             if league == 'wc2026' and not WC2026_API_SYNC_ENABLED:
                 logger.info("[SYNC_SKIP] WC2026 API sync disabled")
                 continue
             if league == 'wc2026':
                 tournament_id = wc_tournament_id
-            elif league == 'rpl':
-                tournament_id = rpl_tournament_id
             else:
                 tournament_id = cup_tournament_id
 

@@ -20,7 +20,7 @@ Pipeline сейчас такой:
 2. Пытается взять PostgreSQL advisory lock через `pg_try_advisory_lock`.
 3. Если lock уже занят, возвращает summary со `status: "skipped_already_running"`.
 4. Если lock взят, вызывает `update_matches()`.
-5. `update_matches()` забирает матчи из football-data и Understat.
+5. `update_matches()` забирает только разрешённые матчи из football-data (сейчас ЧМ-2026).
 6. `update_matches()` вставляет новые матчи и обновляет существующие по старой логике.
 7. После sync очки пересчитываются только для изменённых завершённых матчей через `scoring_recalculation_service.recalc_match_points()`.
 8. `run_sync_with_lock()` пишет scoring summary и финальный `sync end`.
@@ -34,7 +34,6 @@ Sync по-прежнему не запускается в `create_app()` и не
 ```python
 {
     "football_data_matches": 0,
-    "understat_matches": 0,
     "matches_inserted": 0,
     "matches_updated": 0,
     "matches_skipped_finished": 0,
@@ -128,13 +127,10 @@ Exit codes:
 - non-200 ответы football-data;
 - исключения football-data API;
 - ошибки проверки `should_update()`;
-- исключения Understat внутри `update_matches()`;
 - отсутствие матчей от внешних источников;
 - lock acquired/skipped/unavailable;
 - start/end/error `run_sync_with_lock()`;
 - scoring summary после changed-match recalculation или broad fallback.
-
-Understat retry-логика внутри `fetch_rpl_matches()` осталась прежней: attempts пишутся warning-ами, финальный провал пишется error.
 
 ## Что ещё НЕ автоматизировано
 

@@ -2,15 +2,11 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.services.match_service import (
-    RPL_TOURNAMENT_NAME,
-    fetch_rpl_matches,
-    resolve_rpl_season,
-)
 from app.utils import parse_datetime
 
 
 MSK = ZoneInfo("Europe/Moscow")
+RPL_TOURNAMENT_NAME = "Чемпионат России 🇷🇺"
 
 RPL_MATCH_CATEGORIES = (
     ("rpl", "Чемпионат России"),
@@ -140,47 +136,6 @@ def build_rpl_match_groups(matches, today=None):
     return groups
 
 
-def check_rpl_calendar():
-    checked_at = datetime.now().strftime("%d.%m.%Y %H:%M")
-    season = resolve_rpl_season()
-    try:
-        result = fetch_rpl_matches()
-        error = result.get("api_error")
-        matches = result.get("matches", [])
-        if error and error != "understat_not_installed":
-            return {
-                "source": "Understat",
-                "season": season,
-                "checked_at": checked_at,
-                "matches_count": 0,
-                "status": "error",
-                "status_label": "Ошибка проверки календаря",
-                "matches": [],
-                "error": error,
-            }
-        return {
-            "source": "Understat",
-            "season": season,
-            "checked_at": checked_at,
-            "matches_count": len(matches),
-            "status": "available" if matches else "not_published",
-            "status_label": "Календарь доступен" if matches else "Календарь ещё не опубликован",
-            "matches": matches,
-            "error": None,
-        }
-    except Exception as e:
-        return {
-            "source": "Understat",
-            "season": season,
-            "checked_at": checked_at,
-            "matches_count": 0,
-            "status": "error",
-            "status_label": "Ошибка проверки календаря",
-            "matches": [],
-            "error": str(e),
-        }
-
-
 def get_rpl_tournament(cur):
     cur.execute(
         """
@@ -203,7 +158,7 @@ def get_rpl_tournament(cur):
     }
 
 
-def prepare_rpl_admin_data(cur, calendar_check=None):
+def prepare_rpl_admin_data(cur):
     tournament = get_rpl_tournament(cur)
     matches = []
 
@@ -211,7 +166,6 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
         cur.execute(
             """
             SELECT id,
-                   api_match_id,
                    home_team,
                    away_team,
                    kickoff_time,
@@ -230,70 +184,43 @@ def prepare_rpl_admin_data(cur, calendar_check=None):
             (tournament["id"],),
         )
         for row in cur.fetchall():
-            kickoff = parse_datetime(row[4])
-            deadline = parse_datetime(row[5])
-            source = "api" if row[1] else "manual"
+            kickoff = parse_datetime(row[3])
+            deadline = parse_datetime(row[4])
             matches.append({
                 "id": row[0],
-                "api_match_id": row[1],
-                "home_team": row[2],
-                "away_team": row[3],
+                "home_team": row[1],
+                "away_team": row[2],
                 "kickoff_time": kickoff,
                 "deadline": deadline,
-                "status": row[6],
-                "home_score": row[7],
-                "away_score": row[8],
-                "stage": row[9] or "",
-                "match_category": infer_rpl_match_category(row[2], row[3], row[9], row[10]),
-                "match_category_label": RPL_MATCH_CATEGORY_LABELS.get(infer_rpl_match_category(row[2], row[3], row[9], row[10]), "Чемпионат России"),
-                "league": row[11],
-                "source": source,
-                "source_label": "API" if source == "api" else "Вручную",
-                "is_hidden": row[6] == "CANCELLED",
+                "status": row[5],
+                "home_score": row[6],
+                "away_score": row[7],
+                "stage": row[8] or "",
+                "match_category": infer_rpl_match_category(row[1], row[2], row[8], row[9]),
+                "match_category_label": RPL_MATCH_CATEGORY_LABELS.get(infer_rpl_match_category(row[1], row[2], row[8], row[9]), "Чемпионат России"),
+                "league": row[10],
+                "is_hidden": row[5] == "CANCELLED",
                 "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
                 "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
                 "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
                 "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
             })
 
-    calendar_check = calendar_check or {
-        "source": "Understat",
-        "season": resolve_rpl_season(),
-        "checked_at": "не проверялось",
-        "matches_count": 0,
-        "status": "not_checked",
-        "status_label": "Календарь ещё не проверялся",
-        "matches": [],
-        "error": None,
-    }
-
     return {
         "rpl_tournament": tournament,
         "rpl_matches": matches,
         "rpl_match_groups": build_rpl_match_groups(matches),
         "rpl_matches_count": len(matches),
-        "rpl_calendar": calendar_check,
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
         "rpl_match_categories": RPL_MATCH_CATEGORIES,
     }
 
 
-def prepare_rpl_admin_page_data(cur, calendar_check=None):
+def prepare_rpl_admin_page_data(cur):
     """Load RPL page metadata without loading the full match list."""
     tournament = get_rpl_tournament(cur)
-    calendar_check = calendar_check or {
-        "source": "Understat",
-        "season": resolve_rpl_season(),
-        "checked_at": "не проверялось",
-        "matches_count": 0,
-        "status": "not_checked",
-        "status_label": "Календарь ещё не проверялся",
-        "matches": [],
-        "error": None,
-    }
     return {
         "rpl_tournament": tournament,
-        "rpl_calendar": calendar_check,
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
         "rpl_match_categories": RPL_MATCH_CATEGORIES,
     }
