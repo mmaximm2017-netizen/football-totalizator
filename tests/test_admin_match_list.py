@@ -264,12 +264,20 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("pending_preview", html)
         self.assertIn("Ожидают результата", html)
         self.assertIn("ОЖИДАЕТ РЕЗУЛЬТАТА", html)
+        self.assertIn("rpl-match-card--pending", html)
+        self.assertIn("render_rpl_card(m, admin_return_to, true)", html)
+        self.assertIn("admin_match_filters.view == 'pending_result'", html)
         self.assertIn("Все ожидающие результата", html)
         self.assertNotIn("Открыть", html)
         self.assertNotIn("rpl-pending-note", html)
         self.assertNotIn("rpl-pending-note", css)
         self.assertNotIn("rgba(255,183,77", css)
         self.assertIn("#D52B1E", css)
+        self.assertIn("rgba(4,18,53,0.94)", css)
+        self.assertIn("rgba(0,57,166,0.78)", css)
+        self.assertIn("rgba(255,255,255,0.98)", css)
+        self.assertIn("rgba(220,234,255,0.72)", css)
+        self.assertIn("linear-gradient(135deg, #D52B1E, #b51f16)", css)
 
     def test_general_matches_page_and_navigation_are_removed(self):
         root = Path(__file__).resolve().parents[1]

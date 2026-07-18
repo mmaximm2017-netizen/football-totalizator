@@ -3,10 +3,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tournaments/rpl-admin.css') }}">
 
-{% macro render_rpl_card(m, return_to) %}
+{% macro render_rpl_card(m, return_to, pending=false) %}
     {% set live_statuses = ['LIVE', 'IN_PLAY', 'HALFTIME', 'PAUSED'] %}
-    <article class="rpl-compact-card {% if m.status == 'FINISHED' or m.has_result %}is-finished{% elif m.status in live_statuses %}is-live{% endif %} {% if m.pending_result %}is-pending-result{% endif %}">
-        <div class="rpl-card-top"><span class="rpl-card-time">{{ m.match_time_msk }} МСК</span><span class="rpl-card-statuses"><span class="rpl-status-badge {% if m.pending_result and m.status not in live_statuses %}rpl-status-pending{% else %}rpl-status-{{ m.status|lower }}{% endif %}">{% if m.pending_result and m.status not in live_statuses %}ОЖИДАЕТ РЕЗУЛЬТАТА{% else %}{{ m.status }}{% endif %}</span>{% if m.pending_result and m.status in live_statuses %}<span class="rpl-pending-marker">ОЖИДАЕТ РЕЗУЛЬТАТА</span>{% endif %}</span></div>
+    {% set is_pending = pending or m.pending_result %}
+    <article class="rpl-compact-card {% if m.status == 'FINISHED' or m.has_result %}is-finished{% elif m.status in live_statuses %}is-live{% endif %} {% if is_pending %}rpl-match-card--pending{% endif %}">
+        <div class="rpl-card-top"><span class="rpl-card-time">{{ m.match_time_msk }} МСК</span><span class="rpl-card-statuses"><span class="rpl-status-badge {% if is_pending and m.status not in live_statuses %}rpl-status-pending{% else %}rpl-status-{{ m.status|lower }}{% endif %}">{% if is_pending and m.status not in live_statuses %}ОЖИДАЕТ РЕЗУЛЬТАТА{% else %}{{ m.status }}{% endif %}</span>{% if is_pending and m.status in live_statuses %}<span class="rpl-pending-marker">ОЖИДАЕТ РЕЗУЛЬТАТА</span>{% endif %}</span></div>
         <div class="rpl-card-teams">{{ m.home_team }}{% if m.has_result %} <span class="rpl-card-score">{{ m.home_score }}:{{ m.away_score }}</span>{% endif %} — {{ m.away_team }}</div>
         <div class="rpl-card-meta">{{ m.date_label }} · Чемпионат России{% if m.deadline_time_msk %} · Дедлайн {{ m.deadline_time_msk }}{% endif %}</div>
         <div class="rpl-card-actions">
@@ -67,7 +68,7 @@
         {% if admin_match_filters.view == 'upcoming' and admin_match_list.page == 1 and admin_match_list.pending_preview %}
             <section class="rpl-pending-preview">
                 <h2 class="rpl-pending-heading">Ожидают результата <span>· {{ admin_match_list.pending_preview_total }}</span></h2>
-                <div class="rpl-compact-list">{% for m in admin_match_list.pending_preview %}{{ render_rpl_card(m, admin_return_to) }}{% endfor %}</div>
+                <div class="rpl-compact-list">{% for m in admin_match_list.pending_preview %}{{ render_rpl_card(m, admin_return_to, true) }}{% endfor %}</div>
                 {% if admin_match_list.pending_preview_total > admin_match_list.pending_preview|length %}<a class="rpl-pending-all" href="{{ url_for('admin.admin_russia_2027', view='pending_result', page=1) }}">Все ожидающие результата — {{ admin_match_list.pending_preview_total }}</a>{% endif %}
             </section>
         {% endif %}
@@ -80,7 +81,7 @@
                     <section class="admin-date-section">
                         <h2 class="admin-date-heading">{{ day.label }} <span>{{ day.matches|length }} матча</span></h2>
                         {% for m in day.matches %}
-                            {{ render_rpl_card(m, admin_return_to) }}
+                            {{ render_rpl_card(m, admin_return_to, admin_match_filters.view == 'pending_result') }}
                         {% endfor %}
                     </section>
                 {% endfor %}
