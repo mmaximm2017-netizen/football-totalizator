@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tournaments/rpl-admin.css') }}">
+
+<div class="admin-rpl-page rpl-edit-page">
+    <a class="rpl-back-link" href="{{ return_to }}">← Назад к матчам</a>
+    <section class="rpl-edit-hero">
+        <h1>{{ match.home_team }} — {{ match.away_team }}</h1>
+        <div class="rpl-admin-subtitle">{{ match.match_date_msk }} · {{ match.match_time_msk }} МСК</div>
+    </section>
+
+    <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_edit') }}" class="rpl-edit-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="match_id" value="{{ match.id }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+
+        <section class="rpl-edit-section">
+            <h2>Основные данные</h2>
+            <div class="rpl-grid"><label>Домашняя команда<input name="home_team" value="{{ match.home_team }}" required></label><label>Гостевая команда<input name="away_team" value="{{ match.away_team }}" required></label></div>
+            <div class="rpl-grid"><label>Дата<input type="date" name="match_date" value="{{ match.match_date_msk }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ match.match_time_msk }}" required></label></div>
+            <label>Статус<select name="status">{% for value in rpl_statuses %}<option value="{{ value }}" {% if match.status == value %}selected{% endif %}>{{ value|lower }}</option>{% endfor %}</select></label>
+            <label>Категория<select name="match_category">{% for value, label in rpl_match_categories %}<option value="{{ value }}" {% if match.match_category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label>Стадия<input name="stage" value="{{ match.stage }}" placeholder="Например: Тур 1"></label>
+        </section>
+
+        <section class="rpl-edit-section">
+            <h2>Результат</h2>
+            <div class="rpl-grid"><label>Счёт 1<input type="number" min="0" name="home_score" value="{{ match.home_score if match.home_score is not none else '' }}"></label><label>Счёт 2<input type="number" min="0" name="away_score" value="{{ match.away_score if match.away_score is not none else '' }}"></label></div>
+            <label class="rpl-check"><input type="checkbox" name="delete_score" value="1"> Удалить результат</label>
+        </section>
+
+        <section class="rpl-edit-section">
+            <h2>Дедлайн</h2>
+            <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date" value="{{ match.deadline_date_msk }}"></label><label>Время дедлайна<input type="time" name="deadline_time" value="{{ match.deadline_time_msk }}"></label></div>
+        </section>
+
+        <button class="rpl-btn rpl-edit-save" type="submit">Сохранить изменения</button>
+    </form>
+</div>
+{% endblock %}

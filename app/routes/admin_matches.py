@@ -50,6 +50,13 @@ def admin_context_redirect(default_endpoint="admin.admin"):
     return redirect(url_for(default_endpoint))
 
 
+def safe_admin_return_to(target, default_endpoint):
+    target = (target or "").strip()
+    if target.startswith("/admin/") and not target.startswith("//"):
+        return target
+    return url_for(default_endpoint)
+
+
 def normalize_manual_match_status(value, fallback="SCHEDULED"):
     status = (value or fallback or "SCHEDULED").strip().upper()
     return status if status in MANUAL_MATCH_STATUSES else fallback
@@ -184,6 +191,123 @@ def get_required_russian_cup_tournament(cur):
     if not tournament:
         raise ValueError("Турнир Кубок России не найден")
     return tournament
+
+
+@admin_matches_bp.route("/russia-2027/matches/<int:match_id>/edit", methods=["GET"])
+@admin_required
+def admin_russia_2027_edit_form(match_id):
+    return_to = safe_admin_return_to(
+        request.args.get("return_to"),
+        RPL_ADMIN_REDIRECT,
+    )
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category
+            FROM matches
+            WHERE id = %s AND tournament_id = %s AND league = 'rpl'
+            """,
+            (match_id, tournament["id"]),
+        )
+        row = cur.fetchone()
+        if not row:
+            flash("Матч РПЛ не найден", "error")
+            return redirect(return_to)
+        kickoff = parse_datetime(row[3])
+        deadline = parse_datetime(row[4])
+        match = {
+            "id": row[0],
+            "home_team": row[1],
+            "away_team": row[2],
+            "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
+            "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
+            "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
+            "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
+            "status": row[5],
+            "home_score": row[6],
+            "away_score": row[7],
+            "stage": row[8] or "",
+            "match_category": row[9] or "rpl",
+        }
+        return render_template(
+            "admin_rpl_edit.html",
+            match=match,
+            rpl_statuses=("SCHEDULED", "TIMED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"),
+            rpl_match_categories=(
+                ("rpl", "Чемпионат России"),
+                ("supercup", "Суперкубок России"),
+                ("national_team", "Сборная России"),
+            ),
+            return_to=return_to,
+            current_tournament_name="Чемпионат России 🇷🇺",
+            current_tournament_id=tournament["id"],
+        )
+    finally:
+        close_db(conn, cur)
+
+
+@admin_matches_bp.route("/russia_2027_result", methods=["POST"])
+@admin_required
+def admin_russia_2027_result():
+    match_id = request.form.get("match_id", type=int)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        if request.form.get("delete_result") == "1":
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_score = NULL, away_score = NULL, status = 'SCHEDULED'
+                WHERE id = %s AND tournament_id = %s AND league = 'rpl'
+                """,
+                (match_id, tournament["id"]),
+            )
+            if getattr(cur, "rowcount", 1) == 0:
+                conn.rollback()
+                flash("Матч РПЛ не найден", "error")
+                return admin_context_redirect(RPL_ADMIN_REDIRECT)
+            cur.execute(
+                """
+                UPDATE predictions
+                SET points = 0
+                WHERE match_id = %s AND tournament_id = %s
+                """,
+                (match_id, tournament["id"]),
+            )
+            flash("Результат РПЛ удалён", "success")
+        else:
+            home_score, away_score = validate_score(
+                request.form.get("home_score"), request.form.get("away_score")
+            )
+            if home_score is None:
+                flash("Укажите корректный счёт", "error")
+                return admin_context_redirect(RPL_ADMIN_REDIRECT)
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_score = %s, away_score = %s, status = 'FINISHED'
+                WHERE id = %s AND tournament_id = %s AND league = 'rpl'
+                """,
+                (home_score, away_score, match_id, tournament["id"]),
+            )
+            if getattr(cur, "rowcount", 1) == 0:
+                conn.rollback()
+                flash("Матч РПЛ не найден", "error")
+                return admin_context_redirect(RPL_ADMIN_REDIRECT)
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+            flash("Результат РПЛ сохранён", "success")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка сохранения результата РПЛ: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
 
 
 @admin_matches_bp.route("/russia_2027_add", methods=["POST"])
@@ -438,6 +562,36 @@ def admin_russia_2027_delete():
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка удаления матча: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return admin_context_redirect(RPL_ADMIN_REDIRECT)
+
+
+@admin_matches_bp.route("/russia_2027_recalc", methods=["POST"])
+@admin_required
+def admin_russia_2027_recalc():
+    conn = get_db()
+    cur = conn.cursor()
+    recalculated = 0
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        cur.execute(
+            """
+            SELECT id
+            FROM matches
+            WHERE tournament_id = %s AND league = 'rpl'
+            ORDER BY id
+            """,
+            (tournament["id"],),
+        )
+        for row in cur.fetchall():
+            recalc_match_points(row[0], tournament_id=tournament["id"], conn=conn, cur=cur)
+            recalculated += 1
+        conn.commit()
+        flash(f"Очки Чемпионата России пересчитаны: {recalculated}", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка пересчёта очков: {e}", "error")
     finally:
         close_db(conn, cur)
     return admin_context_redirect(RPL_ADMIN_REDIRECT)

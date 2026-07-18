@@ -8,7 +8,9 @@ from app.services.admin_view_service import (
     prepare_admin_matches_page_data,
     parse_admin_match_filters,
     parse_russian_cup_match_filters,
+    parse_rpl_match_filters,
     prepare_admin_match_list,
+    prepare_rpl_match_list,
     prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
 )
@@ -42,6 +44,41 @@ class SequenceCursor(Cursor):
 
 
 class AdminMatchListTests(unittest.TestCase):
+    def test_rpl_defaults_to_upcoming_with_fifteen_matches(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
+        filters = parse_rpl_match_filters(args)
+        self.assertEqual(filters["view"], "upcoming")
+        self.assertEqual(filters["period"], "30")
+        self.assertEqual(filters["per_page"], 15)
+
+    def test_rpl_list_uses_server_side_views_and_pagination(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "pending_result"}.get(key, default))
+        cursor = Cursor(
+            21,
+            [(21, "Спартак", "Зенит", datetime(2026, 7, 18, 16, 0, tzinfo=timezone.utc), None,
+              "LIVE", None, None, "Тур 1")],
+        )
+        result = prepare_rpl_match_list(cursor, 7, parse_rpl_match_filters(args))
+        self.assertEqual(result["per_page"], 20)
+        self.assertIn("COALESCE(m.status, '') <> 'FINISHED'", cursor.executed[0][0])
+        self.assertIn("m.home_score IS NULL", cursor.executed[0][0])
+        self.assertIn("m.tournament_id = %s", cursor.executed[0][0])
+        self.assertIn("m.league = 'rpl'", cursor.executed[0][0])
+        self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
+
+    def test_rpl_upcoming_fallback_keeps_future_rpl_scope(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "upcoming"}.get(key, default))
+        cursor = SequenceCursor(
+            fetchone_values=[(0,), (0,), (1,)],
+            rows=[(10, "Спартак", "Зенит", datetime(2027, 8, 1, 16, 0, tzinfo=timezone.utc), None,
+                   "SCHEDULED", None, None, "Тур 1")],
+        )
+        result = prepare_rpl_match_list(cursor, 7, parse_rpl_match_filters(args))
+        self.assertTrue(result["fallback_notice"])
+        self.assertIn("m.kickoff_time > %s", cursor.executed[-1][0])
+        self.assertIn("m.league = 'rpl'", cursor.executed[-1][0])
+        self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
+
     def test_russian_cup_defaults_to_upcoming_with_fifteen_matches(self):
         args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
         filters = parse_russian_cup_match_filters(args)
@@ -83,7 +120,7 @@ class AdminMatchListTests(unittest.TestCase):
         rpl_cursor = SequenceCursor([(2, "Чемпионат России 🇷🇺", 1, None)])
         rpl_data = prepare_rpl_admin_page_data(rpl_cursor)
         self.assertEqual(rpl_data["rpl_tournament"]["id"], 2)
-        self.assertEqual(len(rpl_cursor.executed), 1)
+        self.assertEqual(len(rpl_cursor.executed), 2)
 
         cup_cursor = SequenceCursor([(3, "Кубок России", 1, None), (4, 1)])
         cup_data = prepare_russian_cup_admin_page_data(cup_cursor)

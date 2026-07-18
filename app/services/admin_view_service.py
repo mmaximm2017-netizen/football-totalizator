@@ -173,6 +173,14 @@ def prepare_admin_matches_page_data(cur):
 
 
 def parse_russian_cup_match_filters(args):
+    return parse_tournament_match_filters(args)
+
+
+def parse_rpl_match_filters(args):
+    return parse_tournament_match_filters(args)
+
+
+def parse_tournament_match_filters(args):
     view = args.get("view", "upcoming")
     if view not in {"upcoming", "pending_result", "finished", "all"}:
         view = "upcoming"
@@ -191,11 +199,19 @@ def parse_russian_cup_match_filters(args):
 
 
 def prepare_russian_cup_match_list(cur, tournament_id, filters):
+    return prepare_tournament_match_list(cur, tournament_id, "rcup", filters)
+
+
+def prepare_rpl_match_list(cur, tournament_id, filters):
+    return prepare_tournament_match_list(cur, tournament_id, "rpl", filters)
+
+
+def prepare_tournament_match_list(cur, tournament_id, league, filters):
     query_filters = dict(filters)
     query_filters["view"] = "attention" if filters["view"] == "pending_result" else filters["view"]
     now = datetime.now(timezone.utc)
     where, params = _admin_match_where(query_filters, now)
-    where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+    where += f" AND m.tournament_id = %s AND m.league = '{league}'"
     params.append(tournament_id)
 
     def count_rows(current_where, current_params):
@@ -215,14 +231,14 @@ def prepare_russian_cup_match_list(cur, tournament_id, filters):
     if filters["view"] == "upcoming":
         pending_filters = dict(filters, view="attention", period="all")
         pending_where, pending_params = _admin_match_where(pending_filters, now)
-        pending_where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+        pending_where += f" AND m.tournament_id = %s AND m.league = '{league}'"
         pending_params.append(tournament_id)
         pending_count = count_rows(pending_where, pending_params)
     fallback_notice = False
     if filters["view"] == "upcoming" and total == 0 and filters["period"] == "30":
         query_filters["period"] = "all"
         where, params = _admin_match_where(query_filters, now)
-        where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+        where += f" AND m.tournament_id = %s AND m.league = '{league}'"
         params.append(tournament_id)
         total = count_rows(where, params)
         fallback_notice = total > 0
@@ -254,6 +270,7 @@ def prepare_russian_cup_match_list(cur, tournament_id, filters):
             "id": row[0], "home_team": row[1], "away_team": row[2],
             "kickoff_time": kickoff, "deadline": deadline, "status": row[5],
             "home_score": row[6], "away_score": row[7], "stage": row[8] or "",
+            "tournament_id": tournament_id,
             "has_result": row[6] is not None and row[7] is not None,
             "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
             "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",

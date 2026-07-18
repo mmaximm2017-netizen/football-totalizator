@@ -219,8 +219,23 @@ def prepare_rpl_admin_data(cur):
 def prepare_rpl_admin_page_data(cur):
     """Load RPL page metadata without loading the full match list."""
     tournament = get_rpl_tournament(cur)
+    matches_count = 0
+    finished_count = 0
+    if tournament:
+        cur.execute(
+            """
+            SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'FINISHED')
+            FROM matches
+            WHERE tournament_id = %s AND league = 'rpl'
+            """,
+            (tournament["id"],),
+        )
+        counters = cur.fetchone() or (0, 0)
+        matches_count, finished_count = counters[0] or 0, counters[1] or 0
     return {
         "rpl_tournament": tournament,
+        "rpl_matches_count": matches_count,
+        "rpl_finished_count": finished_count,
         "rpl_statuses": ("SCHEDULED", "TIMED", "LIVE", "FINISHED"),
         "rpl_match_categories": RPL_MATCH_CATEGORIES,
     }

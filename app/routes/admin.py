@@ -26,6 +26,8 @@ from app.services.admin_view_service import (
     parse_admin_match_filters,
     parse_russian_cup_match_filters,
     prepare_admin_match_list,
+    parse_rpl_match_filters,
+    prepare_rpl_match_list,
     prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
 )
@@ -118,10 +120,20 @@ def admin_russia_2027():
     cur = conn.cursor()
     try:
         data = prepare_rpl_admin_page_data(cur)
-        data['current_tournament_name'] = 'Чемпионат России 2027'
-        filters = parse_admin_match_filters(request.args, forced_tournament_id=data.get('rpl_tournament', {}).get('id') if data.get('rpl_tournament') else None)
+        data['current_tournament_name'] = 'Чемпионат России 🇷🇺'
+        data['current_tournament_slug'] = 'rpl'
+        if data.get('rpl_tournament'):
+            data['current_tournament_id'] = data['rpl_tournament']['id']
+        filters = parse_rpl_match_filters(request.args)
         data['admin_match_filters'] = filters
-        data['admin_match_list'] = prepare_admin_match_list(cur, filters, league='rpl')
+        if data.get('rpl_tournament'):
+            data['admin_match_list'] = prepare_rpl_match_list(cur, data['rpl_tournament']['id'], filters)
+        else:
+            data['admin_match_list'] = {
+                'matches': [], 'groups': [], 'total': 0, 'page': 1,
+                'pages': 1, 'per_page': filters['per_page'], 'first': 0, 'last': 0,
+                'fallback_notice': False, 'pending_count': 0,
+            }
     finally:
         close_db(conn, cur)
     return render_template('admin_russia_2027.html', **data)
