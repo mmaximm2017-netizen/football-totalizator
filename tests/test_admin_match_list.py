@@ -132,6 +132,36 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("m.tournament_id = %s", cursor.executed[0][0])
         self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
 
+    def test_russian_cup_upcoming_has_separate_pending_preview_count_and_limit(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "upcoming"}.get(key, default))
+        cursor = Cursor(
+            2,
+            [(10, "Спартак", "Зенит", datetime(2026, 7, 18, 16, 0, tzinfo=timezone.utc), None,
+              "SCHEDULED", None, None, "Групповой этап")],
+        )
+        result = prepare_russian_cup_match_list(cursor, 7, parse_russian_cup_match_filters(args))
+        self.assertEqual(result["pending_preview_total"], 2)
+        self.assertEqual(len(result["pending_preview"]), 1)
+        self.assertTrue(result["pending_preview"][0]["pending_result"])
+        pending_sql, pending_params = cursor.executed[2]
+        future_sql = cursor.executed[-1][0]
+        self.assertIn("m.kickoff_time <= %s", pending_sql)
+        self.assertIn("m.home_score IS NULL", pending_sql)
+        self.assertIn("m.away_score IS NULL", pending_sql)
+        self.assertIn("m.tournament_id = %s", pending_sql)
+        self.assertIn("m.league = 'rcup'", pending_sql)
+        self.assertIn("ORDER BY m.kickoff_time DESC, m.id DESC", pending_sql)
+        self.assertEqual(pending_params[-1], 5)
+        self.assertIn("m.kickoff_time > %s", future_sql)
+
+    def test_russian_cup_pending_preview_only_loads_on_first_upcoming_page(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "upcoming", "page": 2}.get(key, default))
+        cursor = Cursor(6, [])
+        result = prepare_russian_cup_match_list(cursor, 7, parse_russian_cup_match_filters(args))
+        self.assertEqual(result["page"], 2)
+        self.assertEqual(result["pending_preview"], [])
+        self.assertEqual(len(cursor.executed), 3)
+
     def test_russian_cup_template_has_no_full_edit_form_in_match_list(self):
         root = Path(__file__).resolve().parents[1]
         html = (root / "templates" / "admin_russian_cup.html").read_text(encoding="utf-8")
@@ -278,6 +308,27 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("rgba(255,255,255,0.98)", css)
         self.assertIn("rgba(220,234,255,0.72)", css)
         self.assertIn("linear-gradient(135deg, #D52B1E, #b51f16)", css)
+
+    def test_russian_cup_pending_preview_markup_uses_shared_card_and_rcup_theme(self):
+        root = Path(__file__).resolve().parents[1]
+        html = (root / "templates" / "admin_russian_cup.html").read_text(encoding="utf-8")
+        css = (root / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
+        self.assertIn("{% macro render_rcup_match_card(m, return_to, pending=false) %}", html)
+        self.assertIn("pending_preview", html)
+        self.assertIn("Ожидают результата", html)
+        self.assertIn("Все ожидающие результата", html)
+        self.assertIn("rc-compact-card--pending", html)
+        self.assertIn("render_rcup_match_card(m, admin_return_to, admin_match_filters.view == 'pending_result')", html)
+        self.assertNotIn("rc-pending-note", html)
+        self.assertNotIn("Открыть", html)
+        self.assertNotIn("rc-pending-note", css)
+        self.assertIn("linear-gradient(145deg, rgba(104,0,38,0.96), rgba(49,0,39,0.96))", css)
+        self.assertIn("var(--rcup-red)", css)
+        self.assertIn(".rc-compact-card--pending .rc-quick-result input { background: var(--rcup-lime);", css)
+        self.assertIn(".rc-compact-card--pending .rc-btn-primary { background: var(--rcup-lime);", css)
+        self.assertIn("ОЖИДАЕТ РЕЗУЛЬТАТА", html)
+        self.assertIn("m.status in live_statuses", html)
+        self.assertIn("body.tournament-rcup .admin-russian-cup-page", css)
 
     def test_general_matches_page_and_navigation_are_removed(self):
         root = Path(__file__).resolve().parents[1]

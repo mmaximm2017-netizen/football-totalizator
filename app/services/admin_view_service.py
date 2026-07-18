@@ -99,7 +99,7 @@ def parse_tournament_match_filters(args):
 
 
 def prepare_russian_cup_match_list(cur, tournament_id, filters):
-    return prepare_tournament_match_list(cur, tournament_id, "rcup", filters)
+    return prepare_tournament_match_list(cur, tournament_id, "rcup", filters, include_pending_preview=True)
 
 
 def prepare_rpl_match_list(cur, tournament_id, filters):
