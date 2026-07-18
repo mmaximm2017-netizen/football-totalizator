@@ -1,4 +1,5 @@
 import unittest
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -231,7 +232,10 @@ class RussianCupUiTests(unittest.TestCase):
             html = render_template("admin_russian_cup.html", **context)
 
         self.assertIn('action="/admin/russian_cup_add"', html)
-        self.assertIn('/admin/russian-cup/matches/10/edit', html)
+        self.assertRegex(html, r'href="/admin/russian-cup/matches/10/edit\?return_to=[^"]*admin/russian-cup')
+        self.assertIn('>Редактировать матч</a>', html)
+        self.assertNotIn('>Изменить</a>', html)
+        self.assertIn('aria-label="Действия с матчем"', html)
         self.assertIn('action="/admin/russian_cup_result"', html)
         self.assertIn('action="/admin/russian_cup_visibility"', html)
         self.assertIn('action="/admin/russian_cup_delete"', html)
@@ -239,6 +243,50 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertIn("clubs/Fonbet_Russian_Cup.png", html)
         self.assertNotIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
         self.assertNotIn('placeholder="Нет колонки БД"', html)
+
+    def test_russian_cup_card_actions_have_only_result_form_and_menu(self):
+        app = self.make_app()
+        context = {
+            "russian_cup_tournament": {"id": 1, "name": "Кубок России"},
+            "russian_cup_matches_count": 1,
+            "russian_cup_finished_count": 0,
+            "russian_cup_statuses": ("SCHEDULED",),
+            "russian_cup_stages": (("Групповой этап", "Групповой этап"),),
+            "csrf_token": "test-csrf",
+            "admin_match_filters": {"view": "upcoming", "q": "", "status": "", "period": "30"},
+            "admin_match_list": {
+                "total": 1,
+                "groups": [{"label": "Сегодня", "matches": [{
+                    "id": 10, "home_team": "Спартак", "away_team": "Зенит",
+                    "match_time_msk": "19:00", "match_date_msk": "2026-07-12",
+                    "status": "SCHEDULED", "home_score": None, "away_score": None,
+                    "stage": "Групповой этап", "has_result": False,
+                    "deadline_time_msk": "11:00",
+                }]}],
+                "pages": 1, "page": 1, "first": 1, "last": 1,
+                "fallback_notice": False, "pending_count": 0,
+            },
+        }
+        with app.test_request_context("/admin/russian-cup?view=upcoming&page=2&q=Спартак"):
+            html = render_template("admin_russian_cup.html", **context)
+
+        actions = re.search(r'<div class="rc-card-actions">(.*?)</div>\s*</article>', html, re.DOTALL)
+        self.assertIsNotNone(actions)
+        actions_html = actions.group(1)
+        self.assertEqual(actions_html.count('class="rc-quick-result"'), 1)
+        self.assertEqual(actions_html.count('class="rc-more"'), 1)
+        self.assertNotIn('>Изменить</a>', actions_html)
+        self.assertIn('return_to=/admin/russian-cup?view%3Dupcoming%26page%3D2%26q%3D', actions_html)
+
+    def test_russian_cup_action_css_stays_scoped_and_fits_mobile(self):
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
+        self.assertIn(".rc-card-actions { display: grid; grid-template-columns: minmax(0, 1fr) 44px;", css)
+        self.assertIn(".rc-more > summary { display: inline-flex", css)
+        self.assertIn("width: 44px; height: 44px", css)
+        self.assertIn(".rc-quick-result { grid-template-columns: 34px 10px 34px minmax(0, 1fr);", css)
+        self.assertIn("@media (max-width: 430px)", css)
+        self.assertNotIn("grid-template-columns: minmax(0, 1fr) auto auto", css)
 
     def test_russian_cup_service_filters_by_tournament_and_league(self):
         from app.services.russian_cup_admin_service import prepare_russian_cup_admin_data
