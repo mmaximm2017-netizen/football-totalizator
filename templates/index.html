@@ -227,11 +227,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function compactPointsText(rawText, fallbackValue) {
+        if (fallbackValue === null) return '—';
+
         const fallback = Number(fallbackValue);
         const match = String(rawText || '').match(/-?\d+/);
         const points = match ? Number(match[0]) : (Number.isFinite(fallback) ? fallback : 0);
 
         return points > 0 ? '+' + points : '0';
+    }
+
+    function parseCompactPoints(row) {
+        const raw = row.getAttribute('data-points');
+
+        if (raw === null || raw.trim() === '') return null;
+
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    function compactPointsClass(points) {
+        if (points === null) return 'points-unavailable';
+        if (points === 11) return 'points-exact-major';
+        if (points === 10) return 'points-exact';
+        if (points === 7 || points === 8) return 'points-difference';
+        if (points === 5) return 'points-near';
+        if (points === 3) return 'points-outcome';
+        if (points === 2) return 'points-fallback';
+        if (points === 0) return 'points-zero';
+        return 'points-zero';
     }
 
     function applyTeamNameLengthClass(node, text) {
@@ -326,12 +349,30 @@ document.addEventListener('DOMContentLoaded', function () {
             return wrapper;
         }
 
-        rows.forEach(function (row) {
+        const rowEntries = rows.map(function (row, originalIndex) {
+            return {
+                row: row,
+                originalIndex: originalIndex,
+                points: parseCompactPoints(row),
+            };
+        });
+
+        if (isFinished) {
+            rowEntries.sort(function (a, b) {
+                if (a.points === null && b.points === null) return a.originalIndex - b.originalIndex;
+                if (a.points === null) return 1;
+                if (b.points === null) return -1;
+                return b.points - a.points || a.originalIndex - b.originalIndex;
+            });
+        }
+
+        rowEntries.forEach(function (entry) {
+            const row = entry.row;
             const name = row.querySelector('.prediction-name')?.textContent.trim() || 'Игрок';
             const prediction = row.querySelector('.prediction-score')?.textContent.trim() || '—';
             const points = compactPointsText(
                 row.querySelector('.points-pill')?.textContent || '',
-                row.getAttribute('data-points')
+                entry.points
             );
             const item = document.createElement('div');
             const nameNode = document.createElement('div');
@@ -349,24 +390,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isFinished) {
                 pointsNode = document.createElement('div');
 
-                pointsNode.className = 'bets-compact-points';
-
-                if (points === '0') {
-                    pointsNode.classList.add('zero');
-                }
+                pointsNode.className = 'bets-compact-points ' + compactPointsClass(entry.points);
 
                 pointsNode.textContent = points;
-            }
-
-            const numericPoints = Number(points.replace('+', '')) || 0;
-            if (isFinished) {
-                if (numericPoints === 11) {
-                    item.classList.add('leader-gold');
-                } else if (numericPoints === 10) {
-                    item.classList.add('leader-silver');
-                } else if (numericPoints >= 7 && numericPoints <= 8) {
-                    item.classList.add('leader-blue');
-                }
             }
 
             nameNode.textContent = name;

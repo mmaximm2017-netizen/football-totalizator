@@ -425,7 +425,7 @@
 
         {% for p in predictions %}
 
-        <div class="prediction-row" data-points="{{ p.points or 0 }}">
+        <div class="prediction-row" data-points="{{ p.points if p.points is not none else '' }}">
 
             <div class="prediction-user">
                 <div class="prediction-name">
@@ -441,9 +441,11 @@
                 </div>
 
                 {% if match.status == 'FINISHED' %}
+                    {% if p.points is not none %}
                     <div class="points-pill">
                         +{{ p.points or 0 }} очков
                     </div>
+                    {% endif %}
                 {% endif %}
             </div>
 

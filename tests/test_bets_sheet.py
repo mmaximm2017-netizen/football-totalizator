@@ -72,6 +72,59 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("style.width", template)
         self.assertNotIn("style.height", template)
 
+    def test_finished_rows_sort_by_numeric_points_with_stable_nulls_last(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("function parseCompactPoints(row)", template)
+        self.assertIn("if (raw === null || raw.trim() === '') return null;", template)
+        self.assertIn("if (isFinished) {\n            rowEntries.sort", template)
+        self.assertIn("return b.points - a.points || a.originalIndex - b.originalIndex;", template)
+        self.assertIn("if (a.points === null) return 1;", template)
+        self.assertIn("if (b.points === null) return -1;", template)
+        self.assertIn("const rowEntries = rows.map", template)
+        self.assertNotIn("leader-gold", template)
+        self.assertNotIn("leader-silver", template)
+        self.assertNotIn("leader-blue", template)
+
+    def test_points_use_semantic_categories_and_shared_large_geometry(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        match_template = (ROOT / "templates" / "match_predictions.html").read_text(encoding="utf-8")
+        for category in (
+            "points-exact-major", "points-exact", "points-difference", "points-near",
+            "points-outcome", "points-fallback", "points-zero", "points-unavailable",
+        ):
+            self.assertIn(category, template)
+            self.assertIn(".bets-compact-points." + category, css)
+        self.assertIn("if (points === 11) return 'points-exact-major';", template)
+        self.assertIn("if (points === 10) return 'points-exact';", template)
+        self.assertIn("if (points === 7 || points === 8) return 'points-difference';", template)
+        self.assertIn("if (points === 5) return 'points-near';", template)
+        self.assertIn("if (points === 3) return 'points-outcome';", template)
+        self.assertIn("if (points === 2) return 'points-fallback';", template)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 64px 66px", css)
+        self.assertIn("width: 66px", css)
+        self.assertIn("min-width: 66px", css)
+        self.assertIn("height: 40px", css)
+        self.assertIn("#f6c945", css)
+        self.assertIn("#1769d2", css)
+        self.assertIn("#21ad68", css)
+        self.assertIn("#2c944e", css)
+        self.assertIn("#169eaa", css)
+        self.assertIn("rgba(93,111,142,0.90)", css)
+        self.assertIn("color: #2b1b00", css)
+        self.assertIn("color: #ffffff", css)
+        self.assertIn("data-points=\"{{ p.points if p.points is not none else '' }}\"", match_template)
+        self.assertNotIn("data-points=\"{{ p.points or 0 }}\"", match_template)
+        self.assertIn(".bets-compact-score {", css)
+
+    def test_unfinished_rows_keep_no_points_layout_and_order(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        self.assertIn("if (!isFinished) {\n                item.classList.add('no-points');", template)
+        self.assertIn("if (isFinished) {\n                pointsNode = document.createElement('div');", template)
+        self.assertIn(".bets-compact-row.no-points", css)
+        self.assertNotIn(".bets-compact-row.leader-", css)
+
 
 if __name__ == "__main__":
     unittest.main()

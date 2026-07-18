@@ -1502,7 +1502,7 @@
 
     .bets-compact-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 58px 46px;
+        grid-template-columns: minmax(0, 1fr) 64px 66px;
         align-items: center;
         gap: 8px;
         min-height: 42px;
@@ -1517,7 +1517,7 @@
     }
 
     .bets-compact-row.no-points {
-        grid-template-columns: minmax(0, 1fr) 58px;
+        grid-template-columns: minmax(0, 1fr) 64px;
     }
 
     .bets-compact-name {
@@ -1547,17 +1547,72 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        height: 30px;
-        border-radius: 10px;
-        background: rgba(76,175,80,0.10);
-        color: #2e7d32;
-        font-size: 13px;
-        font-weight: 950;
+        width: 66px;
+        min-width: 66px;
+        height: 40px;
+        padding: 0 8px;
+        box-sizing: border-box;
+        border-radius: 13px;
+        color: #ffffff;
+        font-size: 19px;
+        font-weight: 1000;
+        line-height: 1;
+        letter-spacing: 0.2px;
+        text-align: center;
     }
 
-    .bets-compact-points.zero {
-        background: rgba(93,120,148,0.08);
-        color: rgba(93,120,148,0.88);
+    .bets-compact-points.points-exact-major,
+    .bets-compact-points.points-exact {
+        background: linear-gradient(135deg, #f6c945, #d99b16);
+        border: 1px solid rgba(255,238,164,0.72);
+        color: #2b1b00;
+        box-shadow: 0 7px 18px rgba(224,166,28,0.34), inset 0 1px 0 rgba(255,255,255,0.42);
+    }
+
+    .bets-compact-points.points-exact-major {
+        box-shadow: 0 8px 21px rgba(224,166,28,0.46), inset 0 1px 0 rgba(255,255,255,0.42);
+    }
+
+    .bets-compact-points.points-difference {
+        background: linear-gradient(135deg, #1769d2, #084ca8);
+        border: 1px solid rgba(111,180,255,0.46);
+        color: #ffffff;
+        box-shadow: 0 7px 18px rgba(23,105,210,0.30), inset 0 1px 0 rgba(255,255,255,0.20);
+    }
+
+    .bets-compact-points.points-near {
+        background: linear-gradient(135deg, #21ad68, #14834d);
+        border: 1px solid rgba(105,239,171,0.38);
+        color: #ffffff;
+        box-shadow: 0 7px 18px rgba(33,173,104,0.30), inset 0 1px 0 rgba(255,255,255,0.20);
+    }
+
+    .bets-compact-points.points-outcome {
+        background: linear-gradient(135deg, #2c944e, #206d3a);
+        border: 1px solid rgba(118,213,145,0.30);
+        color: #ffffff;
+        box-shadow: 0 6px 15px rgba(44,148,78,0.24), inset 0 1px 0 rgba(255,255,255,0.16);
+    }
+
+    .bets-compact-points.points-fallback {
+        background: linear-gradient(135deg, #169eaa, #08717d);
+        border: 1px solid rgba(101,229,235,0.32);
+        color: #ffffff;
+        box-shadow: 0 6px 15px rgba(22,158,170,0.25), inset 0 1px 0 rgba(255,255,255,0.17);
+    }
+
+    .bets-compact-points.points-zero {
+        background: linear-gradient(135deg, rgba(93,111,142,0.90), rgba(54,67,94,0.94));
+        border: 1px solid rgba(255,255,255,0.13);
+        color: rgba(255,255,255,0.88);
+        box-shadow: 0 5px 13px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.10);
+    }
+
+    .bets-compact-points.points-unavailable {
+        background: rgba(93,111,142,0.52);
+        border: 1px dashed rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.64);
+        box-shadow: none;
     }
 
     .bets-compact-empty {
@@ -5542,7 +5597,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     }
 
     body.tournament-wc2026 .bets-compact-row {
-        grid-template-columns: minmax(0, 1fr) 64px 48px;
+        grid-template-columns: minmax(0, 1fr) 64px 66px;
         min-height: 48px;
         padding: 8px 9px 8px 12px;
         border-radius: 18px;
@@ -5566,27 +5621,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-wc2026 .bets-compact-row:nth-child(4) { animation-delay: 75ms; }
     body.tournament-wc2026 .bets-compact-row:nth-child(n+5) { animation-delay: 100ms; }
 
-    body.tournament-wc2026 .bets-compact-row.leader-gold {
-        box-shadow:
-            0 0 22px rgba(255,202,86,0.32),
-            inset 0 1px 0 rgba(255,255,255,0.12);
-        border-color: rgba(255,202,86,0.34);
-    }
-
-    body.tournament-wc2026 .bets-compact-row.leader-silver {
-        box-shadow:
-            0 0 20px rgba(225,237,255,0.26),
-            inset 0 1px 0 rgba(255,255,255,0.12);
-        border-color: rgba(225,237,255,0.28);
-    }
-
-    body.tournament-wc2026 .bets-compact-row.leader-blue {
-        box-shadow:
-            0 0 20px rgba(106,227,255,0.26),
-            inset 0 1px 0 rgba(255,255,255,0.12);
-        border-color: rgba(106,227,255,0.30);
-    }
-
     body.tournament-wc2026 .bets-compact-name {
         color: #ffffff;
         font-size: clamp(18px, 4.6vw, 20px);
@@ -5607,21 +5641,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         box-shadow:
             0 0 20px rgba(106,227,255,0.40),
             inset 0 1px 0 rgba(255,255,255,0.36);
-    }
-
-    body.tournament-wc2026 .bets-compact-points {
-        height: 32px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 950;
-    }
-
-    body.tournament-wc2026 .bets-compact-points.zero {
-        background: rgba(255,255,255,0.08);
-        color: rgba(255,255,255,0.72);
     }
 
     body.tournament-wc2026 .bets-compact-empty {
