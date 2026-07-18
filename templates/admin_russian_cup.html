@@ -22,8 +22,6 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="league" value="rcup"><input type="hidden" name="api_match_id" value="">
                 <div class="rc-grid"><label>Команда 1<input name="home_team" required></label><label>Команда 2<input name="away_team" required></label></div>
                 <div class="rc-grid"><label>Дата<input type="date" name="match_date" required></label><label>Время МСК<input type="time" name="match_time" value="19:00" required></label></div>
-                <div class="rc-grid"><label>Стадия<select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><label>Статус<select name="status">{% for value in russian_cup_statuses %}<option value="{{ value }}">{{ value|lower }}</option>{% endfor %}</select></label></div>
-                <label>Другая стадия<input name="stage_custom" placeholder="Например: Путь РПЛ"></label>
                 <details class="rc-add-advanced"><summary>Дополнительные настройки</summary><div class="rc-grid"><label>Дата дедлайна<input type="date" name="deadline_date"></label><label>Время дедлайна<input type="time" name="deadline_time"></label></div><div class="rc-card-note">По умолчанию: 11:00 МСК в день матча.</div></details>
                 <button class="rc-btn" type="submit">Создать матч</button>
             </form>

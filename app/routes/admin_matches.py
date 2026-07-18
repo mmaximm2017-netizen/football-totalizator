@@ -556,8 +556,8 @@ def admin_russian_cup_add():
         away_team = form_data["away_team"]
         match_date = form_data["match_date"]
         match_time = form_data["match_time"]
-        stage = form_data["stage"]
-        status = form_data["status"]
+        stage = ""
+        status = "SCHEDULED"
 
         if not home_team or not away_team or not match_date or not match_time:
             flash("Заполните команды, дату и время", "error")

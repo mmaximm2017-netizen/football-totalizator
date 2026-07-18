@@ -232,6 +232,13 @@ class RussianCupUiTests(unittest.TestCase):
             html = render_template("admin_russian_cup.html", **context)
 
         self.assertIn('action="/admin/russian_cup_add"', html)
+        add_form = re.search(r'<form[^>]+class="rc-add-form".*?</form>', html, re.DOTALL).group(0)
+        self.assertNotIn('name="stage"', add_form)
+        self.assertNotIn('name="status"', add_form)
+        self.assertNotIn('name="stage_custom"', add_form)
+        self.assertNotIn("Другая стадия", add_form)
+        self.assertIn('name="deadline_date"', add_form)
+        self.assertIn('name="deadline_time"', add_form)
         self.assertRegex(html, r'href="/admin/russian-cup/matches/10/edit\?return_to=[^"]*admin/russian-cup')
         self.assertIn('>Редактировать матч</a>', html)
         self.assertNotIn('>Изменить</a>', html)
@@ -373,8 +380,6 @@ class RussianCupUiTests(unittest.TestCase):
                     "away_team": "Зенит",
                     "match_date": "2026-07-12",
                     "match_time": "19:00",
-                    "status": "SCHEDULED",
-                    "stage": "Групповой этап",
                 },
                 [(5, "Кубок России", 1, None), None],
                 [],
@@ -438,6 +443,8 @@ class RussianCupUiTests(unittest.TestCase):
                 if url.endswith("add"):
                     self.assertIn("'rcup'", sql)
                     self.assertIn("'russian_cup'", sql)
+                    self.assertEqual(route_cursor.executed[-1][1][4], "SCHEDULED")
+                    self.assertEqual(route_cursor.executed[-1][1][6], "")
                 elif url.endswith("recalc"):
                     self.assertIn("AND league = 'rcup'", sql)
                     self.assertIn("WHERE tournament_id = %s", sql)
