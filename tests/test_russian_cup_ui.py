@@ -612,6 +612,13 @@ class RussianCupDeadlineTests(unittest.TestCase):
         self.assertEqual(kickoff, expected_kickoff)
         self.assertEqual(deadline, expected_deadline)
 
+    def test_shared_deadline_helper_supports_rpl_and_cup_early_match_contract(self):
+        from app.routes.admin_matches import build_manual_deadline_utc
+        with self.assertRaises(ValueError):
+            build_manual_deadline_utc("2026-08-18", "11:00", "", "", reject_early_auto=True)
+        _, deadline = build_manual_deadline_utc("2026-08-18", "19:30", "", "", reject_early_auto=True)
+        self.assertEqual(deadline, self._as_utc("2026-08-18", "11:00"))
+
 
 if __name__ == "__main__":
     unittest.main()

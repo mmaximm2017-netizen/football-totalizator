@@ -13,6 +13,7 @@ from app.services.wc_playoff_service import (
     is_wc2026_playoff_match,
 )
 from app.utils import (
+    format_admin_match_date,
     format_date_ru,
     format_month_label,
     parse_datetime,
@@ -134,7 +135,7 @@ def prepare_admin_match_list(cur, filters, league=None, tournament_name=None):
             "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
             "deadline_date_msk": deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
             "deadline_time_msk": deadline_msk.strftime("%H:%M") if deadline_msk else "",
-            "date_label": format_date_ru(kickoff_msk.date().isoformat()) if kickoff_msk else "Дата не указана",
+            "date_label": format_admin_match_date(kickoff_msk) if kickoff_msk else "Дата не указана",
         })
     grouped = []
     for match in matches:
@@ -194,7 +195,7 @@ def parse_tournament_match_filters(args):
         "status": (args.get("status") or "").strip().upper(),
         "period": period,
         "page": page,
-        "per_page": {"upcoming": 15, "pending_result": 20, "finished": 20, "all": 30}[view],
+        "per_page": 5,
     }
 
 
@@ -273,6 +274,7 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
             "tournament_id": tournament_id,
             "has_result": row[6] is not None and row[7] is not None,
             "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
+            "date_label": format_admin_match_date(kickoff_msk) if kickoff_msk else "Дата не указана",
             "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
             "deadline_date_msk": deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
             "deadline_time_msk": deadline_msk.strftime("%H:%M") if deadline_msk else "",
@@ -287,7 +289,7 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
         elif date_value == now_msk - timedelta(days=1):
             label = "Вчера"
         else:
-            label = format_date_ru(match["match_date_msk"]) if match["match_date_msk"] else "Дата не указана"
+            label = match["date_label"]
         key = match["match_date_msk"] or "unknown"
         if not groups or groups[-1]["key"] != key:
             groups.append({"key": key, "label": label, "matches": []})

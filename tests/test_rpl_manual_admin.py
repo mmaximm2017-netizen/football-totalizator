@@ -108,6 +108,39 @@ class RplManualAdminTests(unittest.TestCase):
         self.assertEqual(params[4], "SCHEDULED")
         self.assertEqual(params[6], "")
 
+    def test_rpl_create_uses_same_day_1100_msk_deadline_in_utc(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
+        response, conn, _ = self.post(
+            "/admin/russia_2027_add",
+            {"home_team": "Спартак", "away_team": "Зенит", "match_date": "2027-07-18", "match_time": "19:00"},
+            cursor,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 1)
+        params = cursor.executed[-1][1]
+        self.assertEqual(params[2].strftime("%Y-%m-%d %H:%M"), "2027-07-18 16:00")
+        self.assertEqual(params[3].strftime("%Y-%m-%d %H:%M"), "2027-07-18 08:00")
+
+    def test_rpl_manual_deadline_has_priority(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
+        self.post(
+            "/admin/russia_2027_add",
+            {"home_team": "Спартак", "away_team": "Зенит", "match_date": "2027-07-18", "match_time": "19:00", "deadline_date": "2027-07-17", "deadline_time": "09:30"},
+            cursor,
+        )
+        self.assertEqual(cursor.executed[-1][1][3].strftime("%Y-%m-%d %H:%M"), "2027-07-17 06:30")
+
+    def test_rpl_early_match_without_manual_deadline_is_rejected(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None)])
+        response, conn, _ = self.post(
+            "/admin/russia_2027_add",
+            {"home_team": "Спартак", "away_team": "Зенит", "match_date": "2027-07-18", "match_time": "11:00"},
+            cursor,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 0)
+        self.assertEqual(conn.rollbacks, 1)
+
     def test_manual_result_is_scoped_to_rpl_and_recalculates(self):
         cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), (10, "SCHEDULED")])
         response, conn, recalc = self.post(
@@ -146,6 +179,7 @@ class RplManualAdminTests(unittest.TestCase):
         self.assertEqual(len(cursor.executed), 2)
         self.assertIn("SET home_score = %s, away_score = %s, status = 'FINISHED'", cursor.executed[-1][0])
         self.assertIn("AND tournament_id = %s AND league = 'rpl'", cursor.executed[-1][0])
+        self.assertNotIn("deadline =", cursor.executed[-1][0])
 
     def test_edit_page_preserves_safe_return_to(self):
         cursor = Cursor([
@@ -203,6 +237,13 @@ class RplManualAdminTests(unittest.TestCase):
         edit_html = (ROOT / "templates" / "admin_rpl_edit.html").read_text(encoding="utf-8")
         self.assertNotIn("api_match_id", edit_html)
         self.assertNotIn("API", edit_html)
+
+    def test_rpl_admin_shows_default_deadline_and_display_date_without_changing_inputs(self):
+        html = (ROOT / "templates" / "admin_russia_2027.html").read_text(encoding="utf-8")
+        self.assertIn("11:00 МСК в день матча", html)
+        self.assertIn("m.date_label", html)
+        edit_html = (ROOT / "templates" / "admin_rpl_edit.html").read_text(encoding="utf-8")
+        self.assertIn('type="date" name="match_date" value="{{ match.match_date_msk }}"', edit_html)
 
     def test_rpl_admin_css_is_scoped_and_mobile_safe(self):
         css = (ROOT / "static" / "css" / "tournaments" / "rpl-admin.css").read_text(encoding="utf-8")

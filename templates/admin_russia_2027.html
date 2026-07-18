@@ -26,6 +26,7 @@
                 <div class="rpl-grid"><label>Домашняя команда<input name="home_team" required></label><label>Гостевая команда<input name="away_team" required></label></div>
                 <div class="rpl-grid"><label>Дата<input type="date" name="match_date" required></label><label>Время МСК<input type="time" name="match_time" value="19:00" required></label></div>
                 <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date"></label><label>Время дедлайна<input type="time" name="deadline_time"></label></div>
+                <div class="rpl-card-note">По умолчанию: 11:00 МСК в день матча.</div>
                 <button class="rpl-btn" type="submit">Добавить матч</button>
             </form>
         </details>
@@ -60,7 +61,7 @@
                             <article class="rpl-compact-card {% if m.status == 'FINISHED' or m.has_result %}is-finished{% elif m.status in ['LIVE', 'IN_PLAY', 'HALFTIME', 'PAUSED'] %}is-live{% endif %}">
                                 <div class="rpl-card-top"><span class="rpl-card-time">{{ m.match_time_msk }} МСК</span><span class="rpl-status-badge rpl-status-{{ m.status|lower }}">{{ m.status }}</span></div>
                                 <div class="rpl-card-teams">{{ m.home_team }}{% if m.has_result %} <span class="rpl-card-score">{{ m.home_score }}:{{ m.away_score }}</span>{% endif %} — {{ m.away_team }}</div>
-                                <div class="rpl-card-meta">{{ m.match_date_msk }} · Чемпионат России{% if m.deadline_time_msk %} · Дедлайн {{ m.deadline_time_msk }}{% endif %}</div>
+                                <div class="rpl-card-meta">{{ m.date_label }} · Чемпионат России{% if m.deadline_time_msk %} · Дедлайн {{ m.deadline_time_msk }}{% endif %}</div>
                                 <div class="rpl-card-actions">
                                     <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_result') }}" class="rpl-quick-result">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}">
@@ -79,7 +80,7 @@
                     </section>
                 {% endfor %}
             </div>
-            <div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set params = request.args.to_dict() %}{% for page in range(1, admin_match_list.pages + 1) %}{% set _ = params.update({'page': page}) %}<a class="{% if page == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russia_2027', **params) }}">{{ page }}</a>{% endfor %}</div>
+            {% if admin_match_list.pages > 1 %}<div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set params = request.args.to_dict() %}{% if admin_match_list.page > 1 %}{% set _ = params.update({'page': admin_match_list.page - 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Назад</a>{% endif %}{% for page in range(1, admin_match_list.pages + 1) %}{% set _ = params.update({'page': page}) %}<a class="{% if page == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russia_2027', **params) }}">{{ page }}</a>{% endfor %}{% if admin_match_list.page < admin_match_list.pages %}{% set _ = params.update({'page': admin_match_list.page + 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Вперёд</a>{% endif %}</div>{% endif %}
         {% else %}<div class="rpl-pending-note">По выбранным фильтрам матчей нет.</div>{% endif %}
     </section>
 

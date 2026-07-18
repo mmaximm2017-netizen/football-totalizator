@@ -155,7 +155,7 @@ def admin_russian_cup():
             data['admin_match_list'] = prepare_russian_cup_match_list(cur, data['russian_cup_tournament']['id'], filters)
         else:
             data['admin_match_filters'] = parse_admin_match_filters(request.args)
-            data['admin_match_list'] = {'matches': [], 'groups': [], 'total': 0, 'page': 1, 'pages': 1, 'per_page': 30, 'first': 0, 'last': 0}
+            data['admin_match_list'] = {'matches': [], 'groups': [], 'total': 0, 'page': 1, 'pages': 1, 'per_page': 5, 'first': 0, 'last': 0}
     finally:
         close_db(conn, cur)
     return render_template('admin_russian_cup.html', **data)

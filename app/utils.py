@@ -110,6 +110,17 @@ def format_date_ru(date_str):
         return date_str
 
 
+def format_admin_match_date(value):
+    """Format an admin match date in Moscow time without changing input data."""
+    if not value:
+        return "Дата не указана"
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone(MSK)
+        return value.strftime("%d.%m.%Y")
+    return str(value)
+
+
 def get_flag(name):
     """Возвращает флаг из папки /static/flags/."""
     translated = team_data.TEAM_NAMES.get(name, name)

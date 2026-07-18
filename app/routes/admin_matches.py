@@ -76,30 +76,14 @@ def validate_score(home_score, away_score):
         return None, None
 
 
-def build_manual_deadline_utc(match_date, match_time, deadline_date, deadline_time):
-    dt_msk = datetime.strptime(
-        f"{match_date} {match_time}",
-        "%Y-%m-%d %H:%M",
-    ).replace(tzinfo=MSK)
-
-    kickoff_utc = dt_msk.astimezone(timezone.utc)
-
-    if deadline_date or deadline_time:
-        if not deadline_date or not deadline_time:
-            raise ValueError("������� � ����, � ����� ��������")
-
-        deadline_msk = datetime.strptime(
-            f"{deadline_date} {deadline_time}",
-            "%Y-%m-%d %H:%M",
-        ).replace(tzinfo=MSK)
-    else:
-        deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-
-    deadline_utc = deadline_msk.astimezone(timezone.utc)
-    return kickoff_utc, deadline_utc
-
-
-def build_russian_cup_deadline_utc(match_date, match_time, deadline_date, deadline_time):
+def build_manual_deadline_utc(
+    match_date,
+    match_time,
+    deadline_date,
+    deadline_time,
+    *,
+    reject_early_auto=False,
+):
     dt_msk = datetime.strptime(
         f"{match_date} {match_time}",
         "%Y-%m-%d %H:%M",
@@ -117,14 +101,24 @@ def build_russian_cup_deadline_utc(match_date, match_time, deadline_date, deadli
         ).replace(tzinfo=MSK)
     else:
         deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-        if deadline_msk >= dt_msk:
+        if reject_early_auto and deadline_msk >= dt_msk:
             raise ValueError(
-                "Матч начинается раньше стандартного дедлайна 11:00. "
-                "Укажите дедлайн вручную."
+                "Матч начинается раньше стандартного дедлайна 11:00 "
+                "(включая 11:00). Укажите дедлайн вручную."
             )
 
     deadline_utc = deadline_msk.astimezone(timezone.utc)
     return kickoff_utc, deadline_utc
+
+
+def build_russian_cup_deadline_utc(match_date, match_time, deadline_date, deadline_time):
+    return build_manual_deadline_utc(
+        match_date,
+        match_time,
+        deadline_date,
+        deadline_time,
+        reject_early_auto=True,
+    )
 
 
 def get_match_tournament_id(cur, match_id):
@@ -340,6 +334,7 @@ def admin_russia_2027_add():
             match_time,
             request.form.get("deadline_date", "").strip(),
             request.form.get("deadline_time", "").strip(),
+            reject_early_auto=True,
         )
         cur.execute(
             """
@@ -370,6 +365,9 @@ def admin_russia_2027_add():
         match_id = cur.fetchone()[0]
         conn.commit()
         flash("Матч чемпионата России создан", "success")
+    except ValueError as e:
+        conn.rollback()
+        flash(str(e), "error")
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка создания матча: {e}", "error")
@@ -422,6 +420,7 @@ def admin_russia_2027_edit():
             match_time,
             request.form.get("deadline_date", "").strip(),
             request.form.get("deadline_time", "").strip(),
+            reject_early_auto=True,
         )
         home_score = away_score = None
         result_home = (request.form.get("home_score") or "").strip()
@@ -490,6 +489,9 @@ def admin_russia_2027_edit():
             )
         conn.commit()
         flash("Матч сохранён", "success")
+    except ValueError as e:
+        conn.rollback()
+        flash(str(e), "error")
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка сохранения матча: {e}", "error")

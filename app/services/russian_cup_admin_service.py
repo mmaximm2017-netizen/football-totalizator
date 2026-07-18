@@ -1,7 +1,7 @@
 from zoneinfo import ZoneInfo
 
 from app.db import RUSSIAN_CUP_TOURNAMENT_NAME
-from app.utils import parse_datetime
+from app.utils import format_admin_match_date, parse_datetime
 
 
 MSK = ZoneInfo("Europe/Moscow")
@@ -111,6 +111,7 @@ def prepare_russian_cup_admin_data(cur):
                 "penalty_away": "",
                 "is_hidden": row[5] == "CANCELLED",
                 "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
+                "date_label": format_admin_match_date(kickoff) if kickoff else "Дата не указана",
                 "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
                 "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
                 "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
