@@ -172,6 +172,123 @@ def prepare_admin_matches_page_data(cur):
     }
 
 
+def parse_russian_cup_match_filters(args):
+    view = args.get("view", "upcoming")
+    if view not in {"upcoming", "pending_result", "finished", "all"}:
+        view = "upcoming"
+    page = max(args.get("page", 1, type=int) or 1, 1)
+    period = args.get("period", "30" if view == "upcoming" else "all")
+    if period not in {"7", "30", "all"}:
+        period = "30" if view == "upcoming" else "all"
+    return {
+        "view": view,
+        "q": (args.get("q") or "").strip(),
+        "status": (args.get("status") or "").strip().upper(),
+        "period": period,
+        "page": page,
+        "per_page": {"upcoming": 15, "pending_result": 20, "finished": 20, "all": 30}[view],
+    }
+
+
+def prepare_russian_cup_match_list(cur, tournament_id, filters):
+    query_filters = dict(filters)
+    query_filters["view"] = "attention" if filters["view"] == "pending_result" else filters["view"]
+    now = datetime.now(timezone.utc)
+    where, params = _admin_match_where(query_filters, now)
+    where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+    params.append(tournament_id)
+
+    def count_rows(current_where, current_params):
+        cur.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM matches m
+            LEFT JOIN tournaments t ON t.id = m.tournament_id
+            WHERE {current_where}
+            """,
+            tuple(current_params),
+        )
+        return int((cur.fetchone() or [0])[0] or 0)
+
+    total = count_rows(where, params)
+    pending_count = 0
+    if filters["view"] == "upcoming":
+        pending_filters = dict(filters, view="attention", period="all")
+        pending_where, pending_params = _admin_match_where(pending_filters, now)
+        pending_where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+        pending_params.append(tournament_id)
+        pending_count = count_rows(pending_where, pending_params)
+    fallback_notice = False
+    if filters["view"] == "upcoming" and total == 0 and filters["period"] == "30":
+        query_filters["period"] = "all"
+        where, params = _admin_match_where(query_filters, now)
+        where += " AND m.tournament_id = %s AND m.league = 'rcup'"
+        params.append(tournament_id)
+        total = count_rows(where, params)
+        fallback_notice = total > 0
+
+    pages = max((total + filters["per_page"] - 1) // filters["per_page"], 1)
+    page = min(filters["page"], pages)
+    offset = (page - 1) * filters["per_page"]
+    order = "m.kickoff_time DESC, m.id DESC" if filters["view"] in {"pending_result", "finished"} else "m.kickoff_time ASC, m.id ASC"
+    cur.execute(
+        f"""
+        SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
+               m.status, m.home_score, m.away_score, m.playoff_stage_manual
+        FROM matches m
+        LEFT JOIN tournaments t ON t.id = m.tournament_id
+        WHERE {where}
+        ORDER BY {order}
+        LIMIT %s OFFSET %s
+        """,
+        tuple(params + [filters["per_page"], offset]),
+    )
+    now_msk = now.astimezone(MSK).date()
+    matches = []
+    for row in cur.fetchall():
+        kickoff = parse_datetime(row[3])
+        deadline = parse_datetime(row[4])
+        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+        deadline_msk = deadline.astimezone(MSK) if deadline else None
+        matches.append({
+            "id": row[0], "home_team": row[1], "away_team": row[2],
+            "kickoff_time": kickoff, "deadline": deadline, "status": row[5],
+            "home_score": row[6], "away_score": row[7], "stage": row[8] or "",
+            "has_result": row[6] is not None and row[7] is not None,
+            "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
+            "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
+            "deadline_date_msk": deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
+            "deadline_time_msk": deadline_msk.strftime("%H:%M") if deadline_msk else "",
+        })
+    groups = []
+    for match in matches:
+        date_value = match["kickoff_time"].astimezone(MSK).date() if match["kickoff_time"] else None
+        if date_value == now_msk:
+            label = "Сегодня"
+        elif date_value == now_msk + timedelta(days=1):
+            label = "Завтра"
+        elif date_value == now_msk - timedelta(days=1):
+            label = "Вчера"
+        else:
+            label = format_date_ru(match["match_date_msk"]) if match["match_date_msk"] else "Дата не указана"
+        key = match["match_date_msk"] or "unknown"
+        if not groups or groups[-1]["key"] != key:
+            groups.append({"key": key, "label": label, "matches": []})
+        groups[-1]["matches"].append(match)
+    return {
+        "matches": matches,
+        "groups": groups,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "per_page": filters["per_page"],
+        "first": offset + 1 if total else 0,
+        "last": min(offset + len(matches), total),
+        "fallback_notice": fallback_notice,
+        "pending_count": pending_count,
+    }
+
+
 def prepare_wc_playoff_page_data(cur, filters):
     """Load only the bounded WC playoff candidate set for its admin page."""
     now = datetime.now(timezone.utc)

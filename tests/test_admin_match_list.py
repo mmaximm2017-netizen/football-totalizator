@@ -7,7 +7,9 @@ from pathlib import Path
 from app.services.admin_view_service import (
     prepare_admin_matches_page_data,
     parse_admin_match_filters,
+    parse_russian_cup_match_filters,
     prepare_admin_match_list,
+    prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import prepare_rpl_admin_page_data
@@ -40,6 +42,36 @@ class SequenceCursor(Cursor):
 
 
 class AdminMatchListTests(unittest.TestCase):
+    def test_russian_cup_defaults_to_upcoming_with_fifteen_matches(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
+        filters = parse_russian_cup_match_filters(args)
+        self.assertEqual(filters["view"], "upcoming")
+        self.assertEqual(filters["period"], "30")
+        self.assertEqual(filters["per_page"], 15)
+
+    def test_russian_cup_view_limits_and_pending_condition_are_server_side(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {"view": "pending_result"}.get(key, default))
+        cursor = Cursor(
+            21,
+            [(21, "Спартак", "Зенит", datetime(2026, 7, 18, 16, 0, tzinfo=timezone.utc), None,
+              "LIVE", None, None, "Групповой этап")],
+        )
+        result = prepare_russian_cup_match_list(cursor, 7, parse_russian_cup_match_filters(args))
+        self.assertEqual(result["per_page"], 20)
+        self.assertIn("COALESCE(m.status, '') <> 'FINISHED'", cursor.executed[0][0])
+        self.assertIn("m.home_score IS NULL", cursor.executed[0][0])
+        self.assertIn("m.tournament_id = %s", cursor.executed[0][0])
+        self.assertIn("LIMIT %s OFFSET %s", cursor.executed[-1][0])
+
+    def test_russian_cup_template_has_no_full_edit_form_in_match_list(self):
+        root = Path(__file__).resolve().parents[1]
+        html = (root / "templates" / "admin_russian_cup.html").read_text(encoding="utf-8")
+        self.assertIn("admin_russian_cup_edit_form", html)
+        self.assertIn("admin_russian_cup_result", html)
+        self.assertNotIn('action="{{ url_for(\'admin_matches.admin_russian_cup_edit\') }}"', html)
+        self.assertNotIn("disabled", html)
+        self.assertIn("rc-technical-operations", html)
+
     def test_main_page_metadata_does_not_select_matches(self):
         cursor = Cursor(0, [(1, "Турнир", 1, None)])
         data = prepare_admin_matches_page_data(cursor)

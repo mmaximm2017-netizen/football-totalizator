@@ -24,7 +24,9 @@ from app.services.admin_view_service import (
     prepare_admin_matches_page_data,
     prepare_admin_view_data,
     parse_admin_match_filters,
+    parse_russian_cup_match_filters,
     prepare_admin_match_list,
+    prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import (
@@ -140,9 +142,9 @@ def admin_russian_cup():
         data['current_tournament_slug'] = 'rcup'
         if data.get('russian_cup_tournament'):
             data['current_tournament_id'] = data['russian_cup_tournament']['id']
-            filters = parse_admin_match_filters(request.args, forced_tournament_id=data['russian_cup_tournament']['id'])
+            filters = parse_russian_cup_match_filters(request.args)
             data['admin_match_filters'] = filters
-            data['admin_match_list'] = prepare_admin_match_list(cur, filters, league='rcup')
+            data['admin_match_list'] = prepare_russian_cup_match_list(cur, data['russian_cup_tournament']['id'], filters)
         else:
             data['admin_match_filters'] = parse_admin_match_filters(request.args)
             data['admin_match_list'] = {'matches': [], 'groups': [], 'total': 0, 'page': 1, 'pages': 1, 'per_page': 30, 'first': 0, 'last': 0}

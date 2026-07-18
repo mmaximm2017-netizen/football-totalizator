@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, jsonify, redirect, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
@@ -18,6 +18,7 @@ from app.services.wc_playoff_service import (
     is_wc2026_playoff_match,
     normalize_playoff_stage,
 )
+from app.utils import parse_datetime
 
 import logging
 logger = logging.getLogger(__name__)
@@ -728,6 +729,121 @@ def admin_russian_cup_edit():
     except Exception as e:
         conn.rollback()
         flash(f"Ошибка сохранения матча Кубка России: {e}", "error")
+    finally:
+        close_db(conn, cur)
+    return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
+
+
+@admin_matches_bp.route("/russian-cup/matches/<int:match_id>/edit", methods=["GET"])
+@admin_required
+def admin_russian_cup_edit_form(match_id):
+    conn = get_db()
+    cur = conn.cursor()
+    requested_return_to = (request.args.get("return_to") or "").strip()
+    return_to = requested_return_to if requested_return_to.startswith("/admin/") and not requested_return_to.startswith("//") else url_for(RUSSIAN_CUP_ADMIN_REDIRECT)
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual
+            FROM matches
+            WHERE id = %s AND tournament_id = %s AND league = 'rcup'
+            """,
+            (match_id, tournament["id"]),
+        )
+        row = cur.fetchone()
+        if not row:
+            flash("Матч Кубка России не найден", "error")
+            return redirect(return_to)
+        kickoff = parse_datetime(row[3])
+        deadline = parse_datetime(row[4])
+        match = {
+            "id": row[0], "home_team": row[1], "away_team": row[2],
+            "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
+            "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
+            "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
+            "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
+            "status": row[5], "home_score": row[6], "away_score": row[7],
+            "stage": row[8] or "",
+        }
+        return render_template(
+            "admin_russian_cup_edit.html",
+            match=match,
+            russian_cup_stages=(
+                ("Групповой этап", "Групповой этап"),
+                ("Плей-офф", "Плей-офф"),
+                ("1/4 финала", "1/4 финала"),
+                ("1/2 финала", "1/2 финала"),
+                ("Финал", "Финал"),
+                ("Другое", "Другое вручную"),
+            ),
+            russian_cup_statuses=("SCHEDULED", "TIMED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"),
+            return_to=return_to,
+            current_tournament_name="Кубок России",
+            current_tournament_id=tournament["id"],
+            is_rcup_tournament=True,
+        )
+    finally:
+        close_db(conn, cur)
+
+
+@admin_matches_bp.route("/russian_cup_result", methods=["POST"])
+@admin_required
+def admin_russian_cup_result():
+    match_id = request.form.get("match_id", type=int)
+    return_to = request.form.get("return_to")
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        if request.form.get("delete_result") == "1":
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_score = NULL, away_score = NULL, status = 'SCHEDULED'
+                WHERE id = %s AND tournament_id = %s AND league = 'rcup'
+                """,
+                (match_id, tournament["id"]),
+            )
+            if cur.rowcount == 0:
+                conn.rollback()
+                flash("Матч Кубка России не найден", "error")
+                return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
+            cur.execute(
+                """
+                UPDATE predictions
+                SET points = 0
+                WHERE match_id = %s AND tournament_id = %s
+                """,
+                (match_id, tournament["id"]),
+            )
+            flash("Результат Кубка России удалён", "success")
+        else:
+            home_score, away_score = validate_score(
+                request.form.get("home_score"), request.form.get("away_score")
+            )
+            if home_score is None:
+                flash("Укажите корректный счёт", "error")
+                return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
+            cur.execute(
+                """
+                UPDATE matches
+                SET home_score = %s, away_score = %s, status = 'FINISHED'
+                WHERE id = %s AND tournament_id = %s AND league = 'rcup'
+                """,
+                (home_score, away_score, match_id, tournament["id"]),
+            )
+            if cur.rowcount == 0:
+                conn.rollback()
+                flash("Матч Кубка России не найден", "error")
+                return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+            flash("Результат Кубка России сохранён", "success")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        flash(f"Ошибка сохранения результата: {e}", "error")
     finally:
         close_db(conn, cur)
     return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)

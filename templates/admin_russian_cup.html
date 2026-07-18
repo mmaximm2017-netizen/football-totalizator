@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
+{% set admin_match_filters = admin_match_filters|default({'view': 'upcoming', 'q': '', 'status': '', 'period': '30'}) %}
+{% set admin_match_list = admin_match_list|default({'total': 0, 'groups': [], 'pages': 1, 'page': 1, 'first': 0, 'last': 0, 'fallback_notice': false, 'pending_count': 0}) %}
 
 <div class="rc-admin admin-russian-cup-page">
     <div class="admin-nav">
@@ -12,89 +14,65 @@
         <a href="{{ url_for('admin.admin_tournaments') }}">Турниры</a>
     </div>
 
-    <section class="rc-admin-hero admin-russian-cup-hero">
+    <section class="rc-admin-hero admin-russian-cup-hero rc-compact-hero">
         <img src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="FONBET Кубок России" class="rc-admin-logo">
-        <div>
-            <div class="rc-admin-title">Кубок России</div>
-            <div class="rc-admin-subtitle">
-                {{ russian_cup_matches_count }} матчей · {{ russian_cup_finished_count }} завершено · league=rcup
-            </div>
-        </div>
+        <div class="rc-hero-copy"><div class="rc-admin-title">Кубок России</div><div class="rc-admin-subtitle">{{ russian_cup_matches_count }} матчей · {{ russian_cup_finished_count }} завершено</div></div>
+        <details class="rc-add-trigger"><summary>＋ Добавить матч</summary>
+            <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-add-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="league" value="rcup"><input type="hidden" name="api_match_id" value="">
+                <div class="rc-grid"><label>Команда 1<input name="home_team" required></label><label>Команда 2<input name="away_team" required></label></div>
+                <div class="rc-grid"><label>Дата<input type="date" name="match_date" required></label><label>Время МСК<input type="time" name="match_time" value="19:00" required></label></div>
+                <div class="rc-grid"><label>Стадия<select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><label>Статус<select name="status">{% for value in russian_cup_statuses %}<option value="{{ value }}">{{ value|lower }}</option>{% endfor %}</select></label></div>
+                <label>Другая стадия<input name="stage_custom" placeholder="Например: Путь РПЛ"></label>
+                <details class="rc-add-advanced"><summary>Дополнительные настройки</summary><div class="rc-grid"><label>Дата дедлайна<input type="date" name="deadline_date"></label><label>Время дедлайна<input type="time" name="deadline_time"></label></div><div class="rc-card-note">По умолчанию: 11:00 МСК в день матча.</div></details>
+                <button class="rc-btn" type="submit">Создать матч</button>
+            </form>
+        </details>
     </section>
 
-    {% if not russian_cup_tournament %}
-        <div class="rc-alert">Турнир «Кубок России» не найден. Он будет создан автоматически при следующем подключении к БД.</div>
-    {% endif %}
+    {% if not russian_cup_tournament %}<div class="rc-alert">Турнир «Кубок России» не найден.</div>{% endif %}
 
-    <details class="rc-card admin-section" open>
-        <summary>
-            <div>
-                <div class="rc-card-title">Добавить матч</div>
-                <div class="rc-card-note">Только ручные матчи Кубка России, без API-синхронизации</div>
-            </div>
-            <span class="rc-chevron">▶</span>
-        </summary>
-        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_add') }}" class="rc-body admin-russian-cup-form" id="rc-add-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="hidden" name="league" value="rcup">
-            <input type="hidden" name="api_match_id" value="">
-            <div class="rc-grid"><div class="rc-field"><label>Команда 1</label><input name="home_team" required></div><div class="rc-field"><label>Команда 2</label><input name="away_team" required></div></div>
-            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дата</label><input type="date" name="match_date" required></div><div class="rc-field"><label>Время МСК</label><input type="time" name="match_time" value="19:00" required></div></div>
-            <div class="rc-grid"><div class="rc-field"><label>Стадия</label><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div><div class="rc-field"><label>Тур / раунд</label><input name="round_number" placeholder="Например: 3 тур"></div></div>
-            <div class="rc-grid"><div class="rc-field"><label>Статус</label><select name="status">{% for s in russian_cup_statuses %}<option value="{{ s }}">{{ s|lower }}</option>{% endfor %}</select></div><div class="rc-field"><label>Другая стадия</label><input name="stage_custom" placeholder="Например: Путь РПЛ"></div></div>
-            <div class="rc-grid admin-form-datetime"><div class="rc-field"><label>Дедлайн дата</label><input type="date" name="deadline_date"></div><div class="rc-field"><label>Дедлайн время</label><input type="time" name="deadline_time"></div></div>
-            <div class="rc-card-note">По умолчанию: 11:00 МСК в день матча. Дедлайн можно изменить вручную.</div>
-            <button class="rc-btn" type="submit">Добавить матч</button>
+    <section class="rc-workspace">
+        <nav class="rc-view-tabs" aria-label="Режим списка матчей">
+            {% for key, label in [('upcoming', 'Ближайшие'), ('pending_result', 'Ожидают результата'), ('finished', 'Завершённые'), ('all', 'Все')] %}
+                {% set params = request.args.to_dict() %}{% set _ = params.update({'view': key, 'page': 1}) %}
+                <a class="rc-view-tab {% if admin_match_filters.view == key %}active{% endif %}" href="{{ url_for('admin.admin_russian_cup', **params) }}">{{ label }}</a>
+            {% endfor %}
+        </nav>
+
+        {% if admin_match_list.fallback_notice %}<div class="rc-list-note">В ближайшие 30 дней матчей нет. Показаны следующие запланированные матчи.</div>{% endif %}
+        {% if admin_match_filters.view == 'upcoming' and admin_match_list.pending_count %}<div class="rc-pending-note">{{ admin_match_list.pending_count }} матча ожидают результата <a href="{{ url_for('admin.admin_russian_cup', view='pending_result', page=1) }}">Открыть</a></div>{% endif %}
+
+        <form method="get" class="rc-filter-bar">
+            <input type="search" name="q" value="{{ admin_match_filters.q }}" placeholder="Поиск по команде или ID">
+            <details class="rc-filter-details"><summary>Фильтры</summary><div class="rc-filter-panel"><label>Статус<select name="status"><option value="">Все статусы</option>{% for value in russian_cup_statuses %}<option value="{{ value }}" {% if admin_match_filters.status == value %}selected{% endif %}>{{ value|lower }}</option>{% endfor %}</select></label><label>Период<select name="period"><option value="all">Все даты</option><option value="7" {% if admin_match_filters.period == '7' %}selected{% endif %}>7 дней</option><option value="30" {% if admin_match_filters.period == '30' %}selected{% endif %}>30 дней</option></select></label><input type="hidden" name="view" value="{{ admin_match_filters.view }}"><button class="rc-btn" type="submit">Применить</button><a class="rc-btn rc-btn-secondary" href="{{ url_for('admin.admin_russian_cup', view=admin_match_filters.view) }}">Сбросить</a></div></details>
         </form>
-    </details>
 
-    {% if admin_match_list is not defined %}
-    <section class="rc-card admin-section">
-        {% for stage_group in russian_cup_stage_groups|default([]) %}{% for date_group in stage_group.dates %}{% for m in date_group.matches %}<article class="rc-match"><div class="rc-teams">{{ m.home_team }} — {{ m.away_team }}</div><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rc-btn" type="submit">Редактировать</button></form><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rc-btn" type="submit">Скрыть</button></form><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_delete') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rc-btn" type="submit">Удалить</button></form></article>{% endfor %}{% endfor %}{% endfor %}
+        {% if admin_match_list.total %}
+            <div class="rc-match-groups">
+            {% for day in admin_match_list.groups %}
+                <section class="rc-date-section"><h2 class="rc-date-heading">{{ day.label }} <span>{{ day.matches|length }} матча</span></h2>
+                <div class="rc-compact-list">
+                {% for m in day.matches %}
+                    <article class="rc-compact-card {% if m.status == 'FINISHED' or m.has_result %}is-finished{% elif m.status in ['LIVE', 'IN_PLAY', 'HALFTIME', 'PAUSED'] %}is-live{% endif %}">
+                        <div class="rc-card-top"><span class="rc-card-time">{{ m.match_time_msk }} МСК</span><span class="rc-status-badge rc-status-{{ m.status|lower }}">{{ m.status }}</span></div>
+                        <div class="rc-card-teams">{{ m.home_team }} <span>—</span> {{ m.away_team }}</div>
+                        {% if m.home_score is not none and m.away_score is not none %}<div class="rc-card-score">{{ m.home_score }}:{{ m.away_score }}</div>{% endif %}
+                        <div class="rc-card-meta">{{ m.match_date_msk }}{% if m.stage %} · {{ m.stage }}{% endif %}{% if m.deadline_time_msk %} · Дедлайн {{ m.deadline_time_msk }}{% endif %}</div>
+                        <div class="rc-card-actions">
+                            <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_result') }}" class="rc-quick-result"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><input type="number" name="home_score" min="0" placeholder="0" required><span>:</span><input type="number" name="away_score" min="0" placeholder="0" required><button class="rc-btn rc-btn-primary" type="submit">{{ 'Исправить счёт' if m.status == 'FINISHED' or m.has_result else 'Внести счёт' }}</button></form>
+                            <a class="rc-btn rc-btn-secondary" href="{{ url_for('admin_matches.admin_russian_cup_edit_form', match_id=m.id, return_to=request.full_path) }}">Изменить</a>
+                            <details class="rc-more"><summary aria-label="Дополнительные действия">⋮</summary><div class="rc-more-menu"><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.status == 'CANCELLED' %}restore{% else %}hide{% endif %}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button type="submit">{% if m.status == 'CANCELLED' %}Восстановить{% else %}Скрыть{% endif %}</button></form>{% if m.has_result %}<form method="post" action="{{ url_for('admin_matches.admin_russian_cup_result') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="delete_result" value="1"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button type="submit">Удалить результат</button></form>{% endif %}<div class="rc-technical"><strong>Техническая информация</strong><span>ID: {{ m.id }}</span><span>league: rcup</span></div><form class="rc-danger-form" method="post" action="{{ url_for('admin_matches.admin_russian_cup_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button type="submit">Удалить матч</button></form></div></details>
+                        </div>
+                    </article>
+                {% endfor %}
+                </div></section>
+            {% endfor %}
+            </div>
+            <div class="rc-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set params = request.args.to_dict() %}{% for page in range(1, admin_match_list.pages + 1) %}{% set _ = params.update({'page': page}) %}<a class="{% if page == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russian_cup', **params) }}">{{ page }}</a>{% endfor %}</div>
+        {% else %}<div class="rc-empty-state">По выбранным фильтрам матчей нет.</div>{% endif %}
     </section>
-    {% else %}
-    <section class="rc-card admin-section">
-        <div class="rc-card-title">Матчи</div><div class="rc-card-note">{{ admin_match_list.total }} матчей · постоянно видимые карточки</div>
-        <div class="admin-match-tabs">{% for key, label in [('attention','Требуют внимания'),('upcoming','Предстоящие'),('finished','Завершённые'),('all','Все')] %}{% set p = request.args.to_dict() %}{% set _ = p.update({'view': key, 'page': 1}) %}<a class="admin-match-tab {% if admin_match_filters.view == key %}active{% endif %}" href="{{ url_for('admin.admin_russian_cup', **p) }}">{{ label }}</a>{% endfor %}</div>
-        <form class="admin-match-filter-form" method="get"><input type="search" name="q" value="{{ admin_match_filters.q }}" placeholder="Команда или ID"><select name="status"><option value="">Все статусы</option>{% for s in russian_cup_statuses %}<option value="{{ s }}" {% if admin_match_filters.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select><select name="period"><option value="all">Все даты</option><option value="7">7 дней</option><option value="30">30 дней</option></select><input type="hidden" name="view" value="{{ admin_match_filters.view }}"><button class="rc-btn small" type="submit">Фильтровать</button><a class="rc-btn small" href="{{ url_for('admin.admin_russian_cup') }}">Сбросить</a></form>
-        {% if admin_match_list.total %}{% for day in admin_match_list.groups %}<section class="admin-date-section"><h3 class="admin-date-heading">{{ day.label }} <span>{{ day.matches|length }} матчей</span></h3><div class="rc-match-list">{% for m in day.matches %}<article class="rc-match"><div class="rc-match-head"><div><div class="rc-teams">{{ m.home_team }} — {{ m.away_team }}</div><div class="rc-meta">{{ m.match_time_msk }} МСК · {{ m.status }}{% if m.home_score is not none and m.away_score is not none %} · {{ m.home_score }}:{{ m.away_score }}{% endif %}{% if m.playoff_stage %} · {{ m.playoff_stage }}{% endif %}{% if m.deadline_time_msk %} · Дедлайн: {{ m.deadline_date_msk }} {{ m.deadline_time_msk }}{% endif %}</div></div><span class="rc-stage">Кубок России</span></div><div class="rc-actions"><details class="rc-editor"><summary class="rc-card-note">Редактировать</summary><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}" class="rc-body admin-russian-cup-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="league" value="rcup"><input type="hidden" name="return_to" value="{{ request.full_path }}"><div class="rc-grid"><input name="home_team" value="{{ m.home_team }}" required><input name="away_team" value="{{ m.away_team }}" required></div><div class="rc-grid admin-form-datetime"><input type="date" name="match_date" value="{{ m.match_date_msk }}" required><input type="time" name="match_time" value="{{ m.match_time_msk }}" required></div><div class="rc-grid"><select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}" {% if m.playoff_stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><input name="stage_custom" value=""></div><div class="rc-grid"><select name="status">{% for s in russian_cup_statuses %}<option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s|lower }}</option>{% endfor %}</select><input type="number" min="0" name="home_score" value="{{ m.home_score if m.home_score is not none else '' }}"></div><div class="rc-grid"><input type="number" min="0" name="away_score" value="{{ m.away_score if m.away_score is not none else '' }}"><input type="date" name="deadline_date" value="{{ m.deadline_date_msk }}"><input type="time" name="deadline_time" value="{{ m.deadline_time_msk }}"></div><button class="rc-btn" type="submit">Сохранить матч</button></form></details><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.status == 'CANCELLED' %}restore{% else %}hide{% endif %}"><button class="rc-btn small dark" type="submit">{% if m.status == 'CANCELLED' %}Восстановить{% else %}Скрыть{% endif %}</button></form><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="rc-btn small red" type="submit">Удалить</button></form></div></article>{% endfor %}</div></section>{% endfor %}<div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set p = request.args.to_dict() %}{% for n in range(1, admin_match_list.pages + 1) %}{% set _ = p.update({'page': n}) %}<a class="{% if n == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russian_cup', **p) }}">{{ n }}</a>{% endfor %}</div>{% else %}<div class="rc-empty">Матчей по выбранным фильтрам нет.</div>{% endif %}
-    </section>
-    {% endif %}
 
-    <details class="rc-card admin-section">
-        <summary><div><div class="rc-card-title">Пересчитать очки</div><div class="rc-card-note">Для всех завершённых матчей Кубка России</div></div><span class="rc-chevron">▶</span></summary>
-        <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_recalc') }}" class="rc-body" onsubmit="return confirm('Пересчитать очки Кубка России?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="rc-btn dark" type="submit">Пересчитать очки турнира</button>
-        </form>
-    </details>
+    <details class="rc-technical-operations"><summary>Технические операции</summary><form method="post" action="{{ url_for('admin_matches.admin_russian_cup_recalc') }}" onsubmit="return confirm('Пересчитать очки Кубка России?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rc-btn rc-btn-secondary" type="submit">Пересчитать очки Кубка России</button></form></details>
 </div>
-
-<script>
-(function() {
-    var addForm = document.getElementById('rc-add-form');
-    if (addForm) {
-        var matchDate = addForm.querySelector('input[name="match_date"]');
-        var deadlineDate = addForm.querySelector('input[name="deadline_date"]');
-        var deadlineTime = addForm.querySelector('input[name="deadline_time"]');
-        var autoFill = true;
-
-        if (matchDate && deadlineDate && deadlineTime) {
-            matchDate.addEventListener('change', function() {
-                if (autoFill) {
-                    deadlineDate.value = matchDate.value;
-                    deadlineTime.value = '11:00';
-                }
-            });
-
-            deadlineDate.addEventListener('input', function() {
-                autoFill = false;
-            });
-            deadlineTime.addEventListener('input', function() {
-                autoFill = false;
-            });
-        }
-    }
-})();
-</script>
 {% endblock %}

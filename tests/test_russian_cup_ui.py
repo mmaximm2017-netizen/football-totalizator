@@ -57,6 +57,22 @@ class SequenceConnection:
         self.rollbacks += 1
 
 
+class ResultCursor:
+    def __init__(self, tournament_row, rowcount=1, fail_on_execute=False):
+        self.tournament_row = tournament_row
+        self.rowcount = rowcount
+        self.fail_on_execute = fail_on_execute
+        self.executed = []
+
+    def execute(self, query, params=None):
+        if self.fail_on_execute and self.executed:
+            raise RuntimeError("database failure")
+        self.executed.append((query, params))
+
+    def fetchone(self):
+        return self.tournament_row
+
+
 class RussianCupUiTests(unittest.TestCase):
     def make_app(self):
         from app.routes.admin import admin_bp
@@ -176,10 +192,6 @@ class RussianCupUiTests(unittest.TestCase):
             "is_hidden": False,
             "api_match_id": "",
             "league": "rcup",
-            "extra_time_home": "",
-            "extra_time_away": "",
-            "penalty_home": "",
-            "penalty_away": "",
         }
         context = {
             "russian_cup_tournament": {"id": 1, "name": "Кубок России"},
@@ -201,12 +213,26 @@ class RussianCupUiTests(unittest.TestCase):
             "tournaments": [],
             "active_tournaments": [],
             "csrf_token": "test-csrf",
+            "admin_match_filters": {"view": "upcoming", "q": "", "status": "", "period": "30"},
+            "admin_match_list": {
+                "total": 1,
+                "groups": [{"label": "Сегодня", "matches": [{
+                    "id": 10, "home_team": "Спартак", "away_team": "Зенит",
+                    "match_time_msk": "19:00", "match_date_msk": "2026-07-12",
+                    "status": "SCHEDULED", "home_score": None, "away_score": None,
+                    "stage": "Групповой этап", "has_result": False,
+                    "deadline_time_msk": "11:00",
+                }]}],
+                "pages": 1, "page": 1, "first": 1, "last": 1,
+                "fallback_notice": False, "pending_count": 0,
+            },
         }
         with app.test_request_context("/admin/russian-cup"):
             html = render_template("admin_russian_cup.html", **context)
 
         self.assertIn('action="/admin/russian_cup_add"', html)
-        self.assertIn('action="/admin/russian_cup_edit"', html)
+        self.assertIn('/admin/russian-cup/matches/10/edit', html)
+        self.assertIn('action="/admin/russian_cup_result"', html)
         self.assertIn('action="/admin/russian_cup_visibility"', html)
         self.assertIn('action="/admin/russian_cup_delete"', html)
         self.assertIn('action="/admin/russian_cup_recalc"', html)
@@ -372,6 +398,82 @@ class RussianCupUiTests(unittest.TestCase):
                     self.assertIn("AND league = 'rcup'", sql)
 
 
+
+
+class RussianCupResultTests(unittest.TestCase):
+    def setUp(self):
+        self.app = RussianCupUiTests().make_app()
+        self.tournament = (5, "Кубок России", 1, None)
+
+    def post_result(self, cursor, payload):
+        user_conn = SequenceConnection(SequenceCursor(fetchone_results=[(1, 0)]))
+        route_conn = SequenceConnection(cursor)
+        with self.app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+            with (
+                patch("app.routes.admin_common.get_db", return_value=user_conn),
+                patch("app.routes.admin_common.close_db"),
+                patch("app.routes.admin_matches.get_db", return_value=route_conn),
+                patch("app.routes.admin_matches.close_db"),
+                patch("app.routes.admin_matches.recalc_match_points") as recalc,
+            ):
+                response = client.post("/admin/russian_cup_result", data=payload)
+        return response, route_conn, recalc
+
+    def test_add_result_updates_only_rcup_and_recalculates(self):
+        cursor = ResultCursor(self.tournament)
+        response, conn, recalc = self.post_result(
+            cursor,
+            {"match_id": "10", "home_score": "2", "away_score": "1"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 1)
+        self.assertEqual(conn.rollbacks, 0)
+        recalc.assert_called_once_with(10, tournament_id=5, conn=conn, cur=cursor)
+        sql = "\n".join(query for query, _ in cursor.executed)
+        self.assertIn("AND tournament_id = %s", sql)
+        self.assertIn("AND league = 'rcup'", sql)
+
+    def test_delete_result_resets_prediction_points(self):
+        cursor = ResultCursor(self.tournament)
+        response, conn, recalc = self.post_result(
+            cursor,
+            {"match_id": "10", "delete_result": "1"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 1)
+        recalc.assert_not_called()
+        self.assertIn("UPDATE predictions", cursor.executed[2][0])
+        self.assertEqual(cursor.executed[2][1], (10, 5))
+
+    def test_missing_or_foreign_match_rolls_back_without_recalculation(self):
+        cursor = ResultCursor(self.tournament, rowcount=0)
+        response, conn, recalc = self.post_result(
+            cursor,
+            {"match_id": "999", "home_score": "2", "away_score": "1"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 0)
+        self.assertEqual(conn.rollbacks, 1)
+        recalc.assert_not_called()
+        self.assertEqual(len(cursor.executed), 2)
+        self.assertIn("AND league = 'rcup'", cursor.executed[1][0])
+
+    def test_database_error_rolls_back(self):
+        cursor = ResultCursor(self.tournament, fail_on_execute=True)
+        response, conn, recalc = self.post_result(
+            cursor,
+            {"match_id": "10", "home_score": "2", "away_score": "1"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 0)
+        self.assertEqual(conn.rollbacks, 1)
+        recalc.assert_not_called()
 
 
 class RussianCupDeadlineTests(unittest.TestCase):

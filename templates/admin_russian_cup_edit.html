@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
+<div class="rc-admin admin-russian-cup-page rc-edit-page">
+    <a class="rc-back-link" href="{{ return_to }}">← Назад к матчам</a>
+    <section class="rc-edit-hero">
+        <div class="rc-edit-kicker">Кубок России</div>
+        <h1>{{ match.home_team }} — {{ match.away_team }}</h1>
+        <div class="rc-card-note">{{ match.match_date_msk }} · {{ match.match_time_msk }} МСК</div>
+    </section>
+
+    <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_edit') }}" class="rc-edit-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="match_id" value="{{ match.id }}">
+        <input type="hidden" name="league" value="rcup">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+
+        <section class="rc-edit-section">
+            <h2>Основные данные</h2>
+            <div class="rc-grid"><label>Команда 1<input name="home_team" value="{{ match.home_team }}" required></label><label>Команда 2<input name="away_team" value="{{ match.away_team }}" required></label></div>
+            <div class="rc-grid"><label>Дата<input type="date" name="match_date" value="{{ match.match_date_msk }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ match.match_time_msk }}" required></label></div>
+            <label>Статус<select name="status">{% for value in russian_cup_statuses %}<option value="{{ value }}" {% if match.status == value %}selected{% endif %}>{{ value|lower }}</option>{% endfor %}</select></label>
+        </section>
+
+        <section class="rc-edit-section">
+            <h2>Данные Кубка</h2>
+            <label>Стадия<select name="stage">{% for value, label in russian_cup_stages %}<option value="{{ value }}" {% if match.stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label>Другая стадия<input name="stage_custom" value="{% if match.stage not in ['Групповой этап', 'Плей-офф', '1/4 финала', '1/2 финала', 'Финал', 'Другое'] %}{{ match.stage }}{% endif %}"></label>
+        </section>
+
+        <section class="rc-edit-section">
+            <h2>Результат</h2>
+            <div class="rc-grid"><label>Счёт 1<input type="number" min="0" name="home_score" value="{{ match.home_score if match.home_score is not none else '' }}"></label><label>Счёт 2<input type="number" min="0" name="away_score" value="{{ match.away_score if match.away_score is not none else '' }}"></label></div>
+            <label class="rc-check"><input type="checkbox" name="delete_score" value="1"> Удалить результат</label>
+        </section>
+
+        <details class="rc-edit-section rc-advanced">
+            <summary>Дополнительные настройки</summary>
+            <div class="rc-grid"><label>Дата дедлайна<input type="date" name="deadline_date" value="{{ match.deadline_date_msk }}"></label><label>Время дедлайна<input type="time" name="deadline_time" value="{{ match.deadline_time_msk }}"></label></div>
+            <div class="rc-card-note">Автоматически: 11:00 МСК в день матча. Ручное значение сохраняется.</div>
+        </details>
+        <button class="rc-btn rc-edit-save" type="submit">Сохранить изменения</button>
+    </form>
+</div>
+{% endblock %}
