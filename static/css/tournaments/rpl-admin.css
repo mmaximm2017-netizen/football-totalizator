@@ -53,6 +53,7 @@ body.tournament-rpl .admin-rpl-page {
     margin: 0 auto;
     padding: 12px 16px calc(110px + env(safe-area-inset-bottom));
     box-sizing: border-box;
+    --bottom-nav-height: 88px;
     color: #10264f;
 }
 
@@ -300,7 +301,7 @@ body.tournament-rpl .admin-rpl-page .rpl-more[open]::before {
     content: "";
     position: fixed;
     inset: 0;
-    z-index: 0;
+    z-index: 100001;
     pointer-events: none;
     background: rgba(1,7,25,0.28);
     backdrop-filter: blur(2px);
@@ -309,7 +310,7 @@ body.tournament-rpl .admin-rpl-page .rpl-more[open]::before {
 body.tournament-rpl .admin-rpl-page .rpl-more > summary { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid rgba(0,57,166,0.10); border-radius: 999px; background: rgba(255,255,255,0.68); box-shadow: 0 10px 22px rgba(0,57,166,0.10), inset 0 1px 0 rgba(255,255,255,0.78); color: #0039A6; font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; list-style: none; }
 body.tournament-rpl .admin-rpl-page .rpl-more > summary::-webkit-details-marker { display: none; }
 body.tournament-rpl .admin-rpl-page .rpl-more[open] > summary,
-body.tournament-rpl .admin-rpl-page .rpl-more[open] > .rpl-more-menu { position: relative; z-index: 1; }
+body.tournament-rpl .admin-rpl-page .rpl-more[open] > summary { position: relative; z-index: 100003; }
 body.tournament-rpl .admin-rpl-page .rpl-more-menu {
     position: absolute;
     top: 49px;
@@ -389,6 +390,8 @@ body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-technical {
     background: rgba(255,255,255,0.07);
     color: rgba(255,255,255,0.68);
     font-size: 10px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 body.tournament-rpl .admin-rpl-page .rpl-more-menu .rpl-technical strong { color: rgba(255,255,255,0.82); font-weight: 700; }
 body.tournament-rpl .admin-rpl-page .rpl-more-menu > .rpl-danger-form { margin: 0; padding: 0; border-top: 1px solid rgba(255,255,255,0.10); }
@@ -447,4 +450,26 @@ body.tournament-rpl .admin-rpl-page .rpl-check input { width: auto; }
     body.tournament-rpl .admin-rpl-page .rpl-quick-result .rpl-btn { min-width: 0; padding: 7px 5px; }
     body.tournament-rpl .admin-rpl-page .rpl-add-form .rpl-grid,
     body.tournament-rpl .admin-rpl-page .rpl-edit-section .rpl-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    body.tournament-rpl .admin-rpl-page .rpl-more[open] { z-index: 100003; }
+    body.tournament-rpl .admin-rpl-page .rpl-more[open] > .rpl-more-menu {
+        position: fixed;
+        top: auto;
+        left: 16px;
+        right: 16px;
+        inset-inline-start: 16px;
+        inset-inline-end: 16px;
+        bottom: calc(var(--bottom-nav-height, 88px) + 16px + env(safe-area-inset-bottom));
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        max-height: min(70vh, 520px);
+        overflow-y: auto;
+        margin: 0;
+        transform: none;
+        translate: none;
+        z-index: 100002;
+    }
 }
