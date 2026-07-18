@@ -45,14 +45,22 @@ RUSSIAN_CUP_ADMIN_REDIRECT = "admin.admin_russian_cup"
 def admin_context_redirect(default_endpoint="admin.admin"):
     """Return to an internal admin list while rejecting open redirects."""
     target = (request.form.get("return_to") or "").strip()
-    if target.startswith("/admin/") and not target.startswith("//"):
+    if (
+        target.startswith("/admin/")
+        and not target.startswith("//")
+        and not target.startswith("/admin/matches")
+    ):
         return redirect(target)
     return redirect(url_for(default_endpoint))
 
 
 def safe_admin_return_to(target, default_endpoint):
     target = (target or "").strip()
-    if target.startswith("/admin/") and not target.startswith("//"):
+    if (
+        target.startswith("/admin/")
+        and not target.startswith("//")
+        and not target.startswith("/admin/matches")
+    ):
         return target
     return url_for(default_endpoint)
 
@@ -1015,7 +1023,7 @@ def handle_add_match(conn, cur):
         status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
         if status == "FINISHED":
             flash("Для finished сначала создайте матч, затем внесите результат", "error")
-            return redirect(url_for("admin.admin_matches"))
+            return redirect(url_for("admin.admin"))
 
         match_date = request.form["match_date"]
         match_time = request.form["match_time"]
@@ -1052,7 +1060,7 @@ def handle_add_match(conn, cur):
 
         if not tournament_id:
             flash("Выберите турнир для матча", "error")
-            return redirect(url_for("admin.admin_matches"))
+            return redirect(url_for("admin.admin"))
 
         tournament_name = get_tournament_name(cur, tournament_id)
         is_wc2026_match = tournament_name == "ЧМ-2026" or league == "wc2026"
@@ -1306,7 +1314,7 @@ def admin_wc_playoff_override():
     elif request.form.get("next") == "wc_playoff":
         redirect_target = url_for("admin.admin_wc_playoff")
     else:
-        redirect_target = url_for("admin.admin_matches", tid=tid) if tid else url_for("admin.admin_matches")
+        redirect_target = url_for("admin.admin")
 
     if not match_id:
         flash("Матч не выбран", "error")

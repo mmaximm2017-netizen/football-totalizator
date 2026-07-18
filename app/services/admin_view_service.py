@@ -43,7 +43,6 @@ def parse_admin_match_filters(args, forced_tournament_id=None):
         "per_page": 30,
     }
 
-
 def _admin_match_where(filters, now):
     where = ["m.kickoff_time >= %s"]
     params = [START_DATE.strftime("%Y-%m-%dT%H:%M:%S")]
@@ -79,100 +78,6 @@ def _admin_match_where(filters, now):
     return " AND ".join(where), params
 
 
-def prepare_admin_match_list(cur, filters, league=None, tournament_name=None):
-    """Return one filtered, date-grouped, server-paginated admin match list."""
-    now = datetime.now(timezone.utc)
-    where, params = _admin_match_where(filters, now)
-    if league:
-        where += " AND m.league = %s"
-        params.append(league)
-    if tournament_name:
-        where += " AND t.name = %s"
-        params.append(tournament_name)
-
-    count_sql = f"""
-        SELECT COUNT(*)
-        FROM matches m
-        LEFT JOIN tournaments t ON t.id = m.tournament_id
-        WHERE {where}
-    """
-    cur.execute(count_sql, tuple(params))
-    total = int((cur.fetchone() or [0])[0] or 0)
-    pages = max((total + filters["per_page"] - 1) // filters["per_page"], 1)
-    page = min(filters["page"], pages)
-    order = "m.kickoff_time DESC, m.id DESC" if filters["view"] == "finished" else "m.kickoff_time ASC, m.id ASC"
-    offset = (page - 1) * filters["per_page"]
-    cur.execute(
-        f"""
-        SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
-               m.status, m.home_score, m.away_score, m.league,
-               m.tournament_id, t.name, m.playoff_stage_manual,
-               m.playoff_stage_auto, m.api_match_id
-        FROM matches m
-        LEFT JOIN tournaments t ON t.id = m.tournament_id
-        WHERE {where}
-        ORDER BY {order}
-        LIMIT %s OFFSET %s
-        """,
-        tuple(params + [filters["per_page"], offset]),
-    )
-    matches = []
-    for row in cur.fetchall():
-        kickoff = parse_datetime(row[3])
-        deadline = parse_datetime(row[4])
-        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
-        deadline_msk = deadline.astimezone(MSK) if deadline else None
-        matches.append({
-            "id": row[0], "home_team": row[1], "away_team": row[2],
-            "kickoff_time": kickoff, "deadline": deadline, "status": row[5],
-            "home_score": row[6], "away_score": row[7], "league": row[8],
-            "has_result": row[6] is not None and row[7] is not None,
-            "tournament_id": row[9], "tournament_name": row[10] or "",
-            "playoff_stage": row[11] or row[12] or "",
-            "api_match_id": row[13],
-            "is_manual": not row[13],
-            "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
-            "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
-            "deadline_date_msk": deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
-            "deadline_time_msk": deadline_msk.strftime("%H:%M") if deadline_msk else "",
-            "date_label": format_admin_match_date(kickoff_msk) if kickoff_msk else "Дата не указана",
-        })
-    grouped = []
-    for match in matches:
-        if not grouped or grouped[-1]["key"] != (match["kickoff_time"].astimezone(MSK).date().isoformat() if match["kickoff_time"] else "unknown"):
-            key = match["kickoff_time"].astimezone(MSK).date().isoformat() if match["kickoff_time"] else "unknown"
-            grouped.append({"key": key, "label": match["date_label"], "matches": []})
-        grouped[-1]["matches"].append(match)
-    return {
-        "matches": matches,
-        "groups": grouped,
-        "total": total,
-        "page": page,
-        "pages": pages,
-        "per_page": filters["per_page"],
-        "first": offset + 1 if total else 0,
-        "last": min(offset + len(matches), total),
-    }
-
-
-def prepare_admin_matches_page_data(cur):
-    """Load only metadata needed by the main paginated matches page."""
-    cur.execute("""
-        SELECT id, name, is_active, start_date
-        FROM tournaments
-        ORDER BY is_active DESC, id DESC
-    """)
-    tournaments = [
-        {"id": row[0], "name": row[1], "is_active": row[2], "start_date": row[3]}
-        for row in cur.fetchall()
-    ]
-    return {
-        "tournaments": tournaments,
-        "active_tournaments": [item for item in tournaments if item.get("is_active")],
-        "playoff_stages": PLAYOFF_STAGES,
-    }
-
-
 def parse_russian_cup_match_filters(args):
     return parse_tournament_match_filters(args)
 
@@ -186,14 +91,8 @@ def parse_tournament_match_filters(args):
     if view not in {"upcoming", "pending_result", "finished", "all"}:
         view = "upcoming"
     page = max(args.get("page", 1, type=int) or 1, 1)
-    period = args.get("period", "30" if view == "upcoming" else "all")
-    if period not in {"7", "30", "all"}:
-        period = "30" if view == "upcoming" else "all"
     return {
         "view": view,
-        "q": (args.get("q") or "").strip(),
-        "status": (args.get("status") or "").strip().upper(),
-        "period": period,
         "page": page,
         "per_page": 5,
     }
@@ -208,7 +107,7 @@ def prepare_rpl_match_list(cur, tournament_id, filters):
 
 
 def prepare_tournament_match_list(cur, tournament_id, league, filters):
-    query_filters = dict(filters)
+    query_filters = dict(filters, period="30" if filters["view"] == "upcoming" else "all")
     query_filters["view"] = "attention" if filters["view"] == "pending_result" else filters["view"]
     now = datetime.now(timezone.utc)
     where, params = _admin_match_where(query_filters, now)
@@ -236,7 +135,7 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters):
         pending_params.append(tournament_id)
         pending_count = count_rows(pending_where, pending_params)
     fallback_notice = False
-    if filters["view"] == "upcoming" and total == 0 and filters["period"] == "30":
+    if filters["view"] == "upcoming" and total == 0 and query_filters["period"] == "30":
         query_filters["period"] = "all"
         where, params = _admin_match_where(query_filters, now)
         where += f" AND m.tournament_id = %s AND m.league = '{league}'"
@@ -724,79 +623,3 @@ def prepare_admin_view_data(cur):
         'wc_team_options': wc_team_options,
         'wc_playoff_matches': wc_playoff_matches,
     }
-
-
-def prepare_admin_matches_data(cur):
-    data = prepare_admin_view_data(cur)
-
-    manual_matches = data.get('manual_matches', [])
-    for month_block in data.get('free_months', []):
-        key = month_block.get('key', '')
-        if '-' in key:
-            year, month = key.split('-', 1)
-            month_block['label'] = format_month_label(year, month)
-
-    for month_block in data.get('finished_months', []):
-        key = month_block.get('key', '')
-        if '-' in key:
-            year, month = key.split('-', 1)
-            month_block['label'] = format_month_label(year, month)
-    league_names = {
-        'rpl': 'РПЛ',
-        'wc2026': 'ЧМ-2026',
-        'rcup': 'Кубок России',
-        'other': 'Россия',
-        None: 'Россия',
-        '': 'Россия',
-    }
-
-    manual_grouped_map = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    for m in manual_matches:
-        kickoff_dt = parse_datetime(m.get('kickoff_time'))
-        if not kickoff_dt:
-            continue
-        kickoff_msk = kickoff_dt.astimezone(MSK)
-        league_key = normalize_league_key(m.get('league'))
-        league_base = league_names.get(league_key, str(league_key).upper())
-        year = str(kickoff_msk.year)
-        league_label = f"{league_base} {year}".strip()
-        month_key = f"{kickoff_msk.year:04d}-{kickoff_msk.month:02d}"
-        day_key = kickoff_msk.date().isoformat()
-        manual_grouped_map[league_label][month_key][day_key].append(m)
-
-    manual_grouped = []
-    for league_label in sorted(manual_grouped_map.keys()):
-        months = []
-        league_total = 0
-        for month_key in sorted(manual_grouped_map[league_label].keys()):
-            if "-" in month_key:
-                year, month = month_key.split("-", 1)
-                month_label = format_month_label(year, month)
-            else:
-                month_label = month_key
-            days = []
-            month_total = 0
-            for day_key in sorted(manual_grouped_map[league_label][month_key].keys()):
-                matches_for_day = manual_grouped_map[league_label][month_key][day_key]
-                days.append({
-                    'key': day_key,
-                    'date': format_date_ru(day_key),
-                    'matches': matches_for_day
-                })
-                month_total += len(matches_for_day)
-            months.append({
-                'key': month_key,
-                'label': month_label,
-                'days': days,
-                'total_matches': month_total
-            })
-            league_total += month_total
-        manual_grouped.append({
-            'key': league_label.lower().replace(" ", "_"),
-            'label': league_label,
-            'months': months,
-            'total_matches': league_total
-        })
-
-    data['manual_grouped'] = manual_grouped
-    return data

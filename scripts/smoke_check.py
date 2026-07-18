@@ -30,7 +30,6 @@ def main():
         "templates/table.html",
         "templates/profile.html",
         "templates/admin.html",
-        "templates/admin_matches.html",
         "templates/admin_tournaments.html",
         "templates/admin_users.html",
     ]

@@ -220,6 +220,12 @@ class RplManualAdminTests(unittest.TestCase):
         app = self.make_app()
         self.assertNotIn("/admin/russia_2027_import", {rule.rule for rule in app.url_map.iter_rules()})
 
+    def test_general_matches_page_is_removed(self):
+        app = self.make_app()
+        self.assertNotIn("/admin/matches", {rule.rule for rule in app.url_map.iter_rules()})
+        with app.test_client() as client:
+            self.assertEqual(client.get("/admin/matches").status_code, 404)
+
     def test_rpl_admin_template_has_no_api_controls(self):
         html = (ROOT / "templates" / "admin_russia_2027.html").read_text(encoding="utf-8")
         self.assertNotIn("Understat", html)
@@ -233,6 +239,12 @@ class RplManualAdminTests(unittest.TestCase):
         self.assertIn("admin_russia_2027_result", html)
         self.assertIn("admin_russia_2027_edit_form", html)
         self.assertIn('action="{{ url_for(\'admin_matches.admin_russia_2027_add\') }}"', html)
+        self.assertNotIn("Поиск по команде или ID", html)
+        self.assertNotIn("Все статусы", html)
+        self.assertNotIn('name="q"', html)
+        self.assertNotIn('name="status"', html)
+        self.assertNotIn('name="period"', html)
+        self.assertNotIn("admin.admin_matches", html)
 
         edit_html = (ROOT / "templates" / "admin_rpl_edit.html").read_text(encoding="utf-8")
         self.assertNotIn("api_match_id", edit_html)

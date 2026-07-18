@@ -6,7 +6,6 @@
 <div class="admin-rpl-page">
     <div class="admin-nav">
         <a href="{{ url_for('admin.admin') }}">← Админка</a>
-        <a href="{{ url_for('admin.admin_matches') }}">Матчи</a>
         <a href="{{ url_for('admin.admin_wc_playoff') }}">Плей-офф ЧМ-2026</a>
         <a class="active" href="{{ url_for('admin.admin_russia_2027') }}">Чемпионат России</a>
         <a href="{{ url_for('admin.admin_russian_cup') }}">Кубок России</a>
@@ -33,24 +32,16 @@
     </section>
 
     <section class="rpl-workspace">
+        {% set admin_return_to = url_for('admin.admin_russia_2027', view=admin_match_filters.view, page=admin_match_list.page) %}
         <nav class="admin-match-tabs" aria-label="Режим списка матчей">
             {% for key, label in [('upcoming', 'Ближайшие'), ('pending_result', 'Ожидают результата'), ('finished', 'Завершённые'), ('all', 'Все')] %}
-                {% set params = request.args.to_dict() %}{% set _ = params.update({'view': key, 'page': 1}) %}
+                {% set params = {'view': key, 'page': 1} %}
                 <a class="admin-match-tab {% if admin_match_filters.view == key %}active{% endif %}" href="{{ url_for('admin.admin_russia_2027', **params) }}">{{ label }}</a>
             {% endfor %}
         </nav>
 
         {% if admin_match_list.fallback_notice %}<div class="rpl-pending-note">В ближайшие 30 дней матчей нет. Показаны следующие запланированные матчи.</div>{% endif %}
         {% if admin_match_filters.view == 'upcoming' and admin_match_list.pending_count %}<div class="rpl-pending-note">{{ admin_match_list.pending_count }} матча ожидают результата <a href="{{ url_for('admin.admin_russia_2027', view='pending_result', page=1) }}">Открыть</a></div>{% endif %}
-
-        <form method="get" class="admin-match-filter-form">
-            <input type="search" name="q" value="{{ admin_match_filters.q }}" placeholder="Поиск по команде или ID">
-            <select name="status"><option value="">Все статусы</option>{% for value in rpl_statuses %}<option value="{{ value }}" {% if admin_match_filters.status == value %}selected{% endif %}>{{ value|lower }}</option>{% endfor %}</select>
-            <select name="period"><option value="all">Все даты</option><option value="7" {% if admin_match_filters.period == '7' %}selected{% endif %}>7 дней</option><option value="30" {% if admin_match_filters.period == '30' %}selected{% endif %}>30 дней</option></select>
-            <input type="hidden" name="view" value="{{ admin_match_filters.view }}">
-            <button class="rpl-btn" type="submit">Применить</button>
-            <a class="rpl-btn" href="{{ url_for('admin.admin_russia_2027', view=admin_match_filters.view) }}">Сбросить</a>
-        </form>
 
         {% if admin_match_list.total %}
             <div class="rpl-compact-list">
@@ -64,15 +55,15 @@
                                 <div class="rpl-card-meta">{{ m.date_label }} · Чемпионат России{% if m.deadline_time_msk %} · Дедлайн {{ m.deadline_time_msk }}{% endif %}</div>
                                 <div class="rpl-card-actions">
                                     <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_result') }}" class="rpl-quick-result">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}">
+                                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ admin_return_to }}">
                                         <input type="number" name="home_score" min="0" value="{{ m.home_score if m.home_score is not none else '' }}" placeholder="0" required><span>:</span><input type="number" name="away_score" min="0" value="{{ m.away_score if m.away_score is not none else '' }}" placeholder="0" required>
                                         <button class="rpl-btn" type="submit">{{ 'Исправить счёт' if m.has_result else 'Внести счёт' }}</button>
                                     </form>
                                     <details class="rpl-more"><summary aria-label="Действия с матчем">⋮</summary><div class="rpl-more-menu">
-                                        <a class="rpl-menu-link" href="{{ url_for('admin_matches.admin_russia_2027_edit_form', match_id=m.id, return_to=request.full_path) }}">Редактировать матч</a>
-                                        <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.status == 'CANCELLED' %}restore{% else %}hide{% endif %}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button type="submit">{% if m.status == 'CANCELLED' %}Восстановить{% else %}Скрыть{% endif %}</button></form>
+                                        <a class="rpl-menu-link" href="{{ url_for('admin_matches.admin_russia_2027_edit_form', match_id=m.id, return_to=admin_return_to) }}">Редактировать матч</a>
+                                        <form method="post" action="{{ url_for('admin_matches.admin_russia_2027_visibility') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="visibility_action" value="{% if m.status == 'CANCELLED' %}restore{% else %}hide{% endif %}"><input type="hidden" name="return_to" value="{{ admin_return_to }}"><button type="submit">{% if m.status == 'CANCELLED' %}Восстановить{% else %}Скрыть{% endif %}</button></form>
                                         <div class="rpl-technical"><strong>Техническая информация</strong><span>ID: {{ m.id }}</span><span>tournament_id: {{ m.tournament_id }}</span><span>league: rpl</span></div>
-                                        <form class="rpl-danger-form" method="post" action="{{ url_for('admin_matches.admin_russia_2027_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ request.full_path }}"><button type="submit">Удалить матч</button></form>
+                                        <form class="rpl-danger-form" method="post" action="{{ url_for('admin_matches.admin_russia_2027_delete') }}" onsubmit="return confirm('Удалить матч и прогнозы по нему?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="hidden" name="return_to" value="{{ admin_return_to }}"><button type="submit">Удалить матч</button></form>
                                     </div></details>
                                 </div>
                             </article>
@@ -80,7 +71,7 @@
                     </section>
                 {% endfor %}
             </div>
-            {% if admin_match_list.pages > 1 %}<div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set params = request.args.to_dict() %}{% if admin_match_list.page > 1 %}{% set _ = params.update({'page': admin_match_list.page - 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Назад</a>{% endif %}{% for page in range(1, admin_match_list.pages + 1) %}{% set _ = params.update({'page': page}) %}<a class="{% if page == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russia_2027', **params) }}">{{ page }}</a>{% endfor %}{% if admin_match_list.page < admin_match_list.pages %}{% set _ = params.update({'page': admin_match_list.page + 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Вперёд</a>{% endif %}</div>{% endif %}
+            {% if admin_match_list.pages > 1 %}<div class="admin-pagination"><span>Показаны {{ admin_match_list.first }}–{{ admin_match_list.last }} из {{ admin_match_list.total }}</span>{% set params = {'view': admin_match_filters.view} %}{% if admin_match_list.page > 1 %}{% set _ = params.update({'page': admin_match_list.page - 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Назад</a>{% endif %}{% for page in range(1, admin_match_list.pages + 1) %}{% set _ = params.update({'page': page}) %}<a class="{% if page == admin_match_list.page %}active{% endif %}" href="{{ url_for('admin.admin_russia_2027', **params) }}">{{ page }}</a>{% endfor %}{% if admin_match_list.page < admin_match_list.pages %}{% set _ = params.update({'page': admin_match_list.page + 1}) %}<a href="{{ url_for('admin.admin_russia_2027', **params) }}">Вперёд</a>{% endif %}</div>{% endif %}
         {% else %}<div class="rpl-pending-note">По выбранным фильтрам матчей нет.</div>{% endif %}
     </section>
 

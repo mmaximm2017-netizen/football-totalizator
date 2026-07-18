@@ -5,11 +5,9 @@ from types import SimpleNamespace
 from pathlib import Path
 
 from app.services.admin_view_service import (
-    prepare_admin_matches_page_data,
     parse_admin_match_filters,
     parse_russian_cup_match_filters,
     parse_rpl_match_filters,
-    prepare_admin_match_list,
     prepare_rpl_match_list,
     prepare_russian_cup_match_list,
     prepare_wc_playoff_page_data,
@@ -49,7 +47,6 @@ class AdminMatchListTests(unittest.TestCase):
         args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
         filters = parse_rpl_match_filters(args)
         self.assertEqual(filters["view"], "upcoming")
-        self.assertEqual(filters["period"], "30")
         self.assertEqual(filters["per_page"], 5)
 
     def test_rpl_list_uses_server_side_views_and_pagination(self):
@@ -86,7 +83,6 @@ class AdminMatchListTests(unittest.TestCase):
         args = SimpleNamespace(get=lambda key, default=None, type=None: {}.get(key, default))
         filters = parse_russian_cup_match_filters(args)
         self.assertEqual(filters["view"], "upcoming")
-        self.assertEqual(filters["period"], "30")
         self.assertEqual(filters["per_page"], 5)
 
     def test_russian_cup_view_limits_and_pending_condition_are_server_side(self):
@@ -112,13 +108,6 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertNotIn('action="{{ url_for(\'admin_matches.admin_russian_cup_edit\') }}"', html)
         self.assertNotIn("disabled", html)
         self.assertIn("rc-technical-operations", html)
-
-    def test_main_page_metadata_does_not_select_matches(self):
-        cursor = Cursor(0, [(1, "Турнир", 1, None)])
-        data = prepare_admin_matches_page_data(cursor)
-        self.assertEqual(data["tournaments"][0]["id"], 1)
-        self.assertEqual(len(cursor.executed), 1)
-        self.assertNotIn("FROM matches", cursor.executed[0][0].upper())
 
     def test_rpl_and_russian_cup_metadata_do_not_load_match_rows(self):
         rpl_cursor = SequenceCursor([(2, "Чемпионат России 🇷🇺", 1, None)])
@@ -150,7 +139,7 @@ class AdminMatchListTests(unittest.TestCase):
 
     def test_admin_match_templates_do_not_use_grouping_accordions(self):
         root = Path(__file__).resolve().parents[1]
-        for name in ("admin_matches.html", "admin_russia_2027.html", "admin_russian_cup.html"):
+        for name in ("admin_russia_2027.html", "admin_russian_cup.html"):
             html = (root / "templates" / name).read_text(encoding="utf-8")
             html = re.sub(r"<style.*?</style>", "", html, flags=re.DOTALL)
             for marker in ("toggleMonth", "toggleDay", "month-content", "day-content", "league-content", "rc-stage-group", "rc-date-group", "rpl-match-group", "rpl-match-section"):
@@ -180,51 +169,29 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertEqual(filters["page"], 2)
         self.assertEqual(filters["per_page"], 30)
 
-    def test_query_contains_server_side_search_filters_and_pagination(self):
-        args = SimpleNamespace(get=lambda key, default=None, type=None: {
-            "view": "upcoming", "q": "10", "status": "SCHEDULED", "period": "30", "page": 1,
-        }.get(key, default))
-        cursor = Cursor(
-            31,
-            [(10, "Спартак", "Зенит", datetime(2026, 7, 18, 16, 30, tzinfo=timezone.utc),
-              datetime(2026, 7, 18, 8, 0, tzinfo=timezone.utc), "SCHEDULED", None, None,
-              "rpl", 5, "Чемпионат России", None, None, None)],
-        )
-        result = prepare_admin_match_list(cursor, parse_admin_match_filters(args))
-        self.assertEqual(result["per_page"], 30)
-        self.assertEqual(result["pages"], 2)
-        self.assertEqual(result["matches"][0]["id"], 10)
-        sql = "\n".join(query for query, _ in cursor.executed)
-        self.assertIn("ILIKE", sql)
-        self.assertIn("LIMIT %s OFFSET %s", sql)
-        self.assertIn("m.status = %s", sql)
-
-    def test_second_page_uses_offset_and_date_groups_are_static_data(self):
-        args = SimpleNamespace(get=lambda key, default=None, type=None: {"page": 2}.get(key, default))
-        cursor = Cursor(
-            31,
-            [(31, "А", "Б", datetime(2026, 7, 19, 16, 30, tzinfo=timezone.utc), None,
-              "SCHEDULED", None, None, "rcup", 7, "Кубок России", "Финал", None, None)],
-        )
-        result = prepare_admin_match_list(cursor, parse_admin_match_filters(args), league="rcup")
-        self.assertEqual(result["page"], 2)
-        self.assertEqual(result["first"], 31)
-        self.assertEqual(result["groups"][0]["matches"][0]["id"], 31)
-        self.assertIn("m.league = %s", cursor.executed[0][0])
-
-    def test_page_bounds_are_clamped_without_extra_match_load(self):
-        for requested, expected_page, expected_offset in ((0, 1, 0), (999, 2, 30)):
-            args = SimpleNamespace(get=lambda key, default=None, type=None, value=requested: {"page": value}.get(key, default))
-            cursor = Cursor(31, [])
-            result = prepare_admin_match_list(cursor, parse_admin_match_filters(args))
-            self.assertEqual(result["page"], expected_page)
-            self.assertEqual(cursor.executed[1][1][-1], expected_offset)
-
     def test_rpl_and_russian_cup_use_five_for_every_view(self):
         for parser in (parse_rpl_match_filters, parse_russian_cup_match_filters):
             for view in ("upcoming", "pending_result", "finished", "all"):
                 args = SimpleNamespace(get=lambda key, default=None, type=None, view=view: {"view": view}.get(key, default))
                 self.assertEqual(parser(args)["per_page"], 5)
+
+    def test_tournament_parser_ignores_legacy_filter_parameters(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {
+            "view": "finished", "page": 2, "q": "Зенит", "status": "SCHEDULED", "period": "7",
+        }.get(key, default))
+        for parser in (parse_rpl_match_filters, parse_russian_cup_match_filters):
+            filters = parser(args)
+            self.assertEqual(filters, {"view": "finished", "page": 2, "per_page": 5})
+
+    def test_tournament_sql_ignores_legacy_filter_parameters(self):
+        args = SimpleNamespace(get=lambda key, default=None, type=None: {
+            "view": "all", "q": "Зенит", "status": "SCHEDULED", "period": "7",
+        }.get(key, default))
+        cursor = Cursor(6, [])
+        prepare_rpl_match_list(cursor, 7, parse_rpl_match_filters(args))
+        sql = "\n".join(query for query, _ in cursor.executed)
+        self.assertNotIn("ILIKE", sql)
+        self.assertNotIn("m.status = %s", sql)
 
     def test_rpl_and_russian_cup_queries_use_limit_five_for_every_view(self):
         for prepare, parser in ((prepare_rpl_match_list, parse_rpl_match_filters), (prepare_russian_cup_match_list, parse_russian_cup_match_filters)):
@@ -257,6 +224,16 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertIn("m.date_label", rcup)
         self.assertNotIn("{{ m.match_date_msk }} · Чемпионат России", rpl)
         self.assertNotIn("{{ m.match_date_msk }}{% if m.stage %}", rcup)
+
+    def test_general_matches_page_and_navigation_are_removed(self):
+        root = Path(__file__).resolve().parents[1]
+        self.assertFalse((root / "templates" / "admin_matches.html").exists())
+        for name in ("admin.html", "admin_russia_2027.html", "admin_russian_cup.html", "admin_wc_playoff.html", "admin_users.html", "admin_tournaments.html"):
+            html = (root / "templates" / name).read_text(encoding="utf-8")
+            self.assertNotIn("admin.admin_matches", html, name)
+        for name in ("admin_russia_2027.html", "admin_russian_cup.html"):
+            html = (root / "templates" / name).read_text(encoding="utf-8")
+            self.assertNotIn("request.args.to_dict()", html)
 
 
 if __name__ == "__main__":

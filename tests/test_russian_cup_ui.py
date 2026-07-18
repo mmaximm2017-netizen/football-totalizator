@@ -214,7 +214,7 @@ class RussianCupUiTests(unittest.TestCase):
             "tournaments": [],
             "active_tournaments": [],
             "csrf_token": "test-csrf",
-            "admin_match_filters": {"view": "upcoming", "q": "", "status": "", "period": "30"},
+            "admin_match_filters": {"view": "upcoming", "page": 1},
             "admin_match_list": {
                 "total": 1,
                 "groups": [{"label": "Сегодня", "matches": [{
@@ -248,6 +248,12 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertIn('action="/admin/russian_cup_delete"', html)
         self.assertIn('action="/admin/russian_cup_recalc"', html)
         self.assertIn("clubs/Fonbet_Russian_Cup.png", html)
+        self.assertNotIn("Поиск по команде или ID", html)
+        self.assertNotIn("Все статусы", html)
+        self.assertNotIn('name="q"', html)
+        self.assertNotIn('name="status"', html)
+        self.assertNotIn('name="period"', html)
+        self.assertNotIn("admin.admin_matches", html)
         self.assertNotIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
         self.assertNotIn('placeholder="Нет колонки БД"', html)
 
@@ -260,7 +266,7 @@ class RussianCupUiTests(unittest.TestCase):
             "russian_cup_statuses": ("SCHEDULED",),
             "russian_cup_stages": (("Групповой этап", "Групповой этап"),),
             "csrf_token": "test-csrf",
-            "admin_match_filters": {"view": "upcoming", "q": "", "status": "", "period": "30"},
+            "admin_match_filters": {"view": "upcoming", "page": 2},
             "admin_match_list": {
                 "total": 1,
                 "groups": [{"label": "Сегодня", "matches": [{
@@ -270,7 +276,7 @@ class RussianCupUiTests(unittest.TestCase):
                     "stage": "Групповой этап", "has_result": False,
                     "deadline_time_msk": "11:00",
                 }]}],
-                "pages": 1, "page": 1, "first": 1, "last": 1,
+                "pages": 1, "page": 2, "first": 1, "last": 1,
                 "fallback_notice": False, "pending_count": 0,
             },
         }
@@ -283,7 +289,7 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertEqual(actions_html.count('class="rc-quick-result"'), 1)
         self.assertEqual(actions_html.count('class="rc-more"'), 1)
         self.assertNotIn('>Изменить</a>', actions_html)
-        self.assertIn('return_to=/admin/russian-cup?view%3Dupcoming%26page%3D2%26q%3D', actions_html)
+        self.assertIn('return_to=/admin/russian-cup?view%3Dupcoming%26page%3D2', actions_html)
 
     def test_russian_cup_action_css_stays_scoped_and_fits_mobile(self):
         root = Path(__file__).resolve().parents[1]

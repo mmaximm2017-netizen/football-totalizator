@@ -113,7 +113,7 @@ def recalc_all():
 
         if not tournament_id:
             flash("Выберите турнир для пересчёта", "error")
-            return redirect(url_for("admin.admin_matches"))
+            return redirect(url_for("admin.admin"))
 
         cur.execute(
             """
@@ -125,7 +125,7 @@ def recalc_all():
         )
         if not cur.fetchone():
             flash("Турнир не найден", "error")
-            return redirect(url_for("admin.admin_matches"))
+            return redirect(url_for("admin.admin"))
 
         summary = recalc_tournament_points(tournament_id, conn=conn, cur=cur)
         total_updated = summary.get("updated", 0)
@@ -144,7 +144,7 @@ def recalc_all():
     finally:
         close_db(conn, cur)
 
-    return redirect(url_for("admin.admin_matches", tid=tournament_id))
+    return redirect(url_for("admin.admin"))
 
 
 @admin_tournaments_bp.route("/translate", methods=["POST"])
