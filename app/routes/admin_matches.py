@@ -221,14 +221,25 @@ def admin_russia_2027_edit_form(match_id):
             return redirect(return_to)
         kickoff = parse_datetime(row[3])
         deadline = parse_datetime(row[4])
+        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
+        deadline_msk = deadline.astimezone(MSK) if deadline else None
+        standard_deadline = kickoff_msk.replace(hour=11, minute=0, second=0, microsecond=0) if kickoff_msk else None
         match = {
             "id": row[0],
             "home_team": row[1],
             "away_team": row[2],
-            "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
-            "match_time_msk": kickoff.astimezone(MSK).strftime("%H:%M") if kickoff else "",
-            "deadline_date_msk": deadline.astimezone(MSK).strftime("%Y-%m-%d") if deadline else "",
-            "deadline_time_msk": deadline.astimezone(MSK).strftime("%H:%M") if deadline else "",
+            "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
+            "match_time_msk": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
+            "deadline_date_msk": deadline_msk.strftime("%Y-%m-%d") if deadline_msk else "",
+            "deadline_time_msk": deadline_msk.strftime("%H:%M") if deadline_msk else "",
+            "uses_manual_deadline": bool(
+                kickoff_msk and (
+                    not deadline_msk
+                    or not standard_deadline
+                    or deadline_msk != standard_deadline
+                    or (kickoff_msk.hour, kickoff_msk.minute) <= (11, 0)
+                )
+            ),
             "status": row[5],
             "home_score": row[6],
             "away_score": row[7],
@@ -326,6 +337,9 @@ def admin_russia_2027_add():
         stage = (request.form.get("stage") or "").strip()
         match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
+        manual_deadline = request.form.get("manual_deadline") == "1"
+        deadline_date = (request.form.get("deadline_date") or "").strip() if manual_deadline else ""
+        deadline_time = (request.form.get("deadline_time") or "").strip() if manual_deadline else ""
 
         if not home_team or not away_team or not match_date or not match_time:
             flash("Заполните команды, дату и время", "error")
@@ -340,8 +354,8 @@ def admin_russia_2027_add():
         kickoff_utc, deadline_utc = build_manual_deadline_utc(
             match_date,
             match_time,
-            request.form.get("deadline_date", "").strip(),
-            request.form.get("deadline_time", "").strip(),
+            deadline_date,
+            deadline_time,
             reject_early_auto=True,
         )
         cur.execute(
@@ -415,6 +429,9 @@ def admin_russia_2027_edit():
         match_category = normalize_rpl_match_category(request.form.get("match_category"))
         status = normalize_manual_match_status(request.form.get("status"), existing[1])
         delete_score = request.form.get("delete_score") == "1"
+        manual_deadline = request.form.get("manual_deadline") == "1"
+        deadline_date = (request.form.get("deadline_date") or "").strip() if manual_deadline else ""
+        deadline_time = (request.form.get("deadline_time") or "").strip() if manual_deadline else ""
 
         if not home_team or not away_team or not match_date or not match_time:
             flash("Заполните команды, дату и время", "error")
@@ -426,8 +443,8 @@ def admin_russia_2027_edit():
         kickoff_utc, deadline_utc = build_manual_deadline_utc(
             match_date,
             match_time,
-            request.form.get("deadline_date", "").strip(),
-            request.form.get("deadline_time", "").strip(),
+            deadline_date,
+            deadline_time,
             reject_early_auto=True,
         )
         home_score = away_score = None

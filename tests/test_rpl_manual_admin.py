@@ -1,5 +1,6 @@
 import re
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -125,10 +126,124 @@ class RplManualAdminTests(unittest.TestCase):
         cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
         self.post(
             "/admin/russia_2027_add",
-            {"home_team": "Спартак", "away_team": "Зенит", "match_date": "2027-07-18", "match_time": "19:00", "deadline_date": "2027-07-17", "deadline_time": "09:30"},
+            {"home_team": "Спартак", "away_team": "Зенит", "match_date": "2027-07-18", "match_time": "19:00", "manual_deadline": "1", "deadline_date": "2027-07-17", "deadline_time": "09:30"},
             cursor,
         )
         self.assertEqual(cursor.executed[-1][1][3].strftime("%Y-%m-%d %H:%M"), "2027-07-17 06:30")
+
+    def test_hidden_deadline_values_are_ignored_without_manual_mode(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
+        self.post(
+            "/admin/russia_2027_add",
+            {
+                "home_team": "Спартак",
+                "away_team": "Зенит",
+                "match_date": "2027-07-18",
+                "match_time": "19:00",
+                "deadline_date": "2027-07-01",
+                "deadline_time": "09:30",
+            },
+            cursor,
+        )
+        self.assertEqual(cursor.executed[-1][1][3].strftime("%Y-%m-%d %H:%M"), "2027-07-18 08:00")
+
+    def test_manual_deadline_requires_both_parts(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None)])
+        _, conn, _ = self.post(
+            "/admin/russia_2027_add",
+            {
+                "home_team": "Спартак",
+                "away_team": "Зенит",
+                "match_date": "2027-07-18",
+                "match_time": "19:00",
+                "manual_deadline": "1",
+                "deadline_date": "2027-07-17",
+            },
+            cursor,
+        )
+        self.assertEqual(conn.commits, 0)
+        self.assertEqual(conn.rollbacks, 1)
+
+    def test_early_match_with_manual_deadline_is_allowed(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
+        _, conn, _ = self.post(
+            "/admin/russia_2027_add",
+            {
+                "home_team": "Спартак",
+                "away_team": "Зенит",
+                "match_date": "2027-07-18",
+                "match_time": "11:00",
+                "manual_deadline": "1",
+                "deadline_date": "2027-07-17",
+                "deadline_time": "09:30",
+            },
+            cursor,
+        )
+        self.assertEqual(conn.commits, 1)
+        self.assertEqual(cursor.executed[-1][1][3].strftime("%Y-%m-%d %H:%M"), "2027-07-17 06:30")
+
+    def test_edit_without_manual_mode_rebuilds_deadline_after_date_change(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), (10, "SCHEDULED")])
+        self.post(
+            "/admin/russia_2027_edit",
+            {
+                "match_id": "10",
+                "home_team": "Спартак",
+                "away_team": "Зенит",
+                "match_date": "2027-08-20",
+                "match_time": "19:00",
+                "deadline_date": "2027-08-15",
+                "deadline_time": "09:30",
+                "status": "SCHEDULED",
+                "match_category": "rpl",
+            },
+            cursor,
+        )
+        update_params = next(params for query, params in cursor.executed if "SET home_team" in query)
+        self.assertEqual(update_params[3].strftime("%Y-%m-%d %H:%M"), "2027-08-20 08:00")
+
+    def test_edit_manual_mode_preserves_custom_deadline(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), (10, "SCHEDULED")])
+        self.post(
+            "/admin/russia_2027_edit",
+            {
+                "match_id": "10",
+                "home_team": "Спартак",
+                "away_team": "Зенит",
+                "match_date": "2027-08-20",
+                "match_time": "19:00",
+                "manual_deadline": "1",
+                "deadline_date": "2027-08-19",
+                "deadline_time": "09:30",
+                "status": "SCHEDULED",
+                "match_category": "rpl",
+            },
+            cursor,
+        )
+        update_params = next(params for query, params in cursor.executed if "SET home_team" in query)
+        self.assertEqual(update_params[3].strftime("%Y-%m-%d %H:%M"), "2027-08-19 06:30")
+
+    def test_edit_form_opens_manual_deadline_for_nonstandard_value(self):
+        cursor = Cursor([
+            (5, "Чемпионат России 🇷🇺", 1, None),
+            (10, "Спартак", "Зенит", datetime(2027, 8, 20, 16, 0, tzinfo=timezone.utc), datetime(2027, 8, 19, 6, 30, tzinfo=timezone.utc), "SCHEDULED", None, None, "Тур 1", "rpl"),
+        ])
+        response = self.get("/admin/russia-2027/matches/10/edit", cursor)
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-manual-deadline-details open', html)
+        self.assertNotIn('name="manual_deadline" value="1" disabled', html)
+
+    def test_edit_form_keeps_standard_deadline_automatic(self):
+        cursor = Cursor([
+            (5, "Чемпионат России 🇷🇺", 1, None),
+            (10, "Спартак", "Зенит", datetime(2027, 8, 20, 16, 0, tzinfo=timezone.utc), datetime(2027, 8, 20, 8, 0, tzinfo=timezone.utc), "SCHEDULED", None, None, "Тур 1", "rpl"),
+        ])
+        response = self.get("/admin/russia-2027/matches/10/edit", cursor)
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-manual-deadline-details ', html)
+        self.assertIn('name="manual_deadline" value="1" disabled', html)
 
     def test_rpl_early_match_without_manual_deadline_is_rejected(self):
         cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None)])
@@ -253,9 +368,20 @@ class RplManualAdminTests(unittest.TestCase):
     def test_rpl_admin_shows_default_deadline_and_display_date_without_changing_inputs(self):
         html = (ROOT / "templates" / "admin_russia_2027.html").read_text(encoding="utf-8")
         self.assertIn("11:00 МСК в день матча", html)
+        self.assertIn("Изменить дедлайн вручную", html)
+        self.assertIn('name="manual_deadline"', html)
+        self.assertIn("data-manual-deadline-details", html)
+        self.assertIn("data-manual-deadline-field", html)
+        self.assertIn("Для этого матча необходимо задать дедлайн вручную", html)
         self.assertIn("m.date_label", html)
         edit_html = (ROOT / "templates" / "admin_rpl_edit.html").read_text(encoding="utf-8")
         self.assertIn('type="date" name="match_date" value="{{ match.match_date_msk }}"', edit_html)
+        self.assertIn("Изменить дедлайн вручную", edit_html)
+        self.assertIn("match.uses_manual_deadline", edit_html)
+        self.assertIn('name="manual_deadline"', edit_html)
+
+        rcup_html = (ROOT / "templates" / "admin_russian_cup.html").read_text(encoding="utf-8")
+        self.assertNotIn("manual_deadline", rcup_html)
 
     def test_rpl_admin_css_is_scoped_and_mobile_safe(self):
         css = (ROOT / "static" / "css" / "tournaments" / "rpl-admin.css").read_text(encoding="utf-8")

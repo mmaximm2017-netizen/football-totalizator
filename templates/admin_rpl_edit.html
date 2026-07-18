@@ -32,10 +32,50 @@
 
         <section class="rpl-edit-section">
             <h2>Дедлайн</h2>
-            <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date" value="{{ match.deadline_date_msk }}"></label><label>Время дедлайна<input type="time" name="deadline_time" value="{{ match.deadline_time_msk }}"></label></div>
+            <div class="rpl-auto-deadline-note">Дедлайн автоматически: 11:00 МСК в день матча</div>
+            <details class="rpl-manual-deadline" data-manual-deadline-details {% if match.uses_manual_deadline %}open{% endif %}>
+                <summary>Изменить дедлайн вручную</summary>
+                <input type="hidden" name="manual_deadline" value="1" {% if not match.uses_manual_deadline %}disabled{% endif %} data-manual-deadline-control>
+                <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date" value="{{ match.deadline_date_msk }}" {% if not match.uses_manual_deadline %}disabled{% endif %} data-manual-deadline-field></label><label>Время дедлайна<input type="time" name="deadline_time" value="{{ match.deadline_time_msk }}" {% if not match.uses_manual_deadline %}disabled{% endif %} data-manual-deadline-field></label></div>
+                <div class="rpl-card-note">Используйте только для нестандартного дедлайна или матча, который начинается в 11:00 МСК либо раньше.</div>
+            </details>
+            <div class="rpl-early-deadline-warning" data-early-deadline-warning hidden>Для этого матча необходимо задать дедлайн вручную</div>
         </section>
 
         <button class="rpl-btn rpl-edit-save" type="submit">Сохранить изменения</button>
     </form>
 </div>
+<script>
+    (function () {
+        const form = document.querySelector('.rpl-edit-form');
+        if (!form) return;
+        const details = form.querySelector('[data-manual-deadline-details]');
+        const control = form.querySelector('[data-manual-deadline-control]');
+        const fields = Array.from(form.querySelectorAll('[data-manual-deadline-field]'));
+        const matchTime = form.querySelector('[name="match_time"]');
+        const warning = form.querySelector('[data-early-deadline-warning]');
+        if (!details || !control || !matchTime) return;
+
+        function isEarlyMatch() {
+            return matchTime.value && matchTime.value <= '11:00';
+        }
+
+        function syncManualDeadline() {
+            const enabled = details.open;
+            control.disabled = !enabled;
+            fields.forEach(function (field) {
+                field.disabled = !enabled;
+                field.required = enabled;
+            });
+            if (warning) warning.hidden = !isEarlyMatch();
+        }
+
+        details.addEventListener('toggle', syncManualDeadline);
+        matchTime.addEventListener('change', function () {
+            if (isEarlyMatch()) details.open = true;
+            syncManualDeadline();
+        });
+        syncManualDeadline();
+    }());
+</script>
 {% endblock %}

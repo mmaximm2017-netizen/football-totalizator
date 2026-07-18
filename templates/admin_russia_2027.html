@@ -47,8 +47,14 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="rpl-grid"><label>Домашняя команда<input name="home_team" required></label><label>Гостевая команда<input name="away_team" required></label></div>
                 <div class="rpl-grid"><label>Дата<input type="date" name="match_date" required></label><label>Время МСК<input type="time" name="match_time" value="19:00" required></label></div>
-                <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date"></label><label>Время дедлайна<input type="time" name="deadline_time"></label></div>
-                <div class="rpl-card-note">По умолчанию: 11:00 МСК в день матча.</div>
+                <div class="rpl-auto-deadline-note">Дедлайн автоматически: 11:00 МСК в день матча</div>
+                <details class="rpl-manual-deadline" data-manual-deadline-details>
+                    <summary>Изменить дедлайн вручную</summary>
+                    <input type="hidden" name="manual_deadline" value="1" disabled data-manual-deadline-control>
+                    <div class="rpl-grid"><label>Дата дедлайна<input type="date" name="deadline_date" disabled data-manual-deadline-field></label><label>Время дедлайна<input type="time" name="deadline_time" disabled data-manual-deadline-field></label></div>
+                    <div class="rpl-card-note">Используйте только для нестандартного дедлайна или матча, который начинается в 11:00 МСК либо раньше.</div>
+                </details>
+                <div class="rpl-early-deadline-warning" data-early-deadline-warning hidden>Для этого матча необходимо задать дедлайн вручную</div>
                 <button class="rpl-btn" type="submit">Добавить матч</button>
             </form>
         </details>
@@ -92,4 +98,37 @@
 
     <details class="rpl-technical-operations"><summary>Технические операции</summary><form method="post" action="{{ url_for('admin_matches.admin_russia_2027_recalc') }}" onsubmit="return confirm('Пересчитать очки Чемпионата России?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rpl-btn" type="submit">Пересчитать очки Чемпионата России</button></form></details>
 </div>
+<script>
+    (function () {
+        const form = document.querySelector('.rpl-add-form');
+        if (!form) return;
+        const details = form.querySelector('[data-manual-deadline-details]');
+        const control = form.querySelector('[data-manual-deadline-control]');
+        const fields = Array.from(form.querySelectorAll('[data-manual-deadline-field]'));
+        const matchTime = form.querySelector('[name="match_time"]');
+        const warning = form.querySelector('[data-early-deadline-warning]');
+        if (!details || !control || !matchTime) return;
+
+        function isEarlyMatch() {
+            return matchTime.value && matchTime.value <= '11:00';
+        }
+
+        function syncManualDeadline() {
+            const enabled = details.open;
+            control.disabled = !enabled;
+            fields.forEach(function (field) {
+                field.disabled = !enabled;
+                field.required = enabled;
+            });
+            if (warning) warning.hidden = !isEarlyMatch();
+        }
+
+        details.addEventListener('toggle', syncManualDeadline);
+        matchTime.addEventListener('change', function () {
+            if (isEarlyMatch()) details.open = true;
+            syncManualDeadline();
+        });
+        syncManualDeadline();
+    }());
+</script>
 {% endblock %}
