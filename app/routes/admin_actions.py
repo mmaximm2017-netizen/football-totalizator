@@ -1,4 +1,4 @@
-import re
+import unicodedata
 
 from flask import flash, redirect, request, session, url_for
 
@@ -14,23 +14,34 @@ ALLOWED_TITLES = (
     "Чемпион Мира 2026",
 )
 
-CUSTOM_TITLE_RE = re.compile(r"[A-Za-zА-Яа-яЁё0-9 .,!?;:()\"'«»—–-]+")
-
-
 def _admin_redirect():
     return redirect(url_for("admin.admin_users"))
 
 
+def _contains_disallowed_title_control_chars(value):
+    for char in value:
+        if char in {"\n", "\r", "\t", "\u2028", "\u2029"}:
+            return True
+        if unicodedata.category(char) in {"Cc", "Cs"}:
+            return True
+    return False
+
+
 def _resolve_title():
-    custom_title = (request.form.get("custom_title") or "").strip()
+    custom_title = unicodedata.normalize(
+        "NFC",
+        request.form.get("custom_title") or "",
+    )
     selected_title = (request.form.get("title") or "").strip()
 
     if custom_title:
+        if _contains_disallowed_title_control_chars(custom_title):
+            flash("Титул не должен содержать переносы строк или управляющие символы", "error")
+            return None
+        custom_title = custom_title.strip()
+    if custom_title:
         if len(custom_title) > 40:
             flash("Свой титул не должен быть длиннее 40 символов", "error")
-            return None
-        if not CUSTOM_TITLE_RE.fullmatch(custom_title):
-            flash("Свой титул содержит недопустимые символы", "error")
             return None
         return custom_title
 

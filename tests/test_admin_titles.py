@@ -1,4 +1,6 @@
 import unittest
+import unicodedata
+from pathlib import Path
 from unittest.mock import patch
 
 from flask import Flask, session
@@ -10,6 +12,9 @@ from app.routes.admin_actions import (
     handle_replace_title,
 )
 from app.routes.admin_common import admin_required
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class TitleCursor:
@@ -43,6 +48,21 @@ class TitleConnection:
 
     def rollback(self):
         self.rollbacks += 1
+
+
+class UniqueTitleCursor(TitleCursor):
+    def __init__(self):
+        super().__init__()
+        self.titles = set()
+
+    def execute(self, query, params=None):
+        super().execute(query, params)
+        if query.lstrip().startswith("INSERT"):
+            title = params[1]
+            if title in self.titles:
+                self.rowcount = 0
+            else:
+                self.titles.add(title)
 
 
 class AdminTitleTests(unittest.TestCase):
@@ -104,13 +124,85 @@ class AdminTitleTests(unittest.TestCase):
         self.assertIsNone(self.inserted_title(cursor))
         self.assertEqual(conn.commits, 0)
 
-    def test_html_title_is_rejected(self):
+    def test_unicode_symbols_and_html_like_text_are_allowed(self):
+        titles = (
+            "🥉 Бронзовый призёр",
+            "🏆 Победитель турнира",
+            "Лучший прогнозист ⭐",
+            "🔥 Король камбэков",
+            "Zenit 💙🤍",
+            "🥇🥈🥉",
+            "3-е место | Кубок №1 🏆",
+            "Лучший <прогнозист>",
+            "© Чемпион™",
+            "勝者 🏆",
+            "الفائز 🥇",
+            "👨‍👩‍👦 Семейный чемпион",
+            "🥉 3-е место | Кубок №1 🏆",
+        )
+        for title in titles:
+            with self.subTest(title=title):
+                _, conn, cursor = self.call_handler(
+                    handle_award_title,
+                    {"user_id": "7", "custom_title": title},
+                )
+                self.assertEqual(self.inserted_title(cursor), title)
+                self.assertEqual(conn.commits, 1)
+
+    def test_html_like_title_is_stored_as_text(self):
         _, conn, cursor = self.call_handler(
             handle_award_title,
             {"user_id": "7", "custom_title": "<script>alert(1)</script>"},
         )
+        self.assertEqual(self.inserted_title(cursor), "<script>alert(1)</script>")
+        self.assertEqual(conn.commits, 1)
+
+    def test_title_rejects_control_and_line_separator_characters(self):
+        for suffix in ("\n", "\r", "\t", "\x00", "\u2028", "\u2029"):
+            with self.subTest(repr=suffix):
+                _, conn, cursor = self.call_handler(
+                    handle_award_title,
+                    {"user_id": "7", "custom_title": "Титул" + suffix},
+                )
+                self.assertIsNone(self.inserted_title(cursor))
+                self.assertEqual(conn.commits, 0)
+
+    def test_title_is_nfc_normalized_and_zero_width_joiner_is_preserved(self):
+        title = "Cafe\u0301 👨\u200d👩\u200d👦"
+        _, conn, cursor = self.call_handler(
+            handle_award_title,
+            {"user_id": "7", "custom_title": title},
+        )
+        saved = self.inserted_title(cursor)
+        self.assertEqual(saved, unicodedata.normalize("NFC", title))
+        self.assertIn("👨\u200d👩\u200d👦", saved)
+        self.assertEqual(conn.commits, 1)
+
+    def test_repeated_nfc_normalized_title_is_not_inserted_twice(self):
+        cursor = UniqueTitleCursor()
+        first = "Cafe\u0301 🏆"
+        second = "Café 🏆"
+        self.call_handler(handle_award_title, {"user_id": "7", "custom_title": first}, cursor)
+        _, conn, _ = self.call_handler(handle_award_title, {"user_id": "7", "custom_title": second}, cursor)
+        self.assertEqual(len([query for query, _ in cursor.executed if query.lstrip().startswith("INSERT")]), 2)
+        self.assertEqual(conn.rollbacks, 1)
+
+    def test_administrator_cannot_receive_custom_title(self):
+        _, conn, cursor = self.call_handler(
+            handle_award_title,
+            {"user_id": "7", "custom_title": "🏆 Админ"},
+            TitleCursor(is_admin=1),
+        )
         self.assertIsNone(self.inserted_title(cursor))
         self.assertEqual(conn.commits, 0)
+
+    def test_title_templates_use_escaping_for_user_titles(self):
+        admin_template = (ROOT / "templates" / "admin_users.html").read_text(encoding="utf-8")
+        profile_template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
+        self.assertIn("{{ title }}</span>", admin_template)
+        self.assertIn("{{ t.title }}", profile_template)
+        self.assertNotIn("{{ title|safe }}", admin_template)
+        self.assertNotIn("{{ t.title|safe }}", profile_template)
 
     def test_admin_can_replace_title(self):
         _, conn, cursor = self.call_handler(
