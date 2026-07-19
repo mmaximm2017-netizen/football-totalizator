@@ -343,14 +343,6 @@
         min-width: 0;
     }
 
-    .profile-race-cue {
-        margin-top: 8px;
-        font-size: 12px;
-        font-weight: 800;
-        color: rgba(93,120,148,0.86);
-        letter-spacing: 0.1px;
-    }
-
     .title-item {
         border-radius: 12px;
         padding: 7px 11px;
@@ -527,7 +519,6 @@
     body.tournament-wc2026 .stat-label,
     body.tournament-wc2026 .accuracy-label,
     body.tournament-wc2026 .match-bottom,
-    body.tournament-wc2026 .profile-race-cue,
     body.tournament-wc2026 .titles-inline-empty,
     body.tournament-wc2026 .empty-box {
         color: rgba(255,255,255,0.78);
@@ -704,7 +695,6 @@
     body.tournament-rpl .stat-label,
     body.tournament-rpl .accuracy-label,
     body.tournament-rpl .match-bottom,
-    body.tournament-rpl .profile-race-cue,
     body.tournament-rpl .titles-inline-empty,
     body.tournament-rpl .empty-box {
         color: rgba(255,255,255,0.74);
@@ -880,7 +870,6 @@
     body.tournament-rcup .stat-label,
     body.tournament-rcup .accuracy-label,
     body.tournament-rcup .match-bottom,
-    body.tournament-rcup .profile-race-cue,
     body.tournament-rcup .titles-inline-empty,
     body.tournament-rcup .empty-box {
         color: rgba(255, 255, 255, 0.66);
@@ -1011,15 +1000,6 @@
                 {{ current_place }} место
             {% endif %}
 
-        </div>
-        <div class="profile-race-cue">
-            {% if current_place == 1 %}
-                Вы ведёте турнирную гонку
-            {% elif current_place <= 3 %}
-                Вы в зоне лидеров
-            {% else %}
-                Борьба за подъём в таблице
-            {% endif %}
         </div>
         {% endif %}
 

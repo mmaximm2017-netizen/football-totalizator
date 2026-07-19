@@ -368,6 +368,21 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertEqual(response.get_json()["current_tournament_name"], "Selected")
         selected.assert_called_once_with(42)
 
+    def test_profile_has_place_and_titles_without_race_cue(self):
+        profile = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
+        table = (ROOT / "templates" / "table_content.html").read_text(encoding="utf-8")
+        for text in ("Вы ведёте " + "турнирную гонку", "Вы в " + "зоне лидеров", "Борьба за " + "подъём в таблице"):
+            self.assertNotIn(text, profile)
+        self.assertNotIn("profile-" + "race-cue", profile)
+        self.assertIn("🥇 1 место", profile)
+        self.assertIn("🥈 2 место", profile)
+        self.assertIn("🥉 3 место", profile)
+        self.assertIn("{{ current_place }} место", profile)
+        self.assertIn("{% if titles %}", profile)
+        self.assertIn("Пока без титулов", profile)
+        self.assertIn("Лидер", table)
+        self.assertIn("Аутсайдер", table)
+
 
 if __name__ == "__main__":
     unittest.main()
