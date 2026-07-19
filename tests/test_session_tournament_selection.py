@@ -40,19 +40,33 @@ class SessionTournamentSelectionTests(unittest.TestCase):
 
         query = cursor.queries[0][0]
         self.assertEqual(selected, 7)
+        before_order = query.upper().split("ORDER BY", 1)[0]
         self.assertIn("t.is_active = 1", query)
+        self.assertIn("M.DEADLINE IS NOT NULL", before_order)
         self.assertIn("m.deadline > NOW()", query)
+        self.assertIn("m.deadline ASC", query)
+        self.assertNotIn("CASE WHEN m.deadline", query)
         self.assertIn("FINISHED", query)
+        self.assertIn("COMPLETE", query)
+        self.assertIn("COMPLETED", query)
         self.assertIn("CANCELLED", query)
         self.assertIn("POSTPONED", query)
 
     def test_no_eligible_match_uses_first_active_tournament_fallback(self):
-        cursor = Cursor([None, (3,)])
+        cursor = Cursor([None, None, (3,)])
         self.assertEqual(get_session_start_tournament_id(cursor), 3)
+        self.assertEqual(len(cursor.queries), 3)
+
+    def test_future_match_fallback_is_used_before_first_active_tournament(self):
+        cursor = Cursor([None, (8,)])
+        self.assertEqual(get_session_start_tournament_id(cursor), 8)
         self.assertEqual(len(cursor.queries), 2)
+        fallback_sql = cursor.queries[1][0]
+        self.assertIn("m.kickoff_time >= NOW()", fallback_sql)
+        self.assertIn("m.kickoff_time ASC", fallback_sql)
 
     def test_no_matches_and_no_active_tournaments_returns_none(self):
-        cursor = Cursor([None, None])
+        cursor = Cursor([None, None, None])
         self.assertIsNone(get_session_start_tournament_id(cursor))
 
     def test_login_sets_session_tournament_and_redirects_with_explicit_tid(self):
@@ -77,7 +91,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
                 with client.session_transaction() as current_session:
                     self.assertEqual(current_session["selected_tournament_id"], 5)
 
-    def test_bare_main_request_redirects_to_session_selection(self):
+    def test_bare_main_request_recalculates_default_over_stale_session(self):
         from app.routes.main import main_bp
 
         app = Flask(__name__)
@@ -91,15 +105,20 @@ class SessionTournamentSelectionTests(unittest.TestCase):
             patch("app.routes.main.get_db", return_value=conn),
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
+            patch("app.routes.main.get_session_start_tournament_id", return_value=6),
         ):
             with app.test_client() as client:
                 with client.session_transaction() as current_session:
                     current_session["user_id"] = 11
                     current_session["selected_tournament_id"] = 5
-                response = client.get("/")
+                response = client.get("/?league=rpl")
+                with client.session_transaction() as current_session:
+                    selected = current_session.get("selected_tournament_id")
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/?tid=5", response.headers["Location"])
+        self.assertIn("/?tid=6", response.headers["Location"])
+        self.assertIn("league=rpl", response.headers["Location"])
+        self.assertEqual(selected, 6)
 
     def test_bare_main_request_ignores_archived_session_tournament(self):
         from app.routes.main import main_bp
@@ -144,6 +163,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[]),
             patch("app.routes.main.get_selected_tournament_id", return_value=5),
+            patch("app.routes.main.get_session_start_tournament_id") as startup_selection,
             patch("app.routes.main.is_before_deadline", return_value=True),
         ):
             with app.test_client() as client:
@@ -162,6 +182,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         self.assertTrue(response.get_json()["ok"])
         self.assertEqual(conn.commits, 1)
         self.assertTrue(any("ON CONFLICT" in query for query, _ in cursor.queries))
+        startup_selection.assert_not_called()
 
     def test_ajax_prediction_post_uses_string_session_tournament_without_tid(self):
         from app.routes.main import main_bp

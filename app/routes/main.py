@@ -210,31 +210,11 @@ def index():
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if request.method == 'GET' and requested_tid is None:
-            session_tid = session.get('selected_tournament_id')
-            try:
-                session_tid = int(session_tid)
-            except (TypeError, ValueError):
-                session_tid = None
-
-            session_tournament = next(
-                (
-                    tournament
-                    for tournament in all_tournaments
-                    if tournament.get("id") == session_tid and tournament.get("is_active")
-                ),
-                None,
-            )
-            if not session_tournament:
-                session.pop('selected_tournament_id', None)
-                session_tid = None
-
-            if not session_tid:
-                session_tid = get_session_start_tournament_id(cur)
-                if session_tid:
-                    session['selected_tournament_id'] = session_tid
-                    session['tournament_selection_initialized'] = True
-            if session_tid:
-                redirect_args = {'tid': session_tid}
+            default_tid = get_session_start_tournament_id(cur)
+            if default_tid:
+                session['selected_tournament_id'] = default_tid
+                session['tournament_selection_initialized'] = True
+                redirect_args = {'tid': default_tid}
                 if league != 'all':
                     redirect_args['league'] = league
                 return redirect(url_for('main.index', **redirect_args))

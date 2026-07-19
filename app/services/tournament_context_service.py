@@ -15,12 +15,32 @@ def get_session_start_tournament_id(cur):
         JOIN tournaments t ON t.id = m.tournament_id
         WHERE t.is_active = 1
           AND m.tournament_id IS NOT NULL
+          AND m.deadline IS NOT NULL
+          AND m.deadline > NOW()
+          AND COALESCE(UPPER(m.status), 'SCHEDULED')
+              NOT IN ('FINISHED', 'COMPLETE', 'COMPLETED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'LIVE', 'IN_PLAY', 'PAUSED', 'HALFTIME')
+        ORDER BY
+          m.deadline ASC,
+          m.kickoff_time ASC,
+          m.id ASC
+        LIMIT 1
+        """
+    )
+    row = cur.fetchone()
+    if row and row[0]:
+        return row[0]
+
+    cur.execute(
+        """
+        SELECT m.tournament_id
+        FROM matches m
+        JOIN tournaments t ON t.id = m.tournament_id
+        WHERE t.is_active = 1
+          AND m.tournament_id IS NOT NULL
           AND m.kickoff_time >= NOW()
           AND COALESCE(UPPER(m.status), 'SCHEDULED')
-              NOT IN ('FINISHED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'LIVE', 'IN_PLAY', 'PAUSED', 'HALFTIME')
+              NOT IN ('FINISHED', 'COMPLETE', 'COMPLETED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'LIVE', 'IN_PLAY', 'PAUSED', 'HALFTIME')
         ORDER BY
-          CASE WHEN m.deadline > NOW() THEN 0 ELSE 1 END,
-          CASE WHEN m.deadline > NOW() THEN m.deadline END ASC NULLS LAST,
           m.kickoff_time ASC,
           m.id ASC
         LIMIT 1
