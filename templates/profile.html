@@ -72,6 +72,54 @@
             0 10px 22px rgba(0,78,140,0.12);
     }
 
+    .profile-position-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .profile-position-row-single { grid-template-columns: minmax(0, auto); }
+    .profile-position-row-single .place-pill { width: max-content; }
+
+    .profile-position-row .place-pill {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 14px;
+    }
+
+    .profile-position-metric {
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        min-width: 0;
+        min-height: 42px;
+        margin-top: 14px;
+        padding: 7px 10px;
+        box-sizing: border-box;
+        border-radius: var(--radius-round);
+        background: linear-gradient(145deg, rgba(93,120,148,0.10), rgba(255,255,255,0.46));
+        border: 1px solid rgba(93,120,148,0.16);
+        color: #5d7894;
+        text-align: center;
+    }
+
+    .profile-position-metric-label {
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.15;
+        white-space: nowrap;
+    }
+
+    .profile-position-metric-value {
+        margin-top: 3px;
+        color: #063b73;
+        font-size: 16px;
+        font-weight: 1000;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -525,6 +573,7 @@
     }
 
     body.tournament-wc2026 .place-pill,
+    body.tournament-wc2026 .profile-position-metric,
     body.tournament-wc2026 .title-item,
     body.tournament-wc2026 .accuracy-item,
     body.tournament-wc2026 .match-row,
@@ -546,6 +595,14 @@
             0 0 20px rgba(216,255,34,0.18),
             0 12px 24px rgba(0,4,42,0.24);
     }
+
+    body.tournament-wc2026 .profile-position-metric {
+        background: linear-gradient(145deg, rgba(1,12,118,0.52), rgba(3,9,58,0.34));
+        border-color: rgba(31,231,255,0.18);
+        color: rgba(255,255,255,0.78);
+    }
+
+    body.tournament-wc2026 .profile-position-metric-value { color: var(--wc-text-primary); }
 
     body.tournament-wc2026 .title-item {
         color: #d8ff22;
@@ -709,6 +766,14 @@
             0 0 20px rgba(42,168,255,0.18),
             0 12px 24px rgba(0,6,28,0.24);
     }
+
+    body.tournament-rpl .profile-position-metric {
+        background: linear-gradient(145deg, rgba(42,168,255,0.18), rgba(7,22,52,0.54));
+        border-color: rgba(42,168,255,0.28);
+        color: rgba(255,255,255,0.74);
+    }
+
+    body.tournament-rpl .profile-position-metric-value { color: #9fe0ff; }
 
     body.tournament-rpl .title-item,
     body.tournament-rpl .accuracy-item,
@@ -884,6 +949,14 @@
         box-shadow: none;
     }
 
+    body.tournament-rcup .profile-position-metric {
+        background: linear-gradient(145deg, rgba(232,0,36,0.18), rgba(58,10,50,0.92));
+        border-color: rgba(232,0,36,0.34);
+        color: rgba(255,255,255,0.66);
+    }
+
+    body.tournament-rcup .profile-position-metric-value { color: #ffffff; }
+
     body.tournament-rcup .titles-list {
         margin-top: 8px;
     }
@@ -984,22 +1057,28 @@
         </div>
 
         <div class="profile-subtitle">
-            Статистика текущего турнира
+            {% if is_own_profile %}Мой профиль · {% else %}Профиль участника · {% endif %}статистика текущего турнира
         </div>
 
         {% if current_place %}
-        <div class="place-pill">
-
-            {% if current_place == 1 %}
-                🥇 1 место
-            {% elif current_place == 2 %}
-                🥈 2 место
-            {% elif current_place == 3 %}
-                🥉 3 место
-            {% else %}
-                {{ current_place }} место
+        <div class="profile-position-row{% if not position_metric %} profile-position-row-single{% endif %}">
+            <div class="place-pill">
+                {% if current_place == 1 %}
+                    🥇 1 место
+                {% elif current_place == 2 %}
+                    🥈 2 место
+                {% elif current_place == 3 %}
+                    🥉 3 место
+                {% else %}
+                    {{ current_place }} место
+                {% endif %}
+            </div>
+            {% if position_metric %}
+            <div class="profile-position-metric">
+                <span class="profile-position-metric-label">{{ position_metric.label }}</span>
+                <strong class="profile-position-metric-value">{{ position_metric.points_text }}</strong>
+            </div>
             {% endif %}
-
         </div>
         {% endif %}
 

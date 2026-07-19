@@ -1324,7 +1324,7 @@ body {
         {% else %}
         <a
             href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
-            class="{% if request.path == '/profile' %}active{% endif %}"
+            class="{% if request.path == '/profile' and (is_own_profile|default(false)) %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon">
             Профиль
@@ -1354,7 +1354,7 @@ body {
             {% if active_items %}
             <div class="tournament-section-label">Активные турниры</div>
             {% for t in active_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
+            <a href="{% if request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="active-badge">Активный</span>
             </a>
@@ -1364,7 +1364,7 @@ body {
             {% if archive_items %}
             <div class="tournament-section-label">Архив</div>
             {% for t in archive_items %}
-            <a href="{{ tournament_switch_base }}?tid={{ t.id }}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
+            <a href="{% if request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="archive-badge">Архив</span>
             </a>

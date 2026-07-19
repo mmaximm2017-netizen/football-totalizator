@@ -63,9 +63,11 @@ class FakeCursor:
     def __init__(self, fetchone_results=None, fetchall_results=None):
         self.fetchone_results = list(fetchone_results or [])
         self.fetchall_results = list(fetchall_results or [])
+        self.executed = []
         self.closed = False
 
     def execute(self, *args, **kwargs):
+        self.executed.append((args, kwargs))
         return None
 
     def fetchone(self):
@@ -266,6 +268,9 @@ class BaseTournamentThemeTests(unittest.TestCase):
         self.assertIn('href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
         self.assertIn('href="/table{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
         self.assertIn('href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
+        self.assertIn("profile_subject_username|urlencode", source)
+        self.assertIn("is_own_profile|default(true)", source)
+        self.assertIn("request.path == '/profile' and (is_own_profile|default(false))", source)
         self.assertNotIn('{% set current_tid', source)
 
 
@@ -378,10 +383,81 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertIn("🥈 2 место", profile)
         self.assertIn("🥉 3 место", profile)
         self.assertIn("{{ current_place }} место", profile)
+        self.assertIn("profile-position-row", profile)
+        self.assertIn("position_metric", profile)
+        self.assertIn("{{ position_metric.label }}", profile)
+        self.assertIn("{{ position_metric.points_text }}", profile)
+        self.assertIn("Мой профиль", profile)
+        self.assertIn("Профиль участника", profile)
         self.assertIn("{% if titles %}", profile)
         self.assertIn("Пока без титулов", profile)
         self.assertIn("Лидер", table)
         self.assertIn("Аутсайдер", table)
+
+    def test_profile_metric_uses_canonical_ranking_and_russian_plural(self):
+        from app.routes.profile import build_profile_position_metric, format_profile_points
+
+        ranking = [
+            {"user_id": 1, "place": 1, "points": 42},
+            {"user_id": 2, "place": 2, "points": 34},
+        ]
+        self.assertEqual(build_profile_position_metric(ranking, 2), {
+            "kind": "gap", "label": "До лидера", "points": 8, "points_text": "8 очков",
+        })
+        self.assertEqual(build_profile_position_metric(ranking, 1), {
+            "kind": "lead", "label": "Преимущество", "points": 8, "points_text": "8 очков",
+        })
+        self.assertEqual(build_profile_position_metric([{**ranking[0]}, {"user_id": 2, "place": 2, "points": 42}], 2)["points"], 0)
+        self.assertIsNone(build_profile_position_metric(ranking[:1], 1))
+        self.assertIsNone(build_profile_position_metric([], 1))
+        self.assertIsNone(build_profile_position_metric(ranking, 99))
+        self.assertIsNone(build_profile_position_metric([{"user_id": 1, "place": 1, "points": None}], 1))
+        for value, expected in ((0, "0 очков"), (1, "1 очко"), (2, "2 очка"), (4, "4 очка"), (5, "5 очков"), (11, "11 очков"), (14, "14 очков"), (21, "21 очко"), (22, "22 очка"), (25, "25 очков")):
+            self.assertEqual(format_profile_points(value), expected)
+
+    def test_foreign_profile_uses_subject_uid_and_is_not_own_profile(self):
+        from app.routes.profile import profile_bp
+
+        app = self.make_test_app(profile_bp)
+        cursor = FakeCursor(
+            fetchone_results=[
+                (2, "Other Name", 0),
+                (2,),
+                (0, 0, 0, 0, 0, 0, 0, 0),
+            ],
+            fetchall_results=[[], []],
+        )
+        captured = {}
+
+        def render_profile(_template, **context):
+            captured.update(context)
+            return "profile"
+
+        with (
+            app.test_client() as client,
+            patch("app.routes.profile.get_db", return_value=FakeConnection(cursor)),
+            patch("app.routes.profile.close_db"),
+            patch("app.routes.profile.get_all_tournaments", return_value=[{"id": 42, "name": "Selected", "is_active": 1}]),
+            patch("app.routes.profile.get_selected_tournament_id", return_value=42),
+            patch("app.routes.profile.get_tournament_by_id", return_value={"id": 42, "name": "Selected"}),
+            patch("app.routes.profile.get_tournament_ranking", return_value=[
+                {"user_id": 1, "place": 1, "points": 42},
+                {"user_id": 2, "place": 2, "points": 34},
+            ]),
+            patch("app.routes.profile.render_template", side_effect=render_profile),
+        ):
+            with client.session_transaction() as sess:
+                sess["user_id"] = 1
+            response = client.get("/profile?username=Other%20Name&tid=42")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(captured["is_own_profile"])
+        self.assertEqual(captured["profile_subject_username"], "Other Name")
+        self.assertEqual(captured["username"], "Other Name")
+        self.assertEqual(captured["position_metric"]["points"], 8)
+        subject_params = [args[1] for args, _ in cursor.executed if len(args) > 1 and args[1]]
+        self.assertIn((2, 42), subject_params)
+        self.assertIn((2,), subject_params)
 
 
 if __name__ == "__main__":

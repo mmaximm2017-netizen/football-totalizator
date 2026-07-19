@@ -26,29 +26,80 @@ from app.utils import get_club_logo, get_flag
 profile_bp = Blueprint('profile', __name__)
 
 
+def format_profile_points(points):
+    value = abs(int(points))
+    if value % 10 == 1 and value % 100 != 11:
+        word = "очко"
+    elif value % 10 in (2, 3, 4) and value % 100 not in (12, 13, 14):
+        word = "очка"
+    else:
+        word = "очков"
+    return f"{value} {word}"
+
+
+def build_profile_position_metric(ranking, user_id):
+    if not ranking:
+        return None
+
+    def numeric_points(row):
+        try:
+            return int(row.get("points"))
+        except (TypeError, ValueError):
+            return None
+
+    try:
+        target_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    target = next((row for row in ranking if row.get("user_id") == target_id), None)
+    if target is None:
+        target = next((row for row in ranking if str(row.get("user_id")) == str(user_id)), None)
+    if target is None or target.get("place") is None:
+        return None
+
+    target_points = numeric_points(target)
+    leader_points = numeric_points(ranking[0])
+    if target_points is None or leader_points is None:
+        return None
+
+    if str(ranking[0].get("user_id")) == str(user_id):
+        if len(ranking) < 2:
+            return None
+        next_points = numeric_points(ranking[1])
+        if next_points is None:
+            return None
+        points = max(0, leader_points - next_points)
+        return {"kind": "lead", "label": "Преимущество", "points": points, "points_text": format_profile_points(points)}
+
+    points = max(0, leader_points - target_points)
+    return {"kind": "gap", "label": "До лидера", "points": points, "points_text": format_profile_points(points)}
+
+
 @profile_bp.route('/profile')
 def profile():
     conn = get_db()
     cur = conn.cursor()
 
     try:
-        username = request.args.get('username')
+        requested_username = request.args.get('username')
 
-        if username:
+        if requested_username:
             cur.execute(
                 """
-                SELECT id, COALESCE(is_deleted, 0)
+                SELECT id, username, COALESCE(is_deleted, 0)
                 FROM users
                 WHERE username = %s
                 """,
-                (username,),
+                (requested_username,),
             )
             row = cur.fetchone()
             if not row:
                 flash("Игрок не найден", "error")
                 return redirect(url_for('table.table'))
             uid = row[0]
-            user_is_deleted = row[1]
+            username = row[1] if len(row) > 2 else requested_username
+            user_is_deleted = row[2] if len(row) > 2 else row[1]
         else:
             uid = session.get('user_id')
             if not uid:
@@ -70,6 +121,13 @@ def profile():
             username = row[0]
             user_is_deleted = row[1] if len(row) > 1 else 0
 
+        viewer_user_id = session.get("user_id")
+        try:
+            is_own_profile = viewer_user_id is not None and int(viewer_user_id) == int(uid)
+        except (TypeError, ValueError):
+            is_own_profile = False
+        profile_subject_username = username
+
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         tournament_state = get_tournament_state_flags(all_tournaments)
@@ -85,8 +143,9 @@ def profile():
             return redirect(url_for('table.table', tid=tournament_id))
 
         ranking = get_tournament_ranking(tournament_id)
-        user_row = next((r for r in ranking if r['user_id'] == uid), None)
+        user_row = next((r for r in ranking if str(r.get('user_id')) == str(uid)), None)
         current_place = user_row['place'] if user_row else None
+        position_metric = build_profile_position_metric(ranking, uid)
 
         cur.execute(
             """
@@ -188,6 +247,8 @@ def profile():
     return render_template(
         'profile.html',
         username=username,
+        profile_subject_username=profile_subject_username,
+        is_own_profile=is_own_profile,
         stats=stats,
         recent=recent,
         titles=titles,
@@ -200,4 +261,5 @@ def profile():
         **tournament_state,
         current_tournament_id=tournament_id,
         current_tournament_name=current_tournament_name,
+        position_metric=position_metric,
     )
