@@ -6932,23 +6932,23 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     /* RPL home background: light broadcast graphics behind the TV-panel cards. */
     body.tournament-rpl {
         background:
-            linear-gradient(125deg, transparent 0 31%, rgba(0,57,166,0.055) 31% 37%, transparent 37% 64%, rgba(30,91,198,0.075) 64% 70%, transparent 70%),
-            radial-gradient(ellipse 76% 42% at 104% 4%, rgba(30,91,198,0.24), transparent 68%),
-            radial-gradient(ellipse 62% 34% at -12% 78%, rgba(0,43,122,0.16), transparent 70%),
-            radial-gradient(circle at 42% 36%, rgba(255,255,255,0.72), transparent 38%),
-            linear-gradient(180deg, #eef7ff 0%, #dceeff 48%, #d2e7fb 100%) !important;
+            linear-gradient(125deg, transparent 0 31%, rgba(0,27,77,0.16) 31% 37%, transparent 37% 64%, rgba(0,128,255,0.16) 64% 70%, transparent 70%),
+            radial-gradient(ellipse 76% 42% at 104% 4%, rgba(0,128,255,0.42), transparent 68%),
+            radial-gradient(ellipse 62% 34% at -12% 78%, rgba(0,27,77,0.28), transparent 70%),
+            radial-gradient(circle at 42% 36%, rgba(255,255,255,0.18), transparent 38%),
+            linear-gradient(180deg, #0b5cc9 0%, #0066d6 48%, #0054b8 100%) !important;
         background-attachment: fixed;
     }
 
     body.tournament-rpl .home-screen::before {
         width: max(150vw, 1120px);
         height: max(140vh, 900px);
-        opacity: 0.36;
+        opacity: 0.48;
         filter: blur(1px);
         background:
-            linear-gradient(132deg, transparent 0 38%, rgba(0,43,122,0.20) 38% 45%, transparent 45% 61%, rgba(0,57,166,0.15) 61% 67%, transparent 67%),
-            radial-gradient(ellipse 58% 26% at 14% 88%, rgba(0,43,122,0.22), transparent 72%),
-            radial-gradient(ellipse 52% 22% at 88% 22%, rgba(30,91,198,0.18), transparent 74%);
+            linear-gradient(132deg, transparent 0 38%, rgba(0,27,77,0.28) 38% 45%, transparent 45% 61%, rgba(0,128,255,0.24) 61% 67%, transparent 67%),
+            radial-gradient(ellipse 58% 26% at 14% 88%, rgba(0,27,77,0.30), transparent 72%),
+            radial-gradient(ellipse 52% 22% at 88% 22%, rgba(0,128,255,0.26), transparent 74%);
         -webkit-mask-image: none;
         mask-image: none;
     }
@@ -6956,12 +6956,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-rpl .home-screen::after {
         width: max(132vw, 980px);
         height: max(120vh, 760px);
-        opacity: 0.32;
+        opacity: 0.38;
         filter: none;
         background:
-            linear-gradient(120deg, transparent 0 18%, rgba(255,255,255,0.58) 18% 19%, transparent 19% 46%, rgba(0,57,166,0.14) 46% 47%, transparent 47%),
-            linear-gradient(300deg, transparent 0 32%, rgba(0,43,122,0.14) 32% 34%, transparent 34%),
-            radial-gradient(ellipse 64% 30% at 64% 102%, rgba(0,43,122,0.20), transparent 72%);
+            linear-gradient(120deg, transparent 0 18%, rgba(255,255,255,0.34) 18% 19%, transparent 19% 46%, rgba(0,128,255,0.22) 46% 47%, transparent 47%),
+            linear-gradient(300deg, transparent 0 32%, rgba(0,27,77,0.22) 32% 34%, transparent 34%),
+            radial-gradient(ellipse 64% 30% at 64% 102%, rgba(0,27,77,0.28), transparent 72%);
         -webkit-mask-image: none;
         mask-image: none;
     }
