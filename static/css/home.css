@@ -2610,14 +2610,14 @@
 
     body.tournament-rpl .day-header-v2 {
         background:
-            linear-gradient(135deg, #0b5cc9, #002b7a) !important;
+            linear-gradient(135deg, #d52b1e, #002b7a) !important;
         color: #ffffff !important;
         border: 1px solid rgba(255,255,255,0.28) !important;
         border-left: 1px solid rgba(255,255,255,0.28) !important;
         box-shadow:
-            0 10px 24px rgba(0,27,77,0.32),
-            inset 0 1px 0 rgba(255,255,255,0.22),
-            inset 0 -1px 0 rgba(0,27,77,0.16) !important;
+            0 10px 24px rgba(213,43,30,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(0,27,77,0.18) !important;
         backdrop-filter: blur(18px) saturate(118%);
         -webkit-backdrop-filter: blur(18px) saturate(118%);
     }
@@ -2633,11 +2633,11 @@
 
     body.tournament-rpl .day-header-v2.today {
         background:
-            linear-gradient(135deg, #0b5cc9, #002b7a) !important;
+            linear-gradient(135deg, #d52b1e, #002b7a) !important;
         box-shadow:
-            0 10px 24px rgba(0,27,77,0.32),
-            inset 0 1px 0 rgba(255,255,255,0.22),
-            inset 0 -1px 0 rgba(0,27,77,0.16) !important;
+            0 10px 24px rgba(213,43,30,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(0,27,77,0.18) !important;
     }
 
     body.tournament-rpl .day-header-v2 .day-title {
@@ -2647,7 +2647,7 @@
     }
 
     body.tournament-rpl .day-header-v2 .rpl-day-number {
-        color: #d52b1e;
+        color: #ffffff;
         font-size: 20px;
         font-weight: 1000;
         line-height: 1;
@@ -2660,7 +2660,7 @@
         border: 0;
         border-radius: 0;
         background: none;
-        color: #dceeff;
+        color: #ffffff;
         font-size: 13px;
         font-weight: 900;
         line-height: 1.1;
