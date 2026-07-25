@@ -806,9 +806,9 @@ body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .bets-link-v2
 
 body.tournament-rcup .match-card-v2.match-card--russian-cup.finished .bets-link-v2::before,
 body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .bets-link-v2::before {
-    content: "👥";
+    content: "🎯";
     flex: 0 0 auto;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1;
 }
 

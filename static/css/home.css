@@ -6599,9 +6599,9 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.finished .bets-link-v2::before,
     body.tournament-rpl .match-card-v2.closed .bets-link-v2::before {
-        content: "👥";
+        content: "🎯";
         flex: 0 0 auto;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1;
         text-shadow: none;
     }
