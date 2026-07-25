@@ -156,6 +156,22 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn(".bets-compact-row.no-points", css)
         self.assertNotIn(".bets-compact-row.leader-", css)
 
+    def test_finished_match_card_visuals_are_scoped_to_finished_modifier(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
+        self.assertIn("{{ card_state }}", template)
+        self.assertIn(".match-card-v2.finished .team-logo-v2", css)
+        self.assertIn("width: 82px", css)
+        self.assertIn("height: 82px", css)
+        self.assertIn("width: 60px !important", css)
+        self.assertIn("height: 60px !important", css)
+        self.assertIn(".match-card-v2.finished .final-score", css)
+        self.assertIn("font-size: 26px", css)
+        self.assertIn(".match-card-v2.finished .status-done", css)
+        self.assertIn("min-height: 25px", css)
+        self.assertNotIn(".match-card-v2:not(.finished) .team-logo-v2 {\n             width: 82px", css)
+        self.assertNotIn(".match-card-v2:not(.finished) .final-score", css)
+
 
 if __name__ == "__main__":
     unittest.main()
