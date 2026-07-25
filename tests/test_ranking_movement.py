@@ -41,7 +41,7 @@ def load_ranking_module():
 ranking = load_ranking_module()
 
 
-def row(user_id, place, points=0):
+def row(user_id, place, points=0, shared=False):
     return {
         "user_id": user_id,
         "username": f"user{user_id}",
@@ -50,7 +50,7 @@ def row(user_id, place, points=0):
         "exact_diffs": 0,
         "outcomes": 0,
         "place": place,
-        "shared": False,
+        "shared": shared,
     }
 
 
@@ -160,14 +160,14 @@ class RankingMovementTests(unittest.TestCase):
 
         return ranking.apply_leader_status(ranking_rows)[-1]["outsider_status"]
 
-    def test_leader_status_gap_zero_is_leader(self):
-        self.assertEqual(self.leader_status_for_gap(0), "leader")
+    def test_leader_status_gap_zero_solo_gets_no_status(self):
+        self.assertIsNone(self.leader_status_for_gap(0))
 
-    def test_leader_status_gap_one_is_leader(self):
-        self.assertEqual(self.leader_status_for_gap(1), "leader")
+    def test_leader_status_gap_one_is_sole_leader(self):
+        self.assertEqual(self.leader_status_for_gap(1), "sole_leader")
 
-    def test_leader_status_gap_nineteen_is_leader(self):
-        self.assertEqual(self.leader_status_for_gap(19), "leader")
+    def test_leader_status_gap_nineteen_is_sole_leader(self):
+        self.assertEqual(self.leader_status_for_gap(19), "sole_leader")
 
     def test_leader_status_gap_twenty_is_confident(self):
         self.assertEqual(self.leader_status_for_gap(20), "confident")
@@ -187,12 +187,12 @@ class RankingMovementTests(unittest.TestCase):
     def test_leader_status_gap_fifty_is_absolute(self):
         self.assertEqual(self.leader_status_for_gap(50), "absolute")
 
-    def test_leader_status_only_first_sorted_player(self):
-        ranking_rows = [row(1, 1, 100), row(2, 1, 100)]
+    def test_shared_first_place_gets_no_leader_status(self):
+        ranking_rows = [row(1, 1, 100, shared=True), row(2, 1, 100, shared=True)]
 
         annotated = ranking.apply_leader_status(ranking_rows)
 
-        self.assertEqual(annotated[0]["leader_status"], "leader")
+        self.assertIsNone(annotated[0]["leader_status"])
         self.assertIsNone(annotated[1]["leader_status"])
 
     def test_outsider_status_gap_zero_is_outsider(self):

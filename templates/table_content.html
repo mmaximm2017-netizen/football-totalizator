@@ -232,7 +232,8 @@
 
     .leader-badge.confident,
     .leader-badge.dominant,
-    .leader-badge.absolute {
+    .leader-badge.absolute,
+    .leader-badge.sole-leader {
         box-shadow: 0 0 10px rgba(255,215,0,0.38);
     }
 
@@ -938,7 +939,8 @@
     }
 
     .leader-badge.confident,
-    .leader-badge.dominant {
+    .leader-badge.dominant,
+    .leader-badge.sole-leader {
         font-size: 11.5px !important;
         padding-left: 8px !important;
         padding-right: 8px !important;
@@ -1837,7 +1839,8 @@
     }
 
     body.tournament-rcup .leader-badge.confident,
-    body.tournament-rcup .leader-badge.dominant {
+    body.tournament-rcup .leader-badge.dominant,
+    body.tournament-rcup .leader-badge.sole-leader {
         font-size: 11.5px !important;
         padding-left: 8px !important;
         padding-right: 8px !important;
@@ -2157,8 +2160,8 @@
                             <span class="leader-badge dominant">Явный лидер</span>
                         {% elif row.leader_status == 'confident' %}
                             <span class="leader-badge confident">Уверенный лидер</span>
-                        {% elif row.leader_status == 'leader' %}
-                            <span class="leader-badge">Лидер</span>
+                        {% elif row.leader_status == 'sole_leader' %}
+                            <span class="leader-badge sole-leader">Единоличный лидер</span>
                         {% endif %}
                         {% if row.outsider_status == 'absolute' %}
                             <span class="leader-badge outsider-badge absolute">Безоговорочный аутсайдер</span>

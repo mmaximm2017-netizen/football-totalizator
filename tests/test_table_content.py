@@ -11,7 +11,7 @@ class TableContentUiTests(unittest.TestCase):
 
     def test_all_leader_and_outsider_statuses_remain_in_markup(self):
         for text in (
-            "Лидер",
+            "Единоличный лидер",
             "Уверенный лидер",
             "Явный лидер",
             "Безоговорочный лидер",
@@ -21,7 +21,7 @@ class TableContentUiTests(unittest.TestCase):
             "Безоговорочный аутсайдер",
         ):
             self.assertIn(text, self.template)
-        for modifier in ("confident", "dominant", "absolute", "outsider-badge"):
+        for modifier in ("confident", "dominant", "absolute", "sole-leader", "outsider-badge"):
             self.assertIn(modifier, self.template)
 
     def test_badges_are_single_line_and_name_is_only_shrinkable_item(self):
@@ -42,7 +42,7 @@ class TableContentUiTests(unittest.TestCase):
 
     def test_long_statuses_have_readable_compact_sizes(self):
         self.assertIn(".leader-badge.confident,", self.template)
-        self.assertIn(".leader-badge.dominant {", self.template)
+        self.assertIn(".leader-badge.dominant,", self.template)
         self.assertIn("font-size: 11.5px !important;", self.template)
         self.assertIn(".leader-badge.absolute {", self.template)
         self.assertIn("font-size: 11px !important;", self.template)

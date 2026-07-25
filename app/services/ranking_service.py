@@ -31,7 +31,15 @@ def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=T
 
 
 def apply_leader_status(ranking):
-    """Annotate edge players with leader/outsider statuses based on point gaps."""
+    """Annotate edge players with leader/outsider statuses based on point gaps.
+
+    New behaviour:
+    - If 2+ participants share first place → no leader status at all.
+    - Sole leader with 1–19 point gap → "sole_leader" (Единоличный лидер).
+    - 20–29 → "confident" (Уверенный лидер).
+    - 30–39 → "dominant" (Явный лидер).
+    - 40+  → "absolute" (Безоговорочный лидер).
+    """
     annotated = []
     for row in ranking:
         item = dict(row)
@@ -43,8 +51,12 @@ def apply_leader_status(ranking):
         return annotated
 
     if len(annotated) < 2:
-        annotated[0]["leader_status"] = "leader"
+        annotated[0]["leader_status"] = "sole_leader"
         return annotated
+
+    # If 2+ participants share the same rank → tied first place → no leader status.
+    if annotated[0].get("shared"):
+        return update_outsider_status(annotated)
 
     try:
         gap = int(annotated[0].get("points") or 0) - int(annotated[1].get("points") or 0)
@@ -57,8 +69,29 @@ def apply_leader_status(ranking):
         annotated[0]["leader_status"] = "dominant"
     elif gap >= 20:
         annotated[0]["leader_status"] = "confident"
-    elif gap >= 0:
-        annotated[0]["leader_status"] = "leader"
+    elif gap >= 1:
+        annotated[0]["leader_status"] = "sole_leader"
+
+    return update_outsider_status(annotated)
+
+
+def update_outsider_status(annotated):
+    """Apply outsider status to the last-place participant."""
+    try:
+        outsider_gap = int(annotated[-2].get("points") or 0) - int(annotated[-1].get("points") or 0)
+    except (TypeError, ValueError):
+        return annotated
+
+    if outsider_gap >= 40:
+        annotated[-1]["outsider_status"] = "absolute"
+    elif outsider_gap >= 30:
+        annotated[-1]["outsider_status"] = "dominant"
+    elif outsider_gap >= 20:
+        annotated[-1]["outsider_status"] = "confident"
+    elif outsider_gap >= 0:
+        annotated[-1]["outsider_status"] = "outsider"
+
+    return annotated
 
     try:
         outsider_gap = int(annotated[-2].get("points") or 0) - int(annotated[-1].get("points") or 0)

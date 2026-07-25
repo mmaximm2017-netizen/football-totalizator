@@ -391,7 +391,7 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertIn("Профиль участника", profile)
         self.assertIn("{% if titles %}", profile)
         self.assertIn("Пока без титулов", profile)
-        self.assertIn("Лидер", table)
+        self.assertIn("Единоличный лидер", table)
         self.assertIn("Аутсайдер", table)
 
     def test_profile_metric_uses_canonical_ranking_and_russian_plural(self):
