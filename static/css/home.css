@@ -6681,8 +6681,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .status-done {
         min-height: 28px;
         padding: 0 10px 0 13px;
-        background: #001b4d !important;
-        border-color: rgba(213,43,30,0.82) !important;
+        background: #374151 !important;
+        border-color: rgba(255,255,255,0.15) !important;
         color: #ffffff !important;
         box-shadow: inset 3px 0 0 #d52b1e, inset 0 1px 0 rgba(255,255,255,0.16), 0 4px 10px rgba(0,27,77,0.18);
     }
@@ -7100,36 +7100,34 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     /* Finished RPL cards keep the active-card broadcast language. */
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished {
-        color: #001b4d;
-        background:
-            linear-gradient(180deg, rgba(0,27,77,0.03), rgba(0,27,77,0.08)),
-            linear-gradient(180deg, #ffffff 0%, #eaf3ff 100%) !important;
-        border: 1px solid rgba(0,102,214,0.22) !important;
-        border-left: 1px solid rgba(0,102,214,0.22) !important;
+        color: #ffffff;
+        background: linear-gradient(180deg, #26354d, #111827) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-left: 1px solid rgba(255,255,255,0.12) !important;
         box-shadow:
-            0 10px 24px rgba(0,43,122,0.16),
-            inset 0 1px 0 rgba(255,255,255,0.91) !important;
+            0 12px 30px rgba(0,0,0,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .start-time-label::before,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .deadline-label,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .center-sub {
-        color: rgba(0,27,77,0.62);
+        color: #9ca3af;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .start-time-label::after,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .deadline-helper {
-        color: #001b4d;
+        color: #ffffff;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-v2 {
         gap: 2px;
         padding: 2px 4px;
-        background: linear-gradient(180deg, #002b7a, #001b4d);
+        background: linear-gradient(180deg, #1f2937, #111827);
         box-shadow:
-            0 5px 12px rgba(0,27,77,0.16),
-            inset 0 1px 0 rgba(255,255,255,0.16),
-            inset 0 -8px 16px rgba(0,10,42,0.16);
+            0 5px 12px rgba(0,0,0,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            inset 0 -8px 16px rgba(0,0,0,0.20);
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .teams-center {
@@ -7144,7 +7142,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-logo-v2 img,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-logo-v2 .flag-icon {
-        filter: none !important;
+        filter: saturate(0.8) brightness(0.85) !important;
         opacity: 1;
     }
 
@@ -7159,7 +7157,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-placeholder-logo::before {
         content: "⚽";
-        color: #dceeff;
+        color: #9ca3af;
         font-size: 30px;
         line-height: 1;
     }
@@ -7169,21 +7167,21 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         min-width: 80px;
         height: 56px;
         font-size: 34px;
-        background: rgba(255,255,255,0.91) !important;
-        border: 2px solid rgba(0,102,214,0.25);
+        background: #111827 !important;
+        border: 1px solid rgba(255,255,255,0.15);
         border-top-color: #d52b1e;
-        color: #001b4d !important;
-        -webkit-text-fill-color: #001b4d;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.86), 0 5px 12px rgba(0,43,122,0.12) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 5px 12px rgba(0,0,0,0.22) !important;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .prediction-box {
         margin-top: 4px;
         padding: 4px 6px;
-        background: rgba(255,255,255,0.78) !important;
-        border-color: rgba(0,102,214,0.16);
-        border-top-color: rgba(0,27,77,0.18);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.86) !important;
+        background: rgba(255,255,255,0.06) !important;
+        border-color: rgba(255,255,255,0.10);
+        border-top-color: rgba(255,255,255,0.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .prediction-title {
@@ -7198,13 +7196,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .my-prediction-v2,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .prediction-label-finished {
-        color: rgba(0,27,77,0.68);
-        -webkit-text-fill-color: rgba(0,27,77,0.68);
+        color: #9ca3af;
+        -webkit-text-fill-color: #9ca3af;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .prediction-score-finished {
-        color: #001b4d;
-        -webkit-text-fill-color: #001b4d;
+        color: #ffffff;
+        -webkit-text-fill-color: #ffffff;
     }
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .points-v2 {
@@ -7248,11 +7246,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         min-height: 44px;
         margin-top: 0;
         padding: 0 14px;
-        background: rgba(255,255,255,0.76) !important;
-        border-color: rgba(0,102,214,0.30);
-        color: #0039a6 !important;
-        -webkit-text-fill-color: #0039a6;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.80), 0 4px 10px rgba(0,43,122,0.10) !important;
+        background: #374151 !important;
+        border-color: rgba(255,255,255,0.15);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 10px rgba(0,0,0,0.22) !important;
     }
 
     @media (max-width: 430px) {
