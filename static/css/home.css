@@ -6774,12 +6774,14 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-v2,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-v2 {
-        display: flex;
+        display: flex !important;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        justify-content: center !important;
+        align-items: center !important;
         align-self: stretch;
         width: 86%;
+        height: 100%;
+        min-height: 0;
         gap: 16px;
         padding: 7px 5px 8px;
         border: 1px solid rgba(111,183,255,0.36);
@@ -6811,12 +6813,29 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-name-v2,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-name-v2 {
+        position: static;
+        inset: auto;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        margin-top: 0;
+        margin-bottom: 0;
+        align-self: center;
+        width: auto;
+        max-width: calc(100%);
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff;
         background: transparent !important;
         border: 0 !important;
         box-shadow: none !important;
         font-weight: 900;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .team-name-v2::before,
+    body.tournament-rpl .match-card-v2--rpl .team-name-v2::after {
+        content: none;
     }
 
     body.tournament-rpl .match-card-v2--rpl .center-score,

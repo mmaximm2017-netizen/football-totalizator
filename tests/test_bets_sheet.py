@@ -175,6 +175,33 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn(".match-card-v2:not(.finished) .team-logo-v2 {\n             width: 82px", css)
         self.assertNotIn(".match-card-v2:not(.finished) .final-score", css)
 
+    def test_rpl_team_stack_resets_legacy_name_geometry(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        layer = css[css.rindex("/* Standard RPL matches use a compact broadcast-panel treatment."):]
+        stack_selector = "body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-v2"
+        name_selector = "body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-name-v2"
+
+        self.assertIn(stack_selector, layer)
+        self.assertIn("display: flex !important", layer)
+        self.assertIn("justify-content: center !important", layer)
+        self.assertIn("align-items: center !important", layer)
+        self.assertIn("height: 100%", layer)
+        self.assertIn("min-height: 0", layer)
+        self.assertIn(name_selector, layer)
+        name_start = layer.index(name_selector)
+        name_block = layer[name_start:layer.index("}", name_start)]
+        self.assertIn("position: static", layer)
+        self.assertIn("inset: auto", layer)
+        self.assertIn("bottom: auto", layer)
+        self.assertIn("transform: none", layer)
+        self.assertIn("margin-top: 0", layer)
+        self.assertIn("align-self: center", layer)
+        self.assertIn("background: transparent !important", name_block)
+        self.assertEqual(name_block.count("background:"), 1)
+        self.assertIn("box-shadow: none !important", name_block)
+        self.assertIn(".match-card-v2--rpl .team-name-v2::before", layer)
+        self.assertIn("content: none", layer)
+
     def test_rpl_finished_layer_wins_late_theme_logo_rules(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
