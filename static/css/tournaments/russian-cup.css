@@ -955,3 +955,55 @@ body.tournament-rcup .rc-check input { width: auto; margin: 0; }
     body.tournament-rcup .admin-russian-cup-page .rc-quick-result { grid-template-columns: 34px 10px 34px minmax(0, 1fr); }
     body.tournament-rcup .admin-russian-cup-page .rc-quick-result .rc-btn { min-width: 0; padding: 7px 5px; }
 }
+
+/* User-facing RCup closed status: compact badge, not a full-width field. */
+body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-end;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: max-content;
+    min-width: 0;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border: 1px solid rgba(199,242,26,0.62);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #7b2d67 0%, #561a58 100%);
+    color: #ffffff;
+    opacity: 1;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    line-height: 1;
+    text-transform: none;
+    white-space: nowrap;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.22),
+        0 4px 10px rgba(42,0,36,0.24);
+}
+
+body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:hover {
+    background: linear-gradient(180deg, #914078 0%, #6a246c 100%);
+    border-color: rgba(199,242,26,0.82);
+}
+
+body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:active {
+    background: linear-gradient(180deg, #672357 0%, #481348 100%);
+    transform: translateY(1px);
+}
+
+body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:focus-visible {
+    outline: 2px solid rgba(199,242,26,0.92);
+    outline-offset: 2px;
+}
+
+@media (max-width: 430px) {
+    body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed {
+        min-height: 28px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+}

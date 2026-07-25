@@ -299,6 +299,29 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("body.tournament-rpl", layer)
         self.assertNotIn("admin-russian-cup-page", layer)
 
+    def test_russian_cup_closed_status_is_a_compact_scoped_badge(self):
+        rcup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
+        marker = "/* User-facing RCup closed status:"
+        layer = rcup_css[rcup_css.rindex(marker):]
+        selector = "body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed"
+        self.assertIn(selector, layer)
+        self.assertIn("display: inline-flex", layer)
+        self.assertIn("width: auto", layer)
+        self.assertIn("max-width: max-content", layer)
+        self.assertIn("flex: 0 0 auto", layer)
+        self.assertIn("min-height: 30px", layer)
+        self.assertIn("padding: 0 14px", layer)
+        self.assertIn("background: linear-gradient(180deg, #7b2d67 0%, #561a58 100%)", layer)
+        self.assertIn("color: #ffffff", layer)
+        self.assertIn("opacity: 1", layer)
+        self.assertIn("min-height: 28px", layer)
+        self.assertIn("padding: 0 12px", layer)
+        self.assertIn(":hover", layer)
+        self.assertIn(":active", layer)
+        self.assertIn(":focus-visible", layer)
+        self.assertNotIn("body.tournament-rpl", layer)
+        self.assertNotIn("admin-russian-cup-page", layer)
+
 
 if __name__ == "__main__":
     unittest.main()
