@@ -6648,3 +6648,55 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
 
     }
+
+    /* RPL closed status: compact badge, not the generic gray field. */
+    body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: flex-end;
+        flex: 0 0 auto;
+        width: auto;
+        max-width: max-content;
+        min-width: 0;
+        min-height: 30px;
+        box-sizing: border-box;
+        padding: 0 14px;
+        border: 1px solid rgba(137,193,255,0.76);
+        border-radius: 999px;
+        background: linear-gradient(180deg, #2f6fd6 0%, #174a9b 100%);
+        color: #ffffff;
+        opacity: 1;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.1px;
+        line-height: 1;
+        text-transform: none;
+        white-space: nowrap;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.24),
+            0 4px 10px rgba(0,34,105,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:hover {
+        background: linear-gradient(180deg, #3d80e2 0%, #2058ad 100%);
+        border-color: rgba(177,218,255,0.92);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:active {
+        background: linear-gradient(180deg, #245ebc 0%, #123d82 100%);
+        transform: translateY(1px);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:focus-visible {
+        outline: 2px solid rgba(183,220,255,0.96);
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed {
+            min-height: 28px;
+            padding: 0 12px;
+            font-size: 12px;
+        }
+    }

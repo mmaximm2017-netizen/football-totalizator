@@ -80,6 +80,9 @@
         <span class="rcup-match-info-label">ПРОГНОЗ ДО</span>
         <span class="rcup-match-info-value">{{ deadline_plain.replace(' ', ' · ') }}</span>
         <span class="deadline-timer" data-deadline="{{ match.deadline.isoformat() if match.deadline else '' }}" aria-hidden="true">—</span>
+        {% if match.deadline_passed and not match.finished %}
+            <span class="status-pill-v2 status-closed">⏰ Закрыто</span>
+        {% endif %}
     </div>
 </div>
 {% else %}

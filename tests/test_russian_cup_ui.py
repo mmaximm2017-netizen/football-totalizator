@@ -160,6 +160,20 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertIn("match-card match-card--russian-cup", html)
         self.assertIn('data-league="rcup"', html)
 
+    def test_closed_rcup_match_renders_closed_status_inside_rcup_branch(self):
+        html = self.render_day_block(self.base_match(
+            league="rcup",
+            is_russian_cup=True,
+            tournament_name="Кубок России",
+            tournament_slug="rcup",
+            deadline_passed=True,
+            status="SCHEDULED",
+        ))
+
+        self.assertIn('class="status-pill-v2 status-closed"', html)
+        self.assertIn("⏰ Закрыто", html)
+        self.assertIn("rcup-match-deadline", html)
+
     def test_regular_match_does_not_get_russian_cup_class(self):
         html = self.render_day_block(self.base_match())
 

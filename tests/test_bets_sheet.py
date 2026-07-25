@@ -265,6 +265,29 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("width: 100%", layer)
         self.assertNotIn("flex: 1", layer)
 
+    def test_rpl_closed_status_is_a_compact_blue_scoped_badge(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        marker = "/* RPL closed status:"
+        layer = css[css.rindex(marker):]
+        selector = "body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed"
+        self.assertIn(selector, layer)
+        self.assertIn("display: inline-flex", layer)
+        self.assertIn("width: auto", layer)
+        self.assertIn("max-width: max-content", layer)
+        self.assertIn("flex: 0 0 auto", layer)
+        self.assertIn("min-height: 30px", layer)
+        self.assertIn("padding: 0 14px", layer)
+        self.assertIn("background: linear-gradient(180deg, #2f6fd6 0%, #174a9b 100%)", layer)
+        self.assertIn("color: #ffffff", layer)
+        self.assertIn("opacity: 1", layer)
+        self.assertIn("min-height: 28px", layer)
+        self.assertIn("padding: 0 12px", layer)
+        self.assertIn(":hover", layer)
+        self.assertIn(":active", layer)
+        self.assertIn(":focus-visible", layer)
+        self.assertNotIn("body.tournament-rcup", layer)
+        self.assertNotIn("status-done", layer)
+
     def test_russian_cup_user_cards_have_scoped_state_layer(self):
         home_template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
         base_template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
