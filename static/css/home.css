@@ -2595,22 +2595,19 @@
     }
 
     body.tournament-rpl .month-header-v2 {
-        background:
-            linear-gradient(135deg, rgba(229,39,59,0.62), rgba(92,13,35,0.54) 58%, rgba(8,18,50,0.50)) !important;
-        color: rgba(255,255,255,0.94) !important;
-        border: 0 !important;
-        border-left: 0 !important;
+        background: #ffffff !important;
+        color: #d52b1e !important;
+        border: 1px solid rgba(213,43,30,0.42) !important;
+        border-left: 1px solid rgba(213,43,30,0.42) !important;
         box-shadow:
-            0 14px 30px rgba(0,0,0,0.30),
-            inset 0 1px 0 rgba(255,255,255,0.13),
-            inset 0 -1px 0 rgba(255,255,255,0.04) !important;
+            0 8px 18px rgba(213,43,30,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.92) !important;
         backdrop-filter: blur(18px) saturate(118%);
         -webkit-backdrop-filter: blur(18px) saturate(118%);
     }
 
     body.tournament-rpl .day-header-v2 {
-        background:
-            linear-gradient(135deg, #d52b1e, #002b7a) !important;
+        background: #d52b1e !important;
         color: #ffffff !important;
         border: 1px solid rgba(255,255,255,0.28) !important;
         border-left: 1px solid rgba(255,255,255,0.28) !important;
@@ -2631,9 +2628,14 @@
         color: rgba(255,255,255,0.94) !important;
     }
 
+    body.tournament-rpl .month-header-v2 .month-title,
+    body.tournament-rpl .month-header-v2 .month-count,
+    body.tournament-rpl .month-header-v2 .month-arrow {
+        color: #d52b1e !important;
+    }
+
     body.tournament-rpl .day-header-v2.today {
-        background:
-            linear-gradient(135deg, #d52b1e, #002b7a) !important;
+        background: #d52b1e !important;
         box-shadow:
             0 10px 24px rgba(213,43,30,0.35),
             inset 0 1px 0 rgba(255,255,255,0.20),
