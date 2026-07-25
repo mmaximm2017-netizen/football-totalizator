@@ -6573,96 +6573,78 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         outline-color: rgba(183,220,255,0.96);
     }
 
-    /* Shared predictions CTA: the existing button keeps its current behavior. */
-    .bets-link-v2 {
-        position: relative;
-        display: flex;
+    /* RPL closed/completed CTA: override the shared full-width button only here. */
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2 {
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        flex: 1 1 100%;
-        width: 100%;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: auto;
+        max-width: max-content;
         min-width: 0;
-        min-height: 44px;
-        box-sizing: border-box;
-        padding: 10px 14px;
-        gap: 10px;
-        border: 1px solid rgba(92,177,255,0.68);
-        border-radius: 999px;
-        background: linear-gradient(135deg, #126dff 0%, #0751c9 58%, #063d9b 100%) !important;
+        min-height: 38px;
+        margin-top: 10px;
+        padding: 0 16px;
+        gap: 8px;
+        white-space: nowrap;
+        background: linear-gradient(180deg, #2f6fd6 0%, #174a9b 100%) !important;
+        border: 1px solid rgba(137,193,255,0.76);
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff;
-        font-size: 14px;
-        font-weight: 800;
-        line-height: 1.1;
-        letter-spacing: 0.1px;
-        text-shadow: 0 1px 2px rgba(0,24,74,0.28);
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.28),
-            inset 0 -1px 0 rgba(0,20,72,0.24),
-            0 7px 16px rgba(0,52,150,0.26),
-            0 0 14px rgba(44,145,255,0.16) !important;
-        transition:
-            transform 0.14s ease,
-            background 0.14s ease,
-            border-color 0.14s ease,
-            box-shadow 0.14s ease;
+            inset 0 1px 0 rgba(255,255,255,0.24),
+            0 5px 12px rgba(0,34,105,0.24) !important;
     }
 
-    .bets-link-v2::before {
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2::before,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2::before {
         content: "👥";
         flex: 0 0 auto;
-        font-size: 16px;
+        font-size: 14px;
         line-height: 1;
         text-shadow: none;
     }
 
-    .bets-link-v2::after {
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2::after,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2::after {
         content: "›";
         flex: 0 0 auto;
-        margin-left: auto;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 500;
         line-height: 0.7;
     }
 
-    .bets-link-v2:hover {
-        background: linear-gradient(135deg, #2780ff 0%, #0b61df 58%, #074bb6 100%) !important;
-        border-color: rgba(157,214,255,0.88);
-        color: #ffffff !important;
-        transform: translateY(-2px);
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2:hover,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2:hover {
+        background: linear-gradient(180deg, #3d80e2 0%, #2058ad 100%) !important;
+        border-color: rgba(177,218,255,0.92);
+        transform: translateY(-1px);
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.34),
-            0 10px 22px rgba(0,52,150,0.34),
-            0 0 18px rgba(44,145,255,0.24) !important;
+            inset 0 1px 0 rgba(255,255,255,0.30),
+            0 7px 15px rgba(0,34,105,0.30) !important;
     }
 
-    .bets-link-v2:active {
-        background: linear-gradient(135deg, #0d5edb 0%, #0646ad 100%) !important;
-        border-color: rgba(111,191,255,0.72);
-        transform: translateY(1px) scale(0.99);
-        box-shadow:
-            inset 0 2px 4px rgba(0,20,72,0.26),
-            0 3px 8px rgba(0,52,150,0.22) !important;
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2:active,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2:active {
+        background: linear-gradient(180deg, #245ebc 0%, #123d82 100%) !important;
+        transform: translateY(0);
+        box-shadow: inset 0 2px 4px rgba(0,20,72,0.26) !important;
     }
 
-    .bets-link-v2:focus-visible {
+    body.tournament-rpl .match-card-v2.finished .bets-link-v2:focus-visible,
+    body.tournament-rpl .match-card-v2.closed .bets-link-v2:focus-visible {
         outline: 3px solid rgba(183,220,255,0.96);
         outline-offset: 3px;
         border-color: #ffffff;
     }
 
     @media (max-width: 430px) {
-        .bets-link-v2 {
-            min-height: 42px;
-            padding: 9px 12px;
+        body.tournament-rpl .match-card-v2.finished .bets-link-v2,
+        body.tournament-rpl .match-card-v2.closed .bets-link-v2 {
+            min-height: 36px;
+            padding: 0 14px;
             font-size: 13px;
         }
 
-        .bets-link-v2::before {
-            font-size: 15px;
-        }
-
-        .bets-link-v2::after {
-            font-size: 22px;
-        }
     }
