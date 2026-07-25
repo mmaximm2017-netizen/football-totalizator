@@ -29,7 +29,9 @@
                                 {% else %}
                                     {% set points_word = 'очков' %}
                                 {% endif %}
-                                {% if points_value >= 3 %}
+                                {% if points_value >= 7 %}
+                                    {% set points_class = 'points-rpl-major' %}
+                                {% elif points_value >= 3 %}
                                     {% set points_class = 'points-emerald' %}
                                 {% elif points_value > 0 %}
                                     {% set points_class = 'points-cyan' %}
