@@ -2744,7 +2744,7 @@
         grid-row: 1;
         justify-content: center;
         align-self: center;
-        gap: 0;
+        gap: 4px;
     }
 
     body.tournament-rpl .match-card-v2 .tournament-logo {
