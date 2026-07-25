@@ -265,6 +265,40 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("width: 100%", layer)
         self.assertNotIn("flex: 1", layer)
 
+    def test_russian_cup_user_cards_have_scoped_state_layer(self):
+        home_template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
+        base_template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        rcup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
+        layer = rcup_css[rcup_css.rindex("/* User-facing Russian Cup card layer."):]
+        layer = layer.split("body.tournament-rcup .admin-russian-cup-page .rc-compact-card--pending", 1)[0]
+        self.assertIn("russian_cup_class = 'match-card--russian-cup' if is_rcup_match", home_template)
+        self.assertIn("card_state = 'finished'", home_template)
+        self.assertIn("card_state = 'closed'", home_template)
+        self.assertIn("class=\"match-card {{ russian_cup_class }} match-card-v2 {{ card_state }}", home_template)
+        self.assertIn("russian-cup.css', v='20260725-user-cards'", base_template)
+        self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.finished", layer)
+        self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.closed", layer)
+        self.assertIn("linear-gradient(145deg, rgba(45,19,52,0.97), rgba(76,25,46,0.95))", layer)
+        self.assertIn("content: none", layer)
+        self.assertIn("width: 70px !important", layer)
+        self.assertIn("width: 50px !important", layer)
+        self.assertIn("width: 62px !important", layer)
+        self.assertIn("width: 46px !important", layer)
+        self.assertIn("font-size: 32px", layer)
+        self.assertIn("font-size: 30px", layer)
+        self.assertIn("status-done", layer)
+        self.assertIn("display: inline-flex", layer)
+        self.assertIn("width: auto", layer)
+        self.assertIn("flex: 0 0 auto", layer)
+        self.assertIn("background: linear-gradient(180deg, #8f1745 0%, #5b1039 100%)", layer)
+        self.assertIn(".bets-link-v2:hover", layer)
+        self.assertIn(".bets-link-v2:active", layer)
+        self.assertIn(".bets-link-v2:focus-visible", layer)
+        self.assertNotIn("width: 100%", layer)
+        self.assertNotIn("flex: 1", layer)
+        self.assertNotIn("body.tournament-rpl", layer)
+        self.assertNotIn("admin-russian-cup-page", layer)
+
 
 if __name__ == "__main__":
     unittest.main()
