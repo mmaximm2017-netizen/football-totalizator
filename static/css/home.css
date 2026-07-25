@@ -2640,6 +2640,33 @@
             inset 0 -1px 0 rgba(0,27,77,0.16) !important;
     }
 
+    body.tournament-rpl .day-header-v2 .day-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    body.tournament-rpl .day-header-v2 .rpl-day-number {
+        color: #d52b1e;
+        font-size: 20px;
+        font-weight: 1000;
+        line-height: 1;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.16);
+    }
+
+    body.tournament-rpl .day-header-v2 .rpl-day-month {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 7px;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #0039a6;
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1.1;
+        box-shadow: 0 3px 8px rgba(0,27,77,0.18);
+    }
+
     /* RPL premium matte glass card layer: card only, no inner layout changes */
     body.tournament-rpl .match-card-v2 {
         padding: 9px 11px 7px;

@@ -4,7 +4,13 @@
                     <span id="arrow-day-{{ month_idx }}_{{ day_idx }}" class="day-arrow" {% if day_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
 
                     <div class="day-title">
-                        {{ day.label }}
+                        {% if current_tournament_name == 'Чемпионат России 🇷🇺' %}
+                            {% set rpl_day_parts = day.label.split(' ', 1) %}
+                            <span class="rpl-day-number">{{ rpl_day_parts[0] }}</span>
+                            <span class="rpl-day-month">{{ rpl_day_parts[1] if rpl_day_parts|length > 1 else '' }}</span>
+                        {% else %}
+                            {{ day.label }}
+                        {% endif %}
 
                         {% if day.type == 'today' %}
                             <span class="today-pill">СЕГОДНЯ</span>
