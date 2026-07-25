@@ -2772,7 +2772,7 @@
     }
 
     body.tournament-rpl .match-card-v2 .start-time-label {
-        position: static;
+        position: relative;
         width: auto;
         height: auto;
         overflow: visible;
@@ -3234,7 +3234,7 @@
 
     body.tournament-rpl .match-card-v2.match-card--supercup .rpl-event-badge-supercup {
         position: static;
-        top: auto;
+        top: -10px;
         right: auto;
         align-self: center;
         justify-content: center;
