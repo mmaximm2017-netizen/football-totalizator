@@ -6707,6 +6707,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     /* Standard RPL matches use a compact broadcast-panel treatment. */
     body.tournament-rpl .match-card-v2--rpl {
+        padding: 7px 11px 5px;
         color: #001b4d;
         background: linear-gradient(180deg, #ffffff, #f2f6fc) !important;
         border: 1px solid rgba(183,220,255,0.82) !important;
@@ -6734,7 +6735,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2--rpl .match-topline {
         position: relative;
-        padding-bottom: 8px;
+        padding-bottom: 6px;
         box-shadow: none;
     }
 
@@ -6782,8 +6783,8 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         width: 86%;
         height: 100%;
         min-height: 0;
-        gap: 16px;
-        padding: 7px 5px 8px;
+        gap: 6px;
+        padding: 0 5px;
         border: 1px solid rgba(111,183,255,0.36);
         border-radius: 16px;
         background: linear-gradient(180deg, #0039a6, #001b4d);
@@ -6914,12 +6915,12 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     @media (max-width: 430px) {
         body.tournament-rpl .match-card-v2--rpl {
-            padding: 9px 10px 8px;
+            padding: 7px 10px 5px;
             border-radius: 20px;
         }
 
         body.tournament-rpl .match-card-v2--rpl .team-v2 {
-            padding: 6px 3px 7px;
+            padding: 0 3px;
             border-radius: 14px;
         }
     }
