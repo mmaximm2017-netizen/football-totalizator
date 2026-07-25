@@ -159,7 +159,9 @@ class BetsSheetUiTests(unittest.TestCase):
     def test_finished_match_card_visuals_are_scoped_to_finished_modifier(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
-        self.assertIn("{{ card_state }}", template)
+        self.assertIn("card_state = 'finished'", template)
+        self.assertIn("rpl_class = 'match-card--rpl' if match.is_rpl_category and not is_rcup_match", template)
+        self.assertIn("match-card-v2 {{ card_state }}", template)
         self.assertIn(".match-card-v2.finished .team-logo-v2", css)
         self.assertIn("width: 82px", css)
         self.assertIn("height: 82px", css)
@@ -171,6 +173,29 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("min-height: 25px", css)
         self.assertNotIn(".match-card-v2:not(.finished) .team-logo-v2 {\n             width: 82px", css)
         self.assertNotIn(".match-card-v2:not(.finished) .final-score", css)
+
+    def test_rpl_finished_layer_wins_late_theme_logo_rules(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
+        layer_start = css.rindex("/* Authoritative RPL completed-card layer")
+        layer = css[layer_start:]
+        self.assertIn(selector + " .team-logo-v2", layer)
+        self.assertIn(selector + " .team-logo-v2 img", layer)
+        self.assertIn("width: 50px !important", layer)
+        self.assertIn("max-width: 50px !important", layer)
+        self.assertIn("object-fit: contain", layer)
+        self.assertIn("width: 62px", layer)
+        self.assertIn("width: 46px !important", layer)
+        self.assertIn(selector + " .final-score", layer)
+        self.assertIn("font-size: 32px", layer)
+        self.assertIn(selector + " .status-done", layer)
+        self.assertIn("background: #4e8b68 !important", layer)
+        self.assertIn(selector + " .prediction-box", layer)
+        self.assertNotIn("body.tournament-rpl .match-card-v2.match-card--rpl:not(.finished) .team-logo-v2", layer)
+
+    def test_home_css_has_stable_cache_busting_version(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("home.css', v='wc2026-header-broadcast-20260725-rpl-finished'", template)
 
 
 if __name__ == "__main__":

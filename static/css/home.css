@@ -6372,3 +6372,120 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         align-items: center;
         justify-content: center;
     }
+
+    /* Authoritative RPL completed-card layer: keep it after the theme/mobile layers. */
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished {
+        color: #173252;
+        background:
+            radial-gradient(circle at 50% -12%, rgba(152,177,203,0.24), transparent 34%),
+            linear-gradient(180deg, #c8d4e0 0%, #b4c2d0 56%, #a5b5c5 100%) !important;
+        border: 1px solid rgba(35,61,88,0.34) !important;
+        border-left: 4px solid #5d7894 !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.28),
+            0 12px 24px rgba(24,51,78,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.42),
+            inset 0 -18px 34px rgba(44,70,96,0.12) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 {
+        width: 70px;
+        height: 70px;
+        min-width: 70px;
+        min-height: 70px;
+        max-width: 70px;
+        max-height: 70px;
+        background: rgba(230,238,246,0.42);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.48), 0 5px 12px rgba(35,61,88,0.12);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 .flag-icon {
+        width: 50px !important;
+        height: 50px !important;
+        max-width: 50px !important;
+        max-height: 50px !important;
+        object-fit: contain;
+        filter: saturate(0.78) contrast(0.96) drop-shadow(0 5px 8px rgba(31,58,86,0.18));
+        opacity: 0.94;
+        transform: none;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-name-v2 {
+        color: #173252;
+        background: rgba(235,242,248,0.66) !important;
+        border-color: rgba(35,61,88,0.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.54) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .final-score {
+        width: 82px;
+        min-width: 82px;
+        height: 58px;
+        font-size: 32px;
+        letter-spacing: -0.5px;
+        background: linear-gradient(145deg, #274b6e, #416988) !important;
+        color: #ffffff !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            0 9px 18px rgba(27,54,82,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .center-sub {
+        color: rgba(30,57,84,0.58);
+        font-size: 9px;
+        letter-spacing: 0.35px;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .status-done {
+        min-height: 26px;
+        padding: 6px 10px;
+        background: #4e8b68 !important;
+        border-color: #3d7254 !important;
+        color: #ffffff !important;
+        opacity: 1;
+        box-shadow: 0 4px 10px rgba(39,91,61,0.20), inset 0 1px 0 rgba(255,255,255,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .prediction-box {
+        background: rgba(225,234,242,0.48) !important;
+        border-color: rgba(35,61,88,0.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .match-bottomline {
+        color: rgba(23,50,82,0.70);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .bets-link-v2 {
+        background: rgba(39,75,110,0.78) !important;
+        border-color: rgba(39,75,110,0.26);
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(35,61,88,0.14) !important;
+    }
+
+    @media (max-width: 640px) {
+        body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 {
+            width: 62px;
+            height: 62px;
+            min-width: 62px;
+            min-height: 62px;
+            max-width: 62px;
+            max-height: 62px;
+        }
+
+        body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 img,
+        body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 .flag-icon {
+            width: 46px !important;
+            height: 46px !important;
+            max-width: 46px !important;
+            max-height: 46px !important;
+        }
+
+        body.tournament-rpl .match-card-v2.match-card--rpl.finished .final-score {
+            width: 76px;
+            min-width: 76px;
+            height: 54px;
+            font-size: 30px;
+        }
+    }
