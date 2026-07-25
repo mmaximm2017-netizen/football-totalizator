@@ -2239,15 +2239,15 @@
     }
 
     body.tournament-rpl .standings-table tbody tr.top-2 .points-number {
-        background: #e1f2ff !important;
-        color: #0066d6 !important;
-        border-color: rgba(0,102,214,0.24) !important;
+        background: #0066d6 !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.36) !important;
     }
 
     body.tournament-rpl .standings-table tbody tr.top-3 .points-number {
-        background: #f2f8ff !important;
-        color: #2b72ba !important;
-        border-color: rgba(0,102,214,0.16) !important;
+        background: #d8efff !important;
+        color: #001b4d !important;
+        border-color: rgba(0,102,214,0.20) !important;
     }
 
     body.tournament-rpl .standings-table tbody tr.top-1 .place-box {
@@ -2291,8 +2291,7 @@
             <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %} {% if selected_name == 'ЧМ-2026' and loop.last %}wc-eliminated{% endif %}">
                 <td class="place-cell">
                     <div class="place-box">
-                        {% if selected_name == 'Чемпионат России 🇷🇺' %}{{ row.place }}
-                        {% elif row.place == 1 %}<span class="place-emoji">🥇</span>
+                        {% if row.place == 1 %}<span class="place-emoji">🥇</span>
                         {% elif row.place == 2 %}<span class="place-emoji">🥈</span>
                         {% elif row.place == 3 %}<span class="place-emoji">🥉</span>
                         {% else %}{{ row.place }}{% endif %}
