@@ -235,6 +235,27 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn(".match-card-v2:not(.finished) .team-name-v2", layer)
         self.assertNotIn("body.tournament-rcup", layer)
 
+    def test_bets_link_is_a_full_width_cta_with_interaction_states(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        finished = (ROOT / "templates" / "partials" / "home" / "_match_finished.html").read_text(encoding="utf-8")
+        active = (ROOT / "templates" / "partials" / "home" / "_match_active.html").read_text(encoding="utf-8")
+        marker = "/* Shared predictions CTA:"
+        layer = css[css.rindex(marker):]
+        self.assertIn('class="bets-link-v2"', finished)
+        self.assertIn('class="bets-link-v2"', active)
+        self.assertIn('data-bets-sheet', finished)
+        self.assertIn('data-bets-sheet', active)
+        self.assertIn("width: 100%", layer)
+        self.assertIn("min-height: 44px", layer)
+        self.assertIn("background: linear-gradient(135deg, #126dff", layer)
+        self.assertIn('content: "👥"', layer)
+        self.assertIn('content: "›"', layer)
+        self.assertIn(".bets-link-v2:hover", layer)
+        self.assertIn(".bets-link-v2:active", layer)
+        self.assertIn(".bets-link-v2:focus-visible", layer)
+        self.assertIn("min-height: 42px", layer)
+        self.assertNotIn(".prediction-box", layer)
+
 
 if __name__ == "__main__":
     unittest.main()
