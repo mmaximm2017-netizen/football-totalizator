@@ -2655,16 +2655,16 @@
     }
 
     body.tournament-rpl .day-header-v2 .rpl-day-month {
-        display: inline-flex;
-        align-items: center;
-        padding: 3px 7px;
-        border-radius: 7px;
-        background: #ffffff;
-        color: #0039a6;
+        display: inline;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        color: #dceeff;
         font-size: 13px;
         font-weight: 900;
         line-height: 1.1;
-        box-shadow: 0 3px 8px rgba(0,27,77,0.18);
+        box-shadow: none;
     }
 
     /* RPL premium matte glass card layer: card only, no inner layout changes */
