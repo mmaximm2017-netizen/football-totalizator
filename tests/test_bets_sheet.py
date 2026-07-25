@@ -265,7 +265,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("width: 100%", layer)
         self.assertNotIn("flex: 1", layer)
 
-    def test_rpl_closed_status_is_a_compact_blue_scoped_badge(self):
+    def test_rpl_closed_status_is_a_compact_red_scoped_badge(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         marker = "/* RPL closed status:"
         layer = css[css.rindex(marker):]
@@ -277,7 +277,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("flex: 0 0 auto", layer)
         self.assertIn("min-height: 30px", layer)
         self.assertIn("padding: 0 14px", layer)
-        self.assertIn("background: linear-gradient(180deg, #2f6fd6 0%, #174a9b 100%)", layer)
+        self.assertIn("background: linear-gradient(180deg, #d64242 0%, #9b2020 100%)", layer)
         self.assertIn("color: #ffffff", layer)
         self.assertIn("opacity: 1", layer)
         self.assertIn("min-height: 28px", layer)
@@ -334,7 +334,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("flex: 0 0 auto", layer)
         self.assertIn("min-height: 30px", layer)
         self.assertIn("padding: 0 14px", layer)
-        self.assertIn("background: linear-gradient(180deg, #7b2d67 0%, #561a58 100%)", layer)
+        self.assertIn("background: linear-gradient(180deg, #d64242 0%, #9b2020 100%)", layer)
         self.assertIn("color: #ffffff", layer)
         self.assertIn("opacity: 1", layer)
         self.assertIn("min-height: 28px", layer)

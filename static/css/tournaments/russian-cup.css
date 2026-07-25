@@ -956,12 +956,20 @@ body.tournament-rcup .rc-check input { width: auto; margin: 0; }
     body.tournament-rcup .admin-russian-cup-page .rc-quick-result .rc-btn { min-width: 0; padding: 7px 5px; }
 }
 
-/* User-facing RCup closed status: compact badge, not a full-width field. */
+/* Anchor for absolute badge positioning — deadline container in column 3. */
+body.tournament-rcup .match-card--russian-cup.closed .rcup-match-deadline {
+    position: relative;
+}
+
+/* User-facing RCup closed status: compact badge, top-right, red gradient. */
 body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    align-self: flex-end;
     flex: 0 0 auto;
     width: auto;
     max-width: max-content;
@@ -969,9 +977,9 @@ body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-close
     min-height: 30px;
     box-sizing: border-box;
     padding: 0 14px;
-    border: 1px solid rgba(199,242,26,0.62);
+    border: 1px solid rgba(255,140,130,0.50);
     border-radius: 999px;
-    background: linear-gradient(180deg, #7b2d67 0%, #561a58 100%);
+    background: linear-gradient(180deg, #d64242 0%, #9b2020 100%);
     color: #ffffff;
     opacity: 1;
     font-size: 13px;
@@ -981,22 +989,22 @@ body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-close
     text-transform: none;
     white-space: nowrap;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.22),
-        0 4px 10px rgba(42,0,36,0.24);
+        inset 0 1px 0 rgba(255,255,255,0.20),
+        0 4px 10px rgba(120,0,0,0.30);
 }
 
 body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:hover {
-    background: linear-gradient(180deg, #914078 0%, #6a246c 100%);
-    border-color: rgba(199,242,26,0.82);
+    background: linear-gradient(180deg, #e55454 0%, #b02828 100%);
+    border-color: rgba(255,180,170,0.70);
 }
 
 body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:active {
-    background: linear-gradient(180deg, #672357 0%, #481348 100%);
+    background: linear-gradient(180deg, #c03535 0%, #7f1a1a 100%);
     transform: translateY(1px);
 }
 
 body.tournament-rcup .match-card-v2.match-card--russian-cup.closed .status-closed:focus-visible {
-    outline: 2px solid rgba(199,242,26,0.92);
+    outline: 2px solid rgba(255,160,150,0.92);
     outline-offset: 2px;
 }
 

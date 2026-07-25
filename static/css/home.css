@@ -6649,12 +6649,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     }
 
-    /* RPL closed status: compact badge, not the generic gray field. */
+    /* RPL closed status: compact badge, top-right, red gradient. */
     body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        align-self: flex-end;
         flex: 0 0 auto;
         width: auto;
         max-width: max-content;
@@ -6662,9 +6661,9 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         min-height: 30px;
         box-sizing: border-box;
         padding: 0 14px;
-        border: 1px solid rgba(137,193,255,0.76);
+        border: 1px solid rgba(255,140,130,0.50);
         border-radius: 999px;
-        background: linear-gradient(180deg, #2f6fd6 0%, #174a9b 100%);
+        background: linear-gradient(180deg, #d64242 0%, #9b2020 100%);
         color: #ffffff;
         opacity: 1;
         font-size: 13px;
@@ -6674,22 +6673,27 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         text-transform: none;
         white-space: nowrap;
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.24),
-            0 4px 10px rgba(0,34,105,0.24);
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            0 4px 10px rgba(120,0,0,0.30);
+        /* Grid positioning — RPL .match-topline uses display:grid */
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+        align-self: start;
     }
 
     body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:hover {
-        background: linear-gradient(180deg, #3d80e2 0%, #2058ad 100%);
-        border-color: rgba(177,218,255,0.92);
+        background: linear-gradient(180deg, #e55454 0%, #b02828 100%);
+        border-color: rgba(255,180,170,0.70);
     }
 
     body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:active {
-        background: linear-gradient(180deg, #245ebc 0%, #123d82 100%);
+        background: linear-gradient(180deg, #c03535 0%, #7f1a1a 100%);
         transform: translateY(1px);
     }
 
     body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed:focus-visible {
-        outline: 2px solid rgba(183,220,255,0.96);
+        outline: 2px solid rgba(255,160,150,0.92);
         outline-offset: 2px;
     }
 
