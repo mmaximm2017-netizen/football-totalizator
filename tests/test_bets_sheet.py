@@ -215,6 +215,26 @@ class BetsSheetUiTests(unittest.TestCase):
         generic_start = css.index(".match-card-v2 {")
         self.assertLess(generic_start, css.rindex(selector))
 
+    def test_rpl_finished_text_colors_are_scoped_and_contrast_aware(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        marker = "/* Completed RPL text contrast: colors only"
+        layer = css[css.rindex(marker):]
+        selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
+        for child in (
+            ".team-name-v2", ".center-sub", ".final-score", ".status-done",
+            ".points-v2.points-emerald", ".points-v2.points-cyan", ".points-v2.points-zero",
+            ".prediction-label-finished", ".prediction-score-finished", ".bets-link-v2",
+        ):
+            self.assertIn(selector + " " + child, layer)
+        self.assertIn("color: rgba(255,255,255,0.96)", layer)
+        self.assertIn("color: rgba(255,255,255,0.72)", layer)
+        self.assertIn("color: #0d5c31", layer)
+        self.assertIn("color: #075b80", layer)
+        self.assertIn("color: #33465d", layer)
+        self.assertIn("outline-color: rgba(183,220,255,0.96)", layer)
+        self.assertNotIn(".match-card-v2:not(.finished) .team-name-v2", layer)
+        self.assertNotIn("body.tournament-rcup", layer)
+
 
 if __name__ == "__main__":
     unittest.main()

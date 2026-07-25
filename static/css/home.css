@@ -6498,3 +6498,77 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             font-size: 30px;
         }
     }
+
+    /* Completed RPL text contrast: colors only, after every theme/mobile layer. */
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished {
+        color: rgba(255,255,255,0.96);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .league-label,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .time-label,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .start-time-label::after {
+        color: rgba(255,255,255,0.96);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .start-time-label::before,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .center-sub {
+        color: rgba(255,255,255,0.72);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-name-v2 {
+        /* The existing light name chip needs dark text for contrast. */
+        color: #173252;
+        -webkit-text-fill-color: #173252;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .final-score {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .status-done {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .points-v2.points-emerald {
+        color: #0d5c31;
+        -webkit-text-fill-color: #0d5c31;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .points-v2.points-cyan {
+        color: #075b80;
+        -webkit-text-fill-color: #075b80;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .points-v2.points-zero {
+        color: #33465d;
+        -webkit-text-fill-color: #33465d;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .prediction-label-finished {
+        color: rgba(23,50,82,0.78);
+        -webkit-text-fill-color: rgba(23,50,82,0.78);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .prediction-score-finished {
+        color: #173252;
+        -webkit-text-fill-color: #173252;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .bets-link-v2 {
+        color: #ffffff;
+        -webkit-text-fill-color: #ffffff;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .bets-link-v2:hover,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .bets-link-v2:active {
+        color: #ffffff;
+        -webkit-text-fill-color: #ffffff;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .bets-link-v2:focus-visible {
+        outline-color: rgba(183,220,255,0.96);
+    }
