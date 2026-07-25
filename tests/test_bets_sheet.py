@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -196,6 +197,23 @@ class BetsSheetUiTests(unittest.TestCase):
     def test_home_css_has_stable_cache_busting_version(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("home.css', v='wc2026-header-broadcast-20260725-rpl-finished'", template)
+
+    def test_rpl_finished_background_is_dark_and_disables_light_overlays(self):
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        marker = "/* Authoritative RPL completed-card layer"
+        layer = css[css.rindex(marker):]
+        normalized = re.sub(r"\s+", " ", layer)
+        selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
+        self.assertIn(selector, layer)
+        self.assertIn("linear-gradient(145deg, rgba(15,27,58,0.96), rgba(24,42,78,0.94)) !important", normalized)
+        self.assertIn("background-color: #0f1b3a !important", normalized)
+        self.assertIn(selector + "::before", layer)
+        self.assertIn(selector + "::after", layer)
+        self.assertIn("content: none !important", normalized)
+        self.assertNotIn("radial-gradient(circle at 50% -12%", normalized)
+        self.assertNotIn("rgba(255,255,255,0.92)", normalized)
+        generic_start = css.index(".match-card-v2 {")
+        self.assertLess(generic_start, css.rindex(selector))
 
 
 if __name__ == "__main__":

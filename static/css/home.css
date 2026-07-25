@@ -6377,15 +6377,24 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     body.tournament-rpl .match-card-v2.match-card--rpl.finished {
         color: #173252;
         background:
-            radial-gradient(circle at 50% -12%, rgba(152,177,203,0.24), transparent 34%),
-            linear-gradient(180deg, #c8d4e0 0%, #b4c2d0 56%, #a5b5c5 100%) !important;
-        border: 1px solid rgba(35,61,88,0.34) !important;
-        border-left: 4px solid #5d7894 !important;
+            linear-gradient(145deg, rgba(15,27,58,0.96), rgba(24,42,78,0.94)) !important;
+        background-color: #0f1b3a !important;
+        border: 1px solid rgba(89,123,165,0.42) !important;
+        border-left: 4px solid #47698f !important;
         box-shadow:
-            0 0 0 1px rgba(255,255,255,0.28),
-            0 12px 24px rgba(24,51,78,0.18),
-            inset 0 1px 0 rgba(255,255,255,0.42),
-            inset 0 -18px 34px rgba(44,70,96,0.12) !important;
+            0 0 0 1px rgba(80,116,160,0.18),
+            0 12px 24px rgba(3,10,28,0.34),
+            inset 0 1px 0 rgba(150,185,224,0.12),
+            inset 0 -18px 34px rgba(4,12,32,0.28) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished::before,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished::after {
+        content: none !important;
+        background: none !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        opacity: 0 !important;
     }
 
     body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-logo-v2 {
