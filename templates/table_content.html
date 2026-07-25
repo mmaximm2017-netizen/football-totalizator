@@ -232,6 +232,7 @@
 
     .leader-badge.confident,
     .leader-badge.dominant,
+    .leader-badge.dominating,
     .leader-badge.absolute,
     .leader-badge.sole-leader {
         box-shadow: 0 0 10px rgba(255,215,0,0.38);
@@ -953,6 +954,13 @@
         padding-right: 7px !important;
     }
 
+    .leader-badge.dominating {
+        font-size: 10.5px !important;
+        letter-spacing: -0.2px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
     .standings-table tbody tr.top-1,
     .standings-table tbody tr.top-2,
     .standings-table tbody tr.top-3 {
@@ -1335,6 +1343,13 @@
         box-shadow: 0 0 16px rgba(216,255,34,0.16);
     }
 
+    body.tournament-wc2026 .leader-badge.dominating {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a0a00 !important;
+        border-color: rgba(255,215,0,0.50) !important;
+        box-shadow: 0 0 20px rgba(255,215,0,0.30) !important;
+    }
+
     body.tournament-wc2026 .shared-place {
         color: rgba(255,255,255,0.66) !important;
     }
@@ -1471,6 +1486,13 @@
         color: #041022 !important;
         border: 1px solid rgba(255,255,255,0.36) !important;
         box-shadow: 0 0 16px rgba(42,168,255,0.18);
+    }
+
+    body.tournament-rpl .leader-badge.dominating {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a0a00 !important;
+        border-color: rgba(255,215,0,0.50) !important;
+        box-shadow: 0 0 20px rgba(255,215,0,0.30) !important;
     }
 
     body.tournament-rpl .empty-table {
@@ -1853,6 +1875,17 @@
         padding-right: 7px !important;
     }
 
+    body.tournament-rcup .leader-badge.dominating {
+        font-size: 10.5px !important;
+        letter-spacing: -0.2px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        background: linear-gradient(135deg, #ffd700, #b8860b) !important;
+        color: #1a0505 !important;
+        border-color: rgba(255,215,0,0.50) !important;
+        box-shadow: 0 0 20px rgba(255,215,0,0.30) !important;
+    }
+
     body.tournament-rcup .leader-badge.outsider-badge,
     body.tournament-rcup .leader-badge.outsider-badge.confident,
     body.tournament-rcup .leader-badge.outsider-badge.dominant,
@@ -2154,7 +2187,9 @@
                         {% elif row.movement == 'down' %}
                             <span class="rank-movement down" title="Опустился после последнего матча" aria-label="Опустился после последнего матча">▼</span>
                         {% endif %}
-                        {% if row.leader_status == 'absolute' %}
+                        {% if row.leader_status == 'dominating' %}
+                            <span class="leader-badge dominating">Доминирующий лидер</span>
+                        {% elif row.leader_status == 'absolute' %}
                             <span class="leader-badge absolute">Безоговорочный лидер</span>
                         {% elif row.leader_status == 'dominant' %}
                             <span class="leader-badge dominant">Явный лидер</span>

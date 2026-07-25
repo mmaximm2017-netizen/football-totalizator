@@ -38,7 +38,8 @@ def apply_leader_status(ranking):
     - Sole leader with 1–19 point gap → "sole_leader" (Единоличный лидер).
     - 20–29 → "confident" (Уверенный лидер).
     - 30–39 → "dominant" (Явный лидер).
-    - 40+  → "absolute" (Безоговорочный лидер).
+    - 40–49 → "absolute" (Безоговорочный лидер).
+    - 50+  → "dominating" (Доминирующий лидер).
     """
     annotated = []
     for row in ranking:
@@ -63,7 +64,9 @@ def apply_leader_status(ranking):
     except (TypeError, ValueError):
         return annotated
 
-    if gap >= 40:
+    if gap >= 50:
+        annotated[0]["leader_status"] = "dominating"
+    elif gap >= 40:
         annotated[0]["leader_status"] = "absolute"
     elif gap >= 30:
         annotated[0]["leader_status"] = "dominant"
