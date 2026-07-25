@@ -6774,8 +6774,13 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
 
     body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-v2,
     body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-v2 {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         align-self: stretch;
         width: 86%;
+        gap: 16px;
         padding: 7px 5px 8px;
         border: 1px solid rgba(111,183,255,0.36);
         border-radius: 16px;
