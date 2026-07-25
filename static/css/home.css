@@ -3066,7 +3066,7 @@
         border: 1px solid rgba(0,57,166,0.10);
         box-shadow:
             0 8px 18px rgba(0,57,166,0.08),
-            inset 0 1px 0 rgba(255,255,255,0.92),
+            inset 0 1px 0 rgba(255,255,255,0.90),
             inset 0 -1px 0 rgba(0,57,166,0.05) !important;
     }
 
@@ -6702,5 +6702,177 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             min-height: 28px;
             padding: 0 12px;
             font-size: 12px;
+        }
+    }
+
+    /* Standard RPL matches use a compact broadcast-panel treatment. */
+    body.tournament-rpl .match-card-v2--rpl {
+        color: #001b4d;
+        background: linear-gradient(145deg, rgba(255,255,255,0.84), rgba(235,245,255,0.76)) !important;
+        border: 1px solid rgba(183,220,255,0.82) !important;
+        border-left: 1px solid rgba(183,220,255,0.82) !important;
+        box-shadow:
+            0 14px 30px rgba(0,57,166,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.90),
+            inset 0 -1px 0 rgba(0,57,166,0.06) !important;
+        backdrop-filter: blur(16px) saturate(120%);
+        -webkit-backdrop-filter: blur(16px) saturate(120%);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl::before {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        z-index: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(255,255,255,0.42), transparent 28%);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .match-topline {
+        position: relative;
+        padding-bottom: 8px;
+        box-shadow: none;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .match-topline::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 1px;
+        background: linear-gradient(90deg, #0039a6 0%, #0039a6 72%, #d52b1e 100%);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .start-time-label::before,
+    body.tournament-rpl .match-card-v2--rpl .deadline-label {
+        color: rgba(0,27,77,0.58);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .start-time-label::after,
+    body.tournament-rpl .match-card-v2--rpl .deadline-helper {
+        color: #001b4d;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .tournament-logo {
+        background: rgba(255,255,255,0.76);
+        box-shadow: 0 8px 18px rgba(0,57,166,0.14);
+        filter: drop-shadow(0 6px 12px rgba(0,27,77,0.16));
+    }
+
+    body.tournament-rpl .match-card-v2--rpl:not(.finished) .teams-center {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-v2,
+    body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-v2 {
+        align-self: stretch;
+        padding: 7px 5px 8px;
+        border: 1px solid rgba(111,183,255,0.36);
+        border-radius: 16px;
+        background: linear-gradient(145deg, #001b4d, #0039a6);
+        box-shadow:
+            0 8px 18px rgba(0,27,77,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            inset 0 -10px 20px rgba(0,10,42,0.16);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl:not(.finished) .team-logo-v2 {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card-v2--rpl.finished .team-name-v2 {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        font-weight: 900;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .center-score,
+    body.tournament-rpl .match-card-v2--rpl .vs-badge,
+    body.tournament-rpl .match-card-v2--rpl .final-score,
+    body.tournament-rpl .match-card-v2--rpl .closed-prediction-center {
+        color: #001b4d;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .score-stepper {
+        background: rgba(255,255,255,0.76) !important;
+        border: 1px solid rgba(0,57,166,0.18) !important;
+        box-shadow:
+            0 8px 18px rgba(0,57,166,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.94) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2--rpl .score-stepper .stepper-btn[data-step="1"] {
+        color: #0039a6;
+        border-color: rgba(0,57,166,0.16);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .score-stepper .stepper-btn[data-step="-1"] {
+        color: #d52b1e;
+        border-color: rgba(213,43,30,0.18);
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .score-input-v2 {
+        color: #001b4d !important;
+        background: rgba(230,240,255,0.50) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.76) !important;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .save-btn-v2 {
+        background: #0039a6 !important;
+        color: #ffffff;
+        border-radius: 999px;
+        box-shadow:
+            0 10px 22px rgba(0,57,166,0.28),
+            0 0 14px rgba(0,57,166,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.22) !important;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl .my-prediction-v2,
+    body.tournament-rpl .match-card-v2--rpl .prediction-label-finished,
+    body.tournament-rpl .match-card-v2--rpl .closed-prediction-label,
+    body.tournament-rpl .match-card-v2--rpl .center-sub {
+        color: rgba(0,27,77,0.72);
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl.finished {
+        background: linear-gradient(145deg, rgba(255,255,255,0.82), rgba(229,240,255,0.76)) !important;
+        border-left: 1px solid rgba(183,220,255,0.82) !important;
+    }
+
+    body.tournament-rpl .match-card-v2--rpl.finished .final-score {
+        background: linear-gradient(145deg, #001b4d, #0039a6) !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(0,27,77,0.24) !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .match-card-v2--rpl {
+            padding: 9px 10px 8px;
+            border-radius: 20px;
+        }
+
+        body.tournament-rpl .match-card-v2--rpl .team-v2 {
+            padding: 6px 3px 7px;
+            border-radius: 14px;
         }
     }

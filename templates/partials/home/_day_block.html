@@ -25,6 +25,7 @@
                 {% set event_class = match.event_css_class or '' %}
                 {% set is_rcup_match = match.is_russian_cup or match.league == 'rcup' or match.tournament_name == 'Кубок России' or match.tournament_slug|default(match.tournament_type|default('')) == 'rcup' %}
                 {% set rpl_class = 'match-card--rpl' if match.is_rpl_category and not is_rcup_match else '' %}
+                {% set rpl_v2_class = 'match-card-v2--rpl' if rpl_class else '' %}
                 {% set supercup_class = 'match-card--supercup' if match.is_supercup else '' %}
                 {% set russia_class = 'match-card--russia' if match.is_russia_category else '' %}
                 {% set russian_cup_class = 'match-card--russian-cup' if is_rcup_match else '' %}
@@ -47,7 +48,7 @@
                 {% endif %}
 
                 <div
-                    class="match-card {{ russian_cup_class }} match-card-v2 {{ card_state }} {{ predicted_class }} match-status-{{ match.status|lower }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ supercup_class }} {{ russia_class }}"
+                    class="match-card {{ russian_cup_class }} match-card-v2 {{ card_state }} {{ predicted_class }} match-status-{{ match.status|lower }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ rpl_v2_class }} {{ supercup_class }} {{ russia_class }}"
                     data-match-id="{{ match.id }}"
                     data-finished="{% if match.finished %}1{% else %}0{% endif %}"
                     data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
