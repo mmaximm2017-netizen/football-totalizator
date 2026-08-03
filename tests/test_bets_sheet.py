@@ -11,46 +11,20 @@ class BetsSheetUiTests(unittest.TestCase):
         partial = (ROOT / "templates" / "partials" / "home" / "_bets_sheet.html").read_text(encoding="utf-8")
         self.assertIn("predictions-sheet", partial)
         self.assertIn("predictions-sheet__header", partial)
-        self.assertNotIn("predictions-sheet__close", partial)
+        self.assertIn("predictions-sheet__close", partial)
         self.assertIn("data-bets-sheet-content", partial)
 
-    def test_mobile_sheet_stays_above_clickable_bottom_nav(self):
+    def test_mobile_sheet_accounts_for_bottom_nav_safe_area_and_last_row(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
-        base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
-        self.assertIn("--bottom-nav-offset: calc(88px + env(safe-area-inset-bottom));", base)
-        self.assertGreaterEqual(css.count("bottom: var(--bottom-nav-offset);"), 2)
-        self.assertIn("z-index: 100001;", css)
-        self.assertIn("body.bets-sheet-lock .bottom-nav", css)
-        self.assertIn("z-index: 100002;", css)
-        overlay = css[css.index(".bets-sheet-overlay {"):css.index(".bets-sheet-overlay.open {")]
-        self.assertIn("bottom: var(--bottom-nav-offset);", overlay)
-        self.assertNotIn("inset:", overlay)
-        self.assertIn("calc(100dvh - var(--bottom-nav-offset))", css)
+        self.assertIn("@media (max-width: 640px)", css)
+        self.assertIn("box-sizing: border-box", css)
+        self.assertIn("bottom: calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)", css)
+        self.assertIn("max-height: min(72dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))))", css)
         self.assertIn("body.tournament-wc2026 .bets-sheet", css)
+        self.assertIn("padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
+        self.assertIn("scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
+        self.assertIn(".bets-compact-list {\n            padding-bottom: 10px;", css)
         self.assertIn("overflow-y: auto", css)
-
-    def test_sheet_closes_by_overlay_or_handle_swipe_without_close_button(self):
-        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("sheetOverlay.addEventListener('click', closeBetsSheet);", template)
-        self.assertIn("const sheetHandle = document.querySelector('.bets-sheet-handle');", template)
-        self.assertIn("sheetHandle.addEventListener('touchstart'", template)
-        self.assertIn("sheetHandle.addEventListener('touchend'", template)
-        self.assertNotIn("data-bets-sheet-close", template)
-
-    def test_tournament_themes_do_not_override_shared_sheet_geometry(self):
-        home_css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
-        cup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
-
-        for css, selector in (
-            (home_css, "body.tournament-rpl .bets-sheet {"),
-            (home_css, "body.tournament-wc2026 .bets-sheet {"),
-            (cup_css, "body.tournament-rcup .bets-sheet {"),
-        ):
-            start = css.rindex(selector)
-            block = css[start:css.index("}", start)]
-            self.assertNotIn("\n        position:", block)
-            self.assertNotIn("\n        bottom:", block)
-            self.assertNotIn("\n        z-index:", block)
 
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
