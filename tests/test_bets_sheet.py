@@ -16,10 +16,16 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_mobile_sheet_stays_above_clickable_bottom_nav(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
-        self.assertIn("bottom: calc(88px + env(safe-area-inset-bottom));", css)
+        base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        self.assertIn("--bottom-nav-offset: calc(88px + env(safe-area-inset-bottom));", base)
+        self.assertGreaterEqual(css.count("bottom: var(--bottom-nav-offset);"), 2)
         self.assertIn("z-index: 100001;", css)
         self.assertIn("body.bets-sheet-lock .bottom-nav", css)
         self.assertIn("z-index: 100002;", css)
+        overlay = css[css.index(".bets-sheet-overlay {"):css.index(".bets-sheet-overlay.open {")]
+        self.assertIn("bottom: var(--bottom-nav-offset);", overlay)
+        self.assertNotIn("inset:", overlay)
+        self.assertIn("calc(100dvh - var(--bottom-nav-offset))", css)
         self.assertIn("body.tournament-wc2026 .bets-sheet", css)
         self.assertIn("overflow-y: auto", css)
 
@@ -30,6 +36,21 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("sheetHandle.addEventListener('touchstart'", template)
         self.assertIn("sheetHandle.addEventListener('touchend'", template)
         self.assertNotIn("data-bets-sheet-close", template)
+
+    def test_tournament_themes_do_not_override_shared_sheet_geometry(self):
+        home_css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        cup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
+
+        for css, selector in (
+            (home_css, "body.tournament-rpl .bets-sheet {"),
+            (home_css, "body.tournament-wc2026 .bets-sheet {"),
+            (cup_css, "body.tournament-rcup .bets-sheet {"),
+        ):
+            start = css.rindex(selector)
+            block = css[start:css.index("}", start)]
+            self.assertNotIn("\n        position:", block)
+            self.assertNotIn("\n        bottom:", block)
+            self.assertNotIn("\n        z-index:", block)
 
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
