@@ -211,9 +211,8 @@ body {
         }
 
         .app-shell {
-            opacity: 0;
-            animation: appFadeIn 0.45s ease forwards;
-            animation-delay: 0.12s;
+            opacity: 1;
+            animation: none;
         }
 
         @keyframes appFadeIn {
@@ -1427,6 +1426,14 @@ body {
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') closeTournamentSheet();
         });
+
+        if (window.location.pathname === '/') {
+            console.log('[home] navigation initialized', {
+                tournamentTrigger: Boolean(tournamentTrigger),
+                tournamentOverlay: Boolean(tournamentOverlay),
+                tournamentPanel: Boolean(tournamentPanel)
+            });
+        }
 
         (function persistTournamentSelection() {
             const tournamentPages = new Set(['/', '/table', '/profile', '/my-predictions']);

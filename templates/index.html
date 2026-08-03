@@ -136,6 +136,8 @@
 {% include 'partials/home/_bets_sheet.html' %}
 
 <script>
+console.log('[home] page start');
+
 function pluralizeMatch(count) {
     const num = Number(count);
     const mod10 = num % 10;
@@ -154,6 +156,8 @@ function pluralizeMatch(count) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('[home] auth loaded');
+
     // Hide skeleton loader when real content is loaded
     const skeletonLoader = document.getElementById('skeleton-loader');
     const homeScreen = document.querySelector('.home-screen');
@@ -166,6 +170,11 @@ document.addEventListener('DOMContentLoaded', function () {
             skeletonLoader.classList.add('hidden');
         }
     }
+
+    console.log('[home] matches loaded', {
+        cards: document.querySelectorAll('.match-card-v2').length,
+        skeletonHidden: skeletonLoader ? skeletonLoader.classList.contains('hidden') : null
+    });
 
     document.querySelectorAll('[data-match-count]').forEach(function(el) {
         const count = el.getAttribute('data-match-count');
@@ -839,6 +848,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 1200);
             }
         });
+    });
+
+    console.log('[home] cards rendered', {
+        cards: document.querySelectorAll('.match-card-v2').length,
+        forms: forms.length
     });
 });
 </script>
