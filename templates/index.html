@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const sheetOverlay = document.querySelector('[data-bets-sheet-overlay]');
     const sheetPanel = document.querySelector('[data-bets-sheet-panel]');
     const sheetContent = document.querySelector('[data-bets-sheet-content]');
-    const sheetClose = document.querySelector('[data-bets-sheet-close]');
+    const sheetHandle = document.querySelector('.bets-sheet-handle');
 
     function openBetsSheet() {
         if (!sheetOverlay || !sheetPanel) return;
@@ -485,15 +485,20 @@ document.addEventListener('DOMContentLoaded', function () {
         sheetOverlay.addEventListener('click', closeBetsSheet);
     }
 
-    if (sheetClose) {
-        sheetClose.addEventListener('click', closeBetsSheet);
-    }
+    if (sheetHandle) {
+        let swipeStartY = null;
 
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            closeBetsSheet();
-        }
-    });
+        sheetHandle.addEventListener('touchstart', function (event) {
+            swipeStartY = event.touches[0].clientY;
+        }, { passive: true });
+
+        sheetHandle.addEventListener('touchend', function (event) {
+            if (swipeStartY !== null && event.changedTouches[0].clientY - swipeStartY > 40) {
+                closeBetsSheet();
+            }
+            swipeStartY = null;
+        }, { passive: true });
+    }
 
     function applyDeadlineClosedState(card) {
         if (!card) return;

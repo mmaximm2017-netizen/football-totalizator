@@ -585,7 +585,6 @@ body.tournament-rcup .bets-sheet {
 body.tournament-rcup .bets-sheet-title,
 body.tournament-rcup .bets-compact-team-name,
 body.tournament-rcup .bets-compact-name { color: var(--rcup-white); }
-body.tournament-rcup .bets-sheet-close { background: rgba(232, 0, 36, 0.18); color: var(--rcup-white); }
 body.tournament-rcup .bets-sheet-handle { background: rgba(255,255,255,0.34); }
 body.tournament-rcup .bets-compact-match { background: linear-gradient(145deg, rgba(232,0,36,0.24), rgba(58,10,50,0.92)); border-color: rgba(232,0,36,0.46); color: var(--rcup-white); }
 body.tournament-rcup .bets-compact-team-icon { background: rgba(255,255,255,0.10); }

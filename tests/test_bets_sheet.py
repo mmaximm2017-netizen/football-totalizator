@@ -11,20 +11,25 @@ class BetsSheetUiTests(unittest.TestCase):
         partial = (ROOT / "templates" / "partials" / "home" / "_bets_sheet.html").read_text(encoding="utf-8")
         self.assertIn("predictions-sheet", partial)
         self.assertIn("predictions-sheet__header", partial)
-        self.assertIn("predictions-sheet__close", partial)
+        self.assertNotIn("predictions-sheet__close", partial)
         self.assertIn("data-bets-sheet-content", partial)
 
-    def test_mobile_sheet_accounts_for_bottom_nav_safe_area_and_last_row(self):
+    def test_mobile_sheet_stays_above_clickable_bottom_nav(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
-        self.assertIn("@media (max-width: 640px)", css)
-        self.assertIn("box-sizing: border-box", css)
-        self.assertIn("bottom: calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)", css)
-        self.assertIn("max-height: min(72dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))))", css)
+        self.assertIn("bottom: calc(88px + env(safe-area-inset-bottom));", css)
+        self.assertIn("z-index: 100001;", css)
+        self.assertIn("body.bets-sheet-lock .bottom-nav", css)
+        self.assertIn("z-index: 100002;", css)
         self.assertIn("body.tournament-wc2026 .bets-sheet", css)
-        self.assertIn("padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
-        self.assertIn("scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
-        self.assertIn(".bets-compact-list {\n            padding-bottom: 10px;", css)
         self.assertIn("overflow-y: auto", css)
+
+    def test_sheet_closes_by_overlay_or_handle_swipe_without_close_button(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("sheetOverlay.addEventListener('click', closeBetsSheet);", template)
+        self.assertIn("const sheetHandle = document.querySelector('.bets-sheet-handle');", template)
+        self.assertIn("sheetHandle.addEventListener('touchstart'", template)
+        self.assertIn("sheetHandle.addEventListener('touchend'", template)
+        self.assertNotIn("data-bets-sheet-close", template)
 
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
