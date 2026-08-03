@@ -3,6 +3,7 @@ import logging
 import hmac
 import secrets
 from flask import Flask, g, session, request, abort, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import SECRET_KEY
 from app.db import get_db, close_db, PoolExhausted
@@ -35,8 +36,14 @@ def create_app():
         template_folder='../templates',
         static_folder='../static'
     )
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     app.secret_key = SECRET_KEY
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+    )
 
     # ❗ правильно: Flask ждёт timedelta, а не int
     from datetime import timedelta
