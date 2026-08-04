@@ -62,6 +62,21 @@ def sanitize_diagnostics_payload(payload):
     return sanitized
 
 
+def diagnostics_request_is_same_origin():
+    origin = request.headers.get("Origin")
+    if origin:
+        origin_parts = urlsplit(origin)
+        host_parts = urlsplit(request.host_url)
+        if (
+            origin_parts.scheme.lower() != host_parts.scheme.lower()
+            or origin_parts.netloc.lower() != host_parts.netloc.lower()
+        ):
+            return False
+
+    fetch_site = request.headers.get("Sec-Fetch-Site")
+    return not fetch_site or fetch_site.lower() == "same-origin"
+
+
 def ensure_csrf_token():
     token = session.get(CSRF_SESSION_KEY)
 
@@ -135,6 +150,8 @@ def create_app():
     def client_diagnostics():
         if not app.config["IOS_DIAGNOSTICS"]:
             abort(404)
+        if not diagnostics_request_is_same_origin():
+            abort(403)
         if "user_id" not in session:
             abort(401)
         if not request.is_json:
@@ -182,7 +199,9 @@ def create_app():
 
     @app.before_request
     def csrf_protect():
-        if request.path == "/__diagnostics/client":
+        # This project uses this custom CSRF hook instead of Flask-WTF CSRFProtect.
+        # Exempt only the actual registered diagnostics view, never a matching path.
+        if request.method == "POST" and app.view_functions.get(request.endpoint) is client_diagnostics:
             return
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return

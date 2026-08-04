@@ -24,6 +24,48 @@ class IosDiagnosticsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_authenticated_diagnostics_request_does_not_need_csrf(self):
+        app = self.create_diagnostics_app(True)
+        with app.test_client() as client:
+            with client.session_transaction() as current_session:
+                current_session["user_id"] = 11
+            response = client.post("/__diagnostics/client", json={"event": "test"})
+
+        self.assertEqual(response.status_code, 204)
+
+    def test_diagnostics_request_rejects_foreign_origin(self):
+        app = self.create_diagnostics_app(True)
+        with app.test_client() as client:
+            with client.session_transaction() as current_session:
+                current_session["user_id"] = 11
+            response = client.post(
+                "/__diagnostics/client",
+                json={"event": "test"},
+                headers={"Origin": "https://attacker.example"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_diagnostics_request_rejects_cross_site_fetch_metadata(self):
+        app = self.create_diagnostics_app(True)
+        with app.test_client() as client:
+            with client.session_transaction() as current_session:
+                current_session["user_id"] = 11
+            response = client.post(
+                "/__diagnostics/client",
+                json={"event": "test"},
+                headers={"Sec-Fetch-Site": "cross-site"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_other_post_routes_remain_csrf_protected(self):
+        app = self.create_diagnostics_app(True)
+        with app.test_client() as client:
+            response = client.post("/login", data={"username": "user", "password": "password"})
+
+        self.assertEqual(response.status_code, 400)
+
     def test_authenticated_allowed_fields_are_logged_without_secrets(self):
         app = self.create_diagnostics_app(True)
         with app.test_client() as client:
