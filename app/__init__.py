@@ -1,8 +1,9 @@
 # app/__init__.py
 import logging
 import hmac
+import os
 import secrets
-from flask import Flask, g, session, request, abort, jsonify
+from flask import Flask, g, session, request, abort, jsonify, make_response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import SECRET_KEY
@@ -36,13 +37,15 @@ def create_app():
         template_folder='../templates',
         static_folder='../static'
     )
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.secret_key = SECRET_KEY
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_DOMAIN=None,
+        SESSION_COOKIE_PATH="/",
     )
 
     # ❗ правильно: Flask ждёт timedelta, а не int
@@ -77,12 +80,44 @@ def create_app():
     app.register_blueprint(table_bp)
     app.register_blueprint(predictions_bp)
 
+    @app.get("/service-worker.js")
+    def service_worker():
+        response = make_response(app.send_static_file("service-worker.js"))
+        response.headers["Content-Type"] = "application/javascript"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Service-Worker-Allowed"] = "/"
+        return response
+
     # =====================================================
     # CSRF BASELINE
     # =====================================================
     @app.context_processor
     def inject_csrf_token():
         return {"csrf_token": ensure_csrf_token()}
+
+    @app.before_request
+    def log_ios_diagnostics():
+        if os.getenv("IOS_DIAGNOSTICS") != "1":
+            return
+
+        logger.info(
+            "ios_diagnostics request_id=%s method=%s path=%s scheme=%s forwarded_proto=%s "
+            "session_cookie_present=%s session_user_id_present=%s user_agent=%s",
+            request.headers.get("X-Request-ID", "-"),
+            request.method,
+            request.path,
+            request.scheme,
+            request.headers.get("X-Forwarded-Proto", "-"),
+            app.config["SESSION_COOKIE_NAME"] in request.cookies,
+            "user_id" in session,
+            request.user_agent.string,
+        )
+
+    @app.after_request
+    def prevent_auth_caching(response):
+        if request.path in {"/login", "/logout"}:
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.before_request
     def csrf_protect():

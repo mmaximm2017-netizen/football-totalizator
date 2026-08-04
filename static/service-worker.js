@@ -1,19 +1,11 @@
-const CACHE_NAME = 'totish-cache-v5';
-
-const STATIC_ASSETS = [
-    '/static/manifest.json',
-    '/static/icon-192-new.png',
-    '/static/icon-512-new.png',
-    '/static/apple-touch-icon.png',
-    '/static/push-worker.js'
-];
+const CACHE_PREFIX = 'totish-static-';
+const CACHE_NAME = `${CACHE_PREFIX}v6`;
+const LEGACY_CACHE_NAMES = new Set([
+    'totish-cache-v5',
+]);
 
 self.addEventListener('install', event => {
     self.skipWaiting();
-
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-    );
 });
 
 self.addEventListener('activate', event => {
@@ -21,7 +13,10 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(key => key !== CACHE_NAME)
+                    .filter(key =>
+                        LEGACY_CACHE_NAMES.has(key) ||
+                        (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+                    )
                     .map(key => caches.delete(key))
             )
         ).then(() => self.clients.claim())
@@ -31,45 +26,38 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const request = event.request;
 
-    if (request.method !== 'GET') {
-        return;
-    }
-
     const url = new URL(request.url);
 
-    if (url.origin !== location.origin) {
-        return;
-    }
-
-    if (request.mode === 'navigate') {
-        event.respondWith(fetch(request));
+    if (
+        request.method !== 'GET' ||
+        request.mode === 'navigate' ||
+        url.origin !== location.origin ||
+        url.pathname === '/login' ||
+        url.pathname === '/logout' ||
+        url.pathname === '/admin' ||
+        url.pathname.startsWith('/admin/') ||
+        url.pathname === '/api' ||
+        url.pathname.startsWith('/api/') ||
+        !url.pathname.startsWith('/static/')
+    ) {
         return;
     }
 
     event.respondWith(
         fetch(request)
             .then(response => {
-                const responseClone = response.clone();
-
-                if (
-                    response.ok &&
-                    (
-                        url.pathname.startsWith('/static/icons/') ||
-                        url.pathname.startsWith('/static/flags/') ||
-                        url.pathname.endsWith('.css') ||
-                        url.pathname.endsWith('.js') ||
-                        url.pathname.endsWith('.png') ||
-                        url.pathname.endsWith('.svg')
-                    )
-                ) {
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(request, responseClone);
-                    });
+                if (response.ok) {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()))
+                    );
                 }
-
                 return response;
             })
-            .catch(() => caches.match(request))
+            .catch(async () => {
+                const cache = await caches.open(CACHE_NAME);
+                const cachedResponse = await cache.match(request);
+                return cachedResponse || Response.error();
+            })
     );
 });
 

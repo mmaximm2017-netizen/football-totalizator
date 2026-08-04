@@ -121,11 +121,22 @@ body {
             justify-content: center;
 
             transition: opacity 0.45s ease, visibility 0.45s ease;
+            animation: splashFailsafe 0s linear 4s forwards;
         }
 
         #app-splash.hidden {
             opacity: 0;
             visibility: hidden;
+            pointer-events: none;
+            animation: none;
+        }
+
+        @keyframes splashFailsafe {
+            to {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
         }
 
         .splash-inner {
@@ -1492,7 +1503,22 @@ body {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
                 try {
-                    await navigator.serviceWorker.register('/static/service-worker.js');
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(async registration => {
+                        const workers = [registration.active, registration.waiting, registration.installing]
+                            .filter(Boolean);
+                        const hasLegacyScript = workers.some(worker =>
+                            new URL(worker.scriptURL).pathname === '/static/service-worker.js'
+                        );
+                        const hasLegacyScope = new URL(registration.scope).pathname === '/static/';
+                        if (hasLegacyScope || hasLegacyScript) {
+                            await registration.unregister();
+                        }
+                    }));
+                    await navigator.serviceWorker.register('/service-worker.js', {
+                        scope: '/',
+                        updateViaCache: 'none'
+                    });
                 } catch (err) {
                     console.log(err);
                 }

@@ -85,11 +85,16 @@ class SessionTournamentSelectionTests(unittest.TestCase):
             patch("app.routes.auth.get_session_start_tournament_id", return_value=5),
         ):
             with app.test_client() as client:
-                response = client.post("/login", data={"username": "user", "password": "password"})
-                self.assertEqual(response.status_code, 302)
-                self.assertIn("/?tid=5", response.headers["Location"])
                 with client.session_transaction() as current_session:
+                    current_session["stale_value"] = "remove-me"
+                response = client.post("/login", data={"username": "user", "password": "password"})
+                self.assertEqual(response.status_code, 303)
+                self.assertIn("/?tid=5", response.headers["Location"])
+                self.assertNotIn("http://", response.headers["Location"])
+                with client.session_transaction() as current_session:
+                    self.assertEqual(current_session["user_id"], 11)
                     self.assertEqual(current_session["selected_tournament_id"], 5)
+                    self.assertNotIn("stale_value", current_session)
 
     def test_bare_main_request_recalculates_default_over_stale_session(self):
         from app.routes.main import main_bp

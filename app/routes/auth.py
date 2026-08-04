@@ -1,11 +1,8 @@
 # app/routes/auth.py
 
-from datetime import timedelta
-
 import psycopg2
 from flask import (
     Blueprint,
-    current_app,
     flash,
     redirect,
     render_template,
@@ -80,16 +77,19 @@ def login():
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
-            session['user_id'] = user_id
-            session.pop('selected_tournament_id', None)
-            session.pop('tournament_selection_initialized', None)
             selected_tournament_id = get_session_start_tournament_id(cur)
+            session.clear()
+            session['user_id'] = user_id
             if selected_tournament_id:
                 session['selected_tournament_id'] = selected_tournament_id
                 session['tournament_selection_initialized'] = True
             session.permanent = True
-            current_app.permanent_session_lifetime = timedelta(days=7)
-            return redirect(url_for('main.index', tid=selected_tournament_id) if selected_tournament_id else url_for('main.index'))
+            return redirect(
+                url_for('main.index', tid=selected_tournament_id)
+                if selected_tournament_id
+                else url_for('main.index'),
+                code=303,
+            )
         finally:
             close_db(conn, cur)
 
