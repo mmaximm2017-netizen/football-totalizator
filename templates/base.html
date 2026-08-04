@@ -15,6 +15,124 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
+    {% if config.get('IOS_DIAGNOSTICS') %}
+    <script>
+        (function () {
+            const endpoint = '/__diagnostics/client';
+
+            function styleSnapshot(id) {
+                const element = document.getElementById(id);
+                if (!element) return { exists: false };
+
+                const style = window.getComputedStyle(element);
+                return {
+                    exists: true,
+                    className: element.className,
+                    display: style.display,
+                    visibility: style.visibility,
+                    opacity: style.opacity,
+                    pointerEvents: style.pointerEvents
+                };
+            }
+
+            function workerSnapshot() {
+                const controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+                if (!controller) return { controlled: false, scriptPath: '' };
+
+                try {
+                    return {
+                        controlled: true,
+                        scriptPath: new URL(controller.scriptURL).pathname
+                    };
+                } catch (error) {
+                    return { controlled: true, scriptPath: '' };
+                }
+            }
+
+            function navigationSnapshot() {
+                const navigation = performance.getEntriesByType('navigation')[0];
+                return navigation ? {
+                    type: navigation.type,
+                    domContentLoadedEventEnd: navigation.domContentLoadedEventEnd,
+                    loadEventEnd: navigation.loadEventEnd
+                } : {};
+            }
+
+            function send(event, extra) {
+                const splash = styleSnapshot('app-splash');
+                const transition = styleSnapshot('page-transition');
+                const worker = workerSnapshot();
+                const navigation = navigationSnapshot();
+                const payload = Object.assign({
+                    event: event,
+                    pathname: window.location.pathname,
+                    readyState: document.readyState,
+                    visibilityState: document.visibilityState,
+                    timestamp: Date.now(),
+                    splashExists: splash.exists,
+                    splashClass: splash.className || '',
+                    splashDisplay: splash.display || '',
+                    splashVisibility: splash.visibility || '',
+                    splashOpacity: splash.opacity || '',
+                    splashPointerEvents: splash.pointerEvents || '',
+                    transitionExists: transition.exists,
+                    transitionClass: transition.className || '',
+                    transitionDisplay: transition.display || '',
+                    transitionVisibility: transition.visibility || '',
+                    transitionOpacity: transition.opacity || '',
+                    serviceWorkerControlled: worker.controlled,
+                    serviceWorkerScriptPath: worker.scriptPath,
+                    navigationType: navigation.type || '',
+                    domContentLoadedEventEnd: navigation.domContentLoadedEventEnd || 0,
+                    loadEventEnd: navigation.loadEventEnd || 0
+                }, extra || {});
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    keepalive: true,
+                    body: JSON.stringify(payload)
+                }).catch(function () {});
+            }
+
+            function resourcePath(target) {
+                const source = target.src || target.href;
+                if (!source) return '';
+
+                try {
+                    return new URL(source, window.location.origin).pathname;
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            send('script-start');
+            document.addEventListener('DOMContentLoaded', function () { send('DOMContentLoaded'); });
+            window.addEventListener('load', function () { send('load'); });
+            window.addEventListener('pageshow', function () { send('pageshow'); });
+            window.addEventListener('pagehide', function () { send('pagehide'); });
+            window.setTimeout(function () { send('timer-1s'); }, 1000);
+            window.setTimeout(function () { send('timer-4s'); }, 4000);
+            window.setTimeout(function () { send('timer-10s'); }, 10000);
+
+            window.addEventListener('error', function (event) {
+                const target = event.target;
+                if (target && target !== window && /^(SCRIPT|LINK|IMG)$/.test(target.tagName)) {
+                    send('resource-error', { resourcePath: resourcePath(target) });
+                    return;
+                }
+                send('error', { errorMessage: String(event.message || '').slice(0, 512) });
+            }, true);
+
+            window.addEventListener('unhandledrejection', function (event) {
+                const reason = event.reason && event.reason.message ? event.reason.message : event.reason;
+                send('unhandledrejection', { errorMessage: String(reason || '').slice(0, 512) });
+            });
+        })();
+    </script>
+    {% endif %}
+
     <style>
         * {
             margin: 0;

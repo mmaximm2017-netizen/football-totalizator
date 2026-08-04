@@ -1,8 +1,10 @@
 # app/__init__.py
 import logging
 import hmac
+import json
 import os
 import secrets
+from urllib.parse import urlsplit
 from flask import Flask, g, session, request, abort, jsonify, make_response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -18,6 +20,46 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CSRF_SESSION_KEY = "csrf_token"
+DIAGNOSTICS_MAX_BODY_BYTES = 4096
+DIAGNOSTICS_STRING_FIELDS = {
+    "event", "pathname", "readyState", "visibilityState", "splashClass",
+    "splashDisplay", "splashVisibility", "splashOpacity", "splashPointerEvents",
+    "transitionClass", "transitionDisplay", "transitionVisibility", "transitionOpacity",
+    "serviceWorkerScriptPath", "navigationType", "errorMessage", "resourcePath",
+}
+DIAGNOSTICS_BOOLEAN_FIELDS = {
+    "splashExists", "transitionExists", "serviceWorkerControlled",
+}
+DIAGNOSTICS_NUMBER_FIELDS = {
+    "timestamp", "domContentLoadedEventEnd", "loadEventEnd",
+}
+DIAGNOSTICS_PATH_FIELDS = {"pathname", "resourcePath", "serviceWorkerScriptPath"}
+
+
+def diagnostics_enabled():
+    return os.getenv("IOS_DIAGNOSTICS") == "1"
+
+
+def sanitize_diagnostics_payload(payload):
+    if not isinstance(payload, dict):
+        return {}
+
+    sanitized = {}
+    for field, value in payload.items():
+        if field in DIAGNOSTICS_STRING_FIELDS and isinstance(value, str):
+            value = value[:512]
+            if field in DIAGNOSTICS_PATH_FIELDS:
+                parsed = urlsplit(value)
+                if parsed.scheme or parsed.netloc:
+                    continue
+                value = parsed.path[:512]
+            sanitized[field] = value
+        elif field in DIAGNOSTICS_BOOLEAN_FIELDS and isinstance(value, bool):
+            sanitized[field] = value
+        elif field in DIAGNOSTICS_NUMBER_FIELDS and isinstance(value, (int, float)) and not isinstance(value, bool):
+            sanitized[field] = value
+
+    return sanitized
 
 
 def ensure_csrf_token():
@@ -46,6 +88,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_DOMAIN=None,
         SESSION_COOKIE_PATH="/",
+        IOS_DIAGNOSTICS=diagnostics_enabled(),
     )
 
     # ❗ правильно: Flask ждёт timedelta, а не int
@@ -88,6 +131,24 @@ def create_app():
         response.headers["Service-Worker-Allowed"] = "/"
         return response
 
+    @app.post("/__diagnostics/client")
+    def client_diagnostics():
+        if not app.config["IOS_DIAGNOSTICS"]:
+            abort(404)
+        if "user_id" not in session:
+            abort(401)
+        if not request.is_json:
+            abort(415)
+        if request.content_length is not None and request.content_length > DIAGNOSTICS_MAX_BODY_BYTES:
+            abort(413)
+
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            abort(400)
+
+        logger.info("ios_client_diagnostics payload=%s", json.dumps(sanitize_diagnostics_payload(payload), sort_keys=True))
+        return "", 204
+
     # =====================================================
     # CSRF BASELINE
     # =====================================================
@@ -97,7 +158,7 @@ def create_app():
 
     @app.before_request
     def log_ios_diagnostics():
-        if os.getenv("IOS_DIAGNOSTICS") != "1":
+        if not app.config["IOS_DIAGNOSTICS"]:
             return
 
         logger.info(
@@ -121,6 +182,8 @@ def create_app():
 
     @app.before_request
     def csrf_protect():
+        if request.path == "/__diagnostics/client":
+            return
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return
 
@@ -149,6 +212,9 @@ def create_app():
     @app.before_request
     def load_user():
         g.is_admin = False
+
+        if app.config["IOS_DIAGNOSTICS"] and request.path == "/__diagnostics/client":
+            return
 
         if 'user_id' not in session:
             return
