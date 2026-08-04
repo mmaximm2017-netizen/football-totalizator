@@ -3,22 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
-    <title>ТОТИШ БРАТИШЕК</title>
-
-    <link rel="manifest" href="/static/manifest.json?v=4">
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-
-    <meta name="theme-color" content="#dff2ff">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-
     {% if config.get('IOS_DIAGNOSTICS') %}
     <script>
         (function () {
             const endpoint = '/__diagnostics/client';
+            const resourceEvents = new WeakMap();
+            let windowLoadObserved = false;
+
+            function resourcePath(source) {
+                if (!source) return '';
+
+                try {
+                    return new URL(source, window.location.origin).pathname;
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            function compactLines(lines, limit) {
+                let output = '';
+                lines.forEach(function (line) {
+                    const cleanLine = String(line).replace(/[\r\n]+/g, ' ').slice(0, 300);
+                    const next = output ? output + '\n' + cleanLine : cleanLine;
+                    if (next.length <= limit) output = next;
+                });
+                return output;
+            }
+
+            function recordResourceEvent(event) {
+                const target = event.target;
+                if (!target || target === window || !/^(SCRIPT|LINK|IMG|IFRAME|VIDEO|AUDIO)$/.test(target.tagName)) return;
+
+                resourceEvents.set(target, {
+                    tagName: target.tagName.toLowerCase(),
+                    pathname: resourcePath(target.currentSrc || target.src || target.href),
+                    rel: target.rel || '',
+                    as: target.as || '',
+                    time: Math.round(event.timeStamp),
+                    result: event.type
+                });
+            }
+
+            // Registered before every external resource so cached and network events are both observed.
+            window.addEventListener('load', recordResourceEvent, true);
+            window.addEventListener('error', recordResourceEvent, true);
 
             function styleSnapshot(id) {
                 const element = document.getElementById(id);
@@ -56,6 +84,102 @@
                     domContentLoadedEventEnd: navigation.domContentLoadedEventEnd,
                     loadEventEnd: navigation.loadEventEnd
                 } : {};
+            }
+
+            function resourceSnapshot() {
+                const pending = [];
+                const broken = [];
+                let imagePending = 0;
+                let imageBroken = 0;
+                let stylesheetPending = 0;
+                let scriptPending = 0;
+                let scriptErrors = 0;
+                let iframePending = 0;
+                let iframeErrors = 0;
+                let mediaPending = 0;
+                const images = Array.from(document.images);
+                const stylesheets = Array.from(document.querySelectorAll('link[rel~="stylesheet"]'));
+                const scripts = Array.from(document.querySelectorAll('script[src]'));
+                const iframes = Array.from(document.querySelectorAll('iframe'));
+                const media = Array.from(document.querySelectorAll('video, audio'));
+
+                images.forEach(function (image) {
+                    const path = resourcePath(image.currentSrc || image.src);
+                    if (!image.complete) {
+                        imagePending += 1;
+                        pending.push('img ' + path + ' complete=false loading=' + (image.loading || 'auto'));
+                    } else if (image.naturalWidth === 0) {
+                        imageBroken += 1;
+                        broken.push('img ' + path + ' natural=0x' + image.naturalHeight);
+                    }
+                });
+
+                stylesheets.forEach(function (link) {
+                    let sheetState = 'available';
+                    try {
+                        if (link.sheet === null) sheetState = 'null';
+                    } catch (error) {
+                        sheetState = 'unknown';
+                    }
+                    if (sheetState === 'null') {
+                        stylesheetPending += 1;
+                        pending.push('stylesheet ' + resourcePath(link.href) + ' sheet=null media=' + (link.media || 'all') + ' disabled=' + link.disabled);
+                    }
+                });
+
+                scripts.forEach(function (script) {
+                    const state = resourceEvents.get(script);
+                    if (!state) {
+                        scriptPending += 1;
+                        pending.push('script ' + resourcePath(script.src) + ' event=pending async=' + script.async + ' defer=' + script.defer + ' type=' + (script.type || 'classic'));
+                    } else if (state.result === 'error') {
+                        scriptErrors += 1;
+                        pending.push('script ' + resourcePath(script.src) + ' event=error at=' + state.time);
+                    }
+                });
+
+                iframes.forEach(function (frame) {
+                    const state = resourceEvents.get(frame);
+                    let readyState = 'unknown';
+                    try {
+                        readyState = frame.contentDocument ? frame.contentDocument.readyState : 'unknown';
+                    } catch (error) {
+                        readyState = 'unknown';
+                    }
+                    if (state && state.result === 'error') {
+                        iframeErrors += 1;
+                        pending.push('iframe ' + resourcePath(frame.src) + ' event=error at=' + state.time);
+                    } else if (!state && readyState !== 'complete') {
+                        iframePending += 1;
+                        pending.push('iframe ' + resourcePath(frame.src) + ' readyState=' + readyState + ' loading=' + (frame.loading || 'eager'));
+                    }
+                });
+
+                media.forEach(function (element) {
+                    if (element.readyState === 0 && element.networkState === 2) {
+                        mediaPending += 1;
+                        pending.push(element.tagName.toLowerCase() + ' ' + resourcePath(element.currentSrc || element.src) + ' readyState=0 networkState=2 preload=' + (element.preload || 'auto'));
+                    }
+                });
+
+                const slowResources = performance.getEntriesByType('resource')
+                    .sort(function (left, right) { return right.duration - left.duration; })
+                    .slice(0, 20)
+                    .map(function (entry) {
+                        return (entry.initiatorType || 'other') + ' ' + resourcePath(entry.name) + ' duration=' + Math.round(entry.duration) + ' transfer=' + entry.transferSize + ' decoded=' + entry.decodedBodySize;
+                    });
+                const fontStatus = document.fonts ? document.fonts.status : 'unsupported';
+                const pendingCount = imagePending + stylesheetPending + scriptPending + iframePending + mediaPending;
+
+                return {
+                    pendingResourceCount: pendingCount,
+                    pendingResources: compactLines(pending, 700),
+                    brokenResourceCount: imageBroken,
+                    brokenResources: compactLines(broken, 700),
+                    resourceStateSummary: 'images total=' + images.length + ' pending=' + imagePending + ' broken=' + imageBroken + '; stylesheets total=' + stylesheets.length + ' pending=' + stylesheetPending + '; scripts total=' + scripts.length + ' pending=' + scriptPending + ' errors=' + scriptErrors + '; iframes total=' + iframes.length + ' pending=' + iframePending + ' errors=' + iframeErrors + '; media total=' + media.length + ' pending=' + mediaPending + '; readyState=' + document.readyState + '; windowLoadObserved=' + windowLoadObserved,
+                    slowResources: compactLines(slowResources, 700),
+                    fontStatus: fontStatus
+                };
             }
 
             function send(event, extra) {
@@ -96,30 +220,23 @@
                 }).catch(function () {});
             }
 
-            function resourcePath(target) {
-                const source = target.src || target.href;
-                if (!source) return '';
-
-                try {
-                    return new URL(source, window.location.origin).pathname;
-                } catch (error) {
-                    return '';
-                }
-            }
-
             send('script-start');
             document.addEventListener('DOMContentLoaded', function () { send('DOMContentLoaded'); });
-            window.addEventListener('load', function () { send('load'); });
+            window.addEventListener('load', function () {
+                windowLoadObserved = true;
+                send('load');
+            });
             window.addEventListener('pageshow', function () { send('pageshow'); });
             window.addEventListener('pagehide', function () { send('pagehide'); });
             window.setTimeout(function () { send('timer-1s'); }, 1000);
-            window.setTimeout(function () { send('timer-4s'); }, 4000);
-            window.setTimeout(function () { send('timer-10s'); }, 10000);
+            window.setTimeout(function () { send('timer-4s'); send('resource-snapshot', resourceSnapshot()); }, 4000);
+            window.setTimeout(function () { send('timer-10s'); send('resource-snapshot', resourceSnapshot()); }, 10000);
+            window.setTimeout(function () { send('timer-20s'); send('resource-snapshot', resourceSnapshot()); }, 20000);
 
             window.addEventListener('error', function (event) {
                 const target = event.target;
                 if (target && target !== window && /^(SCRIPT|LINK|IMG)$/.test(target.tagName)) {
-                    send('resource-error', { resourcePath: resourcePath(target) });
+                    send('resource-error', { resourcePath: resourcePath(target.currentSrc || target.src || target.href) });
                     return;
                 }
                 send('error', { errorMessage: String(event.message || '').slice(0, 512) });
@@ -132,6 +249,18 @@
         })();
     </script>
     {% endif %}
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+    <title>ТОТИШ БРАТИШЕК</title>
+
+    <link rel="manifest" href="/static/manifest.json?v=4">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+    <meta name="theme-color" content="#dff2ff">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
 
     <style>
         * {

@@ -26,14 +26,23 @@ DIAGNOSTICS_STRING_FIELDS = {
     "splashDisplay", "splashVisibility", "splashOpacity", "splashPointerEvents",
     "transitionClass", "transitionDisplay", "transitionVisibility", "transitionOpacity",
     "serviceWorkerScriptPath", "navigationType", "errorMessage", "resourcePath",
+    "pendingResources", "brokenResources", "resourceStateSummary", "slowResources", "fontStatus",
 }
 DIAGNOSTICS_BOOLEAN_FIELDS = {
     "splashExists", "transitionExists", "serviceWorkerControlled",
 }
 DIAGNOSTICS_NUMBER_FIELDS = {
     "timestamp", "domContentLoadedEventEnd", "loadEventEnd",
+    "pendingResourceCount", "brokenResourceCount",
 }
 DIAGNOSTICS_PATH_FIELDS = {"pathname", "resourcePath", "serviceWorkerScriptPath"}
+DIAGNOSTICS_STRING_LIMITS = {
+    "pendingResources": 700,
+    "brokenResources": 700,
+    "resourceStateSummary": 400,
+    "slowResources": 700,
+    "fontStatus": 100,
+}
 
 
 def diagnostics_enabled():
@@ -47,7 +56,7 @@ def sanitize_diagnostics_payload(payload):
     sanitized = {}
     for field, value in payload.items():
         if field in DIAGNOSTICS_STRING_FIELDS and isinstance(value, str):
-            value = value[:512]
+            value = value[:DIAGNOSTICS_STRING_LIMITS.get(field, 512)]
             if field in DIAGNOSTICS_PATH_FIELDS:
                 parsed = urlsplit(value)
                 if parsed.scheme or parsed.netloc:
