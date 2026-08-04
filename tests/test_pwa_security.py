@@ -74,8 +74,65 @@ class PwaSecurityTests(unittest.TestCase):
     def test_legacy_worker_registration_matches_scope_and_script(self):
         template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
 
-        self.assertIn("new URL(registration.scope).pathname === '/static/'", template)
-        self.assertIn("new URL(worker.scriptURL).pathname === '/static/service-worker.js'", template)
+        self.assertIn("serviceWorkerPath(worker.scriptURL) === '/static/service-worker.js'", template)
+        self.assertIn("scopePath === '/static/'", template)
+
+    def test_service_worker_recovery_runs_before_window_load(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+
+        self.assertIn("document.readyState !== 'loading'", recovery)
+        self.assertIn("document.addEventListener('DOMContentLoaded'", recovery)
+        self.assertNotIn("window.addEventListener('load'", recovery)
+
+    def test_recovery_deletes_all_legacy_and_current_totish_caches(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+
+        self.assertIn("name === 'totish-cache-v5'", recovery)
+        self.assertIn("name.indexOf('totish-static-') === 0", recovery)
+        self.assertIn("name.indexOf('totish-ios-rca-') === 0", recovery)
+        self.assertNotIn("name !== 'totish-static-v6'", recovery)
+
+    def test_recovery_marker_follows_successful_recovery_only(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+
+        self.assertLess(recovery.index("await recoverServiceWorker();"), recovery.index("if (!writeRecoveryMarker())"))
+        self.assertIn("localStorage.setItem(SW_RECOVERY_MARKER, SW_RECOVERY_COMPLETE)", recovery)
+        self.assertIn("localStorage.setItem(probeKey, '1')", recovery)
+        self.assertIn("if (!writeRecoveryMarker())", recovery)
+        catch_block = recovery.split("} catch (error) {\n                    console.warn('Service Worker recovery failed'", 1)[1]
+        self.assertNotIn("writeRecoveryMarker", catch_block)
+
+    def test_unavailable_marker_storage_uses_safe_normal_registration_only(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+        unavailable_mode = recovery.split("if (!marker.available) {", 1)[1].split("}\n                    if (marker.complete)", 1)[0]
+
+        self.assertIn("await registerProductionWorker();", unavailable_mode)
+        self.assertNotIn("recoverServiceWorker", unavailable_mode)
+
+    def test_normal_mode_only_registers_the_production_worker(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+        normal_mode = recovery.split("if (marker.complete) {", 1)[1].split("}\n\n                    await recoverServiceWorker", 1)[0]
+
+        self.assertIn("await registerProductionWorker();", normal_mode)
+        self.assertNotIn("unregister", normal_mode)
+        self.assertNotIn("caches.delete", normal_mode)
+
+    def test_recovery_has_bounded_operations_and_no_reload(self):
+        template = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        recovery = template.split("const SW_RECOVERY_MARKER", 1)[1].split("</script>", 1)[0]
+
+        for operation in ("getRegistrations", "unregister", "caches.keys", "caches.delete", "register"):
+            self.assertIn("'" + operation + "'", recovery)
+        self.assertIn("const SW_OPERATION_TIMEOUT_MS = 8000", recovery)
+        self.assertIn("scope: '/'", recovery)
+        self.assertIn("updateViaCache: 'none'", recovery)
+        self.assertIn("console.warn('Service Worker recovery failed'", recovery)
+        self.assertNotIn("location.reload", recovery)
 
     def test_manifest_uses_root_standalone_scope(self):
         manifest = json.loads((ROOT / "static" / "manifest.json").read_text(encoding="utf-8"))

@@ -1748,28 +1748,137 @@ body {
         })();
 
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
+            const SW_RECOVERY_MARKER = 'totish_sw_recovery_v7';
+            const SW_RECOVERY_COMPLETE = 'complete';
+            const SW_OPERATION_TIMEOUT_MS = 8000;
+
+            function withServiceWorkerTimeout(operation, name) {
+                return new Promise(function (resolve, reject) {
+                    const timeout = window.setTimeout(function () {
+                        reject(new Error('Service Worker ' + name + ' timed out'));
+                    }, SW_OPERATION_TIMEOUT_MS);
+
+                    Promise.resolve()
+                        .then(operation)
+                        .then(function (result) {
+                            window.clearTimeout(timeout);
+                            resolve(result);
+                        }, function (error) {
+                            window.clearTimeout(timeout);
+                            reject(error);
+                        });
+                });
+            }
+
+            function serviceWorkerPath(value) {
                 try {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(registrations.map(async registration => {
-                        const workers = [registration.active, registration.waiting, registration.installing]
-                            .filter(Boolean);
-                        const hasLegacyScript = workers.some(worker =>
-                            new URL(worker.scriptURL).pathname === '/static/service-worker.js'
-                        );
-                        const hasLegacyScope = new URL(registration.scope).pathname === '/static/';
-                        if (hasLegacyScope || hasLegacyScript) {
-                            await registration.unregister();
-                        }
-                    }));
-                    await navigator.serviceWorker.register('/service-worker.js', {
+                    return new URL(value, window.location.origin).pathname;
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            function registerProductionWorker() {
+                return withServiceWorkerTimeout(function () {
+                    return navigator.serviceWorker.register('/service-worker.js', {
                         scope: '/',
                         updateViaCache: 'none'
                     });
-                } catch (err) {
-                    console.log(err);
+                }, 'register');
+            }
+
+            function readRecoveryMarker() {
+                try {
+                    const complete = localStorage.getItem(SW_RECOVERY_MARKER) === SW_RECOVERY_COMPLETE;
+                    if (complete) return { available: true, complete: true };
+
+                    const probeKey = SW_RECOVERY_MARKER + '_storage_probe';
+                    localStorage.setItem(probeKey, '1');
+                    localStorage.removeItem(probeKey);
+                    return { available: true, complete: false };
+                } catch (error) {
+                    console.warn('Service Worker recovery marker is unavailable', error);
+                    return { available: false, complete: false };
                 }
-            });
+            }
+
+            function writeRecoveryMarker() {
+                try {
+                    localStorage.setItem(SW_RECOVERY_MARKER, SW_RECOVERY_COMPLETE);
+                    return true;
+                } catch (error) {
+                    console.warn('Service Worker recovery marker could not be saved', error);
+                    return false;
+                }
+            }
+
+            async function recoverServiceWorker() {
+                const registrations = await withServiceWorkerTimeout(function () {
+                    return navigator.serviceWorker.getRegistrations();
+                }, 'getRegistrations');
+                const legacyRegistrations = registrations.filter(function (registration) {
+                    const workers = [registration.active, registration.waiting, registration.installing].filter(Boolean);
+                    const hasLegacyScript = workers.some(function (worker) {
+                        return serviceWorkerPath(worker.scriptURL) === '/static/service-worker.js';
+                    });
+                    const scopePath = serviceWorkerPath(registration.scope);
+                    return hasLegacyScript || scopePath === '/static/' || scopePath === '/';
+                });
+
+                await Promise.all(legacyRegistrations.map(function (registration) {
+                    return withServiceWorkerTimeout(function () {
+                        return registration.unregister().then(function (unregistered) {
+                            if (!unregistered) throw new Error('Service Worker unregister was not confirmed');
+                        });
+                    }, 'unregister');
+                }));
+
+                const cacheNames = await withServiceWorkerTimeout(function () {
+                    return caches.keys();
+                }, 'caches.keys');
+                const staleCaches = cacheNames.filter(function (name) {
+                    return name === 'totish-cache-v5'
+                        || name.indexOf('totish-static-') === 0
+                        || name.indexOf('totish-ios-rca-') === 0;
+                });
+                await Promise.all(staleCaches.map(function (name) {
+                    return withServiceWorkerTimeout(function () {
+                        return caches.delete(name);
+                    }, 'caches.delete');
+                }));
+
+                await registerProductionWorker();
+            }
+
+            async function startServiceWorker() {
+                const marker = readRecoveryMarker();
+                try {
+                    if (!marker.available) {
+                        // Never repeat destructive cleanup when persistent state cannot be recorded.
+                        await registerProductionWorker();
+                        return;
+                    }
+                    if (marker.complete) {
+                        await registerProductionWorker();
+                        return;
+                    }
+
+                    await recoverServiceWorker();
+                    if (!writeRecoveryMarker()) {
+                        throw new Error('Service Worker recovery marker was not saved');
+                    }
+                } catch (error) {
+                    console.warn('Service Worker recovery failed', error);
+                }
+            }
+
+            if (document.readyState !== 'loading') {
+                void startServiceWorker();
+            } else {
+                document.addEventListener('DOMContentLoaded', function () {
+                    void startServiceWorker();
+                }, { once: true });
+            }
         }
     </script>
 
