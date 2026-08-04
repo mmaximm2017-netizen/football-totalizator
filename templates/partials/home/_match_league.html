@@ -3,6 +3,11 @@
                     src="{{ url_for('static', filename=match.tournament_logo_path) }}"
                     alt="{{ match.tournament_logo_alt }}"
                     class="tournament-logo"
+                    width="18"
+                    height="18"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low"
                     {% if match.tournament_logo_fallback_path %}onerror="this.onerror=null;this.src='{{ url_for('static', filename=match.tournament_logo_fallback_path) }}';"{% endif %}
                 >
             {% endif %}

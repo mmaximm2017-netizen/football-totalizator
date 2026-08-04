@@ -1503,7 +1503,7 @@ body {
             <div class="splash-title">ТОТИШ БРАТИШЕК</div>
 
             <div class="splash-logo">
-                <img src="/static/clubs/WorldCup.png" alt="World Cup logo">
+                <img src="/static/icon-192-new.png" alt="App icon" width="120" height="120" loading="lazy" decoding="async" fetchpriority="low">
             </div>
 
             <div class="splash-spinner" aria-hidden="true"></div>
@@ -1516,7 +1516,7 @@ body {
             <div class="header-inner">
                 <div class="app-title-stack">
                     <div class="app-title">
-                        <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon">
+                        <img src="/static/icon-192-new.png" alt="App icon" class="app-title-icon" width="30" height="30" loading="eager" decoding="async" fetchpriority="high">
                         ТОТИШ БРАТИШЕК
                     </div>
                     {% if g.is_admin %}
@@ -1559,7 +1559,7 @@ body {
             href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/' %}active{% endif %}"
         >
-            <img src="/static/icons/matches.svg" class="nav-icon">
+            <img src="/static/icons/matches.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Матчи
         </a>
 
@@ -1567,7 +1567,7 @@ body {
             href="/table{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/table' %}active{% endif %}"
         >
-            <img src="/static/icons/table.svg" class="nav-icon">
+            <img src="/static/icons/table.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Таблица
         </a>
 
@@ -1576,7 +1576,7 @@ body {
             href="/admin"
             class="{% if request.path.startswith('/admin') %}active{% endif %}"
         >
-            <img src="/static/icons/profile.svg" class="nav-icon">
+            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Админ
         </a>
         {% else %}
@@ -1584,7 +1584,7 @@ body {
             href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/profile' and (is_own_profile|default(false)) %}active{% endif %}"
         >
-            <img src="/static/icons/profile.svg" class="nav-icon">
+            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Профиль
         </a>
         {% endif %}
@@ -1592,7 +1592,7 @@ body {
         <form method="post" action="{{ url_for('auth.logout') }}" class="nav-logout-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="nav-logout-btn">
-                <img src="/static/icons/logout.svg" class="nav-icon">
+                <img src="/static/icons/logout.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
                 Выход
             </button>
         </form>

@@ -126,7 +126,7 @@ def get_flag(name):
     translated = team_data.TEAM_NAMES.get(name, name)
     code = team_data.TEAM_FLAGS.get(translated)
     if code:
-        return f'<img src="/static/flags/{code}.svg" class="flag-icon" width="36" height="36" style="border-radius: 50% !important; object-fit: cover !important; background-color: rgba(0,0,0,0.05);" alt="{translated}">'
+        return f'<img src="/static/flags/{code}.svg" class="flag-icon" width="36" height="36" loading="lazy" decoding="async" fetchpriority="low" style="border-radius: 50% !important; object-fit: cover !important; background-color: rgba(0,0,0,0.05);" alt="{translated}">'
     return ""
 
 
@@ -134,7 +134,7 @@ def get_club_logo(name):
     """Возвращает эмблему клуба из /static/clubs/."""
     logo_url = team_data.CLUB_LOGOS.get(name)
     if logo_url:
-        return f'<img src="{logo_url}" width="24" height="24" style="vertical-align: middle; border-radius: 4px;" alt="{name}">'
+        return f'<img src="{logo_url}" width="24" height="24" loading="lazy" decoding="async" fetchpriority="low" style="vertical-align: middle; border-radius: 4px;" alt="{name}">'
     return ""
 
 
