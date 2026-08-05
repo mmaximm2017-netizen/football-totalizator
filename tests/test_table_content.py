@@ -83,8 +83,12 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("background: #E80024;", leader_rule)
         self.assertIn("border-color: #E80024;", leader_rule)
         self.assertIn("color: #ffffff !important;", leader_rule)
+        non_champion_points = self.template.split("body.tournament-rcup .standings-table tbody tr:not(.top-1) .points-number {", 1)[1].split("}", 1)[0]
+        self.assertIn("background: #310027;", non_champion_points)
+        self.assertIn("border-color: rgba(232, 0, 36, 0.75);", non_champion_points)
+        self.assertIn("color: #ffffff !important;", non_champion_points)
         self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-2 .points-number", self.template)
-        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-3 .points-number {\n        background", self.template)
+        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-3 .points-number", self.template)
         self.assertNotIn("#C5CAD3", self.template)
         self.assertNotIn("#B86A3C", self.template)
         self.assertIn(".rank-movement.up", self.template)
@@ -96,7 +100,8 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("{% elif row.place == 1 %}<span class=\"place-emoji\">🥇</span>", self.template)
         self.assertIn("{% elif row.place == 2 %}<span class=\"place-emoji\">🥈</span>", self.template)
         self.assertIn("{% elif row.place == 3 %}<span class=\"place-emoji\">🥉</span>", self.template)
-        self.assertIn("body.tournament-rcup .standings-table tbody tr.top-2,", self.template)
+        self.assertIn("body.tournament-rcup .standings-table tbody tr:not(.top-1) {", self.template)
+        self.assertIn("body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {", self.template)
         self.assertIn("box-shadow: none;", self.template)
 
     def test_russian_cup_renders_no_medals_after_first_place(self):
