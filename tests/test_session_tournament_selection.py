@@ -105,7 +105,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         cursor = Cursor([None, None, None])
         self.assertIsNone(get_session_start_tournament_id(cursor))
 
-    def test_login_sets_session_tournament_and_redirects_with_explicit_tid(self):
+    def test_login_uses_unfinished_match_selector_for_session_and_redirect(self):
         from app.routes.auth import auth_bp
 
         app = Flask(__name__)
@@ -118,19 +118,47 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         with (
             patch("app.routes.auth.get_db", return_value=conn),
             patch("app.routes.auth.close_db"),
-            patch("app.routes.auth.get_session_start_tournament_id", return_value=5),
+            patch("app.routes.auth.select_default_tournament_by_unfinished_match", return_value=6),
+            patch("app.routes.auth.get_session_start_tournament_id", return_value=5) as fallback,
         ):
             with app.test_client() as client:
                 with client.session_transaction() as current_session:
                     current_session["stale_value"] = "remove-me"
                 response = client.post("/login", data={"username": "user", "password": "password"})
                 self.assertEqual(response.status_code, 303)
-                self.assertIn("/?tid=5", response.headers["Location"])
+                self.assertIn("/?tid=6", response.headers["Location"])
                 self.assertNotIn("http://", response.headers["Location"])
                 with client.session_transaction() as current_session:
                     self.assertEqual(current_session["user_id"], 11)
-                    self.assertEqual(current_session["selected_tournament_id"], 5)
+                    self.assertEqual(current_session["selected_tournament_id"], 6)
                     self.assertNotIn("stale_value", current_session)
+        fallback.assert_not_called()
+
+    def test_login_uses_existing_fallback_when_no_unfinished_match_exists(self):
+        from app.routes.auth import auth_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(auth_bp)
+        app.add_url_rule("/", "main.index", lambda: "index")
+        cursor = Cursor([(11, "password", 0)])
+        conn = Connection(cursor)
+
+        with (
+            patch("app.routes.auth.get_db", return_value=conn),
+            patch("app.routes.auth.close_db"),
+            patch("app.routes.auth.select_default_tournament_by_unfinished_match", return_value=None),
+            patch("app.routes.auth.get_session_start_tournament_id", return_value=5) as fallback,
+        ):
+            with app.test_client() as client:
+                response = client.post("/login", data={"username": "user", "password": "password"})
+                with client.session_transaction() as current_session:
+                    selected_tournament_id = current_session["selected_tournament_id"]
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("/?tid=5", response.headers["Location"])
+        self.assertEqual(selected_tournament_id, 5)
+        fallback.assert_called_once_with(cursor)
 
     def test_bare_main_request_recalculates_default_over_stale_session(self):
         from app.routes.main import main_bp

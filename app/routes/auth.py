@@ -14,7 +14,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.config import INVITE_CODE
 from app.db import close_db, get_db
-from app.services.tournament_context_service import get_session_start_tournament_id
+from app.services.tournament_context_service import (
+    get_session_start_tournament_id,
+    select_default_tournament_by_unfinished_match,
+)
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -77,7 +80,9 @@ def login():
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
-            selected_tournament_id = get_session_start_tournament_id(cur)
+            selected_tournament_id = select_default_tournament_by_unfinished_match(cur)
+            if selected_tournament_id is None:
+                selected_tournament_id = get_session_start_tournament_id(cur)
             session.clear()
             session['user_id'] = user_id
             if selected_tournament_id:
