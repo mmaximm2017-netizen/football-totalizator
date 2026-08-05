@@ -56,6 +56,22 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("width: 54px;", self.template)
         self.assertIn("width: 56px;", self.template)
 
+    def test_russian_cup_uses_the_shared_rpl_ranking_geometry(self):
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .player-name", self.template)
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .table-shell", self.template)
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .points-number", self.template)
+        self.assertIn("body.tournament-rcup .leader-badge", self.template)
+        self.assertIn("background: #E80024;", self.template)
+
+        for conflicting_rule in (
+            "body.tournament-rcup .standings-table .player-row {",
+            "grid-template-columns: 52px minmax(0, 1fr) 60px;",
+            "body.tournament-rcup .standings-table .player-row td {",
+            "body.tournament-rcup .points-cell {",
+            "body.tournament-rcup .leader-badge.dominating {",
+        ):
+            self.assertNotIn(conflicting_rule, self.template)
+
 
 if __name__ == "__main__":
     unittest.main()
