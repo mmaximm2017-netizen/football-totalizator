@@ -1,4 +1,5 @@
 from app.db import close_db, get_db
+from app.utils import utc_now
 from app.services.tournament_service import (
     get_active_tournament,
     get_active_tournament_id,
@@ -61,6 +62,49 @@ def get_session_start_tournament_id(cur):
     )
     row = cur.fetchone()
     return row[0] if row else None
+
+
+def select_default_tournament_by_unfinished_match(cur, now=None):
+    """Choose the active tournament containing the current or next visible match."""
+    now = now or utc_now()
+    candidate_statuses = ['SCHEDULED', 'TIMED', 'IN_PLAY', 'LIVE', 'PAUSED', 'HALFTIME']
+
+    cur.execute(
+        """
+        SELECT m.tournament_id
+        FROM matches m
+        JOIN tournaments t ON t.id = m.tournament_id
+        WHERE t.is_active = 1
+          AND m.tournament_id IS NOT NULL
+          AND m.kickoff_time IS NOT NULL
+          AND COALESCE(UPPER(m.status), 'SCHEDULED') = ANY(%s)
+          AND m.kickoff_time <= %s
+        ORDER BY m.kickoff_time DESC, m.id DESC
+        LIMIT 1
+        """,
+        (candidate_statuses, now),
+    )
+    row = cur.fetchone()
+    if row and row[0]:
+        return row[0]
+
+    cur.execute(
+        """
+        SELECT m.tournament_id
+        FROM matches m
+        JOIN tournaments t ON t.id = m.tournament_id
+        WHERE t.is_active = 1
+          AND m.tournament_id IS NOT NULL
+          AND m.kickoff_time IS NOT NULL
+          AND COALESCE(UPPER(m.status), 'SCHEDULED') = ANY(%s)
+          AND m.kickoff_time > %s
+        ORDER BY m.kickoff_time ASC, m.id ASC
+        LIMIT 1
+        """,
+        (candidate_statuses, now),
+    )
+    row = cur.fetchone()
+    return row[0] if row and row[0] else None
 
 
 def get_nearest_upcoming_tournament_id():

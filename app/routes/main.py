@@ -30,6 +30,7 @@ from app.config import START_DATE
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_session_start_tournament_id,
+    select_default_tournament_by_unfinished_match,
     get_tournament_state_flags,
 )
 from app.services.tournament_service import (
@@ -210,7 +211,9 @@ def index():
         all_tournaments = get_all_tournaments()
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if request.method == 'GET' and requested_tid is None:
-            default_tid = get_session_start_tournament_id(cur)
+            default_tid = select_default_tournament_by_unfinished_match(cur)
+            if default_tid is None:
+                default_tid = get_session_start_tournament_id(cur)
             if default_tid:
                 session['selected_tournament_id'] = default_tid
                 session['tournament_selection_initialized'] = True

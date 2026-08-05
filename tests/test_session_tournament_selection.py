@@ -1,9 +1,13 @@
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from flask import Flask
 
-from app.services.tournament_context_service import get_session_start_tournament_id
+from app.services.tournament_context_service import (
+    get_session_start_tournament_id,
+    select_default_tournament_by_unfinished_match,
+)
 
 
 class Cursor:
@@ -34,6 +38,38 @@ class Connection:
 
 
 class SessionTournamentSelectionTests(unittest.TestCase):
+    def test_current_unfinished_match_beats_future_match(self):
+        now = datetime(2026, 8, 5, 15, tzinfo=timezone.utc)
+        cursor = Cursor([(6,)])
+
+        self.assertEqual(select_default_tournament_by_unfinished_match(cursor, now), 6)
+        query, params = cursor.queries[0]
+        self.assertIn("m.kickoff_time <= %s", query)
+        self.assertIn("m.kickoff_time DESC", query)
+        self.assertIn("'LIVE'", str(params[0]))
+        self.assertEqual(params[1], now)
+
+    def test_future_unfinished_match_is_used_when_none_have_started(self):
+        now = datetime(2026, 8, 5, 15, tzinfo=timezone.utc)
+        cursor = Cursor([None, (5,)])
+
+        self.assertEqual(select_default_tournament_by_unfinished_match(cursor, now), 5)
+        query, params = cursor.queries[1]
+        self.assertIn("m.kickoff_time > %s", query)
+        self.assertIn("m.kickoff_time ASC", query)
+        self.assertEqual(params[1], now)
+
+    def test_default_selector_only_uses_active_visible_non_terminal_matches(self):
+        cursor = Cursor([None, None])
+
+        self.assertIsNone(select_default_tournament_by_unfinished_match(cursor, datetime(2026, 8, 5, tzinfo=timezone.utc)))
+        query = cursor.queries[0][0]
+        self.assertIn("t.is_active = 1", query)
+        self.assertIn("m.kickoff_time IS NOT NULL", query)
+        self.assertIn("COALESCE(UPPER(m.status), 'SCHEDULED') = ANY(%s)", query)
+        self.assertNotIn("'FINISHED'", query)
+        self.assertNotIn("'CANCELLED'", query)
+
     def test_nearest_open_deadline_query_ignores_archived_and_closed_matches(self):
         cursor = Cursor([(7,)])
         selected = get_session_start_tournament_id(cursor)
@@ -110,7 +146,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
             patch("app.routes.main.get_db", return_value=conn),
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
-            patch("app.routes.main.get_session_start_tournament_id", return_value=6),
+            patch("app.routes.main.select_default_tournament_by_unfinished_match", return_value=6),
         ):
             with app.test_client() as client:
                 with client.session_transaction() as current_session:
@@ -139,7 +175,7 @@ class SessionTournamentSelectionTests(unittest.TestCase):
             patch("app.routes.main.get_db", return_value=conn),
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 0}, {"id": 6, "is_active": 1}]),
-            patch("app.routes.main.get_session_start_tournament_id", return_value=6),
+            patch("app.routes.main.select_default_tournament_by_unfinished_match", return_value=6),
         ):
             with app.test_client() as client:
                 with client.session_transaction() as current_session:
@@ -152,6 +188,30 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/?tid=6", response.headers["Location"])
         self.assertEqual(selected, 6)
+
+    def test_bare_main_uses_existing_fallback_when_no_unfinished_match_exists(self):
+        from app.routes.main import main_bp
+
+        app = Flask(__name__)
+        app.secret_key = "test"
+        app.register_blueprint(main_bp)
+        app.add_url_rule("/login", "auth.login", lambda: "login")
+        conn = Connection(Cursor([]))
+
+        with (
+            patch("app.routes.main.get_db", return_value=conn),
+            patch("app.routes.main.close_db"),
+            patch("app.routes.main.get_all_tournaments", return_value=[{"id": 5, "is_active": 1}]),
+            patch("app.routes.main.select_default_tournament_by_unfinished_match", return_value=None),
+            patch("app.routes.main.get_session_start_tournament_id", return_value=5),
+        ):
+            with app.test_client() as client:
+                with client.session_transaction() as current_session:
+                    current_session["user_id"] = 11
+                response = client.get("/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/?tid=5", response.headers["Location"])
 
     def test_ajax_prediction_post_without_tid_returns_json_not_redirect(self):
         from app.routes.main import main_bp
