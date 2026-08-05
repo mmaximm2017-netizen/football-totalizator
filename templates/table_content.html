@@ -1726,12 +1726,24 @@
         color: #ffffff;
     }
 
-    body.tournament-rcup .points-number,
     body.tournament-rcup .top-scorer-goals,
     body.tournament-rcup .leader-badge {
         background: #E80024;
         color: #ffffff;
         box-shadow: none;
+    }
+
+    /* The base points color is green with !important; RCup intentionally overrides it. */
+    body.tournament-rcup .points-number {
+        background: #310027;
+        border-color: rgba(232, 0, 36, 0.75);
+        color: #ffffff !important;
+    }
+
+    body.tournament-rcup .standings-table tbody tr.top-1 .points-number {
+        background: #E80024;
+        border-color: #E80024;
+        color: #ffffff !important;
     }
 
     body.tournament-rcup .top-scorers-title,
