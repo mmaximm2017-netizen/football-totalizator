@@ -104,6 +104,29 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {", self.template)
         self.assertIn("box-shadow: none;", self.template)
 
+    def test_russian_cup_non_champion_places_use_one_complete_geometry_rule(self):
+        place_rule = self.template.split("body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {", 1)[1].split("}", 1)[0]
+        mobile_rule = self.template.split("@media (max-width: 430px) {\n        body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {", 1)[1].split("}\n    }", 1)[0]
+
+        for declaration in (
+            "display: inline-flex;",
+            "align-items: center;",
+            "justify-content: center;",
+            "width: auto;",
+            "min-width: 34px;",
+            "height: 34px;",
+            "padding: 0;",
+            "border-radius: 13px;",
+            "background: rgba(255,255,255,0.52);",
+            "font-size: 16px !important;",
+            "font-weight: 1000 !important;",
+        ):
+            self.assertIn(declaration, place_rule)
+        for declaration in ("min-width: 31px;", "height: 31px;", "border-radius: 12px;", "font-size: 15px !important;"):
+            self.assertIn(declaration, mobile_rule)
+        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-2 .place-box", self.template)
+        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-3 .place-box", self.template)
+
     def test_russian_cup_renders_no_medals_after_first_place(self):
         app = Flask(__name__, template_folder=str(ROOT / "templates"))
         rows = [

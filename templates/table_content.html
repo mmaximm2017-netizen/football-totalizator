@@ -1750,13 +1750,36 @@
     }
 
     body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 34px;
+        height: 34px;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 13px;
         background: rgba(255,255,255,0.52);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+        line-height: 1;
     }
 
     body.tournament-rcup .standings-table tbody tr:not(.top-1) .points-number {
         background: #310027;
         border-color: rgba(232, 0, 36, 0.75);
         color: #ffffff !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {
+            min-width: 31px;
+            height: 31px;
+            border-radius: 12px;
+            font-size: 15px !important;
+        }
     }
 
     body.tournament-rcup .top-scorers-title,
