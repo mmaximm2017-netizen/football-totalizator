@@ -192,6 +192,15 @@ body.tournament-rcup .match-card--russian-cup .score-input-v2[disabled] {
     color: rgba(255, 255, 255, 0.6);
 }
 
+body.tournament-rcup .match-card--russian-cup .closed-prediction-label {
+    color: var(--rcup-lime);
+    opacity: 0.78;
+}
+
+body.tournament-rcup .match-card--russian-cup .closed-prediction-score {
+    color: var(--rcup-lime);
+}
+
 body.tournament-rcup .match-card--russian-cup .score-divider,
 body.tournament-rcup .match-card--russian-cup .vs-badge {
     color: var(--rcup-white);
