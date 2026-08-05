@@ -75,6 +75,8 @@ class TableContentUiTests(unittest.TestCase):
     def test_russian_cup_points_are_white_on_burgundy_or_red_pills(self):
         points_rule = self.template.split("body.tournament-rcup .points-number {", 1)[1].split("}", 1)[0]
         leader_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-1 .points-number {", 1)[1].split("}", 1)[0]
+        second_place_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-2 .points-number {", 1)[1].split("}", 1)[0]
+        third_place_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-3 .points-number {", 1)[1].split("}", 1)[0]
 
         self.assertIn("background: #310027;", points_rule)
         self.assertIn("border-color: rgba(232, 0, 36, 0.75);", points_rule)
@@ -82,6 +84,12 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("background: #E80024;", leader_rule)
         self.assertIn("border-color: #E80024;", leader_rule)
         self.assertIn("color: #ffffff !important;", leader_rule)
+        self.assertIn("background: #C5CAD3;", second_place_rule)
+        self.assertIn("border-color: #9EA5B1;", second_place_rule)
+        self.assertIn("color: #310027 !important;", second_place_rule)
+        self.assertIn("background: #B86A3C;", third_place_rule)
+        self.assertIn("border-color: #8F4828;", third_place_rule)
+        self.assertIn("color: #ffffff !important;", third_place_rule)
         self.assertIn(".rank-movement.up", self.template)
 
 
