@@ -1714,9 +1714,7 @@
         border-bottom-color: rgba(232, 0, 36, 0.16);
     }
 
-    body.tournament-rcup .standings-table tbody tr.top-1,
-    body.tournament-rcup .standings-table tbody tr.top-2,
-    body.tournament-rcup .standings-table tbody tr.top-3 {
+    body.tournament-rcup .standings-table tbody tr.top-1 {
         background: linear-gradient(135deg, rgba(232, 0, 36, 0.22), rgba(36, 43, 53, 0.72));
     }
 
@@ -1746,16 +1744,27 @@
         color: #ffffff !important;
     }
 
-    body.tournament-rcup .standings-table tbody tr.top-2 .points-number {
-        background: #C5CAD3;
-        border-color: #9EA5B1;
-        color: #310027 !important;
+    body.tournament-rcup .standings-table tbody tr.top-2,
+    body.tournament-rcup .standings-table tbody tr.top-3 {
+        background: rgba(0, 0, 5, 0.42);
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .standings-table tbody tr.top-2 .place-box,
+    body.tournament-rcup .standings-table tbody tr.top-3 .place-box {
+        background: rgba(255,255,255,0.52);
+        font-size: 16px !important;
     }
 
     body.tournament-rcup .standings-table tbody tr.top-3 .points-number {
-        background: #B86A3C;
-        border-color: #8F4828;
-        color: #ffffff !important;
+        font-size: 18px !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rcup .standings-table tbody tr.top-2 .place-box,
+        body.tournament-rcup .standings-table tbody tr.top-3 .place-box {
+            font-size: 15px !important;
+        }
     }
 
     body.tournament-rcup .top-scorers-title,
@@ -2119,7 +2128,10 @@
             <tr class="player-row {% if row.place == 1 %}top-1{% elif row.place == 2 %}top-2{% elif row.place == 3 %}top-3{% endif %} {% if selected_name == 'ЧМ-2026' and loop.last %}wc-eliminated{% endif %}">
                 <td class="place-cell">
                     <div class="place-box">
-                        {% if row.place == 1 %}<span class="place-emoji">🥇</span>
+                        {% if selected_name == 'Кубок России' %}
+                            {% if row.place == 1 %}<span class="place-emoji">🏆</span>
+                            {% else %}{{ row.place }}{% endif %}
+                        {% elif row.place == 1 %}<span class="place-emoji">🥇</span>
                         {% elif row.place == 2 %}<span class="place-emoji">🥈</span>
                         {% elif row.place == 3 %}<span class="place-emoji">🥉</span>
                         {% else %}{{ row.place }}{% endif %}

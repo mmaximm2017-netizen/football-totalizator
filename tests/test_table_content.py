@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from flask import Flask, render_template
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -72,11 +73,9 @@ class TableContentUiTests(unittest.TestCase):
         ):
             self.assertNotIn(conflicting_rule, self.template)
 
-    def test_russian_cup_points_are_white_on_burgundy_or_red_pills(self):
+    def test_russian_cup_points_and_podium_only_highlight_the_champion(self):
         points_rule = self.template.split("body.tournament-rcup .points-number {", 1)[1].split("}", 1)[0]
         leader_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-1 .points-number {", 1)[1].split("}", 1)[0]
-        second_place_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-2 .points-number {", 1)[1].split("}", 1)[0]
-        third_place_rule = self.template.split("body.tournament-rcup .standings-table tbody tr.top-3 .points-number {", 1)[1].split("}", 1)[0]
 
         self.assertIn("background: #310027;", points_rule)
         self.assertIn("border-color: rgba(232, 0, 36, 0.75);", points_rule)
@@ -84,13 +83,40 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("background: #E80024;", leader_rule)
         self.assertIn("border-color: #E80024;", leader_rule)
         self.assertIn("color: #ffffff !important;", leader_rule)
-        self.assertIn("background: #C5CAD3;", second_place_rule)
-        self.assertIn("border-color: #9EA5B1;", second_place_rule)
-        self.assertIn("color: #310027 !important;", second_place_rule)
-        self.assertIn("background: #B86A3C;", third_place_rule)
-        self.assertIn("border-color: #8F4828;", third_place_rule)
-        self.assertIn("color: #ffffff !important;", third_place_rule)
+        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-2 .points-number", self.template)
+        self.assertNotIn("body.tournament-rcup .standings-table tbody tr.top-3 .points-number {\n        background", self.template)
+        self.assertNotIn("#C5CAD3", self.template)
+        self.assertNotIn("#B86A3C", self.template)
         self.assertIn(".rank-movement.up", self.template)
+
+    def test_russian_cup_uses_a_trophy_only_for_first_place(self):
+        self.assertIn("{% if selected_name == 'Кубок России' %}", self.template)
+        self.assertIn("{% if row.place == 1 %}<span class=\"place-emoji\">🏆</span>", self.template)
+        self.assertIn("{% else %}{{ row.place }}{% endif %}", self.template)
+        self.assertIn("{% elif row.place == 1 %}<span class=\"place-emoji\">🥇</span>", self.template)
+        self.assertIn("{% elif row.place == 2 %}<span class=\"place-emoji\">🥈</span>", self.template)
+        self.assertIn("{% elif row.place == 3 %}<span class=\"place-emoji\">🥉</span>", self.template)
+        self.assertIn("body.tournament-rcup .standings-table tbody tr.top-2,", self.template)
+        self.assertIn("box-shadow: none;", self.template)
+
+    def test_russian_cup_renders_no_medals_after_first_place(self):
+        app = Flask(__name__, template_folder=str(ROOT / "templates"))
+        rows = [
+            {"place": place, "shared": False, "username": "user", "movement": None,
+             "leader_status": None, "outsider_status": None, "points": 0}
+            for place in (1, 2, 3)
+        ]
+        with app.test_request_context("/"):
+            cup_html = render_template("table_content.html", table=rows, selected_name="Кубок России", selected_tid=None, top_scorers=[])
+            rpl_html = render_template("table_content.html", table=rows, selected_name="Чемпионат России 🇷🇺", selected_tid=None, top_scorers=[])
+
+        self.assertIn("🏆", cup_html)
+        self.assertNotIn("🥇", cup_html)
+        self.assertNotIn("🥈", cup_html)
+        self.assertNotIn("🥉", cup_html)
+        self.assertIn("🥇", rpl_html)
+        self.assertIn("🥈", rpl_html)
+        self.assertIn("🥉", rpl_html)
 
 
 if __name__ == "__main__":
