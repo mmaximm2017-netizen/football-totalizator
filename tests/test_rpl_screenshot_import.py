@@ -10,7 +10,10 @@ from flask import Flask
 from PIL import Image
 from werkzeug.datastructures import FileStorage
 
-from app.services.local_tesseract_service import OcrError, OcrLine, OcrResult, OcrTimeoutError, extract_text_from_image
+from app.services.local_tesseract_service import (
+    OcrError, OcrLine, OcrResult, OcrTimeoutError, OcrWord,
+    extract_text_from_image,
+)
 from app.services.rpl_screenshot_import_service import (
     _candidate_team,
     ImageValidationError,
@@ -41,6 +44,44 @@ def image_upload(fmt="JPEG", mime=None, size=(32, 32)):
     return FileStorage(
         stream=stream, filename=f"screen.{fmt.lower()}",
         content_type=mime or {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}[fmt],
+    )
+
+
+def spatial_result(rows, *, width=1200, height=None):
+    """Build word-level TSV-like geometry: date | two team rows | time."""
+    words = []
+    word_number = 0
+
+    def add(text, left, top, line_num):
+        nonlocal word_number
+        word_number += 1
+        words.append(OcrWord(
+            text, left, top, max(18, len(text) * 14), 28, 90.0,
+            1, 1, 1, line_num, word_number,
+        ))
+
+    for index, row in enumerate(rows):
+        base = 40 + index * 170
+        line = index * 3 + 1
+        if row.get("date", "10.10.") is not None:
+            add(row.get("date", "10.10."), 40, base + 28, line)
+        for offset, token in enumerate(row.get("home", "").split()):
+            add(token, 260 + offset * 155, base, line)
+        for offset, token in enumerate(row.get("away", "").split()):
+            add(token, 260 + offset * 155, base + 65, line + 1)
+        for extra in row.get("extras", ()):
+            text, left, top_offset, line_offset = extra
+            add(text, left, base + top_offset, line + line_offset)
+        if row.get("time", "18:00") is not None:
+            add(row.get("time", "18:00"), 1010, base + 28, line)
+    words.sort(key=lambda word: (word.top, word.left))
+    lines = tuple(
+        OcrLine(word.text, word.top, word.left, word.width, word.height, word.confidence)
+        for word in words
+    )
+    return OcrResult(
+        "\n".join(word.text for word in words), lines, tuple(words),
+        width, height or max(200, len(rows) * 170 + 40),
     )
 
 
@@ -208,6 +249,8 @@ class RplParserTests(unittest.TestCase):
         self.assertEqual(match_rpl_team("Спартак Москва")[0], "Спартак")
         self.assertEqual(match_rpl_team("ФК Динамо Москва")[0], "Динамо")
         self.assertEqual(match_rpl_team("Динамо Махачкала")[0], "Динамо Мх")
+        self.assertEqual(match_rpl_team("Родина Москва")[0], "Родина")
+        self.assertEqual(match_rpl_team("Факел Воронеж")[0], "Факел")
 
     def test_ocr_edge_noise_is_narrow_and_not_fuzzy_matching(self):
         accepted = {
@@ -245,7 +288,8 @@ class RplParserTests(unittest.TestCase):
             "\n".join(texts),
             tuple(OcrLine(text, index * 30, 0, 300, 25, 80.0) for index, text in enumerate(texts)),
         )
-        matches = parse_rpl_ocr(result, TOURNAMENT)
+        diagnostics = {}
+        matches = parse_rpl_ocr(result, TOURNAMENT, diagnostics)
         self.assertEqual([
             (match["home_team"], match["away_team"], match["date"], match["time"], match["status"])
             for match in matches
@@ -253,6 +297,131 @@ class RplParserTests(unittest.TestCase):
             ("Зенит", "Динамо", "2026-08-16", "14:30", "ready"),
             ("Крылья Советов", "Динамо Мх", "2026-08-16", "17:00", "ready"),
             ("Балтика", "Спартак", "2026-08-16", "19:30", "ready"),
+        ])
+        self.assertEqual(diagnostics["parser_mode"], "flat")
+
+    def test_spatial_three_column_layout_builds_eight_ordered_match_regions(self):
+        rows = [
+            {"home": "Крылья Советов", "away": "Спартак Москва"},
+            {"home": "Ростов", "away": "Акрон Тольятти"},
+            {"home": "Оренбург", "away": "Динамо Махачкала"},
+            {"home": "Краснодар", "away": "Зенит"},
+            {"home": "Ахмат", "away": "Балтика"},
+            {"home": "ЦСКА", "away": "Родина"},
+            {"home": "Рубин", "away": "Динамо Москва"},
+            {"home": "Факел", "away": "Локомотив Москва"},
+        ]
+        diagnostics = {}
+        matches = parse_rpl_ocr(spatial_result(rows), TOURNAMENT, diagnostics)
+        self.assertEqual(len(matches), 8)
+        self.assertEqual([(m["home_team"], m["away_team"]) for m in matches], [
+            ("Крылья Советов", "Спартак"), ("Ростов", "Акрон"),
+            ("Оренбург", "Динамо Мх"), ("Краснодар", "Зенит"),
+            ("Ахмат", "Балтика"), ("ЦСКА", "Родина"),
+            ("Рубин", "Динамо"), ("Факел", "Локомотив"),
+        ])
+        self.assertTrue(all(m["date"] == "2026-10-10" and m["time"] == "18:00" for m in matches))
+        self.assertTrue(all(m["status"] == "ready" for m in matches))
+        self.assertEqual(matches[6]["status"], "ready")
+        self.assertEqual(diagnostics, {
+            "time_anchors": 8, "match_regions": 8, "complete_matches": 8,
+            "review_regions": 0, "parser_mode": "spatial",
+        })
+
+    def test_spatial_incomplete_and_ambiguous_regions_require_review(self):
+        cases = {
+            "one team": [{"home": "Зенит", "away": ""}],
+            "three teams": [{
+                "home": "Зенит", "away": "Динамо Москва",
+                "extras": (("Балтика", 260, 100, 2),),
+            }],
+            "two teams one line": [{
+                "home": "Спартак Динамо", "away": "",
+            }],
+            "missing date": [{"home": "Зенит", "away": "Динамо Москва", "date": None}],
+            "invalid date": [{"home": "Зенит", "away": "Динамо Москва", "date": "31.02."}],
+        }
+        for name, rows in cases.items():
+            with self.subTest(name=name):
+                matches = parse_rpl_ocr(spatial_result(rows), TOURNAMENT)
+                self.assertEqual(len(matches), 1)
+                self.assertEqual(matches[0]["status"], "needs_review")
+
+    def test_spatial_repeated_times_noise_and_region_boundaries_are_safe(self):
+        rows = [
+            {
+                "home": "je Зенит", "away": "Динамо Москва",
+                "extras": (("X", 210, 48, 2),),
+            },
+            {"home": "Крылья Советов AEH", "away": "Спартак Москва"},
+            {"home": "Ахмат", "away": "Балтика"},
+        ]
+        result = spatial_result(rows)
+        matches = parse_rpl_ocr(result, TOURNAMENT)
+        self.assertEqual([(m["home_team"], m["away_team"], m["time"]) for m in matches], [
+            ("Зенит", "Динамо", "18:00"),
+            ("Крылья Советов", "Спартак", "18:00"),
+            ("Ахмат", "Балтика", "18:00"),
+        ])
+        self.assertTrue(all(match["status"] == "ready" for match in matches))
+
+    def test_spatial_date_inheritance_requires_equal_neighbours(self):
+        rows = [
+            {"home": "Зенит", "away": "Динамо Москва"},
+            {"home": "Ахмат", "away": "Балтика", "date": None},
+            {"home": "Рубин", "away": "Спартак Москва"},
+        ]
+        matches = parse_rpl_ocr(spatial_result(rows), TOURNAMENT)
+        self.assertTrue(all(match["date"] == "2026-10-10" for match in matches))
+        self.assertTrue(all(match["status"] == "ready" for match in matches))
+
+        rows[2]["date"] = "11.10."
+        matches = parse_rpl_ocr(spatial_result(rows), TOURNAMENT)
+        self.assertEqual(matches[1]["status"], "needs_review")
+        self.assertEqual(matches[1]["date"], "")
+
+    def test_unrelated_clock_column_does_not_create_a_match_region(self):
+        result = spatial_result([
+            {"home": "Зенит", "away": "Динамо Москва"},
+            {"home": "Ахмат", "away": "Балтика"},
+        ])
+        status_clock = OcrWord("08:23", 20, 1, 70, 25, 95.0, 1, 9, 1, 1, 1)
+        result = OcrResult(
+            result.raw_text, result.lines, result.words + (status_clock,),
+            result.image_width, result.image_height,
+        )
+        diagnostics = {}
+        matches = parse_rpl_ocr(result, TOURNAMENT, diagnostics)
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(diagnostics["time_anchors"], 2)
+
+    def test_extra_aligned_time_anchor_creates_review_region_without_reusing_teams(self):
+        result = spatial_result([
+            {"home": "Зенит", "away": "Динамо Москва"},
+            {"home": "Ахмат", "away": "Балтика"},
+        ])
+        extra_time = OcrWord("18:00", 1010, 153, 70, 28, 90.0, 1, 1, 1, 99, 99)
+        result = OcrResult(
+            result.raw_text, result.lines, result.words + (extra_time,),
+            result.image_width, result.image_height,
+        )
+        matches = parse_rpl_ocr(result, TOURNAMENT)
+        self.assertEqual(len(matches), 3)
+        self.assertEqual(sum(match["status"] == "needs_review" for match in matches), 1)
+        teams = [team for match in matches for team in (match["home_team"], match["away_team"]) if team]
+        self.assertEqual(teams.count("Зенит"), 1)
+        self.assertEqual(teams.count("Балтика"), 1)
+
+    def test_team_tokens_are_not_joined_across_region_boundary(self):
+        result = spatial_result([
+            {"home": "Крылья", "away": "Зенит"},
+            {"home": "Советов", "away": "Динамо Москва"},
+        ])
+        matches = parse_rpl_ocr(result, TOURNAMENT)
+        self.assertEqual(len(matches), 2)
+        self.assertTrue(all(match["status"] == "needs_review" for match in matches))
+        self.assertNotIn("Крылья Советов", [
+            team for match in matches for team in (match["home_team"], match["away_team"])
         ])
 
     def test_safe_normalization_handles_case_spaces_yo_and_hyphen(self):
