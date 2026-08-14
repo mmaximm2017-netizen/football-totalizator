@@ -687,17 +687,33 @@ body.tournament-rcup .admin-russian-cup-page .rc-add-form,
 body.tournament-rcup .admin-russian-cup-page .rc-add-advanced { margin-top: 10px; }
 body.tournament-rcup .admin-russian-cup-page .rc-add-form { grid-column: 1 / -1; }
 body.tournament-rcup .admin-russian-cup-page .rc-import-file {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255,255,255,.3);
-    border-radius: 12px;
-    background: rgba(255,255,255,.12);
-    color: var(--rcup-white);
-    font-weight: 800;
+    width: 100%;
+    min-height: 54px;
+    box-sizing: border-box;
+    padding: 0 20px;
+    border: 1px solid rgba(255, 218, 226, .92);
+    border-radius: 16px;
+    background: linear-gradient(180deg, #fffafb 0%, #fff1f5 100%);
+    color: #a30d3d;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
     cursor: pointer;
+    box-shadow: 0 8px 18px rgba(22, 3, 18, .24), 0 0 16px rgba(232, 0, 36, .12), inset 0 1px 0 rgba(255,255,255,.95);
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-file:hover,
+body.tournament-rcup .admin-russian-cup-page .rc-import-file:focus-within {
+    border-color: #ff6b88;
+    background: #fff;
+    box-shadow: 0 10px 22px rgba(22, 3, 18, .28), 0 0 20px rgba(232, 0, 36, .18), inset 0 1px 0 rgba(255,255,255,.98);
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-file:active {
+    box-shadow: 0 5px 12px rgba(22, 3, 18, .22), inset 0 1px 0 rgba(255,255,255,.95);
 }
 body.tournament-rcup .admin-russian-cup-page .rc-import-file input {
     position: absolute;
