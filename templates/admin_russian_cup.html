@@ -40,7 +40,29 @@
                 <button class="rc-btn" type="submit">Создать матч</button>
             </form>
         </details>
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('admin_matches.admin_russian_cup_import_screenshot') }}" class="rc-add-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label>Загрузить скриншот<input type="file" name="screenshot" accept="image/jpeg,image/png,image/webp" required></label>
+            <button class="rc-btn rc-btn-secondary" type="submit">Загрузить скриншот</button>
+        </form>
     </section>
+
+    {% if russian_cup_import_draft %}
+    <section class="rc-workspace rc-import-preview"><h2>Распознано {{ russian_cup_import_draft.matches|length }} матчей</h2>
+      <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_import_confirm') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% for m in russian_cup_import_draft.matches %}<div class="rc-card">
+          <div class="rc-card-note">OCR: {{ m.raw_home_team }} — {{ m.raw_away_team }}</div>
+          <div class="rc-grid"><label>Домашняя команда<input name="home_team" value="{{ m.home_team }}" required></label><label>Гостевая команда<input name="away_team" value="{{ m.away_team }}" required></label></div>
+          <div class="rc-grid"><label>Дата<input type="date" name="match_date" value="{{ m.date }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ m.time }}" required></label></div>
+          <div class="rc-card-note">Статус: {{ m.status }}{% if m.reasons %} · {{ m.reasons|join('; ') }}{% endif %}</div>
+          <button class="rc-btn" type="submit" formaction="{{ url_for('admin_matches.admin_russian_cup_import_delete_row') }}" name="index" value="{{ loop.index0 }}" formmethod="post">Удалить</button>
+        </div>{% endfor %}
+        <button class="rc-btn rc-btn-primary" type="submit" {% if russian_cup_import_draft.matches|selectattr('status','ne','ready')|list %}disabled{% endif %}>Добавить матчи</button>
+      </form>
+      <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_import_cancel') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rc-btn" type="submit">Отменить импорт</button></form>
+    </section>
+    {% endif %}
 
     {% if not russian_cup_tournament %}<div class="rc-alert">Турнир «Кубок России» не найден.</div>{% endif %}
 

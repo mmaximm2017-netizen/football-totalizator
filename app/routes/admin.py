@@ -120,6 +120,7 @@ def admin_russian_cup():
         data = prepare_russian_cup_admin_page_data(cur)
         data['current_tournament_name'] = 'Кубок России'
         data['current_tournament_slug'] = 'rcup'
+        data['russian_cup_import_draft'] = session.get('russian_cup_screenshot_draft')
         if data.get('russian_cup_tournament'):
             data['current_tournament_id'] = data['russian_cup_tournament']['id']
             filters = parse_russian_cup_match_filters(request.args)
@@ -229,4 +230,3 @@ def archive_tournament(tid):
 @admin_required
 def activate_tournament(tid):
     return handle_activate_tournament(tid)
-

@@ -29,6 +29,13 @@ from app.services.rpl_screenshot_import_service import (
     run_import,
     validate_confirmed_fields,
 )
+from app.services.russian_cup_screenshot_import_service import (
+    run_import as run_russian_cup_screenshot_import,
+    IMPORTER_KEY as RUSSIAN_CUP_IMPORTER_KEY,
+    LEAGUE as RUSSIAN_CUP_IMPORT_LEAGUE,
+)
+from app.services.screenshot_match_import_service import generic_draft_is_valid
+from app.services.russian_cup_team_catalog import match_russian_cup_team
 from app.models.scoring import has_valid_finished_score
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -729,6 +736,96 @@ def admin_russian_cup_add():
     finally:
         close_db(conn, cur)
     return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
+
+
+@admin_matches_bp.route("/russian-cup/import-screenshot", methods=["POST"])
+@admin_required
+def admin_russian_cup_import_screenshot():
+    conn = get_db(); cur = conn.cursor()
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        draft = run_russian_cup_screenshot_import(request.files.get("screenshot"), tournament, session["user_id"])
+        draft["matches"] = _mark_russian_cup_preview_duplicates(cur, draft, tournament["id"])
+        session["russian_cup_screenshot_draft"] = draft
+        session.modified = True
+        flash(f"Распознано матчей: {len(draft['matches'])}", "success")
+    except Exception as exc:
+        session.pop("russian_cup_screenshot_draft", None)
+        flash(str(exc), "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+def _mark_russian_cup_preview_duplicates(cur, draft, tournament_id):
+    from app.services.rpl_screenshot_import_service import _valid_time
+    from app.services.manual_match_creation_service import build_manual_deadline_utc
+    seen = set()
+    for match in draft["matches"]:
+        home, hs = match_russian_cup_team(match.get("home_team"))
+        away, aws = match_russian_cup_team(match.get("away_team"))
+        reasons = list(match.get("reasons") or [])
+        if hs != "ready": reasons.append("Домашняя команда не входит в каталог Кубка России")
+        if aws != "ready": reasons.append("Гостевая команда не входит в каталог Кубка России")
+        match.update({"home_team": home or match.get("home_team", ""), "away_team": away or match.get("away_team", ""), "status": "needs_review" if reasons else "ready", "reasons": reasons})
+        if reasons: continue
+        kickoff, _ = build_manual_deadline_utc(match["date"], match["time"])
+        key = (home, away, kickoff)
+        if key in seen:
+            match.update(status="invalid", reasons=["Дубликат внутри черновика"]); continue
+        seen.add(key)
+        cur.execute("SELECT id FROM matches WHERE tournament_id=%s AND league='rcup' AND home_team=%s AND away_team=%s AND kickoff_time=%s", (tournament_id, home, away, kickoff))
+        if cur.fetchone(): match.update(status="invalid", reasons=["Такой матч уже существует"])
+    return draft["matches"]
+
+
+@admin_matches_bp.route("/russian-cup/import-cancel", methods=["POST"])
+@admin_required
+def admin_russian_cup_import_cancel():
+    session.pop("russian_cup_screenshot_draft", None)
+    flash("Черновик импорта удалён", "success")
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+@admin_matches_bp.route("/russian-cup/import-delete-row", methods=["POST"])
+@admin_required
+def admin_russian_cup_import_delete_row():
+    draft = session.get("russian_cup_screenshot_draft")
+    try:
+        index = int(request.form.get("index", "-1"))
+    except ValueError:
+        index = -1
+    if isinstance(draft, dict) and 0 <= index < len(draft.get("matches", [])):
+        draft["matches"].pop(index)
+        session["russian_cup_screenshot_draft"] = draft
+        session.modified = True
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russian-cup/import-confirm", methods=["POST"])
+@admin_required
+def admin_russian_cup_import_confirm():
+    conn = get_db(); cur = conn.cursor(); draft = session.get("russian_cup_screenshot_draft")
+    try:
+        tournament = get_required_russian_cup_tournament(cur)
+        if not generic_draft_is_valid(draft, session["user_id"], tournament["id"], RUSSIAN_CUP_IMPORTER_KEY, RUSSIAN_CUP_IMPORT_LEAGUE):
+            raise ManualMatchValidationError("Черновик импорта истёк. Загрузите скриншот снова")
+        homes, aways = request.form.getlist("home_team"), request.form.getlist("away_team")
+        dates, times = request.form.getlist("match_date"), request.form.getlist("match_time")
+        if not homes or not (len(homes) == len(aways) == len(dates) == len(times)):
+            raise ManualMatchValidationError("Черновик не содержит матчей")
+        checked = []
+        for i, (home, away, day, kickoff) in enumerate(zip(homes, aways, dates, times), 1):
+            h, hs = match_russian_cup_team(home); a, aws = match_russian_cup_team(away)
+            if hs != "ready" or aws != "ready": raise ManualMatchValidationError(f"Матч {i}: команда не входит в каталог Кубка России")
+            if h == a: raise ManualMatchValidationError(f"Матч {i}: команды должны отличаться")
+            checked.append((h, a, day, kickoff))
+        for i, (home, away, day, kickoff) in enumerate(checked, 1):
+            create_manual_match(cur, ManualMatchCreateData(tournament_id=tournament["id"], league="rcup", home_team=home, away_team=away, match_date=day, match_time=kickoff, status="SCHEDULED", stage="", match_category="russian_cup", reject_early_auto_deadline=True))
+        conn.commit(); session.pop("russian_cup_screenshot_draft", None); flash(f"Добавлено матчей: {len(checked)}", "success")
+    except Exception as exc:
+        conn.rollback(); flash(str(exc), "error")
+    finally: close_db(conn, cur)
+    return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
 
 @admin_matches_bp.route("/russian_cup_edit", methods=["POST"])
