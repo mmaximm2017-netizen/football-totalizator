@@ -6,9 +6,9 @@ from app.services.rpl_team_catalog import RPL_TEAM_ALIASES, match_rpl_team, norm
 from app.services.screenshot_match_import_service import (
     MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS, ALLOWED_FORMATS, ALLOWED_MIME_TYPES,
     DRAFT_TTL_SECONDS, ImageValidationError, ImportConfig, _valid_time,
-    _candidate_team, _exact_team_spans, _match_from_parts, _spatial_parse_ocr,
+    _candidate_team as _generic_candidate_team, _exact_team_spans, _match_from_parts, _spatial_parse_ocr,
     _flat_parse_ocr, resolve_match_date, make_generic_draft,
-    generic_draft_is_valid, parse_ocr, save_validated_upload,
+    generic_draft_is_valid, parse_ocr, save_validated_upload as _generic_save_validated_upload,
 )
 from app.services.local_tesseract_service import extract_text_from_image
 
@@ -16,6 +16,16 @@ RPL_IMPORTER_KEY = "rpl"
 DATE_RE = __import__('re').compile(r"(?<!\d)(\d{1,2})[.](\d{1,2})(?!\d)")
 TIME_RE = __import__('re').compile(r"(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])")
 RPL_ALIAS_TOKENS = {token for aliases in RPL_TEAM_ALIASES.values() for alias in aliases for token in normalize_team_text(alias).split()}
+
+def save_validated_upload(upload):
+    """Compatibility entry point preserving patchable RPL validation limits."""
+    from app.services import screenshot_match_import_service as generic
+    previous = (generic.MAX_IMAGE_BYTES, generic.MAX_IMAGE_PIXELS)
+    generic.MAX_IMAGE_BYTES, generic.MAX_IMAGE_PIXELS = MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
+    try:
+        return _generic_save_validated_upload(upload)
+    finally:
+        generic.MAX_IMAGE_BYTES, generic.MAX_IMAGE_PIXELS = previous
 RPL_IMPORT_CONFIG = ImportConfig(
     RPL_IMPORTER_KEY, "rpl", "rpl", RPL_TEAM_ALIASES, match_rpl_team,
     {token for aliases in RPL_TEAM_ALIASES.values() for alias in aliases
@@ -29,6 +39,18 @@ _flat_parse_rpl_ocr = _flat_parse_ocr
 
 def parse_rpl_ocr(result, tournament, diagnostics=None):
     return parse_ocr(result, tournament, RPL_IMPORT_CONFIG, diagnostics)
+
+def _candidate_team(value):
+    """Backward-compatible RPL helper using the shared matcher context."""
+    from app.services import screenshot_match_import_service as generic
+    previous = (generic.team_aliases, generic.alias_tokens, generic.team_matcher)
+    generic.team_aliases = RPL_IMPORT_CONFIG.team_aliases
+    generic.alias_tokens = RPL_IMPORT_CONFIG.alias_tokens
+    generic.team_matcher = RPL_IMPORT_CONFIG.team_matcher
+    try:
+        return _generic_candidate_team(value)
+    finally:
+        generic.team_aliases, generic.alias_tokens, generic.team_matcher = previous
 
 def make_draft(user_id, tournament_id, matches, raw_text=""):
     return make_generic_draft(user_id, tournament_id, matches, RPL_IMPORTER_KEY, "rpl", raw_text)

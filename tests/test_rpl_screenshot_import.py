@@ -500,7 +500,9 @@ class RplParserTests(unittest.TestCase):
         sizes = {}
         for count in (8, 10):
             draft = build(count)
-            self.assertEqual(set(draft), {"id", "user_id", "tournament_id", "created_at", "matches"})
+            self.assertEqual(set(draft), {"id", "user_id", "tournament_id", "created_at", "importer_key", "league", "matches"})
+            self.assertEqual(draft["importer_key"], "rpl")
+            self.assertEqual(draft["league"], "rpl")
             self.assertNotIn("raw_text", draft)
             self.assertNotIn("image", draft)
             serializer = app.session_interface.get_signing_serializer(app)
