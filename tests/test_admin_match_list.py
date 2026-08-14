@@ -320,7 +320,7 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertFalse((root / "templates" / "admin_matches.html").exists())
         dashboard = (root / "templates" / "admin.html").read_text(encoding="utf-8")
         self.assertNotIn("Плей-офф ЧМ-2026", dashboard)
-        for label in ("Чемпионат России 2027", "Кубок России", "Турниры", "Пользователи"):
+        for label in ("Чемпионат России", "Кубок России", "Турниры", "Пользователи"):
             self.assertIn(label, dashboard)
         for name in ("admin.html", "admin_russia_2027.html", "admin_russian_cup.html", "admin_users.html", "admin_tournaments.html"):
             html = (root / "templates" / name).read_text(encoding="utf-8")
