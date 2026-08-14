@@ -686,6 +686,25 @@ body.tournament-rcup .admin-russian-cup-page .rc-add-trigger > summary {
 body.tournament-rcup .admin-russian-cup-page .rc-add-form,
 body.tournament-rcup .admin-russian-cup-page .rc-add-advanced { margin-top: 10px; }
 body.tournament-rcup .admin-russian-cup-page .rc-add-form { grid-column: 1 / -1; }
+body.tournament-rcup .admin-russian-cup-page .rc-import-file {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 12px;
+    background: rgba(255,255,255,.12);
+    color: var(--rcup-white);
+    font-weight: 800;
+    cursor: pointer;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-file input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
 body.tournament-rcup .admin-russian-cup-page .rc-workspace { display: grid; gap: 10px; }
 body.tournament-rcup .admin-russian-cup-page .rc-view-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 4px; }
 body.tournament-rcup .admin-russian-cup-page .rc-view-tab {
