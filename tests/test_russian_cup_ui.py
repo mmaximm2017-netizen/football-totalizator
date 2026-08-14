@@ -318,7 +318,7 @@ class RussianCupUiTests(unittest.TestCase):
     def test_russian_cup_service_filters_by_tournament_and_league(self):
         from app.services.russian_cup_admin_service import prepare_russian_cup_admin_data
 
-        cursor = RecordingCursor(tournament_row=(5, "Кубок России", 1, None), match_rows=[])
+        cursor = RecordingCursor(tournament_row=(5, "Кубок России", 1, "2026-07-01", "2027-05-31"), match_rows=[])
 
         data = prepare_russian_cup_admin_data(cursor)
 
@@ -401,7 +401,7 @@ class RussianCupUiTests(unittest.TestCase):
                     "match_date": "2026-07-12",
                     "match_time": "19:00",
                 },
-                [(5, "Кубок России", 1, None), None],
+                [(5, "Кубок России", 1, "2026-07-01", "2027-05-31"), None],
                 [],
             ),
             (
@@ -415,25 +415,25 @@ class RussianCupUiTests(unittest.TestCase):
                     "status": "SCHEDULED",
                     "stage": "Групповой этап",
                 },
-                [(5, "Кубок России", 1, None), (10, "SCHEDULED")],
+                [(5, "Кубок России", 1, "2026-07-01", "2027-05-31"), (10, "SCHEDULED")],
                 [],
             ),
             (
                 "/admin/russian_cup_visibility",
                 {"match_id": "10", "visibility_action": "hide"},
-                [(5, "Кубок России", 1, None)],
+                [(5, "Кубок России", 1, "2026-07-01", "2027-05-31")],
                 [],
             ),
             (
                 "/admin/russian_cup_recalc",
                 {},
-                [(5, "Кубок России", 1, None)],
+                [(5, "Кубок России", 1, "2026-07-01", "2027-05-31")],
                 [[(10,)]],
             ),
             (
                 "/admin/russian_cup_delete",
                 {"match_id": "10"},
-                [(5, "Кубок России", 1, None)],
+                [(5, "Кубок России", 1, "2026-07-01", "2027-05-31")],
                 [],
             ),
         ]
@@ -479,7 +479,7 @@ class RussianCupUiTests(unittest.TestCase):
 class RussianCupResultTests(unittest.TestCase):
     def setUp(self):
         self.app = RussianCupUiTests().make_app()
-        self.tournament = (5, "Кубок России", 1, None)
+        self.tournament = (5, "Кубок России", 1, "2026-07-01", "2027-05-31")
 
     def post_result(self, cursor, payload):
         user_conn = SequenceConnection(SequenceCursor(fetchone_results=[(1, 0)]))
