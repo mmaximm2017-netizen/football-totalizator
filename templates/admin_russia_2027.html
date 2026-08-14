@@ -77,7 +77,7 @@
             {% for match in rpl_import_draft.matches %}
                 <article class="rpl-import-row {% if match.status == 'ready' %}is-collapsed{% endif %}" data-import-row data-server-invalid="{{ '1' if match.status == 'invalid' else '0' }}" data-server-reason="{{ match.reasons|join('; ') }}">
                     <div class="rpl-import-compact" data-import-compact {% if match.status != 'ready' %}hidden{% endif %}>
-                        <div><strong>{{ match.home_team }} — {{ match.away_team }}</strong><span>{{ match.date }} · {{ match.time }}</span><em>✓ Готово</em></div>
+                        <div><strong>{{ match.home_team }} — {{ match.away_team }}</strong><span>{% if match.date and match.date|length == 10 and match.date[4] == '-' and match.date[7] == '-' %}{{ match.date[8:10] }}.{{ match.date[5:7] }}.{{ match.date[2:4] }}{% else %}{{ match.date }}{% endif %} · {{ match.time }}</span><em>✓ Готово</em></div>
                         <button type="button" class="rpl-import-edit" data-import-toggle aria-expanded="false" aria-controls="rpl-import-editor-{{ loop.index0 }}">Изменить</button>
                     </div>
                     <div id="rpl-import-editor-{{ loop.index0 }}" data-import-editor {% if match.status == 'ready' %}hidden{% endif %}>

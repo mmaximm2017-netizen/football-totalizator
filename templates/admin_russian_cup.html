@@ -55,7 +55,7 @@
       <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_import_confirm') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         {% for m in russian_cup_import_draft.matches %}<div class="rc-card rc-import-row {% if m.status == 'ready' %}is-collapsed{% endif %}" data-import-row>
-          <div class="rc-import-compact" data-import-compact {% if m.status != 'ready' %}hidden{% endif %}><div><strong>{{ m.home_team }} — {{ m.away_team }}</strong><span>{{ m.date }} · {{ m.time }}</span><em>✓ Готово</em></div><button type="button" class="rc-import-edit" data-import-toggle aria-expanded="false" aria-controls="rc-import-editor-{{ loop.index0 }}">Изменить</button></div>
+          <div class="rc-import-compact" data-import-compact {% if m.status != 'ready' %}hidden{% endif %}><div><strong>{{ m.home_team }} — {{ m.away_team }}</strong><span>{% if m.date and m.date|length == 10 and m.date[4] == '-' and m.date[7] == '-' %}{{ m.date[8:10] }}.{{ m.date[5:7] }}.{{ m.date[2:4] }}{% else %}{{ m.date }}{% endif %} · {{ m.time }}</span><em>✓ Готово</em></div><button type="button" class="rc-import-edit" data-import-toggle aria-expanded="false" aria-controls="rc-import-editor-{{ loop.index0 }}">Изменить</button></div>
           <div id="rc-import-editor-{{ loop.index0 }}" class="rc-import-editor" data-import-editor {% if m.status == 'ready' %}hidden{% endif %}>
           <div class="rc-card-note">OCR: {{ m.raw_home_team }} — {{ m.raw_away_team }}</div>
           <div class="rc-grid"><label>Домашняя команда<input name="home_team" value="{{ m.home_team }}" required></label><label>Гостевая команда<input name="away_team" value="{{ m.away_team }}" required></label></div>
