@@ -210,14 +210,50 @@ class RplParserTests(unittest.TestCase):
         self.assertEqual(match_rpl_team("Динамо Махачкала")[0], "Динамо Мх")
 
     def test_ocr_edge_noise_is_narrow_and_not_fuzzy_matching(self):
-        accepted = _single_team_candidate("Зенит Е")
-        self.assertEqual(accepted["canonical"], "Зенит")
-        for value in ("Зенитт", "Зенит X", "Зенит Краснодар", "Зен", "Зенитовец"):
+        accepted = {
+            "je Зенит": "Зенит",
+            "Крылья Советов AEH": "Крылья Советов",
+            "и Балтика OZ": "Балтика",
+            "Зенит Е": "Зенит",
+            "Крылья Советов ao": "Крылья Советов",
+            "Ф Динамо Махачкала": "Динамо Мх",
+        }
+        for value, canonical in accepted.items():
+            with self.subTest(value=value):
+                self.assertEqual(_single_team_candidate(value)["canonical"], canonical)
+
+        rejected = (
+            "Зенитт", "Зенит X", "Зенит Краснодар", "Спартак Динамо",
+            "Краснодар Зенит", "Динамо Балтика", "Зен", "Зенитовец",
+            "СуперЗенит", "Неизвестный Зенитоград",
+        )
+        for value in rejected:
             with self.subTest(value=value):
                 candidate = _single_team_candidate(value)
                 self.assertIsNotNone(candidate)
                 self.assertEqual(candidate["canonical"], "")
                 self.assertEqual(candidate["status"], "needs_review")
+
+    def test_production_tesseract_output_normalizes_all_three_matches(self):
+        texts = [
+            "Воскресенье 16.08.", "Премьер-лига", "РОССИЯ",
+            "je Зенит", "14:30", "Динамо Москва",
+            "Крылья Советов AEH", "17:00", "Динамо Махачкала",
+            "и Балтика OZ", "19:30", "Спартак Москва", "Таблица",
+        ]
+        result = OcrResult(
+            "\n".join(texts),
+            tuple(OcrLine(text, index * 30, 0, 300, 25, 80.0) for index, text in enumerate(texts)),
+        )
+        matches = parse_rpl_ocr(result, TOURNAMENT)
+        self.assertEqual([
+            (match["home_team"], match["away_team"], match["date"], match["time"], match["status"])
+            for match in matches
+        ], [
+            ("Зенит", "Динамо", "2026-08-16", "14:30", "ready"),
+            ("Крылья Советов", "Динамо Мх", "2026-08-16", "17:00", "ready"),
+            ("Балтика", "Спартак", "2026-08-16", "19:30", "ready"),
+        ])
 
     def test_safe_normalization_handles_case_spaces_yo_and_hyphen(self):
         self.assertEqual(match_rpl_team("  фк   СПАРТАК-МОСКВА ")[0], "Спартак")

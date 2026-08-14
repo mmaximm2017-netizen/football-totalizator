@@ -24,13 +24,18 @@ IGNORED_TEXT = {
     "избранное", "турниры", "воскресенье", "суббота", "пятница", "четверг",
     "среда", "вторник", "понедельник",
 }
-# Narrow, screenshot-backed OCR artifacts. This is deliberately not a generic
-# one/two-character tolerance: every accepted edge token is tied to one alias.
-OCR_ALIAS_EDGE_NOISE = {
-    ("Зенит", "зенит"): {"prefix": set(), "suffix": {"е"}},
-    ("Крылья Советов", "крылья советов"): {"prefix": set(), "suffix": {"ao"}},
-    ("Динамо Мх", "динамо махачкала"): {"prefix": {"ф"}, "suffix": set()},
-}
+
+
+def _catalog_alias_tokens():
+    return {
+        token
+        for aliases in RPL_TEAM_ALIASES.values()
+        for alias in aliases
+        for token in normalize_team_text(alias).split()
+    }
+
+
+RPL_ALIAS_TOKENS = _catalog_alias_tokens()
 
 
 class ImageValidationError(ValueError):
@@ -129,23 +134,40 @@ def _candidate_team(line):
     canonical, status = match_rpl_team(text)
     if canonical:
         return {"raw": text, "canonical": canonical, "status": status}
+
+    tokens = normalized.split()
     candidates = []
     for team, aliases in RPL_TEAM_ALIASES.items():
         for alias in aliases:
-            alias_text = normalize_team_text(alias)
-            position = normalized.find(alias_text)
-            if position >= 0:
-                prefix = normalized[:position].strip()
-                remainder = normalized[position + len(alias_text):].strip()
-                allowed = OCR_ALIAS_EDGE_NOISE.get(
-                    (team, alias_text), {"prefix": set(), "suffix": set()}
+            alias_tokens = normalize_team_text(alias).split()
+            length = len(alias_tokens)
+            for start in range(len(tokens) - length + 1):
+                if tokens[start:start + length] == alias_tokens:
+                    candidates.append((team, start, start + length, length))
+
+    if candidates:
+        longest = max(candidate[3] for candidate in candidates)
+        strongest = {
+            (team, start, end)
+            for team, start, end, length in candidates
+            if length == longest
+        }
+        canonical_candidates = {team for team, _, _ in strongest}
+        if len(canonical_candidates) == 1:
+            team = next(iter(canonical_candidates))
+            spans = {(start, end) for candidate, start, end in strongest if candidate == team}
+            if len(spans) == 1:
+                start, end = next(iter(spans))
+                residual = tokens[:start] + tokens[end:]
+                safe_residual = all(
+                    token not in RPL_ALIAS_TOKENS
+                    and token.isalpha()
+                    and len(token) <= 3
+                    and not (len(token) == 1 and token.isascii())
+                    for token in residual
                 )
-                prefix_ok = not prefix or prefix in allowed["prefix"]
-                suffix_ok = not remainder or remainder in allowed["suffix"]
-                if prefix_ok and suffix_ok:
-                    candidates.append(team)
-    if len(set(candidates)) == 1:
-        return {"raw": text, "canonical": candidates[0], "status": "ready"}
+                if residual and safe_residual:
+                    return {"raw": text, "canonical": team, "status": "ready"}
     if any(word in normalized for word in IGNORED_TEXT):
         return None
     return {"raw": text, "canonical": "", "status": "needs_review"}
