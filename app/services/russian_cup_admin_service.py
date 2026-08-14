@@ -44,7 +44,7 @@ def build_russian_cup_match_form_data(form, normalize_status, fallback_status="S
 def get_russian_cup_tournament(cur):
     cur.execute(
         """
-        SELECT id, name, is_active, start_date
+        SELECT id, name, is_active, start_date, end_date
         FROM tournaments
         WHERE name = %s
         ORDER BY id DESC
@@ -60,6 +60,7 @@ def get_russian_cup_tournament(cur):
         "name": row[1],
         "is_active": row[2],
         "start_date": row[3],
+        "end_date": row[4],
     }
 
 
