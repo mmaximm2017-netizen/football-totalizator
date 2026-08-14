@@ -19,12 +19,10 @@ from app.routes.admin_tournaments import (
 )
 from app.services.admin_view_service import (
     prepare_admin_view_data,
-    parse_admin_match_filters,
     parse_russian_cup_match_filters,
     parse_rpl_match_filters,
     prepare_rpl_match_list,
     prepare_russian_cup_match_list,
-    prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import prepare_rpl_admin_page_data
 from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS
@@ -59,23 +57,6 @@ def admin():
         return render_template('admin.html')
     finally:
         close_db(conn, cur)
-
-
-@admin_bp.route('/wc-playoff', methods=['GET'])
-@admin_required
-def admin_wc_playoff():
-    conn = get_db()
-    cur = conn.cursor()
-    try:
-        filters = parse_admin_match_filters(request.args)
-        data = prepare_wc_playoff_page_data(cur, filters)
-        data['admin_match_filters'] = filters
-        data['current_tournament_name'] = 'Плей-офф ЧМ-2026'
-        cur.execute("SELECT DISTINCT team_name FROM (SELECT home_team AS team_name FROM matches WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026') AND home_team IS NOT NULL UNION SELECT away_team AS team_name FROM matches WHERE tournament_id IN (SELECT id FROM tournaments WHERE name = 'ЧМ-2026') AND away_team IS NOT NULL) teams WHERE team_name IS NOT NULL AND team_name <> 'Unknown' ORDER BY team_name")
-        data['wc_team_options'] = [row[0] for row in cur.fetchall()]
-    finally:
-        close_db(conn, cur)
-    return render_template('admin_wc_playoff.html', **data)
 
 
 @admin_bp.route('/russia-2027', methods=['GET'])

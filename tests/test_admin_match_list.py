@@ -10,7 +10,6 @@ from app.services.admin_view_service import (
     parse_rpl_match_filters,
     prepare_rpl_match_list,
     prepare_russian_cup_match_list,
-    prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import prepare_rpl_admin_page_data
 from app.services.russian_cup_admin_service import prepare_russian_cup_admin_page_data
@@ -183,22 +182,6 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertEqual(len(cup_cursor.executed), 2)
         self.assertNotIn("SELECT id,", cup_cursor.executed[1][0])
 
-    def test_wc_page_has_only_count_and_paginated_select(self):
-        args = SimpleNamespace(get=lambda key, default=None, type=None: {"page": 2}.get(key, default))
-        cursor = Cursor(
-            31,
-            [(31, "A", "B", datetime(2026, 7, 1, 16, 0, tzinfo=timezone.utc), None,
-              "SCHEDULED", None, None, "wc2026", 0, 0, 0, "final", None,
-              "api-31", None, 0)],
-        )
-        data = prepare_wc_playoff_page_data(cursor, parse_admin_match_filters(args))
-        self.assertEqual(data["wc_playoff_list"]["page"], 2)
-        self.assertEqual(len(cursor.executed), 2)
-        self.assertIn("COUNT(*)", cursor.executed[0][0])
-        self.assertIn("LIMIT %s OFFSET %s", cursor.executed[1][0])
-        self.assertEqual(cursor.executed[1][1][-1], 30)
-        self.assertEqual(cursor.executed[1][1][-2], 30)
-
     def test_admin_match_templates_do_not_use_grouping_accordions(self):
         root = Path(__file__).resolve().parents[1]
         for name in ("admin_russia_2027.html", "admin_russian_cup.html"):
@@ -333,9 +316,15 @@ class AdminMatchListTests(unittest.TestCase):
     def test_general_matches_page_and_navigation_are_removed(self):
         root = Path(__file__).resolve().parents[1]
         self.assertFalse((root / "templates" / "admin_matches.html").exists())
-        for name in ("admin.html", "admin_russia_2027.html", "admin_russian_cup.html", "admin_wc_playoff.html", "admin_users.html", "admin_tournaments.html"):
+        dashboard = (root / "templates" / "admin.html").read_text(encoding="utf-8")
+        self.assertNotIn("Плей-офф ЧМ-2026", dashboard)
+        for label in ("Чемпионат России 2027", "Кубок России", "Турниры", "Пользователи"):
+            self.assertIn(label, dashboard)
+        for name in ("admin.html", "admin_russia_2027.html", "admin_russian_cup.html", "admin_users.html", "admin_tournaments.html"):
             html = (root / "templates" / name).read_text(encoding="utf-8")
             self.assertNotIn("admin.admin_matches", html, name)
+            self.assertNotIn("admin.admin_wc_playoff", html, name)
+        self.assertFalse((root / "templates" / "admin_wc_playoff.html").exists())
         for name in ("admin_russia_2027.html", "admin_russian_cup.html"):
             html = (root / "templates" / name).read_text(encoding="utf-8")
             self.assertNotIn("request.args.to_dict()", html)

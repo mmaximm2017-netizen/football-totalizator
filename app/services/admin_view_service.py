@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 from app.config import START_DATE
 from app.routes.admin_actions import ALLOWED_TITLES
 from app.services.wc_playoff_service import (
-    WC2026_PLAYOFF_START,
     PLAYOFF_STAGES,
     determine_effective_playoff_stage,
     get_playoff_stage_label,
@@ -237,81 +236,6 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters, include_p
         "pending_count": pending_count,
         "pending_preview": pending_preview,
         "pending_preview_total": pending_count if include_pending_preview and filters["view"] == "upcoming" else 0,
-    }
-
-
-def prepare_wc_playoff_page_data(cur, filters):
-    """Load only the bounded WC playoff candidate set for its admin page."""
-    now = datetime.now(timezone.utc)
-    where, params = _admin_match_where(filters, now)
-    where += " AND t.name = %s AND m.kickoff_time >= %s"
-    params.extend(["ЧМ-2026", WC2026_PLAYOFF_START])
-    cur.execute(
-        f"""
-        SELECT COUNT(*)
-        FROM matches m
-        JOIN tournaments t ON t.id = m.tournament_id
-        WHERE {where}
-        """,
-        tuple(params),
-    )
-    total = int((cur.fetchone() or [0])[0] or 0)
-    pages = max((total + filters["per_page"] - 1) // filters["per_page"], 1)
-    page = min(filters["page"], pages)
-    offset = (page - 1) * filters["per_page"]
-    cur.execute(
-        f"""
-        SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
-               m.status, m.home_score, m.away_score, m.league,
-               COALESCE(m.manual_teams_override, 0),
-               COALESCE(m.manual_result_override, 0),
-               COALESCE(m.manual_kickoff_override, 0),
-               m.playoff_stage_manual, m.playoff_stage_auto,
-               m.api_match_id, m.api_conflict_note, COUNT(p.user_id)
-        FROM matches m
-        JOIN tournaments t ON t.id = m.tournament_id
-        LEFT JOIN predictions p ON p.match_id = m.id AND p.tournament_id = m.tournament_id
-        WHERE {where}
-        GROUP BY m.id, t.name
-        ORDER BY m.kickoff_time ASC, m.id ASC
-        LIMIT %s OFFSET %s
-        """,
-        tuple(params + [filters["per_page"], offset]),
-    )
-    matches = []
-    for row in cur.fetchall():
-        kickoff = parse_datetime(row[3])
-        kickoff_msk = kickoff.astimezone(MSK) if kickoff else None
-        stage = determine_effective_playoff_stage(row[12], row[13])
-        matches.append({
-            "id": row[0], "home_team": row[1], "away_team": row[2],
-            "kickoff_time": kickoff, "deadline": parse_datetime(row[4]),
-            "status": row[5], "home_score": row[6], "away_score": row[7],
-            "league": row[8], "manual_teams_override": bool(row[9]),
-            "manual_result_override": bool(row[10]), "manual_kickoff_override": bool(row[11]),
-            "playoff_stage_manual": row[12], "playoff_stage_auto": row[13],
-            "effective_playoff_stage": stage, "playoff_stage": stage,
-            "playoff_stage_label": get_playoff_stage_label(stage),
-            "api_match_id": row[14], "api_conflict_note": row[15],
-            "has_api_conflict": bool(row[15]), "predictions_count": row[16] or 0,
-            "match_date_input": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",
-            "match_time_input": kickoff_msk.strftime("%H:%M") if kickoff_msk else "",
-        })
-    groups = []
-    for match in matches:
-        key = match["match_date_input"] or "unknown"
-        if not groups or groups[-1]["key"] != key:
-            groups.append({"key": key, "label": key or "Дата не указана", "matches": []})
-        groups[-1]["matches"].append(match)
-    return {
-        "wc_playoff_matches": matches,
-        "playoff_stages": PLAYOFF_STAGES,
-        "wc_playoff_list": {
-            "matches": matches, "groups": groups, "total": total,
-            "page": page, "pages": pages, "per_page": filters["per_page"],
-            "first": offset + 1 if total else 0,
-            "last": min(offset + len(matches), total),
-        },
     }
 
 
