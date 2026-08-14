@@ -528,3 +528,36 @@ body.tournament-rpl .admin-rpl-page .rpl-compact-card.rpl-match-card--pending .r
         z-index: 100002;
     }
 }
+
+body.tournament-rpl .admin-rpl-page .rpl-import-upload { grid-column: 1 / -1; }
+body.tournament-rpl .admin-rpl-page .rpl-import-file {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+    padding: 10px 16px; border: 1px solid rgba(255,255,255,.3); border-radius: 12px;
+    background: rgba(255,255,255,.12); color: #fff; font-weight: 800; cursor: pointer;
+}
+body.tournament-rpl .admin-rpl-page .rpl-import-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+body.tournament-rpl .admin-rpl-page .rpl-import-preview {
+    margin: 16px 0; padding: 16px; border: 1px solid #d9e2ec; border-radius: 16px; background: #fff;
+}
+body.tournament-rpl .admin-rpl-page .rpl-import-heading h2 { margin: 0 0 4px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-heading p { margin: 0 0 14px; color: #52606d; }
+body.tournament-rpl .admin-rpl-page .rpl-import-rows { display: grid; gap: 12px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-row { padding: 13px; border: 1px solid #e4e7eb; border-radius: 12px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-recognized { margin-bottom: 9px; color: #52606d; font-size: 13px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-row .rpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 9px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-row label { display: grid; gap: 4px; font-size: 12px; font-weight: 800; color: #334e68; }
+body.tournament-rpl .admin-rpl-page .rpl-import-row input { width: 100%; min-width: 0; min-height: 42px; padding: 8px; border: 1px solid #bcccdc; border-radius: 9px; font-size: 16px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-row-footer { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+body.tournament-rpl .admin-rpl-page .rpl-import-status { font-size: 13px; font-weight: 800; }
+body.tournament-rpl .admin-rpl-page .rpl-import-status--ready { color: #087f5b; }
+body.tournament-rpl .admin-rpl-page .rpl-import-status--needs_review { color: #b35c00; }
+body.tournament-rpl .admin-rpl-page .rpl-import-status--invalid { color: #c92a2a; }
+body.tournament-rpl .admin-rpl-page .rpl-import-remove,
+body.tournament-rpl .admin-rpl-page .rpl-import-cancel button { border: 0; background: transparent; color: #c92a2a; font-weight: 800; cursor: pointer; }
+body.tournament-rpl .admin-rpl-page .rpl-import-confirm { margin-top: 14px; width: 100%; min-height: 46px; }
+body.tournament-rpl .admin-rpl-page .rpl-import-confirm:disabled { opacity: .45; cursor: not-allowed; }
+body.tournament-rpl .admin-rpl-page .rpl-import-cancel { margin-top: 10px; text-align: center; }
+@media (max-width: 600px) {
+    body.tournament-rpl .admin-rpl-page .rpl-import-row .rpl-grid { grid-template-columns: 1fr; }
+    body.tournament-rpl .admin-rpl-page .rpl-import-file { width: 100%; }
+}

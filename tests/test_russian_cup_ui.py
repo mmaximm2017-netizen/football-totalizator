@@ -461,10 +461,11 @@ class RussianCupUiTests(unittest.TestCase):
                 sql = "\n".join(query for query, _ in route_cursor.executed)
                 self.assertIn("Кубок России", str(route_cursor.executed))
                 if url.endswith("add"):
-                    self.assertIn("'rcup'", sql)
-                    self.assertIn("'russian_cup'", sql)
+                    insert_params = route_cursor.executed[-1][1]
+                    self.assertEqual(insert_params[5], "rcup")
+                    self.assertEqual(insert_params[8], "russian_cup")
                     self.assertEqual(route_cursor.executed[-1][1][4], "SCHEDULED")
-                    self.assertEqual(route_cursor.executed[-1][1][6], "")
+                    self.assertEqual(route_cursor.executed[-1][1][7], "")
                 elif url.endswith("recalc"):
                     self.assertIn("AND league = 'rcup'", sql)
                     self.assertIn("WHERE tournament_id = %s", sql)

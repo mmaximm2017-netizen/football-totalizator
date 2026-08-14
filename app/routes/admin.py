@@ -27,6 +27,7 @@ from app.services.admin_view_service import (
     prepare_wc_playoff_page_data,
 )
 from app.services.rpl_admin_service import prepare_rpl_admin_page_data
+from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS
 from app.services.russian_cup_admin_service import prepare_russian_cup_admin_page_data
 
 
@@ -86,8 +87,15 @@ def admin_russia_2027():
         data = prepare_rpl_admin_page_data(cur)
         data['current_tournament_name'] = 'Чемпионат России 🇷🇺'
         data['current_tournament_slug'] = 'rpl'
+        data['rpl_canonical_teams'] = RPL_CANONICAL_TEAMS
         if data.get('rpl_tournament'):
             data['current_tournament_id'] = data['rpl_tournament']['id']
+            from app.services.rpl_screenshot_import_service import draft_is_valid
+            draft = session.get('rpl_screenshot_draft')
+            if draft_is_valid(draft, session['user_id'], data['rpl_tournament']['id']):
+                data['rpl_import_draft'] = draft
+            elif draft:
+                session.pop('rpl_screenshot_draft', None)
         filters = parse_rpl_match_filters(request.args)
         data['admin_match_filters'] = filters
         if data.get('rpl_tournament'):
@@ -221,6 +229,4 @@ def archive_tournament(tid):
 @admin_required
 def activate_tournament(tid):
     return handle_activate_tournament(tid)
-
-
 

@@ -58,7 +58,36 @@
                 <button class="rpl-btn" type="submit">Добавить матч</button>
             </form>
         </details>
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('admin_matches.admin_rpl_import_screenshot') }}" class="rpl-import-upload">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="rpl-import-file">Загрузить скриншот<input type="file" name="screenshot" accept="image/jpeg,image/png,image/webp" required onchange="this.form.submit()"></label>
+        </form>
     </section>
+
+    {% if rpl_import_draft %}
+    <section class="rpl-import-preview" data-rpl-import-preview>
+        <div class="rpl-import-heading"><div><h2>Распознано {{ rpl_import_draft.matches|length }} матча</h2><p>Проверьте все поля перед добавлением. До подтверждения база данных не изменяется.</p></div></div>
+        <form method="post" action="{{ url_for('admin_matches.admin_rpl_import_confirm') }}" data-rpl-import-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="draft_id" value="{{ rpl_import_draft.id }}">
+            <datalist id="rpl-team-options">
+                {% for team in rpl_canonical_teams %}<option value="{{ team }}">{% endfor %}
+            </datalist>
+            <div class="rpl-import-rows">
+            {% for match in rpl_import_draft.matches %}
+                <article class="rpl-import-row" data-import-row data-server-invalid="{{ '1' if match.status == 'invalid' else '0' }}" data-server-reason="{{ match.reasons|join('; ') }}">
+                    <div class="rpl-import-recognized">OCR: {{ match.raw_home_team }} — {{ match.raw_away_team }}</div>
+                    <div class="rpl-grid"><label>Домашняя команда<input name="home_team" list="rpl-team-options" value="{{ match.home_team }}" required data-team></label><label>Гостевая команда<input name="away_team" list="rpl-team-options" value="{{ match.away_team }}" required data-team></label></div>
+                    <div class="rpl-grid"><label>Дата<input type="date" name="match_date" value="{{ match.date }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ match.time }}" required></label></div>
+                    <div class="rpl-import-row-footer"><span class="rpl-import-status rpl-import-status--{{ match.status }}" data-import-status>{% if match.status == 'ready' %}Готов{% elif match.status == 'invalid' %}Ошибка{% else %}Требуется проверить{% endif %}{% if match.reasons %}: {{ match.reasons|join('; ') }}{% endif %}</span><button type="button" class="rpl-import-remove" data-remove-row>Удалить</button></div>
+                </article>
+            {% endfor %}
+            </div>
+            <button class="rpl-btn rpl-import-confirm" type="submit" data-import-confirm>Добавить матчи</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_matches.admin_rpl_import_cancel') }}" class="rpl-import-cancel"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Отменить импорт</button></form>
+    </section>
+    {% endif %}
 
     <section class="rpl-workspace">
         {% set admin_return_to = url_for('admin.admin_russia_2027', view=admin_match_filters.view, page=admin_match_list.page) %}
@@ -129,6 +158,52 @@
             syncManualDeadline();
         });
         syncManualDeadline();
+    }());
+    (function () {
+        const preview = document.querySelector('[data-rpl-import-preview]');
+        if (!preview) return;
+        const canonical = new Set({{ rpl_canonical_teams|default([])|tojson }});
+        const form = preview.querySelector('[data-rpl-import-form]');
+        const confirmButton = preview.querySelector('[data-import-confirm]');
+        function validate() {
+            const rows = Array.from(preview.querySelectorAll('[data-import-row]'));
+            let allReady = rows.length > 0;
+            const keys = new Set();
+            rows.forEach(function (row) {
+                const teams = row.querySelectorAll('[data-team]');
+                const date = row.querySelector('[name="match_date"]');
+                const time = row.querySelector('[name="match_time"]');
+                const status = row.querySelector('[data-import-status]');
+                const reasons = [];
+                if (!canonical.has(teams[0].value.trim())) reasons.push('домашняя команда не выбрана из каталога');
+                if (!canonical.has(teams[1].value.trim())) reasons.push('гостевая команда не выбрана из каталога');
+                if (teams[0].value.trim() && teams[0].value.trim() === teams[1].value.trim()) reasons.push('команды совпадают');
+                if (!date.value) reasons.push('не указана дата');
+                if (!time.value) reasons.push('не указано время');
+                if (time.value && time.value <= '11:00') reasons.push('требуется ручной дедлайн; используйте ручную форму добавления');
+                const key = [teams[0].value.trim(), teams[1].value.trim(), date.value, time.value].join('|');
+                if (keys.has(key)) reasons.push('дубликат внутри черновика');
+                keys.add(key);
+                if (row.dataset.serverInvalid === '1' && row.dataset.edited !== '1' && row.dataset.serverReason && !reasons.length) reasons.push(row.dataset.serverReason);
+                status.textContent = reasons.length ? 'Требуется проверить: ' + reasons.join('; ') : 'Готов';
+                status.className = 'rpl-import-status ' + (reasons.length ? 'rpl-import-status--needs_review' : 'rpl-import-status--ready');
+                if (reasons.length) allReady = false;
+            });
+            confirmButton.disabled = !allReady;
+        }
+        preview.addEventListener('input', function (event) {
+            const row = event.target.closest('[data-import-row]');
+            if (row) row.dataset.edited = '1';
+            validate();
+        });
+        preview.addEventListener('click', function (event) {
+            if (event.target.matches('[data-remove-row]')) {
+                event.target.closest('[data-import-row]').remove();
+                validate();
+            }
+        });
+        form.addEventListener('submit', function (event) { if (confirmButton.disabled) event.preventDefault(); });
+        validate();
     }());
 </script>
 {% endblock %}

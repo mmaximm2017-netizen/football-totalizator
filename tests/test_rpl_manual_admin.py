@@ -107,7 +107,9 @@ class RplManualAdminTests(unittest.TestCase):
         insert_sql, params = cursor.executed[-1]
         self.assertIn("VALUES (NULL", insert_sql)
         self.assertEqual(params[4], "SCHEDULED")
-        self.assertEqual(params[6], "")
+        self.assertEqual(params[5], "rpl")
+        self.assertEqual(params[6], 5)
+        self.assertEqual(params[7], "")
 
     def test_rpl_create_uses_same_day_1100_msk_deadline_in_utc(self):
         cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])

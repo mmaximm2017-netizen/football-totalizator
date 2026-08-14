@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
@@ -15,6 +15,20 @@ from app.services.russian_cup_admin_service import (
     get_russian_cup_tournament,
 )
 from app.services.scoring_recalculation_service import recalc_match_points
+from app.services.manual_match_creation_service import (
+    ManualMatchCreateData,
+    ManualMatchValidationError,
+    build_manual_deadline_utc,
+    create_manual_match,
+)
+from app.services.local_tesseract_service import OcrError
+from app.services.rpl_screenshot_import_service import (
+    ImageValidationError,
+    draft_is_valid,
+    mark_preview_duplicates,
+    run_import,
+    validate_confirmed_fields,
+)
 from app.models.scoring import has_valid_finished_score
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -82,41 +96,6 @@ def validate_score(home_score, away_score):
 
     except (TypeError, ValueError):
         return None, None
-
-
-def build_manual_deadline_utc(
-    match_date,
-    match_time,
-    deadline_date,
-    deadline_time,
-    *,
-    reject_early_auto=False,
-):
-    dt_msk = datetime.strptime(
-        f"{match_date} {match_time}",
-        "%Y-%m-%d %H:%M",
-    ).replace(tzinfo=MSK)
-
-    kickoff_utc = dt_msk.astimezone(timezone.utc)
-
-    if deadline_date or deadline_time:
-        if not deadline_date or not deadline_time:
-            raise ValueError("Укажите обе дату и время дедлайна")
-
-        deadline_msk = datetime.strptime(
-            f"{deadline_date} {deadline_time}",
-            "%Y-%m-%d %H:%M",
-        ).replace(tzinfo=MSK)
-    else:
-        deadline_msk = dt_msk.replace(hour=11, minute=0, second=0, microsecond=0)
-        if reject_early_auto and deadline_msk >= dt_msk:
-            raise ValueError(
-                "Матч начинается раньше стандартного дедлайна 11:00 "
-                "(включая 11:00). Укажите дедлайн вручную."
-            )
-
-    deadline_utc = deadline_msk.astimezone(timezone.utc)
-    return kickoff_utc, deadline_utc
 
 
 def build_russian_cup_deadline_utc(match_date, match_time, deadline_date, deadline_time):
@@ -351,43 +330,23 @@ def admin_russia_2027_add():
             flash("Для finished сначала создайте матч, затем внесите счёт", "error")
             return redirect(url_for(RPL_ADMIN_REDIRECT))
 
-        kickoff_utc, deadline_utc = build_manual_deadline_utc(
-            match_date,
-            match_time,
-            deadline_date,
-            deadline_time,
-            reject_early_auto=True,
-        )
-        cur.execute(
-            """
-            SELECT id
-            FROM matches
-            WHERE tournament_id = %s
-              AND home_team = %s
-              AND away_team = %s
-              AND kickoff_time = %s
-            """,
-            (tournament["id"], home_team, away_team, kickoff_utc),
-        )
-        if cur.fetchone():
-            flash("Такой матч уже существует", "error")
-            return redirect(url_for(RPL_ADMIN_REDIRECT))
-
-        cur.execute(
-            """
-            INSERT INTO matches (
-                api_match_id, home_team, away_team, kickoff_time, deadline,
-                status, league, tournament_id, playoff_stage_manual, match_category
-            )
-            VALUES (NULL, %s, %s, %s, %s, %s, 'rpl', %s, %s, %s)
-            RETURNING id
-            """,
-            (home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage, match_category),
-        )
-        match_id = cur.fetchone()[0]
+        create_manual_match(cur, ManualMatchCreateData(
+            tournament_id=tournament["id"],
+            league="rpl",
+            home_team=home_team,
+            away_team=away_team,
+            match_date=match_date,
+            match_time=match_time,
+            status=status,
+            stage=stage,
+            match_category=match_category,
+            deadline_date=deadline_date,
+            deadline_time=deadline_time,
+            reject_early_auto_deadline=True,
+        ))
         conn.commit()
         flash("Матч чемпионата России создан", "success")
-    except ValueError as e:
+    except (ManualMatchValidationError, ValueError) as e:
         conn.rollback()
         flash(str(e), "error")
     except Exception as e:
@@ -396,6 +355,105 @@ def admin_russia_2027_add():
     finally:
         close_db(conn, cur)
     return admin_context_redirect(RPL_ADMIN_REDIRECT)
+
+
+@admin_matches_bp.route("/russia-2027/import-screenshot", methods=["POST"])
+@admin_required
+def admin_rpl_import_screenshot():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        logger.info(
+            "rpl_screenshot_import upload_received user_id=%s content_length=%s",
+            session["user_id"], request.content_length,
+        )
+        tournament = get_required_rpl_tournament(cur)
+        draft = run_import(request.files.get("screenshot"), tournament, session["user_id"])
+        mark_preview_duplicates(cur, draft, tournament["id"])
+        session["rpl_screenshot_draft"] = draft
+        session.modified = True
+        logger.info(
+            "rpl_screenshot_import extracted=%s user_id=%s tournament_id=%s",
+            len(draft["matches"]), session["user_id"], tournament["id"],
+        )
+        flash(f"Распознано матчей: {len(draft['matches'])}", "success")
+    except (ImageValidationError, OcrError, ValueError) as exc:
+        session.pop("rpl_screenshot_draft", None)
+        logger.warning("rpl_screenshot_import extraction_failed user_id=%s reason=%s", session["user_id"], type(exc).__name__)
+        flash(str(exc), "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia-2027/import-confirm", methods=["POST"])
+@admin_required
+def admin_rpl_import_confirm():
+    conn = get_db()
+    cur = conn.cursor()
+    draft = session.get("rpl_screenshot_draft")
+    try:
+        tournament = get_required_rpl_tournament(cur)
+        if not draft_is_valid(draft, session["user_id"], tournament["id"]):
+            raise ManualMatchValidationError("Черновик импорта истёк. Загрузите скриншот снова")
+        if request.form.get("draft_id") != draft.get("id"):
+            raise ManualMatchValidationError("Некорректный черновик импорта")
+
+        homes = request.form.getlist("home_team")
+        aways = request.form.getlist("away_team")
+        dates = request.form.getlist("match_date")
+        times = request.form.getlist("match_time")
+        if not homes or not (len(homes) == len(aways) == len(dates) == len(times)):
+            raise ManualMatchValidationError("Черновик не содержит матчей")
+
+        confirmed = []
+        for index, values in enumerate(zip(homes, aways, dates, times), start=1):
+            checked = validate_confirmed_fields(dict(zip(
+                ("home_team", "away_team", "date", "time"), values,
+            )))
+            if checked["status"] != "ready":
+                raise ManualMatchValidationError(
+                    f"Матч {index}: {'; '.join(checked['reasons'])}"
+                )
+            confirmed.append(checked)
+
+        created = []
+        for index, match in enumerate(confirmed, start=1):
+            try:
+                created.append(create_manual_match(cur, ManualMatchCreateData(
+                    tournament_id=tournament["id"], league="rpl",
+                    home_team=match["home_team"], away_team=match["away_team"],
+                    match_date=match["date"], match_time=match["time"],
+                    status="SCHEDULED", stage="", match_category="rpl",
+                    reject_early_auto_deadline=True,
+                )))
+            except ManualMatchValidationError as exc:
+                raise ManualMatchValidationError(f"Матч {index}: {exc}") from exc
+        conn.commit()
+        session.pop("rpl_screenshot_draft", None)
+        logger.info(
+            "rpl_screenshot_import confirmed=%s user_id=%s tournament_id=%s",
+            len(created), session["user_id"], tournament["id"],
+        )
+        flash(f"Добавлено матчей: {len(created)}", "success")
+    except (ManualMatchValidationError, ValueError) as exc:
+        conn.rollback()
+        flash(str(exc), "error")
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("rpl_screenshot_import confirm failed")
+        flash(f"Ошибка импорта матчей: {exc}", "error")
+    finally:
+        close_db(conn, cur)
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
+
+
+@admin_matches_bp.route("/russia-2027/import-cancel", methods=["POST"])
+@admin_required
+def admin_rpl_import_cancel():
+    session.pop("rpl_screenshot_draft", None)
+    flash("Черновик импорта удалён", "success")
+    return redirect(url_for(RPL_ADMIN_REDIRECT))
 
 
 @admin_matches_bp.route("/russia_2027_edit", methods=["POST"])
@@ -649,43 +707,20 @@ def admin_russian_cup_add():
             flash("Для finished сначала создайте матч, затем внесите счёт", "error")
             return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
 
-        try:
-            kickoff_utc, deadline_utc = build_russian_cup_deadline_utc(
-                match_date,
-                match_time,
-                form_data["deadline_date"],
-                form_data["deadline_time"],
-            )
-        except ValueError as e:
-            flash(str(e), "error")
-            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
-
-        cur.execute(
-            """
-            SELECT id
-            FROM matches
-            WHERE tournament_id = %s
-              AND league = 'rcup'
-              AND home_team = %s
-              AND away_team = %s
-              AND kickoff_time = %s
-            """,
-            (tournament["id"], home_team, away_team, kickoff_utc),
-        )
-        if cur.fetchone():
-            flash("Такой матч уже существует", "error")
-            return redirect(url_for(RUSSIAN_CUP_ADMIN_REDIRECT))
-
-        cur.execute(
-            """
-            INSERT INTO matches (
-                api_match_id, home_team, away_team, kickoff_time, deadline,
-                status, league, tournament_id, playoff_stage_manual, match_category
-            )
-            VALUES (NULL, %s, %s, %s, %s, %s, 'rcup', %s, %s, 'russian_cup')
-            """,
-            (home_team, away_team, kickoff_utc, deadline_utc, status, tournament["id"], stage),
-        )
+        create_manual_match(cur, ManualMatchCreateData(
+            tournament_id=tournament["id"],
+            league="rcup",
+            home_team=home_team,
+            away_team=away_team,
+            match_date=match_date,
+            match_time=match_time,
+            status=status,
+            stage=stage,
+            match_category="russian_cup",
+            deadline_date=form_data["deadline_date"],
+            deadline_time=form_data["deadline_time"],
+            reject_early_auto_deadline=True,
+        ))
         conn.commit()
         flash("Матч Кубка России создан", "success")
     except Exception as e:

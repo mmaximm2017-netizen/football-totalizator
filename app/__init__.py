@@ -113,6 +113,7 @@ def create_app():
         SESSION_COOKIE_DOMAIN=None,
         SESSION_COOKIE_PATH="/",
         IOS_DIAGNOSTICS=diagnostics_enabled(),
+        MAX_CONTENT_LENGTH=9 * 1024 * 1024,
     )
 
     # ❗ правильно: Flask ждёт timedelta, а не int
