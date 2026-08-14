@@ -52,12 +52,32 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 9px;
+        gap: 18px;
         width: 100%;
     }
+    .admin-menu-card-icon-shell {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+        border-radius: 50%;
+        isolation: isolate;
+    }
+    .admin-menu-card-icon-shell::before {
+        content: "";
+        position: absolute;
+        inset: -9px;
+        z-index: -1;
+        border-radius: 50%;
+        opacity: .68;
+        filter: blur(10px);
+        background: radial-gradient(circle, var(--admin-icon-glow), transparent 68%);
+    }
     .admin-menu-card-icon {
-        width: 42px;
-        height: 42px;
+        width: 52px;
+        height: 52px;
         object-fit: contain;
         flex: 0 0 auto;
         filter: drop-shadow(0 4px 8px rgba(7,27,60,0.24));
@@ -65,10 +85,10 @@
     .admin-menu-card-emoji {
         display: inline-grid;
         place-items: center;
-        width: 42px;
-        height: 42px;
+        width: 52px;
+        height: 52px;
         flex: 0 0 auto;
-        font-size: 34px;
+        font-size: 31px;
         line-height: 1;
         filter: drop-shadow(0 4px 8px rgba(10,24,58,0.22));
     }
@@ -77,6 +97,7 @@
         transform: translateY(-2px);
     }
     .admin-menu-card--rpl {
+        --admin-icon-glow: rgba(71, 196, 255, .82);
         background: linear-gradient(155deg, rgba(255,255,255,0.93), rgba(91,194,244,0.72));
         border-color: rgba(51,160,224,0.72);
         box-shadow: 0 16px 34px rgba(0,78,140,0.16), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 0 rgba(94,184,235,0.16);
@@ -84,6 +105,7 @@
     .admin-menu-card--rpl .admin-menu-card-title { color: #0b5f9f; }
     .admin-menu-card--rpl .admin-menu-card-text { color: #426f91; }
     .admin-menu-card--cup {
+        --admin-icon-glow: rgba(255, 53, 106, .78);
         background: linear-gradient(155deg, rgba(126,24,70,0.9), rgba(66,10,48,0.84));
         border-color: rgba(245,80,125,0.68);
         box-shadow: 0 16px 34px rgba(66,10,39,0.26), inset 0 1px 0 rgba(255,209,224,0.24), inset 0 -1px 0 rgba(221,104,142,0.14);
@@ -91,6 +113,7 @@
     .admin-menu-card--cup .admin-menu-card-title { color: #7c2148; }
     .admin-menu-card--cup .admin-menu-card-text { color: #754d61; }
     .admin-menu-card--tournaments {
+        --admin-icon-glow: rgba(170, 116, 255, .82);
         background: linear-gradient(155deg, rgba(87,78,181,0.86), rgba(44,37,112,0.82));
         border-color: rgba(177,165,255,0.64);
         box-shadow: 0 16px 34px rgba(34,31,95,0.24), inset 0 1px 0 rgba(224,220,255,0.24), inset 0 -1px 0 rgba(157,149,244,0.14);
@@ -98,6 +121,7 @@
     .admin-menu-card--tournaments .admin-menu-card-title { color: #403b8f; }
     .admin-menu-card--tournaments .admin-menu-card-text { color: #625f88; }
     .admin-menu-card--users {
+        --admin-icon-glow: rgba(62, 230, 190, .78);
         background: linear-gradient(155deg, rgba(23,129,126,0.84), rgba(19,65,80,0.82));
         border-color: rgba(72,225,194,0.62);
         box-shadow: 0 16px 34px rgba(13,72,77,0.24), inset 0 1px 0 rgba(211,255,248,0.22), inset 0 -1px 0 rgba(93,211,190,0.14);
@@ -136,28 +160,36 @@
 
     <a class="admin-menu-card admin-menu-card--rpl" href="{{ url_for('admin.admin_russia_2027') }}">
         <div class="admin-menu-card-content">
-            <img class="admin-menu-card-icon" src="{{ url_for('static', filename='clubs/russian-premier-league-footballlogos-org.png') }}" alt="">
+            <span class="admin-menu-card-icon-shell">
+                <img class="admin-menu-card-icon" src="{{ url_for('static', filename='clubs/russian-premier-league-footballlogos-org.png') }}" alt="">
+            </span>
             <div class="admin-menu-card-title">Чемпионат России</div>
         </div>
     </a>
 
     <a class="admin-menu-card admin-menu-card--cup" href="{{ url_for('admin.admin_russian_cup') }}">
         <div class="admin-menu-card-content">
-            <img class="admin-menu-card-icon" src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="">
+            <span class="admin-menu-card-icon-shell">
+                <img class="admin-menu-card-icon" src="{{ url_for('static', filename='clubs/Fonbet_Russian_Cup.png') }}" alt="">
+            </span>
             <div class="admin-menu-card-title">Кубок России</div>
         </div>
     </a>
 
     <a class="admin-menu-card admin-menu-card--tournaments" href="{{ url_for('admin.admin_tournaments') }}">
         <div class="admin-menu-card-content">
-            <span class="admin-menu-card-emoji" aria-hidden="true">🏆</span>
+            <span class="admin-menu-card-icon-shell">
+                <span class="admin-menu-card-emoji" aria-hidden="true">🏆</span>
+            </span>
             <div class="admin-menu-card-title">Турниры</div>
         </div>
     </a>
 
     <a class="admin-menu-card admin-menu-card--users" href="{{ url_for('admin.admin_users') }}">
         <div class="admin-menu-card-content">
-            <span class="admin-menu-card-emoji" aria-hidden="true">👥</span>
+            <span class="admin-menu-card-icon-shell">
+                <span class="admin-menu-card-emoji" aria-hidden="true">👥</span>
+            </span>
             <div class="admin-menu-card-title">Пользователи</div>
         </div>
     </a>
