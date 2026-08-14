@@ -985,6 +985,93 @@ body.tournament-rcup .admin-russian-cup-page .rc-import-cancel button { min-heig
     body.tournament-rcup .admin-russian-cup-page .rc-quick-result .rc-btn { min-width: 0; padding: 7px 5px; }
 }
 
+/* Screenshot importer preview: same geometry as the RPL preview, with Cup colours. */
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-row {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px;
+    border: 1px solid rgba(232,0,36,.42);
+    border-radius: 12px;
+    background: rgba(49,0,39,.82);
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact > div {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact strong {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--rcup-white);
+    font-size: 15px;
+    line-height: 1.25;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact span,
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact em {
+    display: block;
+    line-height: 1.3;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact span {
+    color: rgba(255,255,255,.62);
+    font-size: 12px;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-compact em {
+    color: #9ee6b8;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-edit,
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-delete,
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-cancel button {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    cursor: pointer;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-edit {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 9px;
+    background: rgba(255,255,255,.08);
+    color: var(--rcup-white);
+    font-size: 12px;
+    font-weight: 800;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-confirm {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    margin: 0;
+    border-radius: 11px;
+    font-size: 14px;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-cancel {
+    margin: 0;
+    text-align: center;
+}
+body.tournament-rcup .admin-russian-cup-page .rc-import-preview .rc-import-cancel button {
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    color: rgba(255,255,255,.58);
+    font-size: 12px;
+    font-weight: 800;
+}
+
 /* Anchor for absolute badge positioning — deadline container in column 3. */
 body.tournament-rcup .match-card--russian-cup.closed .rcup-match-deadline {
     position: relative;
