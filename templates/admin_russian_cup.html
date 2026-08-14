@@ -44,7 +44,7 @@
         </details>
         <form method="post" enctype="multipart/form-data" action="{{ url_for('admin_matches.admin_russian_cup_import_screenshot') }}" class="rc-add-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label class="rc-import-file">Загрузить скриншот<input type="file" name="screenshot" accept="image/jpeg,image/png,image/webp" required onchange="this.form.submit()"></label>
+            <label class="rc-import-file">Загрузить скриншот<input type="file" name="screenshot" accept="image/jpeg,image/png,image/webp" required onchange="this.form.submit()" style="display: none;"></label>
         </form>
     </section>
 
