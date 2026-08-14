@@ -271,6 +271,24 @@ class RussianCupUiTests(unittest.TestCase):
         self.assertNotIn('placeholder="Не поддерживается текущей схемой БД" disabled', html)
         self.assertNotIn('placeholder="Нет колонки БД"', html)
 
+    def test_import_preview_uses_compact_ready_and_expanded_review_markup(self):
+        app = self.make_app()
+        context = {
+            "russian_cup_tournament": {"id": 1, "name": "Кубок России"},
+            "russian_cup_import_draft": {"matches": [
+                {"status": "ready", "home_team": "Спартак", "away_team": "Зенит", "date": "2026-10-10", "time": "18:00", "raw_home_team": "Спартак", "raw_away_team": "Зенит", "reasons": []},
+                {"status": "needs_review", "home_team": "", "away_team": "Зенит", "date": "2026-10-10", "time": "", "raw_home_team": "Неизвестно", "raw_away_team": "Зенит", "reasons": ["Время не распознано"]},
+            ]},
+        }
+        with app.test_request_context("/admin/russian-cup"):
+            html = render_template("admin_russian_cup.html", **context)
+        self.assertIn("data-import-compact", html)
+        self.assertIn("data-import-editor", html)
+        self.assertIn("data-import-toggle", html)
+        self.assertIn("✓ Готово", html)
+        self.assertIn("Требуется проверить: Время не распознано", html)
+        self.assertNotIn("Статус: ready", html)
+
     def test_russian_cup_card_actions_have_only_result_form_and_menu(self):
         app = self.make_app()
         context = {

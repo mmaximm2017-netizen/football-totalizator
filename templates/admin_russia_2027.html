@@ -75,11 +75,17 @@
             </datalist>
             <div class="rpl-import-rows">
             {% for match in rpl_import_draft.matches %}
-                <article class="rpl-import-row" data-import-row data-server-invalid="{{ '1' if match.status == 'invalid' else '0' }}" data-server-reason="{{ match.reasons|join('; ') }}">
+                <article class="rpl-import-row {% if match.status == 'ready' %}is-collapsed{% endif %}" data-import-row data-server-invalid="{{ '1' if match.status == 'invalid' else '0' }}" data-server-reason="{{ match.reasons|join('; ') }}">
+                    <div class="rpl-import-compact" data-import-compact {% if match.status != 'ready' %}hidden{% endif %}>
+                        <div><strong>{{ match.home_team }} — {{ match.away_team }}</strong><span>{{ match.date }} · {{ match.time }}</span><em>✓ Готово</em></div>
+                        <button type="button" class="rpl-import-edit" data-import-toggle aria-expanded="false" aria-controls="rpl-import-editor-{{ loop.index0 }}">Изменить</button>
+                    </div>
+                    <div id="rpl-import-editor-{{ loop.index0 }}" data-import-editor {% if match.status == 'ready' %}hidden{% endif %}>
                     <div class="rpl-import-recognized">OCR: {{ match.raw_home_team }} — {{ match.raw_away_team }}</div>
                     <div class="rpl-grid"><label>Домашняя команда<input name="home_team" list="rpl-team-options" value="{{ match.home_team }}" required data-team></label><label>Гостевая команда<input name="away_team" list="rpl-team-options" value="{{ match.away_team }}" required data-team></label></div>
                     <div class="rpl-grid"><label>Дата<input type="date" name="match_date" value="{{ match.date }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ match.time }}" required></label></div>
                     <div class="rpl-import-row-footer"><span class="rpl-import-status rpl-import-status--{{ match.status }}" data-import-status>{% if match.status == 'ready' %}Готов{% elif match.status == 'invalid' %}Ошибка{% else %}Требуется проверить{% endif %}{% if match.reasons %}: {{ match.reasons|join('; ') }}{% endif %}</span><button type="button" class="rpl-import-remove" data-remove-row>Удалить</button></div>
+                    </div>
                 </article>
             {% endfor %}
             </div>
@@ -206,4 +212,5 @@
         validate();
     }());
 </script>
+<script src="{{ url_for('static', filename='js/screenshot-import-preview.js') }}" defer></script>
 {% endblock %}

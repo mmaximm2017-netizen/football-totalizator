@@ -547,6 +547,10 @@ class RplImportRouteTests(unittest.TestCase):
         for field in ('name="home_team"', 'name="away_team"', 'name="match_date"', 'name="match_time"'):
             self.assertIn(field, template)
         self.assertIn("data-remove-row", template)
+        self.assertIn("data-import-compact", template)
+        self.assertIn("data-import-editor", template)
+        self.assertIn("data-import-toggle", template)
+        self.assertIn("aria-controls=\"rpl-import-editor-", template)
         self.assertIn("Добавить матчи", template)
 
     def test_preview_upload_does_not_insert_matches(self):
