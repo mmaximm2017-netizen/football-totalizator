@@ -53,17 +53,17 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         {% for m in russian_cup_import_draft.matches %}<div class="rc-card rc-import-row {% if m.status == 'ready' %}is-collapsed{% endif %}" data-import-row>
           <div class="rc-import-compact" data-import-compact {% if m.status != 'ready' %}hidden{% endif %}><div><strong>{{ m.home_team }} — {{ m.away_team }}</strong><span>{{ m.date }} · {{ m.time }}</span><em>✓ Готово</em></div><button type="button" class="rc-import-edit" data-import-toggle aria-expanded="false" aria-controls="rc-import-editor-{{ loop.index0 }}">Изменить</button></div>
-          <div id="rc-import-editor-{{ loop.index0 }}" data-import-editor {% if m.status == 'ready' %}hidden{% endif %}>
+          <div id="rc-import-editor-{{ loop.index0 }}" class="rc-import-editor" data-import-editor {% if m.status == 'ready' %}hidden{% endif %}>
           <div class="rc-card-note">OCR: {{ m.raw_home_team }} — {{ m.raw_away_team }}</div>
           <div class="rc-grid"><label>Домашняя команда<input name="home_team" value="{{ m.home_team }}" required></label><label>Гостевая команда<input name="away_team" value="{{ m.away_team }}" required></label></div>
           <div class="rc-grid"><label>Дата<input type="date" name="match_date" value="{{ m.date }}" required></label><label>Время МСК<input type="time" name="match_time" value="{{ m.time }}" required></label></div>
-          <div class="rc-card-note">{% if m.status == 'ready' %}Готово{% else %}Требуется проверить{% endif %}{% if m.reasons %}: {{ m.reasons|join('; ') }}{% endif %}</div>
+          <div class="rc-card-note">{% if m.status == 'ready' %}✓ Готово{% else %}Требуется проверить{% endif %}{% if m.reasons %}: {{ m.reasons|join('; ') }}{% endif %}</div>
+          <button class="rc-import-delete" type="submit" formaction="{{ url_for('admin_matches.admin_russian_cup_import_delete_row') }}" name="index" value="{{ loop.index0 }}" formmethod="post">Удалить матч</button>
           </div>
-          <button class="rc-btn" type="submit" formaction="{{ url_for('admin_matches.admin_russian_cup_import_delete_row') }}" name="index" value="{{ loop.index0 }}" formmethod="post">Удалить</button>
         </div>{% endfor %}
-        <button class="rc-btn rc-btn-primary" type="submit" {% if russian_cup_import_draft.matches|selectattr('status','ne','ready')|list %}disabled{% endif %}>Добавить матчи</button>
+        <div class="rc-import-actions"><button class="rc-btn rc-btn-primary rc-import-confirm" type="submit" {% if russian_cup_import_draft.matches|selectattr('status','ne','ready')|list %}disabled{% endif %}>Добавить матчи</button></div>
       </form>
-      <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_import_cancel') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rc-btn" type="submit">Отменить импорт</button></form>
+      <form method="post" action="{{ url_for('admin_matches.admin_russian_cup_import_cancel') }}" class="rc-import-cancel"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Отменить импорт</button></form>
     </section>
     {% endif %}
     <script src="{{ url_for('static', filename='js/screenshot-import-preview.js') }}" defer></script>
