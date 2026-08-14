@@ -166,8 +166,10 @@ class AdminMatchListTests(unittest.TestCase):
         html = (root / "templates" / "admin_russian_cup.html").read_text(encoding="utf-8")
         self.assertIn("admin_russian_cup_edit_form", html)
         self.assertIn("admin_russian_cup_result", html)
+        # The import confirm button may legitimately use the HTML disabled attribute.
+        # The regression target is the legacy full-row edit form, identified by its
+        # dedicated edit endpoint rather than by unrelated attributes.
         self.assertNotIn('action="{{ url_for(\'admin_matches.admin_russian_cup_edit\') }}"', html)
-        self.assertNotIn("disabled", html)
         self.assertIn("rc-technical-operations", html)
 
     def test_rpl_and_russian_cup_metadata_do_not_load_match_rows(self):
@@ -176,7 +178,7 @@ class AdminMatchListTests(unittest.TestCase):
         self.assertEqual(rpl_data["rpl_tournament"]["id"], 2)
         self.assertEqual(len(rpl_cursor.executed), 2)
 
-        cup_cursor = SequenceCursor([(3, "Кубок России", 1, None), (4, 1)])
+        cup_cursor = SequenceCursor([(3, "Кубок России", 1, "2026-07-29", "2027-06-06"), (4, 1)])
         cup_data = prepare_russian_cup_admin_page_data(cup_cursor)
         self.assertEqual(cup_data["russian_cup_tournament"]["id"], 3)
         self.assertEqual(len(cup_cursor.executed), 2)
