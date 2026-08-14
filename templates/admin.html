@@ -21,47 +21,67 @@
         margin-bottom: 8px;
     }
     .admin-menu-card {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
         display: block;
         text-decoration: none;
         border-radius: 22px;
         padding: 16px;
-        background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(232,246,255,0.78));
-        border: 1px solid rgba(255,255,255,0.62);
-        box-shadow: 0 14px 34px rgba(0,78,140,0.14), inset 0 0 0 1px rgba(255,255,255,0.36);
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        background: linear-gradient(155deg, rgba(255,255,255,0.78), rgba(232,246,255,0.54));
+        border: 1px solid rgba(255,255,255,0.52);
+        box-shadow: 0 16px 34px rgba(8,35,72,0.14), inset 0 1px 0 rgba(255,255,255,0.62), inset 0 -1px 0 rgba(255,255,255,0.16);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        backdrop-filter: blur(18px) saturate(140%);
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
     }
+    .admin-menu-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background: linear-gradient(118deg, rgba(255,255,255,0.34), transparent 38%, rgba(255,255,255,0.07));
+    }
+    .admin-menu-card > * { position: relative; z-index: 1; }
     .admin-menu-card:hover,
     .admin-menu-card:focus-visible {
         transform: translateY(-2px);
     }
     .admin-menu-card--rpl {
-        background: linear-gradient(160deg, rgba(255,255,255,0.96), rgba(218,239,255,0.88));
-        border-color: rgba(71,153,214,0.42);
-        box-shadow: 0 14px 34px rgba(0,78,140,0.16), inset 0 0 0 1px rgba(255,255,255,0.5);
+        background: linear-gradient(155deg, rgba(255,255,255,0.86), rgba(196,229,252,0.62));
+        border-color: rgba(94,184,235,0.56);
+        box-shadow: 0 16px 34px rgba(0,78,140,0.16), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 0 rgba(94,184,235,0.16);
     }
     .admin-menu-card--rpl .admin-menu-card-title { color: #0b5f9f; }
     .admin-menu-card--rpl .admin-menu-card-text { color: #426f91; }
     .admin-menu-card--cup {
-        background: linear-gradient(160deg, rgba(255,247,249,0.96), rgba(244,220,229,0.9));
-        border-color: rgba(142,38,75,0.38);
-        box-shadow: 0 14px 34px rgba(100,24,57,0.16), inset 0 0 0 1px rgba(255,255,255,0.44);
+        background: linear-gradient(155deg, rgba(91,28,60,0.78), rgba(52,17,46,0.72));
+        border-color: rgba(221,104,142,0.42);
+        box-shadow: 0 16px 34px rgba(66,10,39,0.26), inset 0 1px 0 rgba(255,209,224,0.24), inset 0 -1px 0 rgba(221,104,142,0.14);
     }
     .admin-menu-card--cup .admin-menu-card-title { color: #7c2148; }
     .admin-menu-card--cup .admin-menu-card-text { color: #754d61; }
     .admin-menu-card--tournaments {
-        background: linear-gradient(160deg, rgba(248,247,255,0.96), rgba(226,224,250,0.88));
-        border-color: rgba(83,75,156,0.34);
-        box-shadow: 0 14px 34px rgba(60,55,130,0.14), inset 0 0 0 1px rgba(255,255,255,0.46);
+        background: linear-gradient(155deg, rgba(62,58,126,0.76), rgba(38,37,89,0.72));
+        border-color: rgba(157,149,244,0.42);
+        box-shadow: 0 16px 34px rgba(34,31,95,0.24), inset 0 1px 0 rgba(224,220,255,0.24), inset 0 -1px 0 rgba(157,149,244,0.14);
     }
     .admin-menu-card--tournaments .admin-menu-card-title { color: #403b8f; }
     .admin-menu-card--tournaments .admin-menu-card-text { color: #625f88; }
     .admin-menu-card--users {
-        background: linear-gradient(160deg, rgba(245,253,251,0.96), rgba(216,242,236,0.88));
-        border-color: rgba(24,130,116,0.34);
-        box-shadow: 0 14px 34px rgba(20,108,97,0.14), inset 0 0 0 1px rgba(255,255,255,0.46);
+        background: linear-gradient(155deg, rgba(35,86,86,0.78), rgba(25,52,65,0.74));
+        border-color: rgba(93,211,190,0.42);
+        box-shadow: 0 16px 34px rgba(13,72,77,0.24), inset 0 1px 0 rgba(211,255,248,0.22), inset 0 -1px 0 rgba(93,211,190,0.14);
     }
     .admin-menu-card--users .admin-menu-card-title { color: #14766d; }
     .admin-menu-card--users .admin-menu-card-text { color: #527a75; }
+    .admin-menu-card--cup .admin-menu-card-title,
+    .admin-menu-card--tournaments .admin-menu-card-title,
+    .admin-menu-card--users .admin-menu-card-title { color: #f7f9ff; }
+    .admin-menu-card--cup .admin-menu-card-text { color: #e6c7d4; }
+    .admin-menu-card--tournaments .admin-menu-card-text { color: #d0cdf6; }
+    .admin-menu-card--users .admin-menu-card-text { color: #b8dfd8; }
     @media (max-width: 430px) {
         .admin-menu-card { padding: 15px; }
     }
