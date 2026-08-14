@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-match-list.css') }}">
+{# Base includes the Cup stylesheet with a long-lived version key. Keep a template-local
+   cache key for preview changes so production browsers fetch the current CSS. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tournaments/russian-cup.css', v='20260814-import-preview') }}">
 {% set admin_match_filters = admin_match_filters|default({'view': 'upcoming', 'page': 1}) %}
 {% set admin_match_list = admin_match_list|default({'total': 0, 'groups': [], 'pages': 1, 'page': 1, 'first': 0, 'last': 0, 'fallback_notice': false, 'pending_count': 0}) %}
 
