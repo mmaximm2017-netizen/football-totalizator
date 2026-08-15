@@ -136,6 +136,27 @@ def get_enabled_subscriptions(cur, user_id):
     ]
 
 
+def get_enabled_subscriptions_for_users(cur, user_ids):
+    user_ids = sorted({int(user_id) for user_id in user_ids})
+    if not user_ids:
+        return {}
+    cur.execute(
+        """
+        SELECT user_id, endpoint, p256dh, auth
+        FROM push_subscriptions
+        WHERE user_id = ANY(%s) AND enabled = TRUE
+        ORDER BY user_id, id
+        """,
+        (user_ids,),
+    )
+    subscriptions = {user_id: [] for user_id in user_ids}
+    for row in cur.fetchall():
+        subscriptions.setdefault(row[0], []).append(
+            {"endpoint": row[1], "keys": {"p256dh": row[2], "auth": row[3]}}
+        )
+    return subscriptions
+
+
 def reserve_test_push_slot(cur, user_id, *, cooldown_seconds=TEST_PUSH_COOLDOWN_SECONDS):
     """Atomically reserve a user's test-push slot across all workers.
 
