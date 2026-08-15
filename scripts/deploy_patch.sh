@@ -20,7 +20,7 @@ else echo "[2/8] Apply patch (skipped; continue mode)"; fi
 echo "[3/8] Build"
 if ! docker compose build --pull=false app; then echo "Build failed. If the patch was already applied, rerun with --continue. Do NOT apply the patch again." >&2; exit 1; fi
 echo "[4/8] Tests"
-if [[ -n "${TEST_MODULES:-}" ]]; then docker compose run --rm -v "$PROJECT_ROOT/tests:/app/tests:ro" app sh -lc "python -m unittest $TEST_MODULES"; elif [[ "${SKIP_TESTS:-0}" == 1 ]]; then echo "WARNING: tests explicitly skipped"; else echo "TEST_MODULES is empty. Set it or use SKIP_TESTS=1 intentionally." >&2; exit 1; fi
+if [[ -n "${TEST_MODULES:-}" ]]; then docker compose run --rm -v "$PROJECT_ROOT/tests:/app/tests:ro" -v "$PROJECT_ROOT/scripts:/app/scripts:ro" app sh -lc "python -m unittest $TEST_MODULES"; elif [[ "${SKIP_TESTS:-0}" == 1 ]]; then echo "WARNING: tests explicitly skipped"; else echo "TEST_MODULES is empty. Set it or use SKIP_TESTS=1 intentionally." >&2; exit 1; fi
 echo "[5/8] Static checks"
 git diff --check HEAD^ HEAD
 docker compose run --rm app python -m compileall -q app
