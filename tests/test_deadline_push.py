@@ -116,10 +116,13 @@ class DeadlinePushTests(unittest.TestCase):
         cursor = Cursor()
         service.select_deadline_candidates(cursor, datetime.now(timezone.utc))
         query = cursor.executed[0][0]
+        params = cursor.executed[0][1]
         self.assertIn("NOT EXISTS", query)
         self.assertIn("predictions", query)
         self.assertIn("push_delivery_log", query)
-        self.assertIn("FINISHED", query)
+        self.assertIn("UPPER(COALESCE(m.status, 'SCHEDULED'))", query)
+        self.assertIn("<> ALL(%s)", query)
+        self.assertIn("FINISHED", params[2])
         self.assertIn("is_admin", query)
         self.assertIn("updated_at", query)
         self.assertIn("GROUP BY m.id", query)
@@ -131,9 +134,12 @@ class DeadlinePushTests(unittest.TestCase):
         cursor = Cursor()
         service.select_deadline_candidates(cursor, datetime.now(timezone.utc))
         query = cursor.executed[0][0]
-        self.assertIn("CANCELLED", query)
-        self.assertIn("LIVE", query)
-        self.assertIn("ABANDONED", query)
+        params = cursor.executed[0][1]
+        self.assertIn("UPPER(COALESCE(m.status, 'SCHEDULED'))", query)
+        self.assertIn("<> ALL(%s)", query)
+        self.assertIn("CANCELLED", params[2])
+        self.assertIn("LIVE", params[2])
+        self.assertIn("ABANDONED", params[2])
 
     def test_candidate_query_retries_only_stale_pending_claims(self):
         cursor = Cursor()
