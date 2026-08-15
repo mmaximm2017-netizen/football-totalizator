@@ -175,6 +175,41 @@
             inset 0 1px 0 rgba(255,255,255,0.48);
     }
 
+    .web-push-card {
+        display: grid;
+        gap: 10px;
+    }
+
+    .web-push-message {
+        color: #5d7894;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .web-push-button {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid rgba(0, 119, 200, .28);
+        border-radius: 14px;
+        padding: 0 16px;
+        background: linear-gradient(145deg, #087dcc, #00569e);
+        color: #fff;
+        font: inherit;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .web-push-button-secondary {
+        background: rgba(255, 255, 255, .55);
+        color: #07558d;
+    }
+
+    .web-push-button:disabled {
+        cursor: wait;
+        opacity: .65;
+    }
+
     .section-title {
         font-size: 18px;
         font-weight: 1000;
@@ -1249,6 +1284,18 @@
 
     </section>
 
+    {% if is_own_profile %}
+    <section class="section-card web-push-card" data-web-push
+             data-subscribe-url="{{ url_for('push.subscribe') }}"
+             data-unsubscribe-url="{{ url_for('push.unsubscribe') }}"
+             data-vapid-url="{{ url_for('push.vapid_public_key') }}">
+        <div class="section-title">🔔 Уведомления</div>
+        <p class="web-push-message" data-push-message>Проверяем поддержку уведомлений…</p>
+        <button type="button" class="web-push-button" data-push-enable hidden>Включить уведомления</button>
+        <button type="button" class="web-push-button web-push-button-secondary" data-push-disable hidden>Отключить уведомления</button>
+    </section>
+    {% endif %}
+
     <section class="stats-grid">
 
         <div class="stat-card">
@@ -1404,5 +1451,8 @@
 
 </div>
 
-{% endblock %}
+{% if is_own_profile %}
+<script src="{{ url_for('static', filename='js/web-push.js') }}" defer></script>
+{% endif %}
 
+{% endblock %}

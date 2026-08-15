@@ -61,18 +61,39 @@ self.addEventListener('fetch', event => {
     );
 });
 
-self.addEventListener('push', event => {
-    const data = event.data ? event.data.json() : {};
+function safeInternalUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return '/';
 
-    const title = data.title || 'ТОТИШ БРАТИШЕК';
+    try {
+        const parsed = new URL(value, self.location.origin);
+        if (parsed.origin !== self.location.origin) return '/';
+        if (!parsed.pathname.startsWith('/')) return '/';
+        return parsed.pathname + parsed.search + parsed.hash;
+    } catch (error) {
+        return '/';
+    }
+}
+
+self.addEventListener('push', event => {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+        if (!data || typeof data !== 'object' || Array.isArray(data)) data = {};
+    } catch (error) {
+        data = {};
+    }
+
+    const title = typeof data.title === 'string' && data.title.trim()
+        ? data.title
+        : 'ТОТИШ';
 
     const options = {
-        body: data.body || '',
+        body: typeof data.body === 'string' ? data.body : '',
         icon: '/static/icon-192-new.png',
         badge: '/static/icon-192-new.png',
-        tag: data.tag || 'default',
+        tag: typeof data.tag === 'string' && data.tag.trim() ? data.tag : 'totish-default',
         vibrate: [200, 100, 200],
-        data: data.url || '/'
+        data: safeInternalUrl(data.url)
     };
 
     event.waitUntil(
@@ -83,19 +104,26 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
     event.notification.close();
 
-    const url = event.notification.data || '/';
+    const url = safeInternalUrl(event.notification.data);
 
     event.waitUntil(
-        clients.matchAll({ type: 'window' }).then(windowClients => {
-            for (let client of windowClients) {
-                if (client.url === url && 'focus' in client) {
-                    return client.focus();
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            const sameOriginClient = windowClients.find(client => {
+                try {
+                    return new URL(client.url).origin === self.location.origin;
+                } catch (error) {
+                    return false;
                 }
+            });
+
+            if (sameOriginClient && 'focus' in sameOriginClient) {
+                if (sameOriginClient.url !== new URL(url, self.location.origin).href && 'navigate' in sameOriginClient) {
+                    return sameOriginClient.navigate(url).then(client => client.focus());
+                }
+                return sameOriginClient.focus();
             }
 
-            if (clients.openWindow) {
-                return clients.openWindow(url);
-            }
+            if (clients.openWindow) return clients.openWindow(url);
         })
     );
 });
