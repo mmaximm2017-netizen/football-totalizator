@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'totish-static-';
-const CACHE_NAME = `${CACHE_PREFIX}v6`;
+const CACHE_NAME = `${CACHE_PREFIX}v7`;
 const LEGACY_CACHE_NAMES = new Set([
     'totish-cache-v5',
 ]);
@@ -90,7 +90,7 @@ self.addEventListener('push', event => {
     const options = {
         body: typeof data.body === 'string' ? data.body : '',
         icon: '/static/icon-192-new.png',
-        badge: '/static/icon-192-new.png',
+        badge: '/static/notification-badge.png',
         tag: typeof data.tag === 'string' && data.tag.trim() ? data.tag : 'totish-default',
         vibrate: [200, 100, 200],
         data: safeInternalUrl(data.url)
