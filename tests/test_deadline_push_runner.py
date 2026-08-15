@@ -29,6 +29,13 @@ class DeadlinePushRunnerContractTests(unittest.TestCase):
         self.assertIn('"$PROJECT_ROOT/scripts:/app/scripts:ro"', SOURCE)
         self.assertIn("app python scripts/send_deadline_pushes.py", SOURCE)
 
+    def test_worker_uses_noninteractive_compose_mode(self):
+        self.assertIn(
+            '"$DOCKER_BIN" compose run --rm -T \\\n'
+            '        -v "$PROJECT_ROOT/scripts:/app/scripts:ro"',
+            SOURCE,
+        )
+
     def test_default_mode_does_not_add_dry_run(self):
         self.assertIn("WORKER_ARGS=()", SOURCE)
         self.assertIn('WORKER_ARGS+=("--dry-run")', SOURCE)
