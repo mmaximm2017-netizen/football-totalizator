@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from app.config import (
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 MAX_ENDPOINT_LENGTH = 2048
 MAX_KEY_LENGTH = 512
+TEST_PUSH_COOLDOWN_SECONDS = 60
 
 
 class SubscriptionValidationError(ValueError):
@@ -134,8 +136,69 @@ def get_enabled_subscriptions(cur, user_id):
     ]
 
 
+def reserve_test_push_slot(cur, user_id, *, cooldown_seconds=TEST_PUSH_COOLDOWN_SECONDS):
+    """Atomically reserve a user's test-push slot across all workers.
+
+    Returns the remaining cooldown in seconds, or ``None`` when sending is allowed.
+    The caller must commit this short transaction before doing network I/O.
+    """
+    cur.execute(
+        """
+        INSERT INTO push_test_cooldowns (user_id, last_sent_at)
+        VALUES (%s, now())
+        ON CONFLICT (user_id) DO UPDATE
+        SET last_sent_at = now()
+        WHERE push_test_cooldowns.last_sent_at
+              <= now() - (%s * INTERVAL '1 second')
+        RETURNING last_sent_at
+        """,
+        (user_id, cooldown_seconds),
+    )
+    if cur.fetchone():
+        return None
+
+    cur.execute(
+        "SELECT last_sent_at FROM push_test_cooldowns WHERE user_id = %s",
+        (user_id,),
+    )
+    row = cur.fetchone()
+    if not row or not row[0]:
+        return cooldown_seconds
+    last_sent_at = row[0]
+    if last_sent_at.tzinfo is None:
+        last_sent_at = last_sent_at.replace(tzinfo=timezone.utc)
+    elapsed = (datetime.now(timezone.utc) - last_sent_at).total_seconds()
+    return max(1, int(cooldown_seconds - elapsed + 0.999))
+
+
+def disable_expired_subscription(cur, endpoint):
+    """Disable one provider-invalid endpoint without exposing its secrets."""
+    normalized = normalize_endpoint(endpoint)
+    cur.execute(
+        """
+        UPDATE push_subscriptions
+        SET enabled = FALSE, updated_at = now()
+        WHERE endpoint = %s AND enabled = TRUE
+        """,
+        (normalized,),
+    )
+    return normalized
+
+
+def delivery_error_status(error):
+    """Extract an HTTP status from pywebpush errors without logging secrets."""
+    response = getattr(error, "response", None)
+    status = getattr(response, "status_code", None)
+    if status is None:
+        status = getattr(error, "status_code", None)
+    try:
+        return int(status) if status is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def send_push(subscription, payload, *, ttl=300):
-    """Prepared sender; not called by the stage-1 API."""
+    """Send one JSON Web Push payload using the configured VAPID credentials."""
     if not WEB_PUSH_VAPID_PRIVATE_KEY or not WEB_PUSH_VAPID_SUBJECT:
         raise RuntimeError("push_not_configured")
 

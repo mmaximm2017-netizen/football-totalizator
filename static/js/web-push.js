@@ -7,6 +7,7 @@
     const message = card.querySelector('[data-push-message]');
     const enableButton = card.querySelector('[data-push-enable]');
     const disableButton = card.querySelector('[data-push-disable]');
+    const testButton = card.querySelector('[data-push-test]');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     function setMessage(text) {
@@ -16,6 +17,7 @@
     function setState(state) {
         enableButton.hidden = state !== 'enable';
         disableButton.hidden = state !== 'disable';
+        testButton.hidden = state !== 'active';
         if (state === 'active') setMessage('Уведомления включены');
         if (state === 'enable') setMessage('Включите уведомления, чтобы получать важные сообщения ТОТИШа');
         if (state === 'denied') setMessage('Уведомления заблокированы в настройках браузера');
@@ -138,6 +140,40 @@
         }
     }
 
+    async function sendTest() {
+        testButton.disabled = true;
+        setMessage('Отправляем тестовое уведомление…');
+        try {
+            const response = await fetch(card.dataset.testUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: '{}'
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.ok === false) {
+                const error = new Error(data.error || 'request_failed');
+                error.retryAfter = data.retry_after;
+                throw error;
+            }
+            setMessage('Тестовое уведомление отправлено');
+        } catch (error) {
+            if (error.message === 'test_push_cooldown') {
+                setMessage('Подождите немного перед повторной отправкой');
+            } else if (error.message === 'no_active_subscription') {
+                setState('enable');
+                setMessage('Сначала включите уведомления');
+            } else {
+                setMessage('Не удалось отправить тестовое уведомление. Попробуйте ещё раз.');
+            }
+        } finally {
+            testButton.disabled = false;
+        }
+    }
+
     async function initialize() {
         if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
             setState('unsupported');
@@ -160,5 +196,6 @@
 
     enableButton.addEventListener('click', enable);
     disableButton.addEventListener('click', disable);
+    testButton.addEventListener('click', sendTest);
     initialize();
 })();

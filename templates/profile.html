@@ -1288,11 +1288,13 @@
     <section class="section-card web-push-card" data-web-push
              data-subscribe-url="{{ url_for('push.subscribe') }}"
              data-unsubscribe-url="{{ url_for('push.unsubscribe') }}"
+             data-test-url="{{ url_for('push.test_push') }}"
              data-vapid-url="{{ url_for('push.vapid_public_key') }}">
         <div class="section-title">🔔 Уведомления</div>
         <p class="web-push-message" data-push-message>Проверяем поддержку уведомлений…</p>
         <button type="button" class="web-push-button" data-push-enable hidden>Включить уведомления</button>
         <button type="button" class="web-push-button web-push-button-secondary" data-push-disable hidden>Отключить уведомления</button>
+        <button type="button" class="web-push-button web-push-button-secondary" data-push-test hidden>Отправить тестовое уведомление</button>
     </section>
     {% endif %}
 
