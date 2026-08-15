@@ -154,8 +154,12 @@ class PwaSecurityTests(unittest.TestCase):
         worker = (ROOT / "static" / "service-worker.js").read_text(encoding="utf-8")
         badge = ROOT / "static" / "notification-badge.png"
 
+        self.assertIn("const CACHE_NAME = `${CACHE_PREFIX}v8`;", worker)
         self.assertIn("icon: '/static/icon-192-new.png'", worker)
-        self.assertIn("badge: '/static/notification-badge.png'", worker)
+        self.assertIn("badge: '/static/notification-badge.png?v=20260815-circular'", worker)
         self.assertNotIn("badge: '/static/icon-192-new.png'", worker)
-        self.assertNotEqual("/static/icon-192-new.png", "/static/notification-badge.png")
+        self.assertNotEqual(
+            "/static/icon-192-new.png",
+            "/static/notification-badge.png?v=20260815-circular",
+        )
         self.assertTrue(badge.is_file())
