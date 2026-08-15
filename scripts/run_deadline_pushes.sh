@@ -80,7 +80,7 @@ fi
 
 set +e
 "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
-    "$DOCKER_BIN" compose run --rm -T \
+    "$DOCKER_BIN" compose run --rm -T --interactive=false \
         -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
         app python scripts/send_deadline_pushes.py "${WORKER_ARGS[@]}" \
     >>"$LOG_FILE" 2>&1

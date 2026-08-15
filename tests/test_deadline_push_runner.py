@@ -31,7 +31,7 @@ class DeadlinePushRunnerContractTests(unittest.TestCase):
 
     def test_worker_uses_noninteractive_compose_mode(self):
         self.assertIn(
-            '"$DOCKER_BIN" compose run --rm -T \\\n'
+            '"$DOCKER_BIN" compose run --rm -T --interactive=false \\\n'
             '        -v "$PROJECT_ROOT/scripts:/app/scripts:ro"',
             SOURCE,
         )
