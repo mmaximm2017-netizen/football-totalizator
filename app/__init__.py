@@ -137,6 +137,7 @@ def create_app():
     from app.routes.profile import profile_bp
     from app.routes.table import table_bp
     from app.routes.predictions import predictions_bp
+    from app.routes.push import push_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -147,6 +148,7 @@ def create_app():
     app.register_blueprint(profile_bp)
     app.register_blueprint(table_bp)
     app.register_blueprint(predictions_bp)
+    app.register_blueprint(push_bp)
 
     @app.get("/service-worker.js")
     def service_worker():

@@ -33,6 +33,12 @@ DATABASE_URL = require_env("DATABASE_URL")
 
 SECRET_KEY = require_env("SECRET_KEY")
 
+# Web Push configuration is intentionally optional during the staged rollout.
+# Public key can be exposed by the API; the private key must remain server-side.
+WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
+WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")
+WEB_PUSH_VAPID_SUBJECT = os.getenv("WEB_PUSH_VAPID_SUBJECT", "")
+
 MSK_OFFSET = 3
 
 START_DATE = datetime(2026, 5, 6)
