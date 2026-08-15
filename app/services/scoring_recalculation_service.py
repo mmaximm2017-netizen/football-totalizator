@@ -6,6 +6,21 @@ from app.models.scoring import calculate_points, has_valid_finished_score
 
 logger = logging.getLogger(__name__)
 
+RESULT_EVENT_TYPE = "match_result"
+
+
+def _enqueue_result_event(cur, user_id, match_id):
+    """Create the result-push outbox row only after points were calculated."""
+    cur.execute(
+        """
+        INSERT INTO push_delivery_log
+            (user_id, match_id, event_type, event_key, status, sent_at, updated_at)
+        VALUES (%s, %s, %s, %s, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id, event_type, event_key) DO NOTHING
+        """,
+        (user_id, match_id, RESULT_EVENT_TYPE, f"match:{match_id}"),
+    )
+
 
 def _get_cursor(conn=None, cur=None):
     if conn is not None and cur is not None:
@@ -103,6 +118,7 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
                     p[3],
                 ),
             )
+            _enqueue_result_event(cur, p[0], match_id)
             updated += 1
 
         if owns_connection:
