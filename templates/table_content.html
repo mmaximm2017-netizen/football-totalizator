@@ -348,12 +348,43 @@
     }
 
     .top-scorer-name {
+        flex: 1 1 auto;
+        min-width: 0;
         color: #ffffff;
         font-weight: 900;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         text-shadow: 0 1px 6px rgba(0,0,0,0.22);
+    }
+
+    .top-scorer-player {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .top-scorer-photos {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+    }
+
+    .top-scorer-photo {
+        display: block;
+        width: 64px;
+        height: 64px;
+        flex: 0 0 64px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 12px;
+        border: 1px solid rgba(0,102,214,0.18);
+        box-shadow:
+            0 4px 10px rgba(0,43,122,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.36);
+        background: rgba(255,255,255,0.58);
     }
 
     .top-scorer-goals {
@@ -2195,6 +2226,14 @@
 <section class="top-scorers-card">
     <div class="top-scorers-title">⚽ {% if selected_name == 'Чемпионат России 🇷🇺' %}Бомбардиры{% else %}Лучшие бомбардиры{% endif %}</div>
     {% if top_scorers %}
+        {% set scorer_photo_map = {
+            'Bowb': ['scorers/bowb.webp'],
+            'БЕК125125': ['scorers/bek125125-1.webp', 'scorers/bek125125-2.webp'],
+            'Byza-Zenit': ['scorers/byza-zenit.webp'],
+            'Макс Зенит': ['scorers/max-zenit.webp'],
+            'Алексей конь': ['scorers/aleksey-kon.webp'],
+            'Денис 05': ['scorers/denis-05.webp']
+        } %}
         <table class="top-scorers-table">
             <thead>
                 <tr>
@@ -2205,9 +2244,25 @@
             </thead>
             <tbody>
                 {% for scorer in top_scorers %}
+                    {% set scorer_photos = scorer_photo_map.get(scorer.username, []) if selected_name == 'Чемпионат России 🇷🇺' else [] %}
                     <tr>
                         <td><span class="top-scorer-place">{{ scorer.place }}</span></td>
-                        <td class="top-scorer-name">{{ scorer.username }}</td>
+                        <td class="top-scorer-player">
+                            <span class="top-scorer-name">{{ scorer.username }}</span>
+                            {% if scorer_photos %}
+                                <span class="top-scorer-photos" aria-hidden="true">
+                                    {% for photo in scorer_photos %}
+                                        <img
+                                            class="top-scorer-photo"
+                                            src="{{ url_for('static', filename=photo) }}"
+                                            alt=""
+                                            loading="lazy"
+                                            decoding="async"
+                                        >
+                                    {% endfor %}
+                                </span>
+                            {% endif %}
+                        </td>
                         <td><span class="top-scorer-goals">⚽ {{ scorer.scorer_goals }}</span></td>
                     </tr>
                 {% endfor %}

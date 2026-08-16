@@ -146,6 +146,54 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("🥈", rpl_html)
         self.assertIn("🥉", rpl_html)
 
+    def test_rpl_top_scorers_render_mapped_photos_and_two_for_bek(self):
+        app = Flask(__name__, template_folder=str(ROOT / "templates"))
+        rows = [
+            {"place": place, "shared": False, "username": "user", "movement": None,
+             "leader_status": None, "outsider_status": None, "points": 0}
+            for place in (1, 2, 3)
+        ]
+        scorers = [
+            {"place": 1, "username": "Bowb", "scorer_goals": 3},
+            {"place": 2, "username": "БЕК125125", "scorer_goals": 3},
+            {"place": 3, "username": "Byza-Zenit", "scorer_goals": 2},
+            {"place": 4, "username": "Макс Зенит", "scorer_goals": 2},
+            {"place": 5, "username": "Алексей конь", "scorer_goals": 1},
+            {"place": 6, "username": "Денис 05", "scorer_goals": 1},
+            {"place": 7, "username": "Без фото", "scorer_goals": 1},
+        ]
+
+        with app.test_request_context("/"):
+            rpl_html = render_template(
+                "table_content.html",
+                table=rows,
+                selected_name="Чемпионат России 🇷🇺",
+                selected_tid=5,
+                top_scorers=scorers,
+            )
+            cup_html = render_template(
+                "table_content.html",
+                table=rows,
+                selected_name="Кубок России",
+                selected_tid=6,
+                top_scorers=scorers,
+            )
+
+        self.assertEqual(rpl_html.count('class="top-scorer-photo"'), 7)
+        for photo in (
+            "bowb.webp",
+            "bek125125-1.webp",
+            "bek125125-2.webp",
+            "byza-zenit.webp",
+            "max-zenit.webp",
+            "aleksey-kon.webp",
+            "denis-05.webp",
+        ):
+            self.assertEqual(rpl_html.count(f"/static/scorers/{photo}"), 1)
+        self.assertIn(".top-scorer-photo {\n        display: block;\n        width: 64px;\n        height: 64px;", rpl_html)
+        self.assertNotIn('Без фото</span>\n                            <span class="top-scorer-photos"', rpl_html)
+        self.assertNotIn('class="top-scorer-photo"', cup_html)
+
 
 if __name__ == "__main__":
     unittest.main()
