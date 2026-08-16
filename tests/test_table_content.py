@@ -194,6 +194,17 @@ class TableContentUiTests(unittest.TestCase):
         self.assertNotIn('Без фото</span>\n                            <span class="top-scorer-photos"', rpl_html)
         self.assertNotIn('class="top-scorer-photo"', cup_html)
 
+    def test_rpl_scorer_name_and_photos_stay_inline_on_mobile(self):
+        css = self.template
+        self.assertIn(".top-scorer-name {\n        flex: 0 1 auto;", css)
+        self.assertIn(".top-scorer-player {\n        display: flex;", css)
+        self.assertIn("        flex-wrap: nowrap;", css)
+        self.assertIn("body.tournament-rpl .top-scorer-player {\n            gap: 4px;\n            flex-wrap: nowrap;", css)
+        self.assertIn("body.tournament-rpl .top-scorer-name {\n            display: block;", css)
+        self.assertIn("            white-space: nowrap;", css)
+        self.assertIn("            text-overflow: ellipsis;", css)
+        self.assertIn("body.tournament-rpl .top-scorer-photos {\n            gap: 4px;", css)
+
 
 if __name__ == "__main__":
     unittest.main()
