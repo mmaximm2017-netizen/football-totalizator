@@ -360,6 +360,7 @@
 
     .top-scorer-player {
         display: flex;
+        flex-direction: row;
         align-items: center;
         gap: 8px;
         min-width: 0;
@@ -1956,8 +1957,9 @@
     body.tournament-rpl .top-scorer-name {
         color: #082b74;
         font-weight: 700;
-        white-space: normal;
-        overflow-wrap: anywhere;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         text-shadow: none;
     }
 
@@ -2258,21 +2260,23 @@
                     {% set scorer_photos = scorer_photo_map.get(scorer.username, []) if selected_name == 'Чемпионат России 🇷🇺' else [] %}
                     <tr>
                         <td><span class="top-scorer-place">{{ scorer.place }}</span></td>
-                        <td class="top-scorer-player">
-                            <span class="top-scorer-name">{{ scorer.username }}</span>
-                            {% if scorer_photos %}
-                                <span class="top-scorer-photos" aria-hidden="true">
-                                    {% for photo in scorer_photos %}
-                                        <img
-                                            class="top-scorer-photo"
-                                            src="{{ url_for('static', filename=photo) }}"
-                                            alt=""
-                                            loading="lazy"
-                                            decoding="async"
-                                        >
-                                    {% endfor %}
-                                </span>
-                            {% endif %}
+                        <td>
+                            <div class="top-scorer-player">
+                                <span class="top-scorer-name">{{ scorer.username }}</span>
+                                {% if scorer_photos %}
+                                    <span class="top-scorer-photos" aria-hidden="true">
+                                        {% for photo in scorer_photos %}
+                                            <img
+                                                class="top-scorer-photo"
+                                                src="{{ url_for('static', filename=photo) }}"
+                                                alt=""
+                                                loading="lazy"
+                                                decoding="async"
+                                            >
+                                        {% endfor %}
+                                    </span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td><span class="top-scorer-goals">⚽ {{ scorer.scorer_goals }}</span></td>
                     </tr>

@@ -1,9 +1,50 @@
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 
 from flask import Flask, render_template
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class TopScorerPlayerParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.players = []
+        self._stack = []
+        self._player = None
+        self._capturing_name = False
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        classes = set((attributes.get("class") or "").split())
+        parent = self._stack[-1] if self._stack else None
+
+        if tag == "div" and "top-scorer-player" in classes:
+            self._player = {"direct_children": [], "username": "", "photos": 0}
+        elif self._player and parent == "div" and tag == "span":
+            if "top-scorer-name" in classes:
+                self._player["direct_children"].append("top-scorer-name")
+                self._capturing_name = True
+            elif "top-scorer-photos" in classes:
+                self._player["direct_children"].append("top-scorer-photos")
+        elif self._player and "top-scorer-photo" in classes and tag == "img":
+            self._player["photos"] += 1
+
+        self._stack.append(tag)
+
+    def handle_data(self, data):
+        if self._capturing_name and self._player:
+            self._player["username"] += data
+
+    def handle_endtag(self, tag):
+        if tag == "span" and self._capturing_name:
+            self._capturing_name = False
+        if tag == "div" and self._player and self._stack and self._stack[-1] == "div":
+            self.players.append(self._player)
+            self._player = None
+        if self._stack:
+            self._stack.pop()
 
 
 class TableContentUiTests(unittest.TestCase):
@@ -179,6 +220,13 @@ class TableContentUiTests(unittest.TestCase):
                 top_scorers=scorers,
             )
 
+        parser = TopScorerPlayerParser()
+        parser.feed(rpl_html)
+        players = {player["username"]: player for player in parser.players}
+        self.assertEqual(players["Bowb"]["photos"], 1)
+        self.assertEqual(players["БЕК125125"]["photos"], 2)
+        self.assertEqual(players["БЕК125125"]["direct_children"], ["top-scorer-name", "top-scorer-photos"])
+        self.assertEqual(sum(player["photos"] for player in parser.players), 7)
         self.assertEqual(rpl_html.count('class="top-scorer-photo"'), 7)
         for photo in (
             "bowb.webp",
@@ -198,12 +246,20 @@ class TableContentUiTests(unittest.TestCase):
         css = self.template
         self.assertIn(".top-scorer-name {\n        flex: 0 1 auto;", css)
         self.assertIn(".top-scorer-player {\n        display: flex;", css)
+        self.assertIn("        flex-direction: row;", css)
         self.assertIn("        flex-wrap: nowrap;", css)
         self.assertIn("body.tournament-rpl .top-scorer-player {\n            gap: 4px;\n            flex-wrap: nowrap;", css)
         self.assertIn("body.tournament-rpl .top-scorer-name {\n            display: block;", css)
         self.assertIn("            white-space: nowrap;", css)
         self.assertIn("            text-overflow: ellipsis;", css)
         self.assertIn("body.tournament-rpl .top-scorer-photos {\n            gap: 4px;", css)
+
+    def test_rpl_scorer_markup_uses_inner_wrapper_inside_table_cell(self):
+        self.assertIn(
+            '<td>\n                            <div class="top-scorer-player">',
+            self.template,
+        )
+        self.assertNotIn('<td class="top-scorer-player">', self.template)
 
 
 if __name__ == "__main__":
