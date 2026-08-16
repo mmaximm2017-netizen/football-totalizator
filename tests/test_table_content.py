@@ -53,7 +53,7 @@ class TableContentUiTests(unittest.TestCase):
 
     def test_all_leader_and_outsider_statuses_remain_in_markup(self):
         for text in (
-            "Единоличный лидер",
+            "Лидер",
             "Уверенный лидер",
             "Явный лидер",
             "Безоговорочный лидер",
