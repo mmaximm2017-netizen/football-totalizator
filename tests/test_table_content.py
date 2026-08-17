@@ -240,7 +240,24 @@ class TableContentUiTests(unittest.TestCase):
             self.assertEqual(rpl_html.count(f"/static/scorers/{photo}"), 1)
         self.assertIn(".top-scorer-photo {\n        display: block;\n        width: 64px;\n        height: 64px;", rpl_html)
         self.assertNotIn('Без фото</span>\n                            <span class="top-scorer-photos"', rpl_html)
-        self.assertNotIn('class="top-scorer-photo"', cup_html)
+
+        cup_parser = TopScorerPlayerParser()
+        cup_parser.feed(cup_html)
+        cup_players = {player["username"]: player for player in cup_parser.players}
+        self.assertEqual(cup_players["Bowb"]["photos"], 1)
+        self.assertEqual(cup_players["БЕК125125"]["photos"], 2)
+        self.assertEqual(sum(player["photos"] for player in cup_parser.players), 7)
+        self.assertEqual(cup_html.count('class="top-scorer-photo"'), 7)
+
+        with app.test_request_context("/"):
+            wc_html = render_template(
+                "table_content.html",
+                table=rows,
+                selected_name="ЧМ-2026",
+                selected_tid=7,
+                top_scorers=scorers,
+            )
+        self.assertNotIn('class="top-scorer-photo"', wc_html)
 
     def test_rpl_scorer_name_and_photos_stay_inline_on_mobile(self):
         css = self.template
@@ -248,11 +265,24 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn(".top-scorer-player {\n        display: flex;", css)
         self.assertIn("        flex-direction: row;", css)
         self.assertIn("        flex-wrap: nowrap;", css)
-        self.assertIn("body.tournament-rpl .top-scorer-player {\n            gap: 4px;\n            flex-wrap: nowrap;", css)
-        self.assertIn("body.tournament-rpl .top-scorer-name {\n            display: block;", css)
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-player {\n            gap: 4px;\n            flex-wrap: nowrap;", css)
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name {\n            display: block;", css)
         self.assertIn("            white-space: nowrap;", css)
         self.assertIn("            text-overflow: ellipsis;", css)
-        self.assertIn("body.tournament-rpl .top-scorer-photos {\n            gap: 4px;", css)
+        self.assertIn(":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-photos {\n            gap: 4px;", css)
+
+    def test_russian_cup_scorers_share_rpl_geometry_but_keep_scoped_palette(self):
+        for selector in (
+            ":is(body.tournament-rpl, body.tournament-rcup) .top-scorers-card",
+            ":is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table",
+            ":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-place",
+            ":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals",
+        ):
+            self.assertIn(selector, self.template)
+        self.assertIn("border-spacing: 0 7px;", self.template)
+        self.assertIn("body.tournament-rcup .top-scorers-table {\n        border-spacing: 0;", self.template)
+        self.assertIn("background: #3A0A32;", self.template)
+        self.assertIn("background: #E80024;", self.template)
 
     def test_rpl_scorer_markup_uses_inner_wrapper_inside_table_cell(self):
         self.assertIn(

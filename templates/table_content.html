@@ -1989,13 +1989,61 @@
         font-weight: 700;
     }
 
+    /* RPL and Russian Cup share scorer-table geometry; their palettes stay scoped above. */
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 20px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 19px;
+        font-weight: 900;
+        line-height: 1.1;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table {
+        width: 100%;
+        border-spacing: 0 7px;
+        table-layout: fixed;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table th {
+        padding: 0 8px 4px;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td {
+        padding: 10px 8px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-place {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 11px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals {
+        min-width: 56px;
+        min-height: 36px;
+        padding: 5px 8px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
     @media (max-width: 430px) {
-        body.tournament-rpl .top-scorers-table,
-        body.tournament-rpl .top-scorers-table tbody {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody {
             display: block;
         }
 
-        body.tournament-rpl .top-scorers-table thead {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table thead {
             position: absolute;
             width: 1px;
             height: 1px;
@@ -2004,22 +2052,21 @@
             clip-path: inset(50%);
         }
 
-        body.tournament-rpl .top-scorers-table tbody tr,
-        body.tournament-rpl .top-scorers-table tbody tr:first-child {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody tr,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody tr:first-child {
             display: grid;
             grid-template-columns: 40px minmax(0, 1fr) 68px;
             align-items: center;
             gap: 8px;
             margin-top: 8px;
             padding: 8px;
-            border: 1px solid rgba(10, 108, 194, 0.10);
+            border: 1px solid transparent;
             border-radius: 14px;
-            background: rgba(255, 255, 255, 0.62);
         }
 
-        body.tournament-rpl .top-scorers-table tbody td,
-        body.tournament-rpl .top-scorers-table tbody td:first-child,
-        body.tournament-rpl .top-scorers-table tbody td:last-child {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:first-child,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:last-child {
             display: block;
             width: auto;
             min-width: 0;
@@ -2029,11 +2076,11 @@
             text-align: left;
         }
 
-        body.tournament-rpl .top-scorers-table tbody td:last-child {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:last-child {
             text-align: right;
         }
 
-        body.tournament-rpl .top-scorer-name {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name {
             display: block;
             flex: 0 1 auto;
             font-size: 14px;
@@ -2043,19 +2090,25 @@
             text-overflow: ellipsis;
         }
 
-        body.tournament-rpl .top-scorer-player {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-player {
             gap: 4px;
             flex-wrap: nowrap;
         }
 
-        body.tournament-rpl .top-scorer-photos {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-photos {
             gap: 4px;
         }
 
-        body.tournament-rpl .top-scorer-goals {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals {
             min-width: 60px;
             min-height: 42px;
             font-size: 17px;
+        }
+
+        body.tournament-rpl .top-scorers-table tbody tr,
+        body.tournament-rpl .top-scorers-table tbody tr:first-child {
+            border-color: rgba(10, 108, 194, 0.10);
+            background: rgba(255, 255, 255, 0.62);
         }
     }
     /* RPL light broadcast table layer. */
@@ -2257,7 +2310,7 @@
             </thead>
             <tbody>
                 {% for scorer in top_scorers %}
-                    {% set scorer_photos = scorer_photo_map.get(scorer.username, []) if selected_name == 'Чемпионат России 🇷🇺' else [] %}
+                    {% set scorer_photos = scorer_photo_map.get(scorer.username, []) if selected_name in ('Чемпионат России 🇷🇺', 'Кубок России') else [] %}
                     <tr>
                         <td><span class="top-scorer-place">{{ scorer.place }}</span></td>
                         <td>
