@@ -187,6 +187,90 @@
         line-height: 1.35;
     }
 
+    .push-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 44px;
+        min-width: 0;
+        cursor: pointer;
+    }
+
+    .push-toggle-label {
+        min-width: 0;
+        color: #063b73;
+        font-size: 14px;
+        font-weight: 900;
+        line-height: 1.2;
+    }
+
+    .push-toggle-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .push-toggle-track {
+        position: relative;
+        display: inline-flex;
+        flex: 0 0 51px;
+        align-items: center;
+        width: 51px;
+        height: 31px;
+        padding: 2px;
+        border-radius: 999px;
+        background: #aeb8c2;
+        box-shadow: inset 0 1px 2px rgba(0, 35, 70, 0.18);
+        transition: background-color 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .push-toggle-thumb {
+        display: block;
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 2px 5px rgba(0, 35, 70, 0.24);
+        transform: translateX(0);
+        transition: transform 0.22s ease;
+    }
+
+    .push-toggle-input:checked + .push-toggle-track {
+        background: #35b86b;
+        box-shadow: inset 0 1px 2px rgba(0, 75, 35, 0.18), 0 0 0 2px rgba(53, 184, 107, 0.12);
+    }
+
+    .push-toggle-input:checked + .push-toggle-track .push-toggle-thumb {
+        transform: translateX(20px);
+    }
+
+    .push-toggle-input:focus-visible + .push-toggle-track {
+        outline: 3px solid rgba(0, 119, 200, 0.28);
+        outline-offset: 3px;
+    }
+
+    .push-toggle:has(.push-toggle-input:disabled) {
+        cursor: not-allowed;
+    }
+
+    .push-toggle:has(.push-toggle-input:disabled) .push-toggle-track {
+        opacity: 0.55;
+    }
+
+    .web-push-card.is-busy .push-toggle {
+        cursor: wait;
+    }
+
+    .web-push-card.is-busy .push-toggle-track {
+        opacity: 0.68;
+    }
+
     .web-push-button {
         width: 100%;
         min-height: 44px;
@@ -1292,8 +1376,19 @@
              data-vapid-url="{{ url_for('push.vapid_public_key') }}">
         <div class="section-title">🔔 Уведомления</div>
         <p class="web-push-message" data-push-message>Проверяем поддержку уведомлений…</p>
-        <button type="button" class="web-push-button" data-push-enable hidden>Включить уведомления</button>
-        <button type="button" class="web-push-button web-push-button-secondary" data-push-disable hidden>Отключить уведомления</button>
+        <label class="push-toggle">
+            <span class="push-toggle-label">Получать уведомления</span>
+            <input
+                class="push-toggle-input"
+                type="checkbox"
+                data-push-toggle
+                role="switch"
+                aria-label="Уведомления"
+            >
+            <span class="push-toggle-track" aria-hidden="true">
+                <span class="push-toggle-thumb"></span>
+            </span>
+        </label>
         <button type="button" class="web-push-button web-push-button-secondary" data-push-test hidden>Отправить тестовое уведомление</button>
     </section>
     {% endif %}
@@ -1454,7 +1549,7 @@
 </div>
 
 {% if is_own_profile %}
-<script src="{{ url_for('static', filename='js/web-push.js', v='20260815-test-push') }}" defer></script>
+<script src="{{ url_for('static', filename='js/web-push.js', v='20260817-notification-toggle') }}" defer></script>
 {% endif %}
 
 {% endblock %}

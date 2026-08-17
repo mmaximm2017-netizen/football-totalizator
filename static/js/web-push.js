@@ -5,25 +5,36 @@
     if (!card) return;
 
     const message = card.querySelector('[data-push-message]');
-    const enableButton = card.querySelector('[data-push-enable]');
-    const disableButton = card.querySelector('[data-push-disable]');
+    const toggle = card.querySelector('[data-push-toggle]');
     const testButton = card.querySelector('[data-push-test]');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    let state = 'inactive';
+    let busy = false;
 
     function setMessage(text) {
         message.textContent = text;
     }
 
-    function setState(state) {
-        enableButton.hidden = state !== 'enable';
-        disableButton.hidden = state !== 'disable';
-        testButton.hidden = state !== 'active';
-        if (state === 'active') setMessage('Уведомления включены');
-        if (state === 'enable') setMessage('Включите уведомления, чтобы получать важные сообщения ТОТИШа');
+    function setState(nextState, customMessage) {
+        state = nextState;
+        toggle.checked = nextState === 'active';
+        toggle.disabled = busy || ['unsupported', 'denied', 'ios-guidance'].includes(nextState);
+        testButton.hidden = nextState !== 'active';
+        if (customMessage) {
+            setMessage(customMessage);
+            return;
+        }
+        if (nextState === 'active') setMessage('Уведомления включены');
+        if (nextState === 'inactive') setMessage('Уведомления выключены');
         if (state === 'denied') setMessage('Уведомления заблокированы в настройках браузера');
-        if (state === 'unsupported') setMessage('Уведомления не поддерживаются этим браузером');
-        if (state === 'ios-guidance') setMessage('Чтобы включить уведомления на iPhone, добавьте ТОТИШ на экран «Домой» и откройте его как приложение.');
-        if (state === 'error') setMessage('Не удалось настроить уведомления. Попробуйте ещё раз.');
+        if (nextState === 'unsupported') setMessage('Уведомления не поддерживаются этим браузером');
+        if (nextState === 'ios-guidance') setMessage('Чтобы включить уведомления на iPhone, добавьте ТОТИШ на экран «Домой» и откройте его как приложение.');
+    }
+
+    function setBusy(value) {
+        busy = value;
+        card.classList.toggle('is-busy', value);
+        toggle.disabled = value || ['unsupported', 'denied', 'ios-guidance'].includes(state);
     }
 
     function isIos() {
@@ -82,9 +93,13 @@
             return;
         }
 
-        enableButton.disabled = true;
+        setBusy(true);
         setMessage('Подключаем уведомления…');
         try {
+            if (Notification.permission === 'denied') {
+                setState('denied');
+                return;
+            }
             const permission = await Notification.requestPermission();
             if (permission === 'denied') {
                 setState('denied');
@@ -108,14 +123,14 @@
             await syncSubscription(subscription);
             setState('active');
         } catch (error) {
-            setState('error');
+            setState('inactive', 'Не удалось включить уведомления. Попробуйте ещё раз.');
         } finally {
-            enableButton.disabled = false;
+            setBusy(false);
         }
     }
 
     async function disable() {
-        disableButton.disabled = true;
+        setBusy(true);
         setMessage('Отключаем уведомления…');
         try {
             const subscription = await currentSubscription();
@@ -132,11 +147,11 @@
                 await responseJson(response);
                 await subscription.unsubscribe();
             }
-            setState('enable');
+            setState('inactive');
         } catch (error) {
-            setState('error');
+            setState('active', 'Не удалось отключить уведомления. Попробуйте ещё раз.');
         } finally {
-            disableButton.disabled = false;
+            setBusy(false);
         }
     }
 
@@ -164,7 +179,7 @@
             if (error.message === 'test_push_cooldown') {
                 setMessage('Подождите немного перед повторной отправкой');
             } else if (error.message === 'no_active_subscription') {
-                setState('enable');
+                setState('inactive');
                 setMessage('Сначала включите уведомления');
             } else {
                 setMessage('Не удалось отправить тестовое уведомление. Попробуйте ещё раз.');
@@ -188,14 +203,20 @@
             return;
         }
         try {
-            setState(await currentSubscription() ? 'active' : 'enable');
+            setState(await currentSubscription() ? 'active' : 'inactive');
         } catch (error) {
-            setState('error');
+            setState('inactive', 'Не удалось проверить состояние уведомлений.');
         }
     }
 
-    enableButton.addEventListener('click', enable);
-    disableButton.addEventListener('click', disable);
+    toggle.addEventListener('change', () => {
+        if (busy) return;
+        if (toggle.checked) {
+            enable();
+        } else {
+            disable();
+        }
+    });
     testButton.addEventListener('click', sendTest);
     initialize();
 })();

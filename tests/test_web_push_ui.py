@@ -28,10 +28,29 @@ class WebPushUiTests(unittest.TestCase):
             "subscription.unsubscribe()",
         ):
             self.assertIn(value, script)
-        self.assertIn("enableButton.addEventListener('click', enable)", script)
+        self.assertIn("toggle.addEventListener('change'", script)
+        self.assertIn("toggle.checked", script)
+        self.assertIn("setState('active')", script)
+        self.assertIn("setState('inactive')", script)
+        self.assertIn("setState('denied')", script)
+        self.assertIn("setState('unsupported')", script)
+        self.assertIn("setState('ios-guidance')", script)
+        self.assertIn("setBusy(true)", script)
         self.assertIn("testButton.addEventListener('click', sendTest)", script)
         self.assertIn("async function enable()", script)
+        self.assertIn("async function disable()", script)
         self.assertIn("body: '{}'", script)
+
+    def test_profile_uses_one_accessible_notification_toggle(self):
+        template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
+        self.assertIn('data-push-toggle', template)
+        self.assertIn('role="switch"', template)
+        self.assertIn('class="push-toggle-track"', template)
+        self.assertNotIn('data-push-enable', template)
+        self.assertNotIn('data-push-disable', template)
+        self.assertNotIn('Включить уведомления</button>', template)
+        self.assertNotIn('Отключить уведомления</button>', template)
+        self.assertIn("v='20260817-notification-toggle'", template)
 
     def test_foreign_profile_has_no_push_controls(self):
         template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
