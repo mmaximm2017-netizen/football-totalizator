@@ -40,7 +40,7 @@ def test_agent_health_accepts_bearer_token(client):
     assert response.get_json() == {
         "ok": True,
         "service": "totish-agent-api",
-        "version": 1,
+        "version": 2,
     }
     assert response.headers["Cache-Control"] == "no-store"
 

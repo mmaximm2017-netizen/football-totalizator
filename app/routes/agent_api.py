@@ -30,7 +30,7 @@ from app.services.manual_match_creation_service import (
 )
 from app.services.rpl_admin_service import get_rpl_tournament
 from app.services.rpl_screenshot_import_service import validate_confirmed_fields
-from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS
+from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS, match_rpl_team
 from app.services.scoring_recalculation_service import recalc_match_points
 
 
@@ -217,6 +217,170 @@ def _prepare_batch(cur, tournament_id, raw_matches):
 
     return prepared, errors
 
+def _find_matches(cur, tournament_id, home_team, away_team, date_filter=""):
+    clauses = [
+        "tournament_id = %s",
+        "league = 'rpl'",
+        "home_team = %s",
+        "away_team = %s",
+    ]
+    params = [tournament_id, home_team, away_team]
+    if date_filter:
+        clauses.append("(kickoff_time AT TIME ZONE 'Europe/Moscow')::date = %s::date")
+        params.append(date_filter)
+
+    cur.execute(
+        f"""
+        SELECT id, home_team, away_team, kickoff_time, deadline, status,
+               home_score, away_score, playoff_stage_manual, match_category,
+               league, tournament_id
+        FROM matches
+        WHERE {' AND '.join(clauses)}
+        ORDER BY kickoff_time DESC NULLS LAST, id DESC
+        LIMIT 10
+        """,
+        tuple(params),
+    )
+    return [_match_json(row) for row in cur.fetchall()]
+
+
+def _openapi_spec():
+    match_schema = {
+        "type": "object",
+        "required": ["home_team", "away_team", "date", "time"],
+        "properties": {
+            "home_team": {"type": "string"},
+            "away_team": {"type": "string"},
+            "date": {"type": "string", "format": "date"},
+            "time": {"type": "string", "pattern": "^\\\\d{2}:\\\\d{2}$"},
+            "round": {"type": "integer", "minimum": 1},
+            "stage": {"type": "string"},
+        },
+    }
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "TOTISH Agent API",
+            "version": "2.0.0",
+            "description": (
+                "Private administration API for TOTISH RPL matches. "
+                "Read operations are safe. Before create/result writes, "
+                "show the intended change and obtain explicit user confirmation."
+            ),
+        },
+        "servers": [{"url": "https://totish.ru/api/agent/v1"}],
+        "paths": {
+            "/capabilities": {
+                "get": {
+                    "operationId": "getTotishCapabilities",
+                    "summary": "Get agent capabilities and safety rules.",
+                    "responses": {"200": {"description": "Capabilities"}},
+                }
+            },
+            "/teams": {
+                "get": {
+                    "operationId": "getRplTeams",
+                    "summary": "Get canonical RPL team names.",
+                    "parameters": [{
+                        "name": "tournament", "in": "query",
+                        "schema": {"type": "string", "default": "rpl"},
+                    }],
+                    "responses": {"200": {"description": "RPL teams"}},
+                }
+            },
+            "/matches": {
+                "get": {
+                    "operationId": "getRplMatches",
+                    "summary": "List RPL matches stored in TOTISH.",
+                    "parameters": [
+                        {"name": "status", "in": "query", "schema": {"type": "string"}},
+                        {"name": "date", "in": "query", "schema": {"type": "string", "format": "date"}},
+                        {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 200}},
+                    ],
+                    "responses": {"200": {"description": "Matches"}},
+                },
+                "post": {
+                    "operationId": "createRplMatches",
+                    "summary": "Create validated RPL matches.",
+                    "description": (
+                        "WRITE ACTION. Call previewRplMatches first and execute only "
+                        "after explicit user confirmation."
+                    ),
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object",
+                            "required": ["matches"],
+                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                        }}},
+                    },
+                    "responses": {"201": {"description": "Created"}, "422": {"description": "Rejected"}},
+                },
+            },
+            "/matches/find": {
+                "get": {
+                    "operationId": "findRplMatch",
+                    "summary": "Find a match by teams and optionally date.",
+                    "parameters": [
+                        {"name": "home_team", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "away_team", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "date", "in": "query", "schema": {"type": "string", "format": "date"}},
+                    ],
+                    "responses": {"200": {"description": "Matches"}, "422": {"description": "Invalid team"}},
+                }
+            },
+            "/matches/preview": {
+                "post": {
+                    "operationId": "previewRplMatches",
+                    "summary": "Validate/deduplicate matches without writing.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object",
+                            "required": ["matches"],
+                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                        }}},
+                    },
+                    "responses": {"200": {"description": "Ready"}, "422": {"description": "Rejected"}},
+                }
+            },
+            "/matches/{match_id}/result": {
+                "post": {
+                    "operationId": "setRplMatchResult",
+                    "summary": "Set match result and recalculate points.",
+                    "description": (
+                        "WRITE ACTION. Find the match first and execute only after "
+                        "explicit user confirmation. A different existing result is rejected."
+                    ),
+                    "parameters": [{
+                        "name": "match_id", "in": "path", "required": True,
+                        "schema": {"type": "integer"},
+                    }],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object",
+                            "required": ["home_score", "away_score"],
+                            "properties": {
+                                "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                                "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Saved"},
+                        "404": {"description": "Not found"},
+                        "409": {"description": "Different result already exists"},
+                    },
+                }
+            },
+        },
+        "components": {
+            "securitySchemes": {"BearerAuth": {"type": "http", "scheme": "bearer"}}
+        },
+        "security": [{"BearerAuth": []}],
+    }
+
 
 @agent_api_bp.after_request
 def _agent_no_store(response):
@@ -224,10 +388,39 @@ def _agent_no_store(response):
     return response
 
 
+@agent_api_bp.get("/openapi.json")
+def openapi_schema():
+    response = jsonify(_openapi_spec())
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return response
+
+
 @agent_api_bp.get("/health")
 @agent_required
 def health():
-    return _response({"ok": True, "service": "totish-agent-api", "version": 1})
+    return _response({"ok": True, "service": "totish-agent-api", "version": 2})
+
+
+@agent_api_bp.get("/capabilities")
+@agent_required
+def capabilities():
+    return _response({
+        "ok": True,
+        "version": 2,
+        "scope": "rpl",
+        "read": ["get_teams", "get_matches", "find_match"],
+        "write": ["preview_matches", "create_matches", "set_match_result"],
+        "forbidden": [
+            "delete_match", "delete_prediction", "edit_user",
+            "edit_points_directly", "arbitrary_sql",
+            "overwrite_existing_different_result",
+        ],
+        "safety": {
+            "preview_before_create": True,
+            "explicit_confirmation_before_write": True,
+            "existing_different_result_requires_manual_review": True,
+        },
+    })
 
 
 @agent_api_bp.get("/tournaments")
@@ -272,6 +465,49 @@ def teams():
         "tournament": "rpl",
         "teams": list(RPL_CANONICAL_TEAMS),
     })
+
+
+@agent_api_bp.get("/matches/find")
+@agent_required
+def find_match():
+    home_raw = (request.args.get("home_team") or "").strip()
+    away_raw = (request.args.get("away_team") or "").strip()
+    date_filter = (request.args.get("date") or "").strip()
+
+    if not home_raw or not away_raw:
+        return _response({"ok": False, "error": "home_team_and_away_team_required"}, 400)
+
+    home_team, home_status = match_rpl_team(home_raw)
+    away_team, away_status = match_rpl_team(away_raw)
+    if home_status != "ready" or not home_team:
+        return _response({"ok": False, "error": "unknown_home_team", "value": home_raw}, 422)
+    if away_status != "ready" or not away_team:
+        return _response({"ok": False, "error": "unknown_away_team", "value": away_raw}, 422)
+    if home_team == away_team:
+        return _response({"ok": False, "error": "teams_must_differ"}, 422)
+
+    if date_filter:
+        try:
+            datetime.strptime(date_filter, "%Y-%m-%d")
+        except ValueError:
+            return _response({"ok": False, "error": "invalid_date"}, 400)
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+        found = _find_matches(cur, tournament["id"], home_team, away_team, date_filter)
+        return _response({
+            "ok": True,
+            "query": {"home_team": home_team, "away_team": away_team, "date": date_filter or None},
+            "count": len(found),
+            "matches": found,
+            "unique": len(found) == 1,
+        })
+    finally:
+        close_db(conn, cur)
 
 
 @agent_api_bp.get("/matches")
@@ -513,7 +749,8 @@ def set_match_result(match_id):
             UPDATE matches
             SET home_score = %s,
                 away_score = %s,
-                status = 'FINISHED'
+                status = 'FINISHED',
+                manual_result_override = 1
             WHERE id = %s
               AND tournament_id = %s
               AND league = 'rpl'
