@@ -2109,12 +2109,11 @@
             background: rgba(255, 255, 255, 0.62);
         }
 
-        /* RCup's page container has 12px mobile padding; RPL has 10px.
-           Match only this card's usable width without changing other Cup blocks. */
+        /* Match the RPL mobile card width exactly: viewport minus its 10px side padding. */
         body.tournament-rcup .top-scorers-card {
-            width: calc(100% + 4px);
-            margin-left: -2px;
-            margin-right: -2px;
+            width: calc(100vw - 20px);
+            margin-left: calc((100% - (100vw - 20px)) / 2);
+            margin-right: calc((100% - (100vw - 20px)) / 2);
         }
     }
     /* RPL light broadcast table layer. */
