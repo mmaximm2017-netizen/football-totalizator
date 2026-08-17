@@ -31,6 +31,11 @@ from app.services.manual_match_creation_service import (
 from app.services.rpl_admin_service import get_rpl_tournament
 from app.services.rpl_screenshot_import_service import validate_confirmed_fields
 from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS, match_rpl_team
+from app.services.russian_cup_admin_service import get_russian_cup_tournament
+from app.services.russian_cup_team_catalog import (
+    RUSSIAN_CUP_CANONICAL_TEAMS,
+    match_russian_cup_team,
+)
 from app.services.scoring_recalculation_service import recalc_match_points
 
 
@@ -118,6 +123,142 @@ def _rpl_or_error(cur):
     if not tournament:
         return None, _response({"ok": False, "error": "rpl_tournament_not_found"}, 404)
     return tournament, None
+
+
+def _rcup_or_error(cur):
+    tournament = get_russian_cup_tournament(cur)
+    if not tournament:
+        return None, _response({"ok": False, "error": "russian_cup_tournament_not_found"}, 404)
+    return tournament, None
+
+
+def _normalize_rcup_batch_item(raw, index):
+    if not isinstance(raw, dict):
+        return None, [f"Матч {index}: ожидается JSON-объект"]
+
+    home_raw = str(raw.get("home_team") or "").strip()
+    away_raw = str(raw.get("away_team") or "").strip()
+    date_value = str(raw.get("date") or raw.get("match_date") or "").strip()
+    time_value = str(raw.get("time") or raw.get("match_time") or "").strip()
+
+    errors = []
+    home_team, home_status = match_russian_cup_team(home_raw)
+    away_team, away_status = match_russian_cup_team(away_raw)
+
+    if home_status != "ready" or not home_team:
+        errors.append(f"Матч {index}: домашняя команда не входит в каталог Кубка России")
+    if away_status != "ready" or not away_team:
+        errors.append(f"Матч {index}: гостевая команда не входит в каталог Кубка России")
+    if home_team and away_team and home_team == away_team:
+        errors.append(f"Матч {index}: команды должны отличаться")
+
+    try:
+        datetime.strptime(date_value, "%Y-%m-%d")
+    except ValueError:
+        errors.append(f"Матч {index}: некорректная дата")
+
+    try:
+        datetime.strptime(time_value, "%H:%M")
+    except ValueError:
+        errors.append(f"Матч {index}: некорректное время")
+
+    stage = str(raw.get("stage") or "").strip()
+    round_value = raw.get("round")
+    if round_value not in (None, ""):
+        try:
+            round_number = int(round_value)
+            if round_number <= 0:
+                raise ValueError
+            if not stage:
+                stage = f"Групповой этап — Тур {round_number}"
+            elif "тур" not in stage.lower():
+                stage = f"{stage} — Тур {round_number}"
+        except (TypeError, ValueError):
+            errors.append(f"Матч {index}: некорректный номер тура")
+
+    if errors:
+        return None, errors
+
+    return {
+        "home_team": home_team,
+        "away_team": away_team,
+        "date": date_value,
+        "time": time_value,
+        "stage": stage,
+        "match_category": "russian_cup",
+    }, []
+
+
+def _prepare_rcup_batch(cur, tournament_id, raw_matches):
+    if not isinstance(raw_matches, list) or not raw_matches:
+        return [], ["Поле matches должно быть непустым массивом"]
+    if len(raw_matches) > MAX_BATCH_MATCHES:
+        return [], [f"За один запрос разрешено не более {MAX_BATCH_MATCHES} матчей"]
+
+    prepared = []
+    errors = []
+    seen = set()
+    for index, raw in enumerate(raw_matches, start=1):
+        item, item_errors = _normalize_rcup_batch_item(raw, index)
+        if item_errors:
+            errors.extend(item_errors)
+            continue
+        try:
+            kickoff_utc, _ = build_manual_deadline_utc(
+                item["date"], item["time"], reject_early_auto=True,
+            )
+        except ValueError as exc:
+            errors.append(f"Матч {index}: {exc}")
+            continue
+        duplicate_key = (item["home_team"], item["away_team"], kickoff_utc)
+        if duplicate_key in seen:
+            errors.append(f"Матч {index}: дубликат внутри запроса")
+            continue
+        seen.add(duplicate_key)
+        cur.execute(
+            """
+            SELECT id FROM matches
+            WHERE tournament_id = %s
+              AND league = 'rcup'
+              AND home_team = %s
+              AND away_team = %s
+              AND kickoff_time = %s
+            """,
+            (tournament_id, item["home_team"], item["away_team"], kickoff_utc),
+        )
+        existing = cur.fetchone()
+        if existing:
+            errors.append(f"Матч {index}: уже существует (id={existing[0]})")
+            continue
+        item["kickoff_time_utc"] = kickoff_utc.isoformat()
+        prepared.append(item)
+    return prepared, errors
+
+
+def _find_rcup_matches(cur, tournament_id, home_team, away_team, date_filter=""):
+    clauses = [
+        "tournament_id = %s",
+        "league = 'rcup'",
+        "home_team = %s",
+        "away_team = %s",
+    ]
+    params = [tournament_id, home_team, away_team]
+    if date_filter:
+        clauses.append("(kickoff_time AT TIME ZONE 'Europe/Moscow')::date = %s::date")
+        params.append(date_filter)
+    cur.execute(
+        f"""
+        SELECT id, home_team, away_team, kickoff_time, deadline, status,
+               home_score, away_score, playoff_stage_manual, match_category,
+               league, tournament_id
+        FROM matches
+        WHERE {' AND '.join(clauses)}
+        ORDER BY kickoff_time DESC NULLS LAST, id DESC
+        LIMIT 10
+        """,
+        tuple(params),
+    )
+    return [_match_json(row) for row in cur.fetchall()]
 
 
 def _match_json(row):
@@ -404,6 +545,103 @@ def _openapi_spec():
                     },
                 }
             },
+            "/russian-cup/teams": {
+                "get": {
+                    "operationId": "getRussianCupTeams",
+                    "summary": "Get canonical Russian Cup team names.",
+                    "responses": {"200": {"description": "Russian Cup teams"}},
+                }
+            },
+            "/russian-cup/matches": {
+                "get": {
+                    "operationId": "getRussianCupMatches",
+                    "summary": "List Russian Cup matches stored in TOTISH.",
+                    "parameters": [
+                        {"name": "status", "in": "query", "schema": {"type": "string"}},
+                        {"name": "date", "in": "query", "schema": {"type": "string", "format": "date"}},
+                        {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 200}},
+                    ],
+                    "responses": {"200": {"description": "Russian Cup matches"}},
+                },
+                "post": {
+                    "operationId": "createRussianCupMatches",
+                    "summary": "Create validated Russian Cup matches.",
+                    "description": "WRITE ACTION. Call previewRussianCupMatches first and execute only after explicit user confirmation.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["matches"],
+                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                        }}},
+                    },
+                    "responses": {"201": {"description": "Created"}, "422": {"description": "Rejected"}},
+                },
+            },
+            "/russian-cup/matches/upcoming": {
+                "get": {
+                    "operationId": "getUpcomingRussianCupMatches",
+                    "summary": "Get nearest future Russian Cup matches in chronological order.",
+                    "parameters": [{"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}],
+                    "responses": {"200": {"description": "Upcoming Russian Cup matches"}},
+                }
+            },
+            "/russian-cup/matches/recent": {
+                "get": {
+                    "operationId": "getRecentRussianCupMatches",
+                    "summary": "Get most recently finished Russian Cup matches, newest first.",
+                    "parameters": [{"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}],
+                    "responses": {"200": {"description": "Recently finished Russian Cup matches"}},
+                }
+            },
+            "/russian-cup/matches/find": {
+                "get": {
+                    "operationId": "findRussianCupMatch",
+                    "summary": "Find a Russian Cup match by teams and optionally date.",
+                    "parameters": [
+                        {"name": "home_team", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "away_team", "in": "query", "required": True, "schema": {"type": "string"}},
+                        {"name": "date", "in": "query", "schema": {"type": "string", "format": "date"}},
+                    ],
+                    "responses": {"200": {"description": "Matches"}, "422": {"description": "Invalid team"}},
+                }
+            },
+            "/russian-cup/matches/preview": {
+                "post": {
+                    "operationId": "previewRussianCupMatches",
+                    "summary": "Validate/deduplicate Russian Cup matches without writing.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["matches"],
+                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                        }}},
+                    },
+                    "responses": {"200": {"description": "Ready"}, "422": {"description": "Rejected"}},
+                }
+            },
+            "/russian-cup/matches/{match_id}/result": {
+                "post": {
+                    "operationId": "setRussianCupMatchResult",
+                    "summary": "Set Russian Cup match result and recalculate points.",
+                    "description": "WRITE ACTION. Find the match first and execute only after explicit user confirmation. A different existing result is rejected.",
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["home_score", "away_score"],
+                            "properties": {
+                                "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                                "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Saved"},
+                        "404": {"description": "Not found"},
+                        "409": {"description": "Different result already exists"},
+                    },
+                }
+            },
         },
         "components": {
             "schemas": {},
@@ -439,6 +677,11 @@ def capabilities():
         "ok": True,
         "version": 2,
         "scope": "rpl",
+        "scopes": ["rpl", "rcup"],
+        "russian_cup": {
+            "read": ["get_teams", "get_matches", "get_upcoming_matches", "get_recent_matches", "find_match"],
+            "write": ["preview_matches", "create_matches", "set_match_result"],
+        },
         "read": [
             "get_teams",
             "get_matches",
@@ -917,5 +1160,287 @@ def set_match_result(match_id):
         logger.exception("Agent API set_match_result failed match_id=%s", match_id)
         _audit("set_match_result", status="error", details={"match_id": match_id})
         return _response({"ok": False, "error": "internal_error"}, 500)
+    finally:
+        close_db(conn, cur)
+
+# ---------------------------------------------------------------------------
+# Russian Cup agent actions
+# ---------------------------------------------------------------------------
+
+@agent_api_bp.get("/russian-cup/teams")
+@agent_required
+def russian_cup_teams():
+    return _response({"ok": True, "tournament": "rcup", "teams": list(RUSSIAN_CUP_CANONICAL_TEAMS)})
+
+
+@agent_api_bp.get("/russian-cup/matches/upcoming")
+@agent_required
+def upcoming_russian_cup_matches():
+    limit, error = _read_limit()
+    if error:
+        return error
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category,
+                   league, tournament_id
+            FROM matches
+            WHERE tournament_id = %s AND league = 'rcup' AND kickoff_time >= NOW()
+            ORDER BY kickoff_time ASC, id ASC
+            LIMIT %s
+            """,
+            (tournament["id"], limit),
+        )
+        rows = cur.fetchall()
+        return _response({"ok": True, "kind": "upcoming", "scope": "rcup", "tournament": tournament, "count": len(rows), "matches": [_match_json(row) for row in rows]})
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/russian-cup/matches/recent")
+@agent_required
+def recent_russian_cup_matches():
+    limit, error = _read_limit()
+    if error:
+        return error
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category,
+                   league, tournament_id
+            FROM matches
+            WHERE tournament_id = %s AND league = 'rcup'
+              AND status = 'FINISHED' AND kickoff_time <= NOW()
+            ORDER BY kickoff_time DESC, id DESC
+            LIMIT %s
+            """,
+            (tournament["id"], limit),
+        )
+        rows = cur.fetchall()
+        return _response({"ok": True, "kind": "recent", "scope": "rcup", "tournament": tournament, "count": len(rows), "matches": [_match_json(row) for row in rows]})
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/russian-cup/matches/find")
+@agent_required
+def find_russian_cup_match():
+    home_raw = (request.args.get("home_team") or "").strip()
+    away_raw = (request.args.get("away_team") or "").strip()
+    date_filter = (request.args.get("date") or "").strip()
+    if not home_raw or not away_raw:
+        return _response({"ok": False, "error": "home_team_and_away_team_required"}, 400)
+    home_team, home_status = match_russian_cup_team(home_raw)
+    away_team, away_status = match_russian_cup_team(away_raw)
+    if home_status != "ready" or not home_team:
+        return _response({"ok": False, "error": "unknown_home_team", "value": home_raw}, 422)
+    if away_status != "ready" or not away_team:
+        return _response({"ok": False, "error": "unknown_away_team", "value": away_raw}, 422)
+    if home_team == away_team:
+        return _response({"ok": False, "error": "teams_must_differ"}, 422)
+    if date_filter:
+        try:
+            datetime.strptime(date_filter, "%Y-%m-%d")
+        except ValueError:
+            return _response({"ok": False, "error": "invalid_date"}, 400)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        found = _find_rcup_matches(cur, tournament["id"], home_team, away_team, date_filter)
+        return _response({"ok": True, "scope": "rcup", "query": {"home_team": home_team, "away_team": away_team, "date": date_filter or None}, "count": len(found), "matches": found, "unique": len(found) == 1})
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/russian-cup/matches")
+@agent_required
+def russian_cup_matches():
+    status = (request.args.get("status") or "").strip().upper()
+    date_filter = (request.args.get("date") or "").strip()
+    try:
+        limit = min(max(int(request.args.get("limit", 100)), 1), MAX_MATCH_LIST)
+    except (TypeError, ValueError):
+        return _response({"ok": False, "error": "invalid_limit"}, 400)
+    if date_filter:
+        try:
+            datetime.strptime(date_filter, "%Y-%m-%d")
+        except ValueError:
+            return _response({"ok": False, "error": "invalid_date"}, 400)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        clauses = ["tournament_id = %s", "league = 'rcup'"]
+        params = [tournament["id"]]
+        if status:
+            clauses.append("status = %s")
+            params.append(status)
+        if date_filter:
+            clauses.append("(kickoff_time AT TIME ZONE 'Europe/Moscow')::date = %s::date")
+            params.append(date_filter)
+        params.append(limit)
+        cur.execute(
+            f"""
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category,
+                   league, tournament_id
+            FROM matches
+            WHERE {' AND '.join(clauses)}
+            ORDER BY kickoff_time NULLS LAST, id
+            LIMIT %s
+            """,
+            tuple(params),
+        )
+        rows = cur.fetchall()
+        return _response({"ok": True, "scope": "rcup", "tournament": tournament, "count": len(rows), "matches": [_match_json(row) for row in rows]})
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches/preview")
+@agent_required
+def preview_russian_cup_matches():
+    payload, error = _require_json_object()
+    if error:
+        return error
+    raw_matches = payload.get("matches")
+    if not isinstance(raw_matches, list) or not raw_matches:
+        return _response({"ok": False, "dry_run": True, "scope": "rcup", "ready_count": 0, "error_count": 1, "matches": [], "errors": ["Поле matches должно быть непустым массивом"]}, 422)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        prepared, errors = _prepare_rcup_batch(cur, tournament["id"], raw_matches)
+        result = {"ok": not errors, "dry_run": True, "scope": "rcup", "ready_count": len(prepared), "error_count": len(errors), "matches": prepared, "errors": errors}
+        _audit("preview_russian_cup_matches", status="success" if not errors else "rejected", details={"ready_count": len(prepared), "error_count": len(errors)})
+        return _response(result, 200 if not errors else 422)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches")
+@agent_required
+def create_russian_cup_matches():
+    payload, error = _require_json_object()
+    if error:
+        return error
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        prepared, errors = _prepare_rcup_batch(cur, tournament["id"], payload.get("matches"))
+        if errors:
+            conn.rollback()
+            _audit("create_russian_cup_matches", status="rejected", details={"errors": errors})
+            return _response({"ok": False, "scope": "rcup", "created_count": 0, "errors": errors}, 422)
+        created = []
+        for item in prepared:
+            match_id = create_manual_match(
+                cur,
+                ManualMatchCreateData(
+                    tournament_id=tournament["id"], league="rcup",
+                    home_team=item["home_team"], away_team=item["away_team"],
+                    match_date=item["date"], match_time=item["time"],
+                    status="SCHEDULED", stage=item["stage"],
+                    match_category="russian_cup", reject_early_auto_deadline=True,
+                ),
+            )
+            created.append({"id": match_id, "home_team": item["home_team"], "away_team": item["away_team"], "date": item["date"], "time": item["time"], "stage": item["stage"]})
+        conn.commit()
+        _audit("create_russian_cup_matches", details={"created": created})
+        return _response({"ok": True, "scope": "rcup", "created_count": len(created), "matches": created}, 201)
+    except ManualMatchValidationError as exc:
+        conn.rollback()
+        _audit("create_russian_cup_matches", status="rejected", details={"error": str(exc)})
+        return _response({"ok": False, "scope": "rcup", "error": str(exc)}, 422)
+    except Exception:
+        conn.rollback()
+        logger.exception("Agent API create_russian_cup_matches failed")
+        _audit("create_russian_cup_matches", status="error")
+        return _response({"ok": False, "scope": "rcup", "error": "internal_error"}, 500)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches/<int:match_id>/result")
+@agent_required
+def set_russian_cup_match_result(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    try:
+        home_score = int(payload.get("home_score"))
+        away_score = int(payload.get("away_score"))
+    except (TypeError, ValueError):
+        return _response({"ok": False, "error": "invalid_score"}, 422)
+    if not has_valid_finished_score("FINISHED", home_score, away_score):
+        return _response({"ok": False, "error": "invalid_score"}, 422)
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, status, home_score, away_score
+            FROM matches
+            WHERE id = %s AND tournament_id = %s AND league = 'rcup'
+            FOR UPDATE
+            """,
+            (match_id, tournament["id"]),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.rollback()
+            return _response({"ok": False, "error": "match_not_found"}, 404)
+        previous = {"status": row[3], "home_score": row[4], "away_score": row[5]}
+        if row[4] is not None or row[5] is not None:
+            if row[4] == home_score and row[5] == away_score and row[3] == "FINISHED":
+                conn.rollback()
+                return _response({"ok": True, "scope": "rcup", "changed": False, "match_id": match_id, "home_score": home_score, "away_score": away_score})
+            conn.rollback()
+            _audit("set_russian_cup_match_result", status="rejected", details={"match_id": match_id, "reason": "existing_result_requires_manual_review", "previous": previous, "requested": [home_score, away_score]})
+            return _response({"ok": False, "scope": "rcup", "error": "existing_result_requires_manual_review", "current": previous}, 409)
+
+        cur.execute(
+            """
+            UPDATE matches
+            SET home_score = %s, away_score = %s, status = 'FINISHED', manual_result_override = 1
+            WHERE id = %s AND tournament_id = %s AND league = 'rcup'
+            """,
+            (home_score, away_score, match_id, tournament["id"]),
+        )
+        recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+        conn.commit()
+        _audit("set_russian_cup_match_result", details={"match_id": match_id, "teams": [row[1], row[2]], "previous": previous, "new": {"status": "FINISHED", "home_score": home_score, "away_score": away_score}})
+        return _response({"ok": True, "scope": "rcup", "changed": True, "match_id": match_id, "home_team": row[1], "away_team": row[2], "home_score": home_score, "away_score": away_score, "points_recalculated": True})
+    except Exception:
+        conn.rollback()
+        logger.exception("Agent API set_russian_cup_match_result failed match_id=%s", match_id)
+        _audit("set_russian_cup_match_result", status="error", details={"match_id": match_id})
+        return _response({"ok": False, "scope": "rcup", "error": "internal_error"}, 500)
     finally:
         close_db(conn, cur)
