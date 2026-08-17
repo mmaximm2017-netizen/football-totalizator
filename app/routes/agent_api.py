@@ -75,9 +75,17 @@ def agent_required(view):
             logger.error("Agent API disabled: TOTISH_AGENT_TOKEN is not configured")
             return _response({"ok": False, "error": "agent_api_disabled"}, 503)
         if not _token_is_valid():
+            auth_header = request.headers.get("Authorization") or ""
+            scheme = auth_header.split(" ", 1)[0] if auth_header else ""
+            token_len = len(auth_header.split(" ", 1)[1].strip()) if " " in auth_header else 0
             audit_logger.warning(
-                "agent_request_denied method=%s path=%s remote=%s",
-                request.method, request.path, request.remote_addr,
+                "agent_request_denied method=%s path=%s remote=%s auth_present=%s scheme=%s token_len=%s",
+                request.method,
+                request.path,
+                request.remote_addr,
+                bool(auth_header),
+                scheme,
+                token_len,
             )
             return _response({"ok": False, "error": "unauthorized"}, 401)
         return view(*args, **kwargs)
