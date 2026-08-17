@@ -1162,6 +1162,17 @@
     }
 
     @media (max-width: 430px) {
+        /* Standings shell uses the same mobile width as RPL; only RCup needs
+           parent-padding compensation because its page container is wider-padded. */
+        :is(body.tournament-rpl, body.tournament-rcup) .table-shell {
+            width: calc(100vw - 20px);
+        }
+
+        body.tournament-rcup .table-shell {
+            margin-left: calc((100% - (100vw - 20px)) / 2);
+            margin-right: calc((100% - (100vw - 20px)) / 2);
+        }
+
         .table-shell {
             margin-top: 10px;
             border-radius: 22px;
