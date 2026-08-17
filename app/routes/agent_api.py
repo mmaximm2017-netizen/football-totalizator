@@ -325,6 +325,28 @@ def _openapi_spec():
                     "responses": {"201": {"description": "Created"}, "422": {"description": "Rejected"}},
                 },
             },
+            "/matches/upcoming": {
+                "get": {
+                    "operationId": "getUpcomingRplMatches",
+                    "summary": "Get nearest future RPL matches in chronological order.",
+                    "parameters": [
+                        {"name": "limit", "in": "query",
+                         "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}},
+                    ],
+                    "responses": {"200": {"description": "Upcoming RPL matches"}},
+                }
+            },
+            "/matches/recent": {
+                "get": {
+                    "operationId": "getRecentRplMatches",
+                    "summary": "Get most recently finished RPL matches, newest first.",
+                    "parameters": [
+                        {"name": "limit", "in": "query",
+                         "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}},
+                    ],
+                    "responses": {"200": {"description": "Recently finished RPL matches"}},
+                }
+            },
             "/matches/find": {
                 "get": {
                     "operationId": "findRplMatch",
@@ -417,7 +439,13 @@ def capabilities():
         "ok": True,
         "version": 2,
         "scope": "rpl",
-        "read": ["get_teams", "get_matches", "find_match"],
+        "read": [
+            "get_teams",
+            "get_matches",
+            "get_upcoming_matches",
+            "get_recent_matches",
+            "find_match",
+        ],
         "write": ["preview_matches", "create_matches", "set_match_result"],
         "forbidden": [
             "delete_match", "delete_prediction", "edit_user",
@@ -474,6 +502,94 @@ def teams():
         "tournament": "rpl",
         "teams": list(RPL_CANONICAL_TEAMS),
     })
+
+
+def _read_limit(default=20, maximum=100):
+    try:
+        return min(max(int(request.args.get("limit", default)), 1), maximum), None
+    except (TypeError, ValueError):
+        return None, _response({"ok": False, "error": "invalid_limit"}, 400)
+
+
+@agent_api_bp.get("/matches/upcoming")
+@agent_required
+def upcoming_matches():
+    limit, error = _read_limit()
+    if error:
+        return error
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category,
+                   league, tournament_id
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = 'rpl'
+              AND kickoff_time >= NOW()
+            ORDER BY kickoff_time ASC, id ASC
+            LIMIT %s
+            """,
+            (tournament["id"], limit),
+        )
+        rows = cur.fetchall()
+        return _response({
+            "ok": True,
+            "kind": "upcoming",
+            "tournament": tournament,
+            "count": len(rows),
+            "matches": [_match_json(row) for row in rows],
+        })
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/matches/recent")
+@agent_required
+def recent_matches():
+    limit, error = _read_limit()
+    if error:
+        return error
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, deadline, status,
+                   home_score, away_score, playoff_stage_manual, match_category,
+                   league, tournament_id
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = 'rpl'
+              AND status = 'FINISHED'
+              AND kickoff_time <= NOW()
+            ORDER BY kickoff_time DESC, id DESC
+            LIMIT %s
+            """,
+            (tournament["id"], limit),
+        )
+        rows = cur.fetchall()
+        return _response({
+            "ok": True,
+            "kind": "recent",
+            "tournament": tournament,
+            "count": len(rows),
+            "matches": [_match_json(row) for row in rows],
+        })
+    finally:
+        close_db(conn, cur)
 
 
 @agent_api_bp.get("/matches/find")
