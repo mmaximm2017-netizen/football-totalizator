@@ -138,6 +138,7 @@ def create_app():
     from app.routes.table import table_bp
     from app.routes.predictions import predictions_bp
     from app.routes.push import push_bp
+    from app.routes.agent_api import agent_api_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -149,6 +150,7 @@ def create_app():
     app.register_blueprint(table_bp)
     app.register_blueprint(predictions_bp)
     app.register_blueprint(push_bp)
+    app.register_blueprint(agent_api_bp)
 
     @app.get("/service-worker.js")
     def service_worker():
@@ -214,6 +216,10 @@ def create_app():
         # This project uses this custom CSRF hook instead of Flask-WTF CSRFProtect.
         # Exempt only the actual registered diagnostics view, never a matching path.
         if request.method == "POST" and app.view_functions.get(request.endpoint) is client_diagnostics:
+            return
+        # Agent API authenticates every request with a dedicated bearer token.
+        # Exempt by registered endpoint, not by a user-controlled path prefix.
+        if request.endpoint and request.endpoint.startswith("agent_api."):
             return
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return
