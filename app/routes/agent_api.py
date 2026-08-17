@@ -376,6 +376,7 @@ def _openapi_spec():
             },
         },
         "components": {
+            "schemas": {},
             "securitySchemes": {"BearerAuth": {"type": "http", "scheme": "bearer"}}
         },
         "security": [{"BearerAuth": []}],
