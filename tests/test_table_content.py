@@ -276,11 +276,14 @@ class TableContentUiTests(unittest.TestCase):
             ":is(body.tournament-rpl, body.tournament-rcup) .top-scorers-card",
             ":is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table",
             ":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-place",
+            ":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name",
             ":is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals",
         ):
             self.assertIn(selector, self.template)
         self.assertIn("border-spacing: 0 7px;", self.template)
-        self.assertIn("body.tournament-rcup .top-scorers-table {\n        border-spacing: 0;", self.template)
+        self.assertNotIn("body.tournament-rcup .top-scorers-table {\n        border-spacing: 0;", self.template)
+        self.assertIn("body.tournament-rcup .top-scorers-card {\n            width: calc(100% + 4px);", self.template)
+        self.assertIn("font-weight: 700;", self.template)
         self.assertIn("background: #3A0A32;", self.template)
         self.assertIn("background: #E80024;", self.template)
 

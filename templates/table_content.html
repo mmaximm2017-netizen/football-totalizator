@@ -1822,23 +1822,17 @@
     }
 
     body.tournament-rcup .top-scorers-card {
-        margin-top: 14px;
-        padding: 14px;
         overflow: hidden;
         border: 1px solid rgba(232, 0, 36, 0.55);
-        border-radius: 18px;
         background: #310027;
         box-shadow: none;
     }
 
     body.tournament-rcup .top-scorers-title {
         color: #ffffff;
-        font-size: 18px;
-        font-weight: 900;
     }
 
     body.tournament-rcup .top-scorers-table {
-        border-spacing: 0;
         color: #ffffff;
     }
 
@@ -2028,6 +2022,10 @@
         border-radius: 11px;
     }
 
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name {
+        font-weight: 700;
+    }
+
     :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals {
         min-width: 56px;
         min-height: 36px;
@@ -2109,6 +2107,14 @@
         body.tournament-rpl .top-scorers-table tbody tr:first-child {
             border-color: rgba(10, 108, 194, 0.10);
             background: rgba(255, 255, 255, 0.62);
+        }
+
+        /* RCup's page container has 12px mobile padding; RPL has 10px.
+           Match only this card's usable width without changing other Cup blocks. */
+        body.tournament-rcup .top-scorers-card {
+            width: calc(100% + 4px);
+            margin-left: -2px;
+            margin-right: -2px;
         }
     }
     /* RPL light broadcast table layer. */
