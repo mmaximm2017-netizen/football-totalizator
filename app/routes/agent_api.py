@@ -261,6 +261,56 @@ def _find_rcup_matches(cur, tournament_id, home_team, away_team, date_filter="")
     return [_match_json(row) for row in cur.fetchall()]
 
 
+
+def _reconcile_candidate_batch(cur, tournament_id, league, raw_matches, normalizer):
+    if not isinstance(raw_matches, list) or not raw_matches:
+        return None, _response({"ok": False, "error": "matches_required"}, 422)
+    if len(raw_matches) > MAX_BATCH_MATCHES:
+        return None, _response({"ok": False, "error": "too_many_matches", "max": MAX_BATCH_MATCHES}, 422)
+
+    missing, existing, invalid, seen = [], [], [], set()
+    for index, raw in enumerate(raw_matches, start=1):
+        item, item_errors = normalizer(raw, index)
+        if item_errors:
+            invalid.append({"index": index, "errors": item_errors, "input": raw})
+            continue
+        try:
+            kickoff_utc, _ = build_manual_deadline_utc(item["date"], item["time"], reject_early_auto=True)
+        except ValueError as exc:
+            invalid.append({"index": index, "errors": [str(exc)], "input": raw})
+            continue
+
+        key = (item["home_team"], item["away_team"], kickoff_utc)
+        if key in seen:
+            invalid.append({"index": index, "errors": ["дубликат внутри переданного списка"], "input": raw})
+            continue
+        seen.add(key)
+
+        cur.execute(
+            """
+            SELECT id, status, home_score, away_score
+            FROM matches
+            WHERE tournament_id = %s AND league = %s
+              AND home_team = %s AND away_team = %s AND kickoff_time = %s
+            LIMIT 1
+            """,
+            (tournament_id, league, item["home_team"], item["away_team"], kickoff_utc),
+        )
+        row = cur.fetchone()
+        candidate = dict(item)
+        candidate["kickoff_time_utc"] = kickoff_utc.isoformat()
+        if row:
+            existing.append({"id": row[0], "status": row[1], "home_score": row[2], "away_score": row[3], **candidate})
+        else:
+            missing.append(candidate)
+
+    return {
+        "ok": not invalid, "dry_run": True, "scope": league,
+        "candidate_count": len(raw_matches),
+        "missing_count": len(missing), "existing_count": len(existing), "invalid_count": len(invalid),
+        "missing": missing, "existing": existing, "invalid": invalid,
+    }, None
+
 def _match_json(row):
     kickoff = row[3]
     deadline = row[4]
@@ -640,6 +690,31 @@ def _openapi_spec():
                         "404": {"description": "Not found"},
                         "409": {"description": "Different result already exists"},
                     },
+                }
+            },
+
+            "/matches/reconcile": {
+                "post": {
+                    "operationId": "reconcileRplMatches",
+                    "summary": "Compare a candidate RPL schedule with TOTISH without writing.",
+                    "description": "READ-ONLY. Split a full candidate round into missing, existing and invalid matches. Use before creating matches collected from external sources.",
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                        "type": "object", "required": ["matches"],
+                        "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}}
+                    }}}},
+                    "responses": {"200": {"description": "Reconciliation result"}}
+                }
+            },
+            "/russian-cup/matches/reconcile": {
+                "post": {
+                    "operationId": "reconcileRussianCupMatches",
+                    "summary": "Compare a candidate Russian Cup schedule with TOTISH without writing.",
+                    "description": "READ-ONLY. Split a full candidate round into missing, existing and invalid matches. Use before creating matches collected from external sources.",
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                        "type": "object", "required": ["matches"],
+                        "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}}
+                    }}}},
+                    "responses": {"200": {"description": "Reconciliation result"}}
                 }
             },
         },
@@ -1442,5 +1517,46 @@ def set_russian_cup_match_result(match_id):
         logger.exception("Agent API set_russian_cup_match_result failed match_id=%s", match_id)
         _audit("set_russian_cup_match_result", status="error", details={"match_id": match_id})
         return _response({"ok": False, "scope": "rcup", "error": "internal_error"}, 500)
+    finally:
+        close_db(conn, cur)
+
+@agent_api_bp.post("/matches/reconcile")
+@agent_required
+def reconcile_rpl_matches():
+    payload, error = _require_json_object()
+    if error:
+        return error
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+        result, error = _reconcile_candidate_batch(cur, tournament["id"], "rpl", payload.get("matches"), _normalize_batch_item)
+        if error:
+            return error
+        _audit("reconcile_rpl_matches", details={k: result[k] for k in ("candidate_count","missing_count","existing_count","invalid_count")})
+        return _response(result)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches/reconcile")
+@agent_required
+def reconcile_russian_cup_matches():
+    payload, error = _require_json_object()
+    if error:
+        return error
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        result, error = _reconcile_candidate_batch(cur, tournament["id"], "rcup", payload.get("matches"), _normalize_rcup_batch_item)
+        if error:
+            return error
+        _audit("reconcile_russian_cup_matches", details={k: result[k] for k in ("candidate_count","missing_count","existing_count","invalid_count")})
+        return _response(result)
     finally:
         close_db(conn, cur)
