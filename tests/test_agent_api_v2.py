@@ -72,7 +72,8 @@ def test_result_sql_sets_manual_override(client):
     with patch("app.routes.agent_api.get_db", return_value=conn), \
          patch("app.routes.agent_api.get_rpl_tournament",
                return_value={"id": 5, "name": "Чемпионат России"}), \
-         patch("app.routes.agent_api.recalc_match_points"):
+         patch("app.routes.agent_api.recalc_match_points"), \
+         patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post(
             "/api/agent/v1/matches/777/result",
             headers=auth(),

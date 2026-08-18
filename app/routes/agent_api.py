@@ -218,6 +218,51 @@ def _consume_schedule_confirmation(cur, *, token, action, payload):
     return None
 
 
+
+def _result_confirmation_payload(*, league, match_id, home_score, away_score):
+    return {
+        "league": league,
+        "match_id": int(match_id),
+        "home_score": int(home_score),
+        "away_score": int(away_score),
+    }
+
+
+def _preview_result_change(cur, *, tournament_id, league, match_id, home_score, away_score):
+    if not has_valid_finished_score("FINISHED", home_score, away_score):
+        return None, _response({"ok": False, "error": "invalid_score"}, 422)
+    cur.execute(
+        """
+        SELECT id, home_team, away_team, status, home_score, away_score
+        FROM matches
+        WHERE id = %s AND tournament_id = %s AND league = %s
+        """,
+        (match_id, tournament_id, league),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, _response({"ok": False, "error": "match_not_found"}, 404)
+    previous = {"status": row[3], "home_score": row[4], "away_score": row[5]}
+    if row[4] is not None or row[5] is not None:
+        if row[4] == home_score and row[5] == away_score and row[3] == "FINISHED":
+            return {
+                "ok": True, "dry_run": True, "changed": False,
+                "match_id": match_id, "home_team": row[1], "away_team": row[2],
+                "current": previous,
+                "requested": {"status": "FINISHED", "home_score": home_score, "away_score": away_score},
+                "confirmation_required": False,
+            }, None
+        return None, _response(
+            {"ok": False, "error": "existing_result_requires_manual_review", "current": previous}, 409
+        )
+    return {
+        "ok": True, "dry_run": True, "changed": True,
+        "match_id": match_id, "home_team": row[1], "away_team": row[2],
+        "current": previous,
+        "requested": {"status": "FINISHED", "home_score": home_score, "away_score": away_score},
+    }, None
+
+
 def _rpl_or_error(cur):
     tournament = get_rpl_tournament(cur)
     if not tournament:
@@ -995,6 +1040,23 @@ def _openapi_spec():
                     "responses": {"200": {"description": "Ready"}, "422": {"description": "Rejected"}},
                 }
             },
+            "/matches/{match_id}/result/preview": {
+                "post": {
+                    "operationId": "previewRplMatchResult",
+                    "summary": "Preview an RPL result before writing.",
+                    "description": "READ-ONLY for match data. Returns a short-lived token bound to this exact result when allowed.",
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                        "type": "object",
+                        "required": ["home_score", "away_score"],
+                        "properties": {
+                            "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                            "away_score": {"type": "integer", "minimum": 0, "maximum": 99}
+                        }
+                    }}}},
+                    "responses": {"200": {"description": "Preview"}, "404": {"description": "Not found"}, "409": {"description": "Conflict"}, "422": {"description": "Invalid score"}}
+                }
+            },
             "/matches/{match_id}/result": {
                 "post": {
                     "operationId": "setRplMatchResult",
@@ -1011,10 +1073,11 @@ def _openapi_spec():
                         "required": True,
                         "content": {"application/json": {"schema": {
                             "type": "object",
-                            "required": ["home_score", "away_score"],
+                            "required": ["home_score", "away_score", "confirmation_token"],
                             "properties": {
                                 "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
                                 "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                                "confirmation_token": {"type": "string"},
                             },
                         }}},
                     },
@@ -1099,6 +1162,23 @@ def _openapi_spec():
                     "responses": {"200": {"description": "Ready"}, "422": {"description": "Rejected"}},
                 }
             },
+            "/russian-cup/matches/{match_id}/result/preview": {
+                "post": {
+                    "operationId": "previewRussianCupMatchResult",
+                    "summary": "Preview a Russian Cup result before writing.",
+                    "description": "READ-ONLY for match data. Returns a short-lived token bound to this exact result when allowed.",
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                        "type": "object",
+                        "required": ["home_score", "away_score"],
+                        "properties": {
+                            "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                            "away_score": {"type": "integer", "minimum": 0, "maximum": 99}
+                        }
+                    }}}},
+                    "responses": {"200": {"description": "Preview"}, "404": {"description": "Not found"}, "409": {"description": "Conflict"}, "422": {"description": "Invalid score"}}
+                }
+            },
             "/russian-cup/matches/{match_id}/result": {
                 "post": {
                     "operationId": "setRussianCupMatchResult",
@@ -1108,10 +1188,11 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["home_score", "away_score"],
+                            "type": "object", "required": ["home_score", "away_score", "confirmation_token"],
                             "properties": {
                                 "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
                                 "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
+                                "confirmation_token": {"type": "string"},
                             },
                         }}},
                     },
@@ -1385,6 +1466,9 @@ def capabilities():
             "schedule_confirmation_token_required": True,
             "schedule_confirmation_token_single_use": True,
             "schedule_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
+            "result_confirmation_token_required": True,
+            "result_confirmation_token_single_use": True,
+            "result_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
             "existing_different_result_requires_manual_review": True,
         },
     })
@@ -1728,6 +1812,42 @@ def create_matches():
         close_db(conn, cur)
 
 
+@agent_api_bp.post("/matches/<int:match_id>/result/preview")
+@agent_required
+def preview_rpl_match_result(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    try:
+        home_score = int(payload.get("home_score"))
+        away_score = int(payload.get("away_score"))
+    except (TypeError, ValueError):
+        return _response({"ok": False, "error": "invalid_score"}, 422)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+        preview, error = _preview_result_change(
+            cur, tournament_id=tournament["id"], league="rpl",
+            match_id=match_id, home_score=home_score, away_score=away_score,
+        )
+        if error:
+            return error
+        if preview["changed"]:
+            preview.update(_issue_schedule_confirmation(
+                cur, conn, action="set_match_result",
+                payload=_result_confirmation_payload(
+                    league="rpl", match_id=match_id,
+                    home_score=home_score, away_score=away_score,
+                ),
+            ))
+        return _response(preview)
+    finally:
+        close_db(conn, cur)
+
+
 @agent_api_bp.post("/matches/<int:match_id>/result")
 @agent_required
 def set_match_result(match_id):
@@ -1750,6 +1870,19 @@ def set_match_result(match_id):
         tournament, error = _rpl_or_error(cur)
         if error:
             return error
+
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="set_match_result",
+            payload=_result_confirmation_payload(
+                league="rpl", match_id=match_id,
+                home_score=home_score, away_score=away_score,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
 
         cur.execute(
             """
@@ -2070,6 +2203,42 @@ def create_russian_cup_matches():
         close_db(conn, cur)
 
 
+@agent_api_bp.post("/russian-cup/matches/<int:match_id>/result/preview")
+@agent_required
+def preview_russian_cup_match_result(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    try:
+        home_score = int(payload.get("home_score"))
+        away_score = int(payload.get("away_score"))
+    except (TypeError, ValueError):
+        return _response({"ok": False, "error": "invalid_score"}, 422)
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        preview, error = _preview_result_change(
+            cur, tournament_id=tournament["id"], league="rcup",
+            match_id=match_id, home_score=home_score, away_score=away_score,
+        )
+        if error:
+            return error
+        if preview["changed"]:
+            preview.update(_issue_schedule_confirmation(
+                cur, conn, action="set_russian_cup_match_result",
+                payload=_result_confirmation_payload(
+                    league="rcup", match_id=match_id,
+                    home_score=home_score, away_score=away_score,
+                ),
+            ))
+        return _response(preview)
+    finally:
+        close_db(conn, cur)
+
+
 @agent_api_bp.post("/russian-cup/matches/<int:match_id>/result")
 @agent_required
 def set_russian_cup_match_result(match_id):
@@ -2090,6 +2259,20 @@ def set_russian_cup_match_result(match_id):
         tournament, error = _rcup_or_error(cur)
         if error:
             return error
+
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="set_russian_cup_match_result",
+            payload=_result_confirmation_payload(
+                league="rcup", match_id=match_id,
+                home_score=home_score, away_score=away_score,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
+
         cur.execute(
             """
             SELECT id, home_team, away_team, status, home_score, away_score

@@ -67,7 +67,7 @@ def test_create_russian_cup_uses_rcup_fields(client):
 def test_russian_cup_result_rejects_existing_different_result(client):
     conn = MagicMock(); cur = MagicMock(); conn.cursor.return_value = cur
     cur.fetchone.return_value = (777, "Зенит", "Спартак", "FINISHED", 3, 0)
-    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.recalc_match_points") as recalc:
+    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.recalc_match_points") as recalc, patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post("/api/agent/v1/russian-cup/matches/777/result", headers=auth(), json={"home_score":2,"away_score":0})
     assert response.status_code == 409
     assert response.get_json()["error"] == "existing_result_requires_manual_review"
@@ -76,7 +76,7 @@ def test_russian_cup_result_rejects_existing_different_result(client):
 def test_russian_cup_result_sets_manual_override_and_recalculates(client):
     conn = MagicMock(); cur = MagicMock(); conn.cursor.return_value = cur
     cur.fetchone.return_value = (777, "Зенит", "Спартак", "SCHEDULED", None, None)
-    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.recalc_match_points") as recalc:
+    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.recalc_match_points") as recalc, patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post("/api/agent/v1/russian-cup/matches/777/result", headers=auth(), json={"home_score":2,"away_score":1})
     assert response.status_code == 200
     sql_calls = [" ".join(call.args[0].split()) for call in cur.execute.call_args_list]
