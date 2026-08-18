@@ -1127,11 +1127,9 @@ def _openapi_spec():
                     "operationId": "getTotishAdminAttention",
                     "summary": "Check TOTISH RPL and Russian Cup data for issues requiring administrator attention.",
                     "description": (
-                        "READ-ONLY administrative audit. Use when the user asks to check TOTISH, "
-                        "find data problems, or say what needs attention. Checks active RPL and "
-                        "Russian Cup matches for missing schedule/deadline, invalid finished scores, "
-                        "scores on non-finished matches, stale overdue scheduled matches and exact duplicates. "
-                        "It never changes data. Report problems first; do not invent issues when the list is empty."
+                        "READ-ONLY. Checks active RPL and Russian Cup matches for data problems: "
+                        "missing schedule/deadline, invalid scores, overdue unfinished matches and exact duplicates. "
+                        "Never changes data."
                     ),
                     "responses": {
                         "200": {"description": "Administrative attention report"},
