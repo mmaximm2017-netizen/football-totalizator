@@ -148,19 +148,35 @@ def _schedule_confirmation_payload(*, league, match_id, date_value, time_value):
     }
 
 
+def _ensure_confirmation_handle_schema(cur):
+    cur.execute(
+        f"ALTER TABLE {CONFIRMATION_TABLE} "
+        "ADD COLUMN IF NOT EXISTS confirmation_ref TEXT"
+    )
+    cur.execute(
+        f"CREATE UNIQUE INDEX IF NOT EXISTS "
+        f"uq_{CONFIRMATION_TABLE}_confirmation_ref "
+        f"ON {CONFIRMATION_TABLE} (confirmation_ref) "
+        "WHERE confirmation_ref IS NOT NULL"
+    )
+
+
 def _issue_schedule_confirmation(cur, conn, *, action, payload):
+    _ensure_confirmation_handle_schema(cur)
     token = secrets.token_urlsafe(32)
+    handle = "cfm_" + secrets.token_urlsafe(9)
     cur.execute(
         f"""
         INSERT INTO {CONFIRMATION_TABLE}
-            (token_hash, action, payload_hash, not_before, expires_at)
+            (token_hash, confirmation_ref, action, payload_hash, not_before, expires_at)
         VALUES
-            (%s, %s, %s,
+            (%s, %s, %s, %s,
              NOW() + (%s * INTERVAL '1 second'),
              NOW() + (%s * INTERVAL '1 second'))
         """,
         (
             _confirmation_token_hash(token),
+            handle,
             action,
             _confirmation_payload_hash(action, payload),
             CONFIRMATION_MIN_AGE_SECONDS,
@@ -169,6 +185,7 @@ def _issue_schedule_confirmation(cur, conn, *, action, payload):
     )
     conn.commit()
     return {
+        "confirmation_handle": handle,
         "confirmation_token": token,
         "confirmation_required": True,
         "confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
@@ -176,11 +193,19 @@ def _issue_schedule_confirmation(cur, conn, *, action, payload):
     }
 
 
-def _consume_schedule_confirmation(cur, *, token, action, payload):
-    if not token:
+def _consume_schedule_confirmation(cur, *, handle=None, token=None, action, payload):
+    if not handle and not token:
         return _response({"ok": False, "error": "confirmation_required"}, 409)
 
-    token_hash = _confirmation_token_hash(token)
+    if handle:
+        lookup_column = "confirmation_ref"
+        lookup_value = str(handle)
+        invalid_error = "invalid_confirmation_handle"
+    else:
+        lookup_column = "token_hash"
+        lookup_value = _confirmation_token_hash(token)
+        invalid_error = "invalid_confirmation_token"
+
     cur.execute(
         f"""
         SELECT action, payload_hash,
@@ -188,14 +213,14 @@ def _consume_schedule_confirmation(cur, *, token, action, payload):
                (NOW() < expires_at) AS fresh,
                used_at
         FROM {CONFIRMATION_TABLE}
-        WHERE token_hash = %s
+        WHERE {lookup_column} = %s
         FOR UPDATE
         """,
-        (token_hash,),
+        (lookup_value,),
     )
     row = cur.fetchone()
     if not row:
-        return _response({"ok": False, "error": "invalid_confirmation_token"}, 409)
+        return _response({"ok": False, "error": invalid_error}, 409)
 
     stored_action, stored_payload_hash, ready, fresh, used_at = row
     expected_payload_hash = _confirmation_payload_hash(action, payload)
@@ -210,13 +235,12 @@ def _consume_schedule_confirmation(cur, *, token, action, payload):
         return _response({"ok": False, "error": "confirmation_payload_mismatch"}, 409)
 
     cur.execute(
-        f"UPDATE {CONFIRMATION_TABLE} SET used_at = NOW() WHERE token_hash = %s AND used_at IS NULL",
-        (token_hash,),
+        f"UPDATE {CONFIRMATION_TABLE} SET used_at = NOW() WHERE {lookup_column} = %s AND used_at IS NULL",
+        (lookup_value,),
     )
     if getattr(cur, "rowcount", 1) != 1:
         return _response({"ok": False, "error": "confirmation_already_used"}, 409)
     return None
-
 
 
 def _result_confirmation_payload(*, league, match_id, home_score, away_score):
@@ -995,17 +1019,18 @@ def _openapi_spec():
                     "operationId": "createRplMatches",
                     "summary": "Create validated RPL matches.",
                     "description": (
-                        "WRITE ACTION. Requires confirmation_token returned by previewRplMatches. "
+                        "WRITE ACTION. Requires confirmation_handle returned by previewRplMatches. "
                         "The token is bound to the exact validated batch and is single-use."
                     ),
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
                             "type": "object",
-                            "required": ["matches", "confirmation_token"],
+                            "required": ["matches", "confirmation_handle"],
                             "properties": {
                                 "matches": {"type": "array", "maxItems": 32, "items": match_schema},
-                                "confirmation_token": {"type": "string"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1094,11 +1119,12 @@ def _openapi_spec():
                         "required": True,
                         "content": {"application/json": {"schema": {
                             "type": "object",
-                            "required": ["home_score", "away_score", "confirmation_token"],
+                            "required": ["home_score", "away_score", "confirmation_handle"],
                             "properties": {
                                 "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
                                 "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
-                                "confirmation_token": {"type": "string"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1130,14 +1156,15 @@ def _openapi_spec():
                 "post": {
                     "operationId": "createRussianCupMatches",
                     "summary": "Create validated Russian Cup matches.",
-                    "description": "WRITE ACTION. Requires confirmation_token returned by previewRussianCupMatches. The token is bound to the exact validated batch and is single-use.",
+                    "description": "WRITE ACTION. Requires confirmation_handle returned by previewRussianCupMatches. The token is bound to the exact validated batch and is single-use.",
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["matches", "confirmation_token"],
+                            "type": "object", "required": ["matches", "confirmation_handle"],
                             "properties": {
                                 "matches": {"type": "array", "maxItems": 32, "items": match_schema},
-                                "confirmation_token": {"type": "string"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1212,11 +1239,12 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["home_score", "away_score", "confirmation_token"],
+                            "type": "object", "required": ["home_score", "away_score", "confirmation_handle"],
                             "properties": {
                                 "home_score": {"type": "integer", "minimum": 0, "maximum": 99},
                                 "away_score": {"type": "integer", "minimum": 0, "maximum": 99},
-                                "confirmation_token": {"type": "string"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1293,10 +1321,12 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["date", "time", "confirmation_token"],
+                            "type": "object", "required": ["date", "time", "confirmation_handle"],
                             "properties": {
                                 "date": {"type": "string", "format": "date"},
                                 "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1348,10 +1378,12 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["date", "time", "confirmation_token"],
+                            "type": "object", "required": ["date", "time", "confirmation_handle"],
                             "properties": {
                                 "date": {"type": "string", "format": "date"},
                                 "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                                "confirmation_handle": {"type": "string", "description": "Short-lived confirmation handle returned by the matching preview action."},
+                                "confirmation_token": {"type": "string", "description": "Legacy fallback; use confirmation_handle for new clients."},
                             },
                         }}},
                     },
@@ -1496,6 +1528,8 @@ def capabilities():
             "create_confirmation_token_required": True,
             "create_confirmation_token_single_use": True,
             "create_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
+            "confirmation_handle_v2": True,
+            "confirmation_handle_preferred": True,
             "existing_different_result_requires_manual_review": True,
         },
     })
@@ -1807,6 +1841,7 @@ def create_matches():
 
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="create_matches",
             payload=_create_confirmation_payload(
@@ -1925,6 +1960,7 @@ def set_match_result(match_id):
 
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="set_match_result",
             payload=_result_confirmation_payload(
@@ -2241,6 +2277,7 @@ def create_russian_cup_matches():
 
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="create_russian_cup_matches",
             payload=_create_confirmation_payload(
@@ -2340,6 +2377,7 @@ def set_russian_cup_match_result(match_id):
 
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="set_russian_cup_match_result",
             payload=_result_confirmation_payload(
@@ -2499,6 +2537,7 @@ def update_rpl_match_schedule(match_id):
             return error
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="update_rpl_match_schedule",
             payload=_schedule_confirmation_payload(
@@ -2595,6 +2634,7 @@ def update_russian_cup_match_schedule(match_id):
             return error
         confirmation_error = _consume_schedule_confirmation(
             cur,
+            handle=payload.get("confirmation_handle"),
             token=payload.get("confirmation_token"),
             action="update_russian_cup_match_schedule",
             payload=_schedule_confirmation_payload(
