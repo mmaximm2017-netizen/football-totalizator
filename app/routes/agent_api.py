@@ -263,6 +263,24 @@ def _preview_result_change(cur, *, tournament_id, league, match_id, home_score, 
     }, None
 
 
+
+def _create_confirmation_payload(*, league, prepared):
+    return {
+        "league": league,
+        "matches": [
+            {
+                "home_team": item["home_team"],
+                "away_team": item["away_team"],
+                "date": item["date"],
+                "time": item["time"],
+                "stage": item.get("stage") or "",
+                "match_category": item.get("match_category") or league,
+            }
+            for item in prepared
+        ],
+    }
+
+
 def _rpl_or_error(cur):
     tournament = get_rpl_tournament(cur)
     if not tournament:
@@ -977,15 +995,18 @@ def _openapi_spec():
                     "operationId": "createRplMatches",
                     "summary": "Create validated RPL matches.",
                     "description": (
-                        "WRITE ACTION. Call previewRplMatches first and execute only "
-                        "after explicit user confirmation."
+                        "WRITE ACTION. Requires confirmation_token returned by previewRplMatches. "
+                        "The token is bound to the exact validated batch and is single-use."
                     ),
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
                             "type": "object",
-                            "required": ["matches"],
-                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                            "required": ["matches", "confirmation_token"],
+                            "properties": {
+                                "matches": {"type": "array", "maxItems": 32, "items": match_schema},
+                                "confirmation_token": {"type": "string"},
+                            },
                         }}},
                     },
                     "responses": {"201": {"description": "Created"}, "422": {"description": "Rejected"}},
@@ -1109,12 +1130,15 @@ def _openapi_spec():
                 "post": {
                     "operationId": "createRussianCupMatches",
                     "summary": "Create validated Russian Cup matches.",
-                    "description": "WRITE ACTION. Call previewRussianCupMatches first and execute only after explicit user confirmation.",
+                    "description": "WRITE ACTION. Requires confirmation_token returned by previewRussianCupMatches. The token is bound to the exact validated batch and is single-use.",
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["matches"],
-                            "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}},
+                            "type": "object", "required": ["matches", "confirmation_token"],
+                            "properties": {
+                                "matches": {"type": "array", "maxItems": 32, "items": match_schema},
+                                "confirmation_token": {"type": "string"},
+                            },
                         }}},
                     },
                     "responses": {"201": {"description": "Created"}, "422": {"description": "Rejected"}},
@@ -1469,6 +1493,9 @@ def capabilities():
             "result_confirmation_token_required": True,
             "result_confirmation_token_single_use": True,
             "result_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
+            "create_confirmation_token_required": True,
+            "create_confirmation_token_single_use": True,
+            "create_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
             "existing_different_result_requires_manual_review": True,
         },
     })
@@ -1733,6 +1760,18 @@ def preview_matches():
             "matches": prepared,
             "errors": errors,
         }
+        if not errors and prepared:
+            result.update(_issue_schedule_confirmation(
+                cur,
+                conn,
+                action="create_matches",
+                payload=_create_confirmation_payload(
+                    league="rpl",
+                    prepared=prepared,
+                ),
+            ))
+        else:
+            result["confirmation_required"] = False
         _audit(
             "preview_matches",
             status="success" if not errors else "rejected",
@@ -1765,6 +1804,19 @@ def create_matches():
                 {"ok": False, "created_count": 0, "errors": errors},
                 422,
             )
+
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="create_matches",
+            payload=_create_confirmation_payload(
+                league="rpl",
+                prepared=prepared,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
 
         created = []
         for item in prepared:
@@ -2151,6 +2203,18 @@ def preview_russian_cup_matches():
             return error
         prepared, errors = _prepare_rcup_batch(cur, tournament["id"], raw_matches)
         result = {"ok": not errors, "dry_run": True, "scope": "rcup", "ready_count": len(prepared), "error_count": len(errors), "matches": prepared, "errors": errors}
+        if not errors and prepared:
+            result.update(_issue_schedule_confirmation(
+                cur,
+                conn,
+                action="create_russian_cup_matches",
+                payload=_create_confirmation_payload(
+                    league="rcup",
+                    prepared=prepared,
+                ),
+            ))
+        else:
+            result["confirmation_required"] = False
         _audit("preview_russian_cup_matches", status="success" if not errors else "rejected", details={"ready_count": len(prepared), "error_count": len(errors)})
         return _response(result, 200 if not errors else 422)
     finally:
@@ -2174,6 +2238,20 @@ def create_russian_cup_matches():
             conn.rollback()
             _audit("create_russian_cup_matches", status="rejected", details={"errors": errors})
             return _response({"ok": False, "scope": "rcup", "created_count": 0, "errors": errors}, 422)
+
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="create_russian_cup_matches",
+            payload=_create_confirmation_payload(
+                league="rcup",
+                prepared=prepared,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
+
         created = []
         for item in prepared:
             match_id = create_manual_match(

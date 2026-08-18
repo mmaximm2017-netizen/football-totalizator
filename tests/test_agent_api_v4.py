@@ -52,12 +52,19 @@ def test_preview_russian_cup_is_dry_run(client):
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["dry_run"] is True and payload["scope"] == "rcup" and payload["ready_count"] == 1
-    assert conn.commit.called is False
-    assert "league = 'rcup'" in " ".join(cur.execute.call_args.args[0].split())
+    assert payload["confirmation_required"] is True
+    assert bool(payload["confirmation_token"])
+    assert conn.commit.called is True
+    sql_calls = [
+        " ".join(call.args[0].split())
+        for call in cur.execute.call_args_list
+        if call.args
+    ]
+    assert any("league = 'rcup'" in sql for sql in sql_calls)
 
 def test_create_russian_cup_uses_rcup_fields(client):
     conn = MagicMock(); cur = MagicMock(); conn.cursor.return_value = cur; cur.fetchone.return_value = None
-    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.create_manual_match", return_value=888) as create:
+    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), patch("app.routes.agent_api.create_manual_match", return_value=888) as create, patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post("/api/agent/v1/russian-cup/matches", headers=auth(), json={"matches":[{"home_team":"Зенит","away_team":"Спартак","date":"2099-12-31","time":"19:00","stage":"Групповой этап"}]})
     assert response.status_code == 201
     data = create.call_args.args[1]
