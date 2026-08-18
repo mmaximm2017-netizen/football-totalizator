@@ -47,14 +47,23 @@ def test_find_russian_cup_match_normalizes_aliases(client):
 
 def test_preview_russian_cup_is_dry_run(client):
     conn = MagicMock(); cur = MagicMock(); conn.cursor.return_value = cur; cur.fetchone.return_value = None
-    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()):
+    with patch("app.routes.agent_api.get_db", return_value=conn), patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), \
+        patch(
+            "app.routes.agent_api._issue_schedule_confirmation",
+            return_value={
+                "confirmation_id": 999,
+                "confirmation_handle": "cfm_test",
+                "confirmation_token": "test-token",
+                "confirmation_required": True,
+            },
+        ):
         response = client.post("/api/agent/v1/russian-cup/matches/preview", headers=auth(), json={"matches":[{"home_team":"Зенит","away_team":"Спартак","date":"2099-12-31","time":"19:00","round":4,"stage":"Групповой этап"}]})
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["dry_run"] is True and payload["scope"] == "rcup" and payload["ready_count"] == 1
     assert payload["confirmation_required"] is True
     assert bool(payload["confirmation_token"])
-    assert conn.commit.called is True
+    assert conn.commit.called is False
     sql_calls = [
         " ".join(call.args[0].split())
         for call in cur.execute.call_args_list

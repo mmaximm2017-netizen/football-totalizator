@@ -58,10 +58,28 @@ def test_rpl_schedule_preview_is_read_only_and_recalculates_deadline(client):
     conn = MagicMock()
     cur = MagicMock()
     conn.cursor.return_value = cur
+
+    # 1) current match
+    # 2) duplicate/conflict lookup
     cur.fetchone.side_effect = [match_row(), None]
 
+    confirmation = {
+        "confirmation_id": 999,
+        "confirmation_handle": "cfm_test",
+        "confirmation_token": "test-token",
+        "confirmation_required": True,
+    }
+
     with patch("app.routes.agent_api.get_db", return_value=conn), \
-         patch("app.routes.agent_api.get_rpl_tournament", return_value=rpl_tournament()):
+         patch(
+             "app.routes.agent_api.get_rpl_tournament",
+             return_value=rpl_tournament(),
+         ), \
+         patch(
+             "app.routes.agent_api._issue_schedule_confirmation",
+             return_value=confirmation,
+         ) as issue_confirmation:
+
         response = client.post(
             "/api/agent/v1/matches/428/schedule/preview",
             headers=auth(),
@@ -69,15 +87,28 @@ def test_rpl_schedule_preview_is_read_only_and_recalculates_deadline(client):
         )
 
     assert response.status_code == 200
+
     payload = response.get_json()
+
     assert payload["dry_run"] is True
     assert payload["changed"] is True
-    assert payload["requested"]["kickoff_time_msk"].startswith("2026-08-22T20:15:00")
-    assert payload["requested"]["deadline_msk"].startswith("2026-08-22T11:00:00")
+
+    assert payload["requested"]["kickoff_time_msk"].startswith(
+        "2026-08-22T20:15:00"
+    )
+    assert payload["requested"]["deadline_msk"].startswith(
+        "2026-08-22T11:00:00"
+    )
+
     assert payload["confirmation_required"] is True
+    assert payload["confirmation_id"] == 999
     assert bool(payload["confirmation_token"])
-    # Preview does not change match data, but persists a short-lived confirmation record.
-    assert conn.commit.called is True
+
+    # Этот старый тест проверяет preview, а не внутреннее SQL-хранилище
+    # подтверждений. Сам confirmation storage тестируется отдельно.
+    issue_confirmation.assert_called_once()
+    assert conn.commit.called is False
+
 
 
 def test_schedule_preview_rejects_finished_match(client):
