@@ -468,6 +468,142 @@ def _apply_schedule_update(cur, conn, *, tournament_id, league, match_id, date_v
         "points_recalculated": False,
     })
 
+
+def _admin_attention_match_payload(row):
+    kickoff = row[4]
+    deadline = row[5]
+    return {
+        "id": row[0],
+        "scope": row[1],
+        "home_team": row[2],
+        "away_team": row[3],
+        "kickoff_time": kickoff.isoformat() if kickoff else None,
+        "kickoff_time_msk": kickoff.astimezone(MSK).isoformat() if kickoff else None,
+        "deadline": deadline.isoformat() if deadline else None,
+        "status": row[6],
+        "home_score": row[7],
+        "away_score": row[8],
+    }
+
+
+def _collect_admin_attention(cur, active_scopes):
+    issues = []
+
+    for scope, tournament_id in active_scopes.items():
+        cur.execute(
+            """
+            SELECT id, %s AS scope, home_team, away_team, kickoff_time, deadline,
+                   status, home_score, away_score
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = %s
+              AND (
+                    kickoff_time IS NULL
+                 OR deadline IS NULL
+                 OR (kickoff_time IS NOT NULL AND deadline IS NOT NULL AND deadline >= kickoff_time)
+                 OR (
+                      status = 'FINISHED'
+                      AND (
+                           home_score IS NULL OR away_score IS NULL
+                           OR home_score < 0 OR away_score < 0
+                      )
+                 )
+                 OR (
+                      status IN ('SCHEDULED', 'TIMED', 'POSTPONED', 'CANCELLED')
+                      AND (home_score IS NOT NULL OR away_score IS NOT NULL)
+                 )
+                 OR (
+                      status IN ('SCHEDULED', 'TIMED')
+                      AND kickoff_time IS NOT NULL
+                      AND kickoff_time < NOW() - INTERVAL '3 hours'
+                 )
+              )
+            ORDER BY kickoff_time ASC NULLS FIRST, id ASC
+            """,
+            (scope, tournament_id, scope),
+        )
+        for row in cur.fetchall():
+            match = _admin_attention_match_payload(row)
+            codes = []
+            if match["kickoff_time"] is None:
+                codes.append(("critical", "missing_kickoff_time", "У матча отсутствует время начала"))
+            if match["deadline"] is None:
+                codes.append(("critical", "missing_deadline", "У матча отсутствует дедлайн прогнозов"))
+            if row[4] is not None and row[5] is not None and row[5] >= row[4]:
+                codes.append(("critical", "deadline_not_before_kickoff", "Дедлайн не раньше начала матча"))
+            if match["status"] == "FINISHED" and (
+                match["home_score"] is None
+                or match["away_score"] is None
+                or match["home_score"] < 0
+                or match["away_score"] < 0
+            ):
+                codes.append(("critical", "finished_without_valid_score", "FINISHED-матч без корректного счёта"))
+            if match["status"] in {"SCHEDULED", "TIMED", "POSTPONED", "CANCELLED"} and (
+                match["home_score"] is not None or match["away_score"] is not None
+            ):
+                codes.append(("warning", "score_on_nonfinished_match", "У незавершённого матча уже указан счёт"))
+            if match["status"] in {"SCHEDULED", "TIMED"} and row[4] is not None:
+                now_utc = datetime.now(tz=row[4].tzinfo)
+                if row[4] < now_utc.replace(microsecond=0) and (now_utc - row[4]).total_seconds() > 3 * 3600:
+                    codes.append(("warning", "overdue_unfinished_match", "Матч начался более 3 часов назад, но не завершён в ТОТИШе"))
+
+            for severity, code, message in codes:
+                issues.append({
+                    "severity": severity,
+                    "code": code,
+                    "message": message,
+                    "match": match,
+                })
+
+        cur.execute(
+            """
+            SELECT home_team, away_team, kickoff_time, COUNT(*) AS duplicate_count,
+                   ARRAY_AGG(id ORDER BY id) AS match_ids
+            FROM matches
+            WHERE tournament_id = %s
+              AND league = %s
+            GROUP BY home_team, away_team, kickoff_time
+            HAVING COUNT(*) > 1
+            ORDER BY kickoff_time ASC NULLS FIRST
+            """,
+            (tournament_id, scope),
+        )
+        for row in cur.fetchall():
+            kickoff = row[2]
+            issues.append({
+                "severity": "critical",
+                "code": "exact_duplicate_matches",
+                "message": "Найдены точные дубликаты матча",
+                "scope": scope,
+                "home_team": row[0],
+                "away_team": row[1],
+                "kickoff_time": kickoff.isoformat() if kickoff else None,
+                "kickoff_time_msk": kickoff.astimezone(MSK).isoformat() if kickoff else None,
+                "duplicate_count": row[3],
+                "match_ids": list(row[4] or []),
+            })
+
+    severity_order = {"critical": 0, "warning": 1}
+    issues.sort(key=lambda item: (
+        severity_order.get(item.get("severity"), 9),
+        item.get("scope") or item.get("match", {}).get("scope") or "",
+        item.get("code") or "",
+    ))
+    critical_count = sum(1 for item in issues if item["severity"] == "critical")
+    warning_count = sum(1 for item in issues if item["severity"] == "warning")
+    return {
+        "ok": critical_count == 0,
+        "read_only": True,
+        "needs_attention": bool(issues),
+        "summary": {
+            "total_issues": len(issues),
+            "critical": critical_count,
+            "warnings": warning_count,
+        },
+        "scopes": active_scopes,
+        "issues": issues,
+    }
+
 def _match_json(row):
     kickoff = row[3]
     deadline = row[4]
@@ -982,6 +1118,25 @@ def _openapi_spec():
                         "404": {"description": "Match not found"},
                         "409": {"description": "Unsafe/conflicting update"},
                         "422": {"description": "Invalid schedule"},
+                    },
+                }
+            },
+
+            "/admin-attention": {
+                "get": {
+                    "operationId": "getTotishAdminAttention",
+                    "summary": "Check TOTISH RPL and Russian Cup data for issues requiring administrator attention.",
+                    "description": (
+                        "READ-ONLY administrative audit. Use when the user asks to check TOTISH, "
+                        "find data problems, or say what needs attention. Checks active RPL and "
+                        "Russian Cup matches for missing schedule/deadline, invalid finished scores, "
+                        "scores on non-finished matches, stale overdue scheduled matches and exact duplicates. "
+                        "It never changes data. Report problems first; do not invent issues when the list is empty."
+                    ),
+                    "responses": {
+                        "200": {"description": "Administrative attention report"},
+                        "401": {"description": "Unauthorized"},
+                        "404": {"description": "Required active tournament not found"},
                     },
                 }
             },
@@ -1961,5 +2116,37 @@ def update_russian_cup_match_schedule(match_id):
         logger.exception("Agent API update_russian_cup_match_schedule failed match_id=%s", match_id)
         _audit("update_russian_cup_match_schedule", status="error", details={"match_id": match_id})
         return _response({"ok": False, "error": "internal_error"}, 500)
+    finally:
+        close_db(conn, cur)
+
+@agent_api_bp.get("/admin-attention")
+@agent_required
+def get_totish_admin_attention():
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        rpl, rpl_error = _rpl_or_error(cur)
+        if rpl_error:
+            return rpl_error
+        rcup, rcup_error = _rcup_or_error(cur)
+        if rcup_error:
+            return rcup_error
+
+        result = _collect_admin_attention(
+            cur,
+            {
+                "rpl": rpl["id"],
+                "rcup": rcup["id"],
+            },
+        )
+        _audit(
+            "get_totish_admin_attention",
+            details={
+                "total_issues": result["summary"]["total_issues"],
+                "critical": result["summary"]["critical"],
+                "warnings": result["summary"]["warnings"],
+            },
+        )
+        return _response(result)
     finally:
         close_db(conn, cur)
