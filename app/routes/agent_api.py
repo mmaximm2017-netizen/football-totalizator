@@ -604,6 +604,43 @@ def _collect_admin_attention(cur, active_scopes):
         "issues": issues,
     }
 
+
+def _activity_time_json(value):
+    if value is None:
+        return {"last_seen": None, "last_seen_msk": None}
+    return {
+        "last_seen": value.isoformat(),
+        "last_seen_msk": value.astimezone(MSK).isoformat(),
+    }
+
+
+def _get_visible_participants(cur):
+    cur.execute(
+        """
+        SELECT id, username
+        FROM users
+        WHERE COALESCE(is_deleted, 0) = 0
+          AND COALESCE(is_admin, 0) = 0
+        ORDER BY LOWER(username), id
+        """
+    )
+    return [{"user_id": row[0], "username": row[1]} for row in cur.fetchall()]
+
+
+def _match_identity(cur, match_id):
+    cur.execute(
+        """
+        SELECT id, home_team, away_team, kickoff_time, deadline, status,
+               home_score, away_score, playoff_stage_manual, match_category,
+               league, tournament_id
+        FROM matches
+        WHERE id = %s
+        """,
+        (match_id,),
+    )
+    row = cur.fetchone()
+    return _match_json(row) if row else None
+
 def _match_json(row):
     kickoff = row[3]
     deadline = row[4]
@@ -1136,6 +1173,57 @@ def _openapi_spec():
                         "401": {"description": "Unauthorized"},
                         "404": {"description": "Required active tournament not found"},
                     },
+                }
+            },
+
+            "/users/activity": {
+                "get": {
+                    "operationId": "getTotishUsers",
+                    "summary": "List TOTISH users and their last authenticated activity.",
+                    "description": "READ-ONLY. last_seen reflects authenticated activity and is refreshed at most once every 10 minutes. Never returns passwords or prediction scores.",
+                    "parameters": [{"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 200}}],
+                    "responses": {"200": {"description": "User activity list"}}
+                }
+            },
+            "/users/{user_id}/activity": {
+                "get": {
+                    "operationId": "getTotishUserActivity",
+                    "summary": "Get activity and prediction participation for one TOTISH user.",
+                    "description": "READ-ONLY. Shows last activity and which matches have a prediction, but never exposes predicted scores. Prediction creation time is not stored.",
+                    "parameters": [{"name": "user_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "User activity"}, "404": {"description": "User not found"}}
+                }
+            },
+            "/matches/{match_id}/prediction-participation": {
+                "get": {
+                    "operationId": "getMatchPredictionParticipation",
+                    "summary": "Show which participants have or have not predicted a match.",
+                    "description": "READ-ONLY. Returns only prediction presence. Never returns home_goals, away_goals or any predicted score.",
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "Participation"}, "404": {"description": "Match not found"}}
+                }
+            },
+            "/prediction-participation": {
+                "post": {
+                    "operationId": "getTournamentPredictionParticipation",
+                    "summary": "Compare prediction completion across a selected set of matches.",
+                    "description": "READ-ONLY despite POST. Supply match IDs from a round or date range. Returns who covered which matches and who missed them, without predicted scores.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object",
+                            "required": ["match_ids"],
+                            "properties": {
+                                "match_ids": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "maxItems": 32,
+                                    "items": {"type": "integer"}
+                                }
+                            }
+                        }}}
+                    },
+                    "responses": {"200": {"description": "Participation summary"}, "404": {"description": "Match not found"}, "422": {"description": "Invalid match IDs"}}
                 }
             },
         },
@@ -2146,5 +2234,284 @@ def get_totish_admin_attention():
             },
         )
         return _response(result)
+    finally:
+        close_db(conn, cur)
+
+@agent_api_bp.get("/users/activity")
+@agent_required
+def get_totish_users():
+    limit, error = _read_limit(default=100, maximum=200)
+    if error:
+        return error
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, username, COALESCE(is_admin, 0), last_seen, COALESCE(is_deleted, 0)
+            FROM users
+            WHERE COALESCE(is_deleted, 0) = 0
+            ORDER BY last_seen DESC NULLS LAST, LOWER(username), id
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        users = []
+        for row in cur.fetchall():
+            item = {
+                "user_id": row[0],
+                "username": row[1],
+                "is_admin": bool(row[2]),
+                "is_deleted": bool(row[4]),
+            }
+            item.update(_activity_time_json(row[3]))
+            users.append(item)
+
+        _audit("get_totish_users", details={"count": len(users)})
+        return _response({
+            "ok": True,
+            "read_only": True,
+            "activity_semantics": "last_seen is authenticated activity, updated at most once every 10 minutes",
+            "count": len(users),
+            "users": users,
+        })
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/users/<int:user_id>/activity")
+@agent_required
+def get_totish_user_activity(user_id):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, username, COALESCE(is_admin, 0), last_seen, COALESCE(is_deleted, 0)
+            FROM users
+            WHERE id = %s
+            """,
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return _response({"ok": False, "error": "user_not_found"}, 404)
+
+        user = {
+            "user_id": row[0],
+            "username": row[1],
+            "is_admin": bool(row[2]),
+            "is_deleted": bool(row[4]),
+        }
+        user.update(_activity_time_json(row[3]))
+
+        cur.execute(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE m.league = 'rpl') AS rpl_predictions,
+                COUNT(*) FILTER (WHERE m.league = 'rcup') AS rcup_predictions,
+                COUNT(*) AS total_predictions
+            FROM predictions p
+            JOIN matches m ON m.id = p.match_id
+            WHERE p.user_id = %s
+            """,
+            (user_id,),
+        )
+        counts = cur.fetchone() or (0, 0, 0)
+
+        cur.execute(
+            """
+            SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.league,
+                   m.playoff_stage_manual, m.status
+            FROM predictions p
+            JOIN matches m ON m.id = p.match_id
+            WHERE p.user_id = %s
+            ORDER BY m.kickoff_time DESC NULLS LAST, m.id DESC
+            LIMIT 30
+            """,
+            (user_id,),
+        )
+        predictions = []
+        for prow in cur.fetchall():
+            kickoff = prow[3]
+            predictions.append({
+                "match_id": prow[0],
+                "home_team": prow[1],
+                "away_team": prow[2],
+                "kickoff_time": kickoff.isoformat() if kickoff else None,
+                "kickoff_time_msk": kickoff.astimezone(MSK).isoformat() if kickoff else None,
+                "scope": prow[4],
+                "stage": prow[5] or "",
+                "status": prow[6],
+                "has_prediction": True,
+            })
+
+        _audit("get_totish_user_activity", details={"user_id": user_id})
+        return _response({
+            "ok": True,
+            "read_only": True,
+            "user": user,
+            "prediction_counts": {
+                "rpl": counts[0],
+                "rcup": counts[1],
+                "total": counts[2],
+            },
+            "recent_prediction_matches": predictions,
+            "prediction_scores_exposed": False,
+            "prediction_created_at_available": False,
+        })
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.get("/matches/<int:match_id>/prediction-participation")
+@agent_required
+def get_match_prediction_participation(match_id):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        match = _match_identity(cur, match_id)
+        if not match:
+            return _response({"ok": False, "error": "match_not_found"}, 404)
+
+        participants = _get_visible_participants(cur)
+        cur.execute(
+            """
+            SELECT DISTINCT p.user_id
+            FROM predictions p
+            JOIN users u ON u.id = p.user_id
+            WHERE p.match_id = %s
+              AND COALESCE(u.is_deleted, 0) = 0
+              AND COALESCE(u.is_admin, 0) = 0
+            """,
+            (match_id,),
+        )
+        predicted_ids = {row[0] for row in cur.fetchall()}
+
+        predicted = [u for u in participants if u["user_id"] in predicted_ids]
+        missing = [u for u in participants if u["user_id"] not in predicted_ids]
+
+        _audit(
+            "get_match_prediction_participation",
+            details={"match_id": match_id, "predicted": len(predicted), "missing": len(missing)},
+        )
+        return _response({
+            "ok": True,
+            "read_only": True,
+            "match": match,
+            "participant_count": len(participants),
+            "predicted_count": len(predicted),
+            "missing_count": len(missing),
+            "predicted_users": predicted,
+            "missing_users": missing,
+            "prediction_scores_exposed": False,
+        })
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/prediction-participation")
+@agent_required
+def get_tournament_prediction_participation():
+    payload, error = _require_json_object()
+    if error:
+        return error
+
+    raw_ids = payload.get("match_ids")
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return _response({"ok": False, "error": "match_ids_required"}, 422)
+    if len(raw_ids) > 32:
+        return _response({"ok": False, "error": "too_many_match_ids", "max": 32}, 422)
+
+    match_ids = []
+    for value in raw_ids:
+        try:
+            match_id = int(value)
+        except (TypeError, ValueError):
+            return _response({"ok": False, "error": "invalid_match_id"}, 422)
+        if match_id <= 0 or match_id in match_ids:
+            return _response({"ok": False, "error": "invalid_or_duplicate_match_id"}, 422)
+        match_ids.append(match_id)
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, home_team, away_team, kickoff_time, league, playoff_stage_manual, status
+            FROM matches
+            WHERE id = ANY(%s)
+            ORDER BY kickoff_time ASC NULLS LAST, id ASC
+            """,
+            (match_ids,),
+        )
+        rows = cur.fetchall()
+        found_ids = {row[0] for row in rows}
+        missing_match_ids = [mid for mid in match_ids if mid not in found_ids]
+        if missing_match_ids:
+            return _response({
+                "ok": False,
+                "error": "matches_not_found",
+                "match_ids": missing_match_ids,
+            }, 404)
+
+        matches = []
+        for row in rows:
+            kickoff = row[3]
+            matches.append({
+                "match_id": row[0],
+                "home_team": row[1],
+                "away_team": row[2],
+                "kickoff_time": kickoff.isoformat() if kickoff else None,
+                "kickoff_time_msk": kickoff.astimezone(MSK).isoformat() if kickoff else None,
+                "scope": row[4],
+                "stage": row[5] or "",
+                "status": row[6],
+            })
+
+        participants = _get_visible_participants(cur)
+        cur.execute(
+            """
+            SELECT p.user_id, p.match_id
+            FROM predictions p
+            JOIN users u ON u.id = p.user_id
+            WHERE p.match_id = ANY(%s)
+              AND COALESCE(u.is_deleted, 0) = 0
+              AND COALESCE(u.is_admin, 0) = 0
+            GROUP BY p.user_id, p.match_id
+            """,
+            (match_ids,),
+        )
+        predicted_pairs = {(row[0], row[1]) for row in cur.fetchall()}
+
+        users = []
+        total_matches = len(match_ids)
+        for user in participants:
+            predicted_match_ids = [mid for mid in match_ids if (user["user_id"], mid) in predicted_pairs]
+            missing_ids = [mid for mid in match_ids if (user["user_id"], mid) not in predicted_pairs]
+            users.append({
+                **user,
+                "predicted_count": len(predicted_match_ids),
+                "missing_count": len(missing_ids),
+                "completion_percent": round((len(predicted_match_ids) / total_matches) * 100, 1),
+                "predicted_match_ids": predicted_match_ids,
+                "missing_match_ids": missing_ids,
+            })
+
+        users.sort(key=lambda item: (-item["completion_percent"], item["username"].lower(), item["user_id"]))
+        _audit(
+            "get_tournament_prediction_participation",
+            details={"match_count": total_matches, "participant_count": len(participants)},
+        )
+        return _response({
+            "ok": True,
+            "read_only": True,
+            "match_count": total_matches,
+            "participant_count": len(participants),
+            "matches": matches,
+            "users": users,
+            "prediction_scores_exposed": False,
+        })
     finally:
         close_db(conn, cur)
