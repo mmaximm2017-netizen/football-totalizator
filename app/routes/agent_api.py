@@ -311,6 +311,163 @@ def _reconcile_candidate_batch(cur, tournament_id, league, raw_matches, normaliz
         "missing": missing, "existing": existing, "invalid": invalid,
     }, None
 
+
+EDITABLE_SCHEDULE_STATUSES = {"SCHEDULED", "TIMED", "POSTPONED"}
+
+
+def _schedule_update_preview(cur, *, tournament_id, league, match_id, date_value, time_value):
+    try:
+        kickoff_utc, deadline_utc = build_manual_deadline_utc(
+            date_value,
+            time_value,
+            reject_early_auto=True,
+        )
+    except (ValueError, ManualMatchValidationError) as exc:
+        return None, _response({"ok": False, "error": "invalid_schedule", "details": str(exc)}, 422)
+
+    cur.execute(
+        """
+        SELECT id, home_team, away_team, kickoff_time, deadline, status,
+               home_score, away_score, playoff_stage_manual, match_category,
+               league, tournament_id
+        FROM matches
+        WHERE id = %s AND tournament_id = %s AND league = %s
+        """,
+        (match_id, tournament_id, league),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, _response({"ok": False, "error": "match_not_found"}, 404)
+
+    current = _match_json(row)
+    if current["status"] not in EDITABLE_SCHEDULE_STATUSES:
+        return None, _response({
+            "ok": False,
+            "error": "schedule_update_not_allowed_for_status",
+            "status": current["status"],
+            "allowed_statuses": sorted(EDITABLE_SCHEDULE_STATUSES),
+        }, 409)
+
+    cur.execute(
+        """
+        SELECT id
+        FROM matches
+        WHERE tournament_id = %s
+          AND league = %s
+          AND home_team = %s
+          AND away_team = %s
+          AND kickoff_time = %s
+          AND id <> %s
+        LIMIT 1
+        """,
+        (
+            tournament_id,
+            league,
+            current["home_team"],
+            current["away_team"],
+            kickoff_utc,
+            match_id,
+        ),
+    )
+    duplicate = cur.fetchone()
+    if duplicate:
+        return None, _response({
+            "ok": False,
+            "error": "schedule_update_would_create_duplicate",
+            "duplicate_match_id": duplicate[0],
+        }, 409)
+
+    changed = current["kickoff_time"] != kickoff_utc.isoformat()
+    preview = {
+        "ok": True,
+        "dry_run": True,
+        "changed": changed,
+        "scope": league,
+        "match_id": match_id,
+        "home_team": current["home_team"],
+        "away_team": current["away_team"],
+        "status": current["status"],
+        "current": {
+            "kickoff_time": current["kickoff_time"],
+            "kickoff_time_msk": current["kickoff_time_msk"],
+            "deadline": current["deadline"],
+        },
+        "requested": {
+            "date": date_value,
+            "time": time_value,
+            "kickoff_time_utc": kickoff_utc.isoformat(),
+            "kickoff_time_msk": kickoff_utc.astimezone(MSK).isoformat(),
+            "deadline_utc": deadline_utc.isoformat(),
+            "deadline_msk": deadline_utc.astimezone(MSK).isoformat(),
+        },
+    }
+    return preview, None
+
+
+def _apply_schedule_update(cur, conn, *, tournament_id, league, match_id, date_value, time_value, audit_action):
+    preview, error = _schedule_update_preview(
+        cur,
+        tournament_id=tournament_id,
+        league=league,
+        match_id=match_id,
+        date_value=date_value,
+        time_value=time_value,
+    )
+    if error:
+        return error
+
+    if not preview["changed"]:
+        conn.rollback()
+        return _response({
+            "ok": True,
+            "changed": False,
+            "scope": league,
+            "match_id": match_id,
+            "message": "schedule_already_matches",
+            "match": preview,
+        })
+
+    kickoff_utc = datetime.fromisoformat(preview["requested"]["kickoff_time_utc"])
+    deadline_utc = datetime.fromisoformat(preview["requested"]["deadline_utc"])
+
+    cur.execute(
+        """
+        UPDATE matches
+        SET kickoff_time = %s,
+            deadline = %s
+        WHERE id = %s
+          AND tournament_id = %s
+          AND league = %s
+          AND status IN ('SCHEDULED', 'TIMED', 'POSTPONED')
+        """,
+        (kickoff_utc, deadline_utc, match_id, tournament_id, league),
+    )
+    if getattr(cur, "rowcount", 1) == 0:
+        conn.rollback()
+        return _response({"ok": False, "error": "schedule_update_conflict"}, 409)
+
+    conn.commit()
+    _audit(
+        audit_action,
+        details={
+            "match_id": match_id,
+            "teams": [preview["home_team"], preview["away_team"]],
+            "before": preview["current"],
+            "after": preview["requested"],
+        },
+    )
+    return _response({
+        "ok": True,
+        "changed": True,
+        "scope": league,
+        "match_id": match_id,
+        "home_team": preview["home_team"],
+        "away_team": preview["away_team"],
+        "before": preview["current"],
+        "after": preview["requested"],
+        "points_recalculated": False,
+    })
+
 def _match_json(row):
     kickoff = row[3]
     deadline = row[4]
@@ -715,6 +872,117 @@ def _openapi_spec():
                         "properties": {"matches": {"type": "array", "maxItems": 32, "items": match_schema}}
                     }}}},
                     "responses": {"200": {"description": "Reconciliation result"}}
+                }
+            },
+
+            "/matches/{match_id}/schedule/preview": {
+                "post": {
+                    "operationId": "previewRplMatchScheduleUpdate",
+                    "summary": "Preview a date/time change for an existing RPL match without writing.",
+                    "description": (
+                        "READ-ONLY. Find the match first. Show the current and requested schedule. "
+                        "Do not call the write action until the user explicitly confirms."
+                    ),
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["date", "time"],
+                            "properties": {
+                                "date": {"type": "string", "format": "date"},
+                                "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Preview"},
+                        "404": {"description": "Match not found"},
+                        "409": {"description": "Unsafe/conflicting update"},
+                        "422": {"description": "Invalid schedule"},
+                    },
+                }
+            },
+            "/matches/{match_id}/schedule": {
+                "post": {
+                    "operationId": "updateRplMatchSchedule",
+                    "summary": "Update date/time of an existing RPL match.",
+                    "description": (
+                        "WRITE ACTION. Call previewRplMatchScheduleUpdate first and execute only "
+                        "after explicit user confirmation. Only SCHEDULED, TIMED and POSTPONED "
+                        "matches may be changed. The deadline is recalculated automatically."
+                    ),
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["date", "time"],
+                            "properties": {
+                                "date": {"type": "string", "format": "date"},
+                                "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Updated"},
+                        "404": {"description": "Match not found"},
+                        "409": {"description": "Unsafe/conflicting update"},
+                        "422": {"description": "Invalid schedule"},
+                    },
+                }
+            },
+            "/russian-cup/matches/{match_id}/schedule/preview": {
+                "post": {
+                    "operationId": "previewRussianCupMatchScheduleUpdate",
+                    "summary": "Preview a date/time change for an existing Russian Cup match without writing.",
+                    "description": (
+                        "READ-ONLY. Find the match first. Show the current and requested schedule. "
+                        "Do not call the write action until the user explicitly confirms."
+                    ),
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["date", "time"],
+                            "properties": {
+                                "date": {"type": "string", "format": "date"},
+                                "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Preview"},
+                        "404": {"description": "Match not found"},
+                        "409": {"description": "Unsafe/conflicting update"},
+                        "422": {"description": "Invalid schedule"},
+                    },
+                }
+            },
+            "/russian-cup/matches/{match_id}/schedule": {
+                "post": {
+                    "operationId": "updateRussianCupMatchSchedule",
+                    "summary": "Update date/time of an existing Russian Cup match.",
+                    "description": (
+                        "WRITE ACTION. Call previewRussianCupMatchScheduleUpdate first and execute "
+                        "only after explicit user confirmation. Only SCHEDULED, TIMED and POSTPONED "
+                        "matches may be changed. The deadline is recalculated automatically."
+                    ),
+                    "parameters": [{"name": "match_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {
+                            "type": "object", "required": ["date", "time"],
+                            "properties": {
+                                "date": {"type": "string", "format": "date"},
+                                "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
+                            },
+                        }}},
+                    },
+                    "responses": {
+                        "200": {"description": "Updated"},
+                        "404": {"description": "Match not found"},
+                        "409": {"description": "Unsafe/conflicting update"},
+                        "422": {"description": "Invalid schedule"},
+                    },
                 }
             },
         },
@@ -1558,5 +1826,140 @@ def reconcile_russian_cup_matches():
             return error
         _audit("reconcile_russian_cup_matches", details={k: result[k] for k in ("candidate_count","missing_count","existing_count","invalid_count")})
         return _response(result)
+    finally:
+        close_db(conn, cur)
+
+@agent_api_bp.post("/matches/<int:match_id>/schedule/preview")
+@agent_required
+def preview_rpl_match_schedule_update(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    date_value = str(payload.get("date") or "").strip()
+    time_value = str(payload.get("time") or "").strip()
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+        preview, error = _schedule_update_preview(
+            cur,
+            tournament_id=tournament["id"],
+            league="rpl",
+            match_id=match_id,
+            date_value=date_value,
+            time_value=time_value,
+        )
+        if error:
+            return error
+        _audit(
+            "preview_rpl_match_schedule_update",
+            details={"match_id": match_id, "changed": preview["changed"]},
+        )
+        return _response(preview)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/matches/<int:match_id>/schedule")
+@agent_required
+def update_rpl_match_schedule(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    date_value = str(payload.get("date") or "").strip()
+    time_value = str(payload.get("time") or "").strip()
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rpl_or_error(cur)
+        if error:
+            return error
+        return _apply_schedule_update(
+            cur,
+            conn,
+            tournament_id=tournament["id"],
+            league="rpl",
+            match_id=match_id,
+            date_value=date_value,
+            time_value=time_value,
+            audit_action="update_rpl_match_schedule",
+        )
+    except Exception:
+        conn.rollback()
+        logger.exception("Agent API update_rpl_match_schedule failed match_id=%s", match_id)
+        _audit("update_rpl_match_schedule", status="error", details={"match_id": match_id})
+        return _response({"ok": False, "error": "internal_error"}, 500)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches/<int:match_id>/schedule/preview")
+@agent_required
+def preview_russian_cup_match_schedule_update(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    date_value = str(payload.get("date") or "").strip()
+    time_value = str(payload.get("time") or "").strip()
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        preview, error = _schedule_update_preview(
+            cur,
+            tournament_id=tournament["id"],
+            league="rcup",
+            match_id=match_id,
+            date_value=date_value,
+            time_value=time_value,
+        )
+        if error:
+            return error
+        _audit(
+            "preview_russian_cup_match_schedule_update",
+            details={"match_id": match_id, "changed": preview["changed"]},
+        )
+        return _response(preview)
+    finally:
+        close_db(conn, cur)
+
+
+@agent_api_bp.post("/russian-cup/matches/<int:match_id>/schedule")
+@agent_required
+def update_russian_cup_match_schedule(match_id):
+    payload, error = _require_json_object()
+    if error:
+        return error
+    date_value = str(payload.get("date") or "").strip()
+    time_value = str(payload.get("time") or "").strip()
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        tournament, error = _rcup_or_error(cur)
+        if error:
+            return error
+        return _apply_schedule_update(
+            cur,
+            conn,
+            tournament_id=tournament["id"],
+            league="rcup",
+            match_id=match_id,
+            date_value=date_value,
+            time_value=time_value,
+            audit_action="update_russian_cup_match_schedule",
+        )
+    except Exception:
+        conn.rollback()
+        logger.exception("Agent API update_russian_cup_match_schedule failed match_id=%s", match_id)
+        _audit("update_russian_cup_match_schedule", status="error", details={"match_id": match_id})
+        return _response({"ok": False, "error": "internal_error"}, 500)
     finally:
         close_db(conn, cur)
