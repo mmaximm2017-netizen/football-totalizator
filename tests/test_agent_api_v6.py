@@ -74,7 +74,10 @@ def test_rpl_schedule_preview_is_read_only_and_recalculates_deadline(client):
     assert payload["changed"] is True
     assert payload["requested"]["kickoff_time_msk"].startswith("2026-08-22T20:15:00")
     assert payload["requested"]["deadline_msk"].startswith("2026-08-22T11:00:00")
-    assert conn.commit.called is False
+    assert payload["confirmation_required"] is True
+    assert bool(payload["confirmation_token"])
+    # Preview does not change match data, but persists a short-lived confirmation record.
+    assert conn.commit.called is True
 
 
 def test_schedule_preview_rejects_finished_match(client):
@@ -124,7 +127,8 @@ def test_rpl_schedule_write_updates_only_schedule_fields(client):
     cur.rowcount = 1
 
     with patch("app.routes.agent_api.get_db", return_value=conn), \
-         patch("app.routes.agent_api.get_rpl_tournament", return_value=rpl_tournament()):
+         patch("app.routes.agent_api.get_rpl_tournament", return_value=rpl_tournament()), \
+         patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post(
             "/api/agent/v1/matches/428/schedule",
             headers=auth(),
@@ -151,7 +155,8 @@ def test_russian_cup_schedule_write_is_scoped_to_rcup(client):
     cur.rowcount = 1
 
     with patch("app.routes.agent_api.get_db", return_value=conn), \
-         patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()):
+         patch("app.routes.agent_api.get_russian_cup_tournament", return_value=rcup_tournament()), \
+         patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post(
             "/api/agent/v1/russian-cup/matches/500/schedule",
             headers=auth(),
@@ -173,7 +178,8 @@ def test_schedule_write_noop_when_time_already_matches(client):
     cur.fetchone.side_effect = [current, None]
 
     with patch("app.routes.agent_api.get_db", return_value=conn), \
-         patch("app.routes.agent_api.get_rpl_tournament", return_value=rpl_tournament()):
+         patch("app.routes.agent_api.get_rpl_tournament", return_value=rpl_tournament()), \
+         patch("app.routes.agent_api._consume_schedule_confirmation", return_value=None):
         response = client.post(
             "/api/agent/v1/matches/428/schedule",
             headers=auth(),

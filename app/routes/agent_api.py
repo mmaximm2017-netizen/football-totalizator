@@ -10,10 +10,12 @@ No delete, arbitrary SQL, user management or direct points editing exists here.
 """
 from __future__ import annotations
 
+import hashlib
 import hmac
 import json
 import logging
 import os
+import secrets
 from datetime import datetime
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -47,6 +49,9 @@ agent_api_bp = Blueprint("agent_api", __name__, url_prefix="/api/agent/v1")
 
 MAX_BATCH_MATCHES = 32
 MAX_MATCH_LIST = 200
+CONFIRMATION_TTL_SECONDS = 300
+CONFIRMATION_MIN_AGE_SECONDS = 8
+CONFIRMATION_TABLE = "agent_write_confirmations"
 
 
 def _response(payload, status=200):
@@ -116,6 +121,101 @@ def _require_json_object():
     if not isinstance(payload, dict):
         return None, _response({"ok": False, "error": "invalid_json_object"}, 400)
     return payload, None
+
+
+
+def _confirmation_payload_hash(action, payload):
+    canonical = json.dumps(
+        {"action": action, "payload": payload},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _confirmation_token_hash(token):
+    return hashlib.sha256(str(token).encode("utf-8")).hexdigest()
+
+
+def _schedule_confirmation_payload(*, league, match_id, date_value, time_value):
+    return {
+        "league": league,
+        "match_id": int(match_id),
+        "date": str(date_value),
+        "time": str(time_value),
+    }
+
+
+def _issue_schedule_confirmation(cur, conn, *, action, payload):
+    token = secrets.token_urlsafe(32)
+    cur.execute(
+        f"""
+        INSERT INTO {CONFIRMATION_TABLE}
+            (token_hash, action, payload_hash, not_before, expires_at)
+        VALUES
+            (%s, %s, %s,
+             NOW() + (%s * INTERVAL '1 second'),
+             NOW() + (%s * INTERVAL '1 second'))
+        """,
+        (
+            _confirmation_token_hash(token),
+            action,
+            _confirmation_payload_hash(action, payload),
+            CONFIRMATION_MIN_AGE_SECONDS,
+            CONFIRMATION_TTL_SECONDS,
+        ),
+    )
+    conn.commit()
+    return {
+        "confirmation_token": token,
+        "confirmation_required": True,
+        "confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
+        "confirmation_expires_in_seconds": CONFIRMATION_TTL_SECONDS,
+    }
+
+
+def _consume_schedule_confirmation(cur, *, token, action, payload):
+    if not token:
+        return _response({"ok": False, "error": "confirmation_required"}, 409)
+
+    token_hash = _confirmation_token_hash(token)
+    cur.execute(
+        f"""
+        SELECT action, payload_hash,
+               (NOW() >= not_before) AS ready,
+               (NOW() < expires_at) AS fresh,
+               used_at
+        FROM {CONFIRMATION_TABLE}
+        WHERE token_hash = %s
+        FOR UPDATE
+        """,
+        (token_hash,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return _response({"ok": False, "error": "invalid_confirmation_token"}, 409)
+
+    stored_action, stored_payload_hash, ready, fresh, used_at = row
+    expected_payload_hash = _confirmation_payload_hash(action, payload)
+
+    if used_at is not None:
+        return _response({"ok": False, "error": "confirmation_already_used"}, 409)
+    if not fresh:
+        return _response({"ok": False, "error": "confirmation_expired"}, 409)
+    if not ready:
+        return _response({"ok": False, "error": "confirmation_not_yet_valid"}, 409)
+    if stored_action != action or not hmac.compare_digest(stored_payload_hash, expected_payload_hash):
+        return _response({"ok": False, "error": "confirmation_payload_mismatch"}, 409)
+
+    cur.execute(
+        f"UPDATE {CONFIRMATION_TABLE} SET used_at = NOW() WHERE token_hash = %s AND used_at IS NULL",
+        (token_hash,),
+    )
+    if getattr(cur, "rowcount", 1) != 1:
+        return _response({"ok": False, "error": "confirmation_already_used"}, 409)
+    return None
 
 
 def _rpl_or_error(cur):
@@ -1088,7 +1188,7 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["date", "time"],
+                            "type": "object", "required": ["date", "time", "confirmation_token"],
                             "properties": {
                                 "date": {"type": "string", "format": "date"},
                                 "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
@@ -1143,7 +1243,7 @@ def _openapi_spec():
                     "requestBody": {
                         "required": True,
                         "content": {"application/json": {"schema": {
-                            "type": "object", "required": ["date", "time"],
+                            "type": "object", "required": ["date", "time", "confirmation_token"],
                             "properties": {
                                 "date": {"type": "string", "format": "date"},
                                 "time": {"type": "string", "pattern": "^([01]\\\\d|2[0-3]):[0-5]\\\\d$"},
@@ -1282,6 +1382,9 @@ def capabilities():
         "safety": {
             "preview_before_create": True,
             "explicit_confirmation_before_write": True,
+            "schedule_confirmation_token_required": True,
+            "schedule_confirmation_token_single_use": True,
+            "schedule_confirmation_min_age_seconds": CONFIRMATION_MIN_AGE_SECONDS,
             "existing_different_result_requires_manual_review": True,
         },
     })
@@ -2095,6 +2198,20 @@ def preview_rpl_match_schedule_update(match_id):
         )
         if error:
             return error
+        if preview["changed"]:
+            preview.update(_issue_schedule_confirmation(
+                cur,
+                conn,
+                action="update_rpl_match_schedule",
+                payload=_schedule_confirmation_payload(
+                    league="rpl",
+                    match_id=match_id,
+                    date_value=date_value,
+                    time_value=time_value,
+                ),
+            ))
+        else:
+            preview["confirmation_required"] = False
         _audit(
             "preview_rpl_match_schedule_update",
             details={"match_id": match_id, "changed": preview["changed"]},
@@ -2119,6 +2236,20 @@ def update_rpl_match_schedule(match_id):
         tournament, error = _rpl_or_error(cur)
         if error:
             return error
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="update_rpl_match_schedule",
+            payload=_schedule_confirmation_payload(
+                league="rpl",
+                match_id=match_id,
+                date_value=date_value,
+                time_value=time_value,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
         return _apply_schedule_update(
             cur,
             conn,
@@ -2163,6 +2294,20 @@ def preview_russian_cup_match_schedule_update(match_id):
         )
         if error:
             return error
+        if preview["changed"]:
+            preview.update(_issue_schedule_confirmation(
+                cur,
+                conn,
+                action="update_russian_cup_match_schedule",
+                payload=_schedule_confirmation_payload(
+                    league="rcup",
+                    match_id=match_id,
+                    date_value=date_value,
+                    time_value=time_value,
+                ),
+            ))
+        else:
+            preview["confirmation_required"] = False
         _audit(
             "preview_russian_cup_match_schedule_update",
             details={"match_id": match_id, "changed": preview["changed"]},
@@ -2187,6 +2332,20 @@ def update_russian_cup_match_schedule(match_id):
         tournament, error = _rcup_or_error(cur)
         if error:
             return error
+        confirmation_error = _consume_schedule_confirmation(
+            cur,
+            token=payload.get("confirmation_token"),
+            action="update_russian_cup_match_schedule",
+            payload=_schedule_confirmation_payload(
+                league="rcup",
+                match_id=match_id,
+                date_value=date_value,
+                time_value=time_value,
+            ),
+        )
+        if confirmation_error:
+            conn.rollback()
+            return confirmation_error
         return _apply_schedule_update(
             cur,
             conn,
