@@ -2247,6 +2247,11 @@
         text-shadow: none;
     }
 
+    /* Keep the reigning-champion shield immediately beside the nickname. */
+    body.tournament-rpl .player-line--rpl-champion .player-name {
+        flex: 0 1 auto;
+    }
+
     /* RPL reigning champion mark: Russian tricolour in a gold scudetto-style shield. */
     body.tournament-rpl .rpl-champion-shield {
         position: relative;
@@ -2320,7 +2325,7 @@
                     {% if row.shared %}<span class="shared-place">делят место</span>{% endif %}
                 </td>
                 <td class="player-cell">
-                    <div class="player-line">
+                    <div class="player-line{% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %} player-line--rpl-champion{% endif %}">
                         <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
                         {% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %}
                             <span class="rpl-champion-shield" role="img" aria-label="Действующий чемпион России" title="Действующий чемпион России"></span>
