@@ -2246,6 +2246,59 @@
         color: #001b4d !important;
         text-shadow: none;
     }
+
+    /* RPL reigning champion mark: Russian tricolour in a gold scudetto-style shield. */
+    body.tournament-rpl .rpl-champion-shield {
+        position: relative;
+        display: inline-block;
+        flex: 0 0 auto;
+        width: 23px;
+        height: 27px;
+        margin-left: 1px;
+        vertical-align: middle;
+        background: linear-gradient(
+            145deg,
+            #fff2a8 0%,
+            #e4b447 24%,
+            #fff0a0 50%,
+            #b77c12 74%,
+            #f7d76e 100%
+        );
+        clip-path: polygon(
+            50% 0%,
+            94% 12%,
+            92% 61%,
+            74% 83%,
+            50% 100%,
+            26% 83%,
+            8% 61%,
+            6% 12%
+        );
+        filter: drop-shadow(0 2px 3px rgba(106, 67, 0, 0.24));
+    }
+
+    body.tournament-rpl .rpl-champion-shield::before {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        clip-path: inherit;
+        background: linear-gradient(
+            to bottom,
+            #ffffff 0%,
+            #ffffff 33.333%,
+            #0039a6 33.333%,
+            #0039a6 66.666%,
+            #d52b1e 66.666%,
+            #d52b1e 100%
+        );
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .rpl-champion-shield {
+            width: 22px;
+            height: 26px;
+        }
+    }
 </style>
 
 {% if table %}
@@ -2269,6 +2322,9 @@
                 <td class="player-cell">
                     <div class="player-line">
                         <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
+                        {% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %}
+                            <span class="rpl-champion-shield" role="img" aria-label="Действующий чемпион России" title="Действующий чемпион России"></span>
+                        {% endif %}
                         {% if row.movement == 'up' %}
                             <span class="rank-movement up" title="Поднялся после последнего матча" aria-label="Поднялся после последнего матча">▲</span>
                         {% elif row.movement == 'down' %}

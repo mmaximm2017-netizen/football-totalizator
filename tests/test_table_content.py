@@ -187,6 +187,43 @@ class TableContentUiTests(unittest.TestCase):
         self.assertIn("🥈", rpl_html)
         self.assertIn("🥉", rpl_html)
 
+    def test_rpl_reigning_champion_shield_only_marks_max_zenit(self):
+        app = Flask(__name__, template_folder=str(ROOT / "templates"))
+        rows = [
+            {"place": 1, "shared": False, "username": "Денис 05", "movement": None,
+             "leader_status": "sole_leader", "outsider_status": None, "points": 127},
+            {"place": 3, "shared": False, "username": "Макс Зенит", "movement": None,
+             "leader_status": None, "outsider_status": None, "points": 117},
+        ]
+
+        with app.test_request_context("/"):
+            rpl_html = render_template(
+                "table_content.html",
+                table=rows,
+                selected_name="Чемпионат России 🇷🇺",
+                selected_tid=5,
+                top_scorers=[],
+            )
+            cup_html = render_template(
+                "table_content.html",
+                table=rows,
+                selected_name="Кубок России",
+                selected_tid=6,
+                top_scorers=[],
+            )
+
+        self.assertEqual(rpl_html.count('class="rpl-champion-shield"'), 1)
+        self.assertIn('aria-label="Действующий чемпион России"', rpl_html)
+        self.assertNotIn('class="rpl-champion-shield"', cup_html)
+
+        css = self.template
+        self.assertIn("body.tournament-rpl .rpl-champion-shield {", css)
+        self.assertIn("#ffffff 33.333%", css)
+        self.assertIn("#0039a6 66.666%", css)
+        self.assertIn("#d52b1e 100%", css)
+        self.assertIn("#e4b447 24%", css)
+        self.assertIn("#b77c12 74%", css)
+
     def test_rpl_top_scorers_render_mapped_photos_and_two_for_bek(self):
         app = Flask(__name__, template_folder=str(ROOT / "templates"))
         rows = [
