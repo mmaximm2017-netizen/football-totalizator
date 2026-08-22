@@ -36,6 +36,46 @@ class BetsSheetUiTests(unittest.TestCase):
             template,
         )
 
+    def test_android_webview_neutralizes_page_transition_fixed_containing_block(self):
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+
+        self.assertIn("const isAndroidWebView =", template)
+        self.assertIn("/Android/i.test(userAgent)", template)
+        self.assertIn("/\\bwv\\b/i.test(userAgent)", template)
+        self.assertIn("document.getElementById('page-transition')", template)
+        self.assertIn(
+            "pageTransition.style.setProperty('position', 'static', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('transform', 'none', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('perspective', 'none', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('contain', 'none', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('content-visibility', 'visible', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('will-change', 'auto', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('overflow', 'visible', 'important')",
+            template,
+        )
+        self.assertIn(
+            "pageTransition.style.setProperty('isolation', 'auto', 'important')",
+            template,
+        )
+
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("buildTeamIcon", template)
