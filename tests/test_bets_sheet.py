@@ -28,7 +28,8 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("overflow-y: auto", css)
         self.assertIn("function syncBetsSheetBottomClearance()", template)
         self.assertIn("bottomNav.getBoundingClientRect()", template)
-        self.assertIn("window.visualViewport.height + window.visualViewport.offsetTop", template)
+        self.assertIn("window.innerHeight - navRect.top + 8", template)
+        self.assertNotIn("window.visualViewport.height + window.visualViewport.offsetTop", template)
         self.assertIn("syncBetsSheetBottomClearance();", template)
         self.assertIn(
             "window.visualViewport.addEventListener('resize', syncBetsSheetBottomClearance)",

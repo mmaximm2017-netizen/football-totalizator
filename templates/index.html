@@ -217,10 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const viewportHeight = window.visualViewport
-            ? window.visualViewport.height + window.visualViewport.offsetTop
-            : window.innerHeight;
-        const clearance = Math.max(0, viewportHeight - navRect.top + 8);
+        const clearance = Math.max(0, window.innerHeight - navRect.top + 8);
 
         document.documentElement.style.setProperty(
             '--bets-sheet-bottom-clearance',
