@@ -39,10 +39,10 @@ class BetsSheetUiTests(unittest.TestCase):
     def test_android_webview_neutralizes_page_transition_fixed_containing_block(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("const isAndroidWebView =", template)
-        self.assertIn("/Android/i.test(userAgent)", template)
-        self.assertIn("/\\bwv\\b/i.test(userAgent)", template)
+        self.assertNotIn("const isAndroidWebView =", template)
+        self.assertNotIn("/Android/i.test(userAgent)", template)
         self.assertIn("document.getElementById('page-transition')", template)
+        self.assertIn("sheetPanel.offsetParent === pageTransition", template)
         self.assertIn(
             "pageTransition.style.setProperty('position', 'static', 'important')",
             template,

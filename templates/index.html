@@ -197,41 +197,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 120);
     })();
 
-    // Android System WebView can incorrectly use #page-transition as the
-    // containing block for position: fixed descendants. This makes the bets
-    // sheet move with the document scroll instead of staying in the viewport.
-    // Keep the workaround strictly scoped to Android WebView so browser/PWA
-    // rendering remains unchanged.
-    const userAgent = navigator.userAgent || '';
-    const isAndroidWebView =
-        /Android/i.test(userAgent) &&
-        (
-            /\bwv\b/i.test(userAgent) ||
-            /;\s*wv\)/i.test(userAgent) ||
-            (
-                /Version\/4\.0/i.test(userAgent) &&
-                /Chrome\/\d+/i.test(userAgent)
-            )
-        );
-
-    if (isAndroidWebView) {
-        const pageTransition = document.getElementById('page-transition');
-
-        if (pageTransition) {
-            pageTransition.style.setProperty('position', 'static', 'important');
-            pageTransition.style.setProperty('transform', 'none', 'important');
-            pageTransition.style.setProperty('filter', 'none', 'important');
-            pageTransition.style.setProperty('perspective', 'none', 'important');
-            pageTransition.style.setProperty('contain', 'none', 'important');
-            pageTransition.style.setProperty('content-visibility', 'visible', 'important');
-            pageTransition.style.setProperty('will-change', 'auto', 'important');
-            pageTransition.style.setProperty('overflow', 'visible', 'important');
-            pageTransition.style.setProperty('isolation', 'auto', 'important');
-        }
-    }
-
     const sheetOverlay = document.querySelector('[data-bets-sheet-overlay]');
     const sheetPanel = document.querySelector('[data-bets-sheet-panel]');
+
+    // Some Android WebViews incorrectly use #page-transition as the containing
+    // block for position: fixed descendants. Detect the actual broken layout
+    // instead of relying on User-Agent strings, which wrappers may customize.
+    const pageTransition = document.getElementById('page-transition');
+
+    if (
+        sheetPanel &&
+        pageTransition &&
+        sheetPanel.offsetParent === pageTransition
+    ) {
+        pageTransition.style.setProperty('position', 'static', 'important');
+        pageTransition.style.setProperty('transform', 'none', 'important');
+        pageTransition.style.setProperty('filter', 'none', 'important');
+        pageTransition.style.setProperty('perspective', 'none', 'important');
+        pageTransition.style.setProperty('contain', 'none', 'important');
+        pageTransition.style.setProperty('content-visibility', 'visible', 'important');
+        pageTransition.style.setProperty('will-change', 'auto', 'important');
+        pageTransition.style.setProperty('overflow', 'visible', 'important');
+        pageTransition.style.setProperty('isolation', 'auto', 'important');
+    }
     const sheetContent = document.querySelector('[data-bets-sheet-content]');
     const sheetClose = document.querySelector('[data-bets-sheet-close]');
 
