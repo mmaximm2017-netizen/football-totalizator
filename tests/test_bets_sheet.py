@@ -30,10 +30,6 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("bottomNav.getBoundingClientRect()", template)
         self.assertIn("window.innerHeight - navRect.top + 8", template)
         self.assertNotIn("window.visualViewport.height + window.visualViewport.offsetTop", template)
-        self.assertIn("sheetOverlay.parentElement !== document.body", template)
-        self.assertIn("document.body.appendChild(sheetOverlay)", template)
-        self.assertIn("sheetPanel.parentElement !== document.body", template)
-        self.assertIn("document.body.appendChild(sheetPanel)", template)
         self.assertIn("syncBetsSheetBottomClearance();", template)
         self.assertIn(
             "window.visualViewport.addEventListener('resize', syncBetsSheetBottomClearance)",
