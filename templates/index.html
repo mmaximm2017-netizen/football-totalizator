@@ -202,6 +202,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const sheetContent = document.querySelector('[data-bets-sheet-content]');
     const sheetClose = document.querySelector('[data-bets-sheet-close]');
 
+    // Keep fixed bets layers outside the scrolling/transformed page container.
+    if (sheetOverlay && sheetOverlay.parentElement !== document.body) {
+        document.body.appendChild(sheetOverlay);
+    }
+
+    if (sheetPanel && sheetPanel.parentElement !== document.body) {
+        document.body.appendChild(sheetPanel);
+    }
+
     function syncBetsSheetBottomClearance() {
         const bottomNav = document.querySelector('.bottom-nav');
 
