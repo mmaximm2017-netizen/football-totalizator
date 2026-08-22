@@ -6373,9 +6373,18 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
     @media (max-width: 640px) {
         .bets-sheet {
             box-sizing: border-box;
-            bottom: calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px);
-            max-height: min(72vh, calc(100vh - 84px - max(2px, env(safe-area-inset-bottom))));
-            max-height: min(72dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))));
+            bottom: var(
+                --bets-sheet-bottom-clearance,
+                calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)
+            );
+            max-height: min(
+                72vh,
+                calc(100vh - var(--bets-sheet-bottom-clearance, 86px) - 16px)
+            );
+            max-height: min(
+                72dvh,
+                calc(100dvh - var(--bets-sheet-bottom-clearance, 86px) - 16px)
+            );
             padding-bottom: calc(16px + env(safe-area-inset-bottom));
         }
 

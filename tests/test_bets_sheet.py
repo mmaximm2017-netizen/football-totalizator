@@ -16,15 +16,24 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_mobile_sheet_accounts_for_bottom_nav_safe_area_and_last_row(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
+        template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("@media (max-width: 640px)", css)
         self.assertIn("box-sizing: border-box", css)
-        self.assertIn("bottom: calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)", css)
-        self.assertIn("max-height: min(72dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))))", css)
+        self.assertIn("--bets-sheet-bottom-clearance", css)
+        self.assertIn("calc(100dvh - var(--bets-sheet-bottom-clearance, 86px) - 16px)", css)
         self.assertIn("body.tournament-wc2026 .bets-sheet", css)
         self.assertIn("padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
         self.assertIn("scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom))", css)
         self.assertIn(".bets-compact-list {\n            padding-bottom: 10px;", css)
         self.assertIn("overflow-y: auto", css)
+        self.assertIn("function syncBetsSheetBottomClearance()", template)
+        self.assertIn("bottomNav.getBoundingClientRect()", template)
+        self.assertIn("window.visualViewport.height + window.visualViewport.offsetTop", template)
+        self.assertIn("syncBetsSheetBottomClearance();", template)
+        self.assertIn(
+            "window.visualViewport.addEventListener('resize', syncBetsSheetBottomClearance)",
+            template,
+        )
 
     def test_compact_match_uses_separate_team_nodes_and_long_dash(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
@@ -225,7 +234,7 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_home_css_has_stable_cache_busting_version(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("home.css', v='wc2026-header-broadcast-20260725-rpl-finished'", template)
+        self.assertIn("home.css', v='android-bets-sheet-20260822'", template)
 
     def test_rpl_finished_background_is_dark_and_disables_light_overlays(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
@@ -327,7 +336,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("card_state = 'finished'", home_template)
         self.assertIn("card_state = 'closed'", home_template)
         self.assertIn("class=\"match-card {{ russian_cup_class }} match-card-v2 {{ card_state }}", home_template)
-        self.assertIn("russian-cup.css', v='20260725-user-cards'", base_template)
+        self.assertIn("russian-cup.css', v='20260814-russian-cup-ui'", base_template)
         self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.finished", layer)
         self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.closed", layer)
         self.assertIn("linear-gradient(145deg, rgba(45,19,52,0.97), rgba(76,25,46,0.95))", layer)

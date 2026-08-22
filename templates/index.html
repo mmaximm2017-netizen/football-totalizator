@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block extra_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css', v='wc2026-header-broadcast-20260725-rpl-finished') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css', v='android-bets-sheet-20260822') }}">
 {% endblock %}
 
 {% block content %}
@@ -202,8 +202,36 @@ document.addEventListener('DOMContentLoaded', function () {
     const sheetContent = document.querySelector('[data-bets-sheet-content]');
     const sheetClose = document.querySelector('[data-bets-sheet-close]');
 
+    function syncBetsSheetBottomClearance() {
+        const bottomNav = document.querySelector('.bottom-nav');
+
+        if (!bottomNav) {
+            document.documentElement.style.removeProperty('--bets-sheet-bottom-clearance');
+            return;
+        }
+
+        const navRect = bottomNav.getBoundingClientRect();
+
+        if (navRect.height <= 0) {
+            document.documentElement.style.removeProperty('--bets-sheet-bottom-clearance');
+            return;
+        }
+
+        const viewportHeight = window.visualViewport
+            ? window.visualViewport.height + window.visualViewport.offsetTop
+            : window.innerHeight;
+        const clearance = Math.max(0, viewportHeight - navRect.top + 8);
+
+        document.documentElement.style.setProperty(
+            '--bets-sheet-bottom-clearance',
+            Math.ceil(clearance) + 'px'
+        );
+    }
+
     function openBetsSheet() {
         if (!sheetOverlay || !sheetPanel) return;
+
+        syncBetsSheetBottomClearance();
 
         sheetOverlay.classList.add('open');
         sheetPanel.classList.add('open');
@@ -218,6 +246,12 @@ document.addEventListener('DOMContentLoaded', function () {
         sheetPanel.classList.remove('open');
         sheetPanel.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('bets-sheet-lock');
+    }
+
+    window.addEventListener('resize', syncBetsSheetBottomClearance);
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncBetsSheetBottomClearance);
     }
 
     function setSheetLoading() {
