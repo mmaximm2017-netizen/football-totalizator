@@ -205,11 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // instead of relying on User-Agent strings, which wrappers may customize.
     const pageTransition = document.getElementById('page-transition');
 
-    if (
-        sheetPanel &&
-        pageTransition &&
-        sheetPanel.offsetParent === pageTransition
-    ) {
+    function neutralizeBetsSheetContainingBlock() {
+        if (!pageTransition) return;
+
         pageTransition.style.setProperty('position', 'static', 'important');
         pageTransition.style.setProperty('transform', 'none', 'important');
         pageTransition.style.setProperty('filter', 'none', 'important');
@@ -249,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function openBetsSheet() {
         if (!sheetOverlay || !sheetPanel) return;
 
+        neutralizeBetsSheetContainingBlock();
         syncBetsSheetBottomClearance();
 
         sheetOverlay.classList.add('open');

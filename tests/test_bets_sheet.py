@@ -42,7 +42,8 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("const isAndroidWebView =", template)
         self.assertNotIn("/Android/i.test(userAgent)", template)
         self.assertIn("document.getElementById('page-transition')", template)
-        self.assertIn("sheetPanel.offsetParent === pageTransition", template)
+        self.assertIn("function neutralizeBetsSheetContainingBlock()", template)
+        self.assertIn("neutralizeBetsSheetContainingBlock();", template)
         self.assertIn(
             "pageTransition.style.setProperty('position', 'static', 'important')",
             template,
