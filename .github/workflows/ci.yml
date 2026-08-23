@@ -121,6 +121,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
       - test
+      - lint
+      - security
       - docker
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -157,3 +159,15 @@ jobs:
           echo "Image tag: ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.sha_tag }}"
           echo "Image tag: ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.short_sha_tag }}"
           echo "Digest: ${{ steps.build.outputs.digest }}"
+
+      - name: Save published image reference
+        run: |
+          echo "ghcr.io/mmaximm2017-netizen/football-totalizator@${{ steps.build.outputs.digest }}" > image-reference.txt
+
+      - name: Upload published image reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-image-reference
+          path: image-reference.txt
+          if-no-files-found: error
+          retention-days: 1

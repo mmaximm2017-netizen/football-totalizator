@@ -1,0 +1,63 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_reference:
+        description: Full GHCR image reference with sha256 digest
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main')
+    name: Deploy production
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+
+    steps:
+      - name: Download published image reference
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: production-image-reference
+          path: image-reference
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Select immutable image reference
+        id: image
+        env:
+          MANUAL_IMAGE_REFERENCE: ${{ inputs.image_reference }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            image_reference="$MANUAL_IMAGE_REFERENCE"
+          else
+            image_reference="$(<image-reference/image-reference.txt)"
+          fi
+          [[ "$image_reference" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]
+          echo "reference=$image_reference" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy immutable image on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            ./scripts/deploy_production.sh ${{ steps.image.outputs.reference }}
