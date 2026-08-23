@@ -50,6 +50,9 @@ wait_for_health() {
     local attempt
 
     echo "HEALTH CHECK"
+    echo "Waiting 5 seconds for the app to begin accepting connections..."
+    sleep 5
+
     for attempt in {1..30}; do
         if check_health_once; then
             echo "HEALTH CHECK OK"
@@ -86,6 +89,7 @@ rollback() {
     fi
 
     if (( rollback_ok )); then
+        docker inspect football-totalizator-app-1 --format '{{.Config.Image}}'
         echo "ROLLBACK SUCCESS: restored $CURRENT_IMAGE_REFERENCE"
         return 0
     fi
@@ -176,4 +180,5 @@ docker compose up -d --force-recreate app
 
 wait_for_health
 
+docker inspect football-totalizator-app-1 --format '{{.Config.Image}}'
 echo "SUCCESS: deployed $TARGET_IMAGE"
