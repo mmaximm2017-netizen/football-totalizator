@@ -2122,9 +2122,7 @@
 
         /* Match the RPL mobile card width exactly: viewport minus its 10px side padding. */
         body.tournament-rcup .top-scorers-card {
-            width: calc(100vw - 20px);
-            margin-left: calc((100% - (100vw - 20px)) / 2);
-            margin-right: calc((100% - (100vw - 20px)) / 2);
+            width: calc(100% + 4px);
         }
     }
     /* RPL light broadcast table layer. */
@@ -2402,7 +2400,7 @@
                                                 alt=""
                                                 loading="lazy"
                                                 decoding="async"
-                                            >
+                                            />
                                         {% endfor %}
                                     </span>
                                 {% endif %}
