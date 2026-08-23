@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test application
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: totish_ci
+          POSTGRES_PASSWORD: totish_ci
+          POSTGRES_DB: totish_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      API_KEY: ci-test-api-key
+      INVITE_CODE: ci-test-invite-code
+      ADMIN_USERNAME: ci-admin
+      ADMIN_PASSWORD: ci-test-admin-password
+      DATABASE_URL: postgresql://totish_ci:totish_ci@127.0.0.1:5432/totish_ci
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install application and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+
+      - name: Verify application import
+        run: python -c "from app import create_app; app=create_app(); print('APP_IMPORT_OK')"
+
+      - name: Run test suite
+        run: pytest -q
+
+  docker:
+    name: Build Docker image
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --progress=plain -t totish-ci .
