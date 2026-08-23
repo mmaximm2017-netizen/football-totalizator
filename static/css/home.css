@@ -1386,10 +1386,14 @@
     );
         transition: transform 0.26s ease;
         overflow: hidden;
+        visibility: hidden;
+        pointer-events: none;
     }
 
     .bets-sheet.open {
         transform: translateY(0);
+        visibility: visible;
+        pointer-events: auto;
     }
 
     .bets-sheet-handle {
