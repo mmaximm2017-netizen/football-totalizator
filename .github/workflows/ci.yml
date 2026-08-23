@@ -38,6 +38,7 @@ jobs:
       DATABASE_URL: postgresql://totish_ci:totish_ci@127.0.0.1:5432/totish_ci
       SECRET_KEY: ci-test-secret-key-not-for-production
       PYTHONUNBUFFERED: "1"
+      PYTHONPATH: .
 
     steps:
       - name: Check out repository
