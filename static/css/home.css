@@ -1381,7 +1381,9 @@
         box-shadow:
             0 -14px 34px rgba(0,54,102,0.16),
             inset 0 1px 0 rgba(255,255,255,0.72);
-        transform: translateY(104%);
+        transform: translateY(
+        calc(104% + var(--bets-sheet-bottom-clearance, 0px))
+    );
         transition: transform 0.26s ease;
         overflow: hidden;
     }
