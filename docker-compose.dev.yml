@@ -1,6 +1,7 @@
 services:
   app:
-    image: ${TOTISH_IMAGE:?TOTISH_IMAGE must be set}
+    build:
+      context: .
     env_file:
       - .env
     ports:
