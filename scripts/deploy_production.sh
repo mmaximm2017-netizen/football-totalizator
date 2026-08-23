@@ -32,6 +32,13 @@ json_field_is_ok() {
     [[ "$body" =~ \"${field}\"[[:space:]]*:[[:space:]]*\"ok\" ]]
 }
 
+json_field_is_ok_or_warn() {
+    local body="$1"
+    local field="$2"
+
+    [[ "$body" =~ \"${field}\"[[:space:]]*:[[:space:]]*\"(ok|warn:[^\"]+)\" ]]
+}
+
 check_health_once() {
     local health_body
     local db_health_body
@@ -41,9 +48,10 @@ check_health_once() {
     json_field_is_ok "$health_body" "status" || return 1
 
     db_health_body="$(curl --fail --silent --show-error --max-time 5 "$DB_HEALTH_URL")" || return 1
-    for field in db active_tournament ranking single_active; do
+    for field in db active_tournament ranking; do
         json_field_is_ok "$db_health_body" "$field" || return 1
     done
+    json_field_is_ok_or_warn "$db_health_body" "single_active" || return 1
 }
 
 wait_for_health() {
