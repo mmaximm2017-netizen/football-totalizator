@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   test:
@@ -114,3 +115,45 @@ jobs:
 
       - name: Build Docker image
         run: docker build --progress=plain -t totish-ci .
+
+  publish:
+    name: Publish Docker image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - test
+      - docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Define image tags
+        id: image
+        run: |
+          echo "sha_tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha_tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.sha_tag }}
+            ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.short_sha_tag }}
+
+      - name: Report published image
+        run: |
+          echo "Image tag: ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.sha_tag }}"
+          echo "Image tag: ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.short_sha_tag }}"
+          echo "Digest: ${{ steps.build.outputs.digest }}"
