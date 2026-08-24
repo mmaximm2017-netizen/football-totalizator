@@ -160,11 +160,17 @@ class RankingMovementTests(unittest.TestCase):
 
         return ranking.apply_leader_status(ranking_rows)[-1]["outsider_status"]
 
-    def test_leader_status_gap_zero_solo_gets_no_status(self):
-        self.assertIsNone(self.leader_status_for_gap(0))
+    def test_leader_status_gap_zero_is_leader(self):
+        self.assertEqual(self.leader_status_for_gap(0), "leader")
 
-    def test_leader_status_gap_one_is_sole_leader(self):
-        self.assertEqual(self.leader_status_for_gap(1), "sole_leader")
+    def test_leader_status_gap_one_is_leader(self):
+        self.assertEqual(self.leader_status_for_gap(1), "leader")
+
+    def test_leader_status_gap_nine_is_leader(self):
+        self.assertEqual(self.leader_status_for_gap(9), "leader")
+
+    def test_leader_status_gap_ten_is_sole_leader(self):
+        self.assertEqual(self.leader_status_for_gap(10), "sole_leader")
 
     def test_leader_status_gap_nineteen_is_sole_leader(self):
         self.assertEqual(self.leader_status_for_gap(19), "sole_leader")
@@ -192,6 +198,11 @@ class RankingMovementTests(unittest.TestCase):
 
     def test_leader_status_gap_sixty_is_dominating(self):
         self.assertEqual(self.leader_status_for_gap(60), "dominating")
+
+    def test_single_participant_is_leader(self):
+        annotated = ranking.apply_leader_status([row(1, 1, 100)])
+
+        self.assertEqual(annotated[0]["leader_status"], "leader")
 
     def test_shared_first_place_gets_no_leader_status(self):
         ranking_rows = [row(1, 1, 100, shared=True), row(2, 1, 100, shared=True)]

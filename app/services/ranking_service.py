@@ -35,7 +35,8 @@ def apply_leader_status(ranking):
 
     New behaviour:
     - If 2+ participants share first place → no leader status at all.
-    - Sole leader with 1–19 point gap → "sole_leader" (Единоличный лидер).
+    - Sole leader with 0–9 point gap → "leader" (Лидер).
+    - Sole leader with 10–19 point gap → "sole_leader" (Единоличный лидер).
     - 20–29 → "confident" (Уверенный лидер).
     - 30–39 → "dominant" (Явный лидер).
     - 40–49 → "absolute" (Безоговорочный лидер).
@@ -52,7 +53,7 @@ def apply_leader_status(ranking):
         return annotated
 
     if len(annotated) < 2:
-        annotated[0]["leader_status"] = "sole_leader"
+        annotated[0]["leader_status"] = "leader"
         return annotated
 
     # If 2+ participants share the same rank → tied first place → no leader status.
@@ -72,8 +73,10 @@ def apply_leader_status(ranking):
         annotated[0]["leader_status"] = "dominant"
     elif gap >= 20:
         annotated[0]["leader_status"] = "confident"
-    elif gap >= 1:
+    elif gap >= 10:
         annotated[0]["leader_status"] = "sole_leader"
+    elif gap >= 0:
+        annotated[0]["leader_status"] = "leader"
 
     return update_outsider_status(annotated)
 

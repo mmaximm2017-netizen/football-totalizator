@@ -66,6 +66,12 @@ class TableContentUiTests(unittest.TestCase):
         for modifier in ("confident", "dominant", "absolute", "sole-leader", "outsider-badge"):
             self.assertIn(modifier, self.template)
 
+    def test_leader_status_labels_are_present(self):
+        self.assertIn("row.leader_status == 'leader'", self.template)
+        self.assertIn("Лидер", self.template)
+        self.assertIn("row.leader_status == 'sole_leader'", self.template)
+        self.assertIn("Единоличный лидер", self.template)
+
     def test_badges_are_single_line_and_name_is_only_shrinkable_item(self):
         css = self.template
         self.assertIn("width: 100%;", css)
