@@ -139,6 +139,7 @@ def create_app():
     from app.routes.predictions import predictions_bp
     from app.routes.push import push_bp
     from app.routes.agent_api import agent_api_bp
+    from app.routes.gpt_api import gpt_api_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -151,6 +152,7 @@ def create_app():
     app.register_blueprint(predictions_bp)
     app.register_blueprint(push_bp)
     app.register_blueprint(agent_api_bp)
+    app.register_blueprint(gpt_api_bp)
 
     @app.get("/service-worker.js")
     def service_worker():
@@ -249,6 +251,11 @@ def create_app():
     @app.before_request
     def load_user():
         g.is_admin = False
+
+        # GPT uses bearer auth only. Never load, mutate, or otherwise process
+        # browser-session user state for its strictly read-only API surface.
+        if request.path.startswith("/api/gpt/"):
+            return
 
         if app.config["IOS_DIAGNOSTICS"] and request.path == "/__diagnostics/client":
             return
