@@ -56,16 +56,48 @@ paths:
       operationId: getTotishMatches
       summary: Get matches and scores using Moscow calendar-date filters.
       parameters:
-        - $ref: '#/components/parameters/TournamentId'
-        - $ref: '#/components/parameters/DateFrom'
-        - $ref: '#/components/parameters/DateTo'
+        - name: tournament_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
         - name: finished
           in: query
+          required: false
           schema:
             type: boolean
           description: Filter to finished=true or unfinished=false matches.
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
       responses:
         '200':
           description: Paginated match data.
@@ -84,13 +116,54 @@ paths:
       operationId: getTotishPredictions
       summary: Get submitted predictions with stored points and actual results only for finished matches.
       parameters:
-        - $ref: '#/components/parameters/MatchId'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/TournamentId'
-        - $ref: '#/components/parameters/DateFrom'
-        - $ref: '#/components/parameters/DateTo'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Offset'
+        - name: match_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
       responses:
         '200':
           description: Paginated predictions. The database has no standalone prediction id; identity is user_id, match_id and tournament_id.
@@ -109,10 +182,32 @@ paths:
       operationId: getTotishPlayerStats
       summary: Calculate public participant statistics from finished matches and stored scoring values.
       parameters:
-        - $ref: '#/components/parameters/UserIdRequired'
-        - $ref: '#/components/parameters/TournamentId'
-        - $ref: '#/components/parameters/DateFrom'
-        - $ref: '#/components/parameters/DateTo'
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: false
+          description: Inclusive Moscow calendar date in YYYY-MM-DD format.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Aggregated player statistics.
@@ -133,62 +228,6 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-  parameters:
-    MatchId:
-      name: match_id
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-    UserId:
-      name: user_id
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-    UserIdRequired:
-      name: user_id
-      in: query
-      required: true
-      schema:
-        type: integer
-        minimum: 1
-    TournamentId:
-      name: tournament_id
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-    DateFrom:
-      name: date_from
-      in: query
-      description: Inclusive Moscow calendar date in YYYY-MM-DD format.
-      schema:
-        type: string
-        format: date
-    DateTo:
-      name: date_to
-      in: query
-      description: Inclusive Moscow calendar date in YYYY-MM-DD format.
-      schema:
-        type: string
-        format: date
-    Limit:
-      name: limit
-      in: query
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 500
-        default: 100
-    Offset:
-      name: offset
-      in: query
-      schema:
-        type: integer
-        minimum: 0
-        maximum: 100000
-        default: 0
   responses:
     BadRequest:
       description: A query parameter is missing or invalid.
