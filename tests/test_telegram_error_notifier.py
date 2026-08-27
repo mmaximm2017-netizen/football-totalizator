@@ -25,7 +25,7 @@ class TelegramErrorNotifierTests(unittest.TestCase):
             raise ValueError("broken")
         except ValueError as exc:
             message = notifier._build_message(exc, source="flask_500", method="POST", path="/test")
-        self.assertIn("TOTISH ERROR", message)
+        self.assertIn("🚨 Проблема в ТОТИШе", message)
         self.assertIn("flask_500", message)
         self.assertIn("ValueError: broken", message)
         self.assertIn("POST /test", message)
