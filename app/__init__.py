@@ -15,6 +15,7 @@ from app.services.tournament_service import (
     ensure_single_active_tournament,
     get_active_tournament_id,
 )
+from app.services.telegram_error_notifier import notify_exception
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -240,10 +241,34 @@ def create_app():
     # =====================================================
     @app.errorhandler(PoolExhausted)
     def handle_pool_exhausted(e):
+        notify_exception(
+            e,
+            source="flask_db",
+            method=request.method,
+            path=request.path,
+        )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"ok": False, "message": str(e)}), 503
 
         return "Service temporarily unavailable. Please try again later.", 503
+
+    # =====================================================
+    # UNHANDLED SERVER ERRORS
+    # =====================================================
+    @app.errorhandler(500)
+    def handle_internal_server_error(e):
+        original = getattr(e, "original_exception", None) or e
+        notify_exception(
+            original,
+            source="flask_500",
+            method=request.method,
+            path=request.path,
+        )
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "message": "Internal server error"}), 500
+
+        return "Internal Server Error", 500
 
     # =====================================================
     # BEFORE REQUEST (user context)
