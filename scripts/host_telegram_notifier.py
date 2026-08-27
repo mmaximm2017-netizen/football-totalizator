@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 from pathlib import Path
 from urllib.parse import urlencode
@@ -64,6 +65,19 @@ def drain_outbox():
     return sent
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--message")
+    args = parser.parse_args()
+
+    if args.message is not None:
+        send_message(args.message)
+        print("SEND: OK")
+        return
+
     count = drain_outbox()
     print(f"OUTBOX SENT: {count}")
+
+
+if __name__ == "__main__":
+    main()

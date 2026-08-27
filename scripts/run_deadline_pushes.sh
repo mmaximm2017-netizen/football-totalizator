@@ -90,6 +90,15 @@ set -e
 FINISHED_AT="$(date -Is)"
 printf '%s FINISH deadline worker exit_code=%s\n' "$FINISHED_AT" "$WORKER_STATUS" >>"$LOG_FILE"
 
+if [[ "$WORKER_STATUS" -ne 0 ]]; then
+    python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" \
+        --message "🚨 TOTISH ERROR
+Источник: deadline_worker
+Ошибка: worker завершился с exit_code=${WORKER_STATUS}
+Время: ${FINISHED_AT}" \
+        >/dev/null 2>&1 || true
+fi
+
 if [[ "$WORKER_STATUS" -eq 124 || "$WORKER_STATUS" -eq 137 ]]; then
     printf '%s TIMEOUT deadline worker limit=%ss\n' "$FINISHED_AT" "$TIMEOUT_SECONDS" >>"$LOG_FILE"
 fi
