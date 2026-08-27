@@ -35,6 +35,16 @@ DOCKER_BIN="$(command -v docker)"
 FLOCK_BIN="$(command -v flock)"
 TIMEOUT_BIN="$(command -v timeout)"
 
+if [[ -z "${TOTISH_IMAGE:-}" ]]; then
+    TOTISH_IMAGE="$("$DOCKER_BIN" inspect --format='{{.Config.Image}}' football-totalizator-app-1 2>/dev/null || true)"
+    export TOTISH_IMAGE
+fi
+
+if [[ -z "${TOTISH_IMAGE:-}" ]]; then
+    echo "TOTISH_IMAGE is not set and current production image could not be detected" >&2
+    exit 1
+fi
+
 if ! "$DOCKER_BIN" compose version >/dev/null 2>&1; then
     echo "docker compose is required" >&2
     exit 1
@@ -63,6 +73,7 @@ fi
 
 cd "$PROJECT_ROOT"
 
+
 STARTED_AT="$(date -Is)"
 printf '%s START match-result worker%s\n' "$STARTED_AT" "${1:+ mode=$1}" >>"$LOG_FILE"
 
@@ -84,11 +95,27 @@ FINISHED_AT="$(date -Is)"
 printf '%s FINISH match-result worker exit_code=%s\n' "$FINISHED_AT" "$WORKER_STATUS" >>"$LOG_FILE"
 
 if [[ "$WORKER_STATUS" -ne 0 ]]; then
+    if [[ "$WORKER_STATUS" -eq 124 || "$WORKER_STATUS" -eq 137 ]]; then
+        HUMAN_REASON="Фоновая задача работала слишком долго и была принудительно остановлена по таймауту."
+    else
+        HUMAN_REASON="Фоновая задача завершилась с ошибкой и не смогла выполнить работу до конца."
+    fi
+
     python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" \
-        --message "🚨 TOTISH ERROR
-Источник: match_result_worker
-Ошибка: worker завершился с exit_code=${WORKER_STATUS}
-Время: ${FINISHED_AT}" \
+        --message "🚨 ТОТИШ: ошибка фоновой задачи
+
+Что именно произошло:
+Не удалось обработать уведомления после завершения матчей.
+
+Из-за этого пользователи могли не получить push с результатом матча и начисленными очками.
+
+Причина:
+${HUMAN_REASON}
+
+Время: ${FINISHED_AT}
+
+Технические детали:
+match_result_worker / exit_code=${WORKER_STATUS}" \
         >/dev/null 2>&1 || true
 fi
 

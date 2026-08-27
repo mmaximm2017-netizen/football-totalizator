@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import traceback
+from datetime import datetime
 import uuid
 from pathlib import Path
 from urllib.parse import urlencode
@@ -55,17 +56,60 @@ def _should_send(fingerprint, now=None):
     return True
 
 def _build_message(exc, *, source, method=None, path=None):
-    trace = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)).strip()
+    trace = "".join(
+        traceback.format_exception(type(exc), exc, exc.__traceback__)
+    ).strip()
     trace = _redact(trace)
+
+    human_messages = {
+        "flask_500": (
+            "На сайте произошла внутренняя ошибка.",
+            "Какое-то действие или страница ТОТИШа не смогли нормально выполниться.",
+        ),
+        "flask_db": (
+            "ТОТИШ не смог обратиться к базе данных.",
+            "Часть функций сайта в этот момент могла временно не работать.",
+        ),
+    }
+
+    title, explanation = human_messages.get(
+        str(source),
+        (
+            "В ТОТИШе произошла техническая ошибка.",
+            "Сайт продолжает контролироваться. Ниже оставлены технические данные для диагностики.",
+        ),
+    )
+
+    now = datetime.now().astimezone().strftime("%d.%m.%Y %H:%M:%S %Z")
+
     lines = [
-        "🚨 TOTISH ERROR",
-        f"Источник: {_redact(source)}",
-        f"Ошибка: {type(exc).__name__}: {_redact(exc)}",
+        "🚨 Проблема в ТОТИШе",
+        "",
+        title,
+        explanation,
+        "",
+        f"Время: {now}",
     ]
+
     if method or path:
-        lines.append(f"Запрос: {_redact(method or '-')} {_redact(path or '-')}")
+        lines.extend((
+            "",
+            f"Где произошло: {_redact(method or '-')} {_redact(path or '-')}",
+        ))
+
+    lines.extend((
+        "",
+        "Технические детали:",
+        f"{_redact(source)} / {type(exc).__name__}: {_redact(exc)}",
+    ))
+
     if trace:
-        lines.extend(("", "Traceback:", trace))
+        lines.extend((
+            "",
+            "Traceback:",
+            trace,
+        ))
+
     message = "\n".join(lines)
     if len(message) > TELEGRAM_MESSAGE_LIMIT:
         message = message[: TELEGRAM_MESSAGE_LIMIT - 16] + "\n...[truncated]"
