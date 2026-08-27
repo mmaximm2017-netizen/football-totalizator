@@ -3,6 +3,8 @@ services:
     image: ${TOTISH_IMAGE:?TOTISH_IMAGE must be set}
     env_file:
       - .env
+    volumes:
+      - ./runtime/telegram-outbox:/app/runtime/telegram-outbox
     ports:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped

@@ -5,6 +5,8 @@ import re
 import threading
 import time
 import traceback
+import uuid
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -12,10 +14,19 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_MESSAGE_LIMIT = 3900
 ERROR_DEDUP_SECONDS = 300
+DEFAULT_OUTBOX_DIR = "/app/runtime/telegram-outbox"
 _recent_errors = {}
 _recent_errors_lock = threading.Lock()
 
+
+def _outbox_dir():
+    value = os.getenv("TELEGRAM_ERROR_OUTBOX_DIR", DEFAULT_OUTBOX_DIR).strip()
+    return Path(value) if value else None
+
 def telegram_monitor_configured():
+    outbox = _outbox_dir()
+    if outbox is not None and outbox.is_dir():
+        return True
     return bool(os.getenv("TELEGRAM_ERROR_BOT_TOKEN") and os.getenv("TELEGRAM_ERROR_CHAT_ID"))
 
 def _redact(value):
@@ -60,6 +71,31 @@ def _build_message(exc, *, source, method=None, path=None):
         message = message[: TELEGRAM_MESSAGE_LIMIT - 16] + "\n...[truncated]"
     return message
 
+def _enqueue_message(message):
+    outbox = _outbox_dir()
+    if outbox is None or not outbox.is_dir():
+        return False
+
+    filename = f"{time.time_ns()}-{os.getpid()}-{uuid.uuid4().hex}.msg"
+    tmp_path = outbox / (filename + ".tmp")
+    final_path = outbox / filename
+
+    try:
+        with tmp_path.open("x", encoding="utf-8") as handle:
+            handle.write(_redact(message))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, final_path)
+        return True
+    except Exception:
+        logger.exception("telegram_error_outbox_write_failed")
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return False
+
+
 def _send_message(message):
     token = os.getenv("TELEGRAM_ERROR_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_ERROR_CHAT_ID")
@@ -71,6 +107,9 @@ def _send_message(message):
         response.read()
 
 def _safe_send(message):
+    if _enqueue_message(message):
+        return
+
     try:
         _send_message(message)
     except Exception:
