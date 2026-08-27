@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
+import json
 import os
+import time
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -8,6 +11,9 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env"
 OUTBOX_DIR = ROOT / "runtime" / "telegram-outbox"
+STATE_DIR = Path.home() / ".local" / "state" / "totish"
+DEDUPE_FILE = STATE_DIR / "telegram-relay-dedupe.json"
+DEDUPE_SECONDS = 300
 
 
 def load_env():
@@ -23,6 +29,44 @@ def load_env():
                 value = value[1:-1]
             values[key.strip()] = value
     return values
+
+
+def _load_dedupe_state():
+    try:
+        data = json.loads(DEDUPE_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_dedupe_state(state):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = DEDUPE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
+    tmp.replace(DEDUPE_FILE)
+
+
+def _message_fingerprint(message):
+    return hashlib.sha256(
+        message.encode("utf-8", errors="replace")
+    ).hexdigest()
+
+
+def should_send_message(message):
+    now = int(time.time())
+    state = _load_dedupe_state()
+    previous = int(state.get(_message_fingerprint(message), 0) or 0)
+    return not previous or now - previous >= DEDUPE_SECONDS
+
+
+def mark_message_sent(message):
+    now = int(time.time())
+    state = _load_dedupe_state()
+    state[_message_fingerprint(message)] = now
+
+    cutoff = now - 3600
+    state = {k: v for k, v in state.items() if int(v or 0) >= cutoff}
+    _save_dedupe_state(state)
 
 
 def send_message(message):
@@ -55,9 +99,13 @@ def drain_outbox():
     for path in sorted(OUTBOX_DIR.glob("*.msg")):
         try:
             message = path.read_text(encoding="utf-8")
-            send_message(message)
+            if should_send_message(message):
+                send_message(message)
+                mark_message_sent(message)
+                sent += 1
+            else:
+                print(f"OUTBOX DEDUPED: {path.name}")
             path.unlink()
-            sent += 1
         except Exception as exc:
             print(f"OUTBOX ERROR {path.name}: {exc}")
             break

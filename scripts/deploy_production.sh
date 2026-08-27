@@ -182,6 +182,9 @@ echo "Release metadata saved to $STATE_FILE"
 trap on_error ERR
 DEPLOY_STARTED=1
 
+mkdir -p runtime/telegram-outbox
+chmod 703 runtime/telegram-outbox
+
 echo "DEPLOY"
 docker compose pull app
 docker compose up -d --force-recreate app
