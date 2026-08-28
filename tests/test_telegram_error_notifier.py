@@ -1,5 +1,6 @@
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from app.services import telegram_error_notifier as notifier
@@ -47,6 +48,19 @@ class TelegramErrorNotifierTests(unittest.TestCase):
         self.assertTrue(notifier._should_send(fingerprint, now=100))
         self.assertFalse(notifier._should_send(fingerprint, now=399))
         self.assertTrue(notifier._should_send(fingerprint, now=400))
+
+    def test_public_enqueue_writes_the_existing_outbox_format(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory, patch.dict(
+            os.environ,
+            {"TELEGRAM_ERROR_OUTBOX_DIR": directory},
+            clear=True,
+        ):
+            self.assertTrue(notifier.enqueue_telegram_message("digest"))
+            messages = list(Path(directory).glob("*.msg"))
+
+        self.assertEqual(len(messages), 1)
 
     def test_notify_sends_once_when_configured(self):
         env = {"TELEGRAM_ERROR_BOT_TOKEN": "token", "TELEGRAM_ERROR_CHAT_ID": "123"}

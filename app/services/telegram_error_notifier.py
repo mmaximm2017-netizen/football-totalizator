@@ -140,6 +140,11 @@ def _enqueue_message(message):
         return False
 
 
+def enqueue_telegram_message(message):
+    """Atomically enqueue a Telegram message for the host relay only."""
+    return _enqueue_message(message)
+
+
 def _send_message(message):
     token = os.getenv("TELEGRAM_ERROR_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_ERROR_CHAT_ID")
