@@ -88,7 +88,7 @@ def test_authorized_callback_acknowledges_then_edits_message():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append(args[1]) or True):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 def test_message_not_modified_is_benign():
@@ -118,7 +118,7 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 def test_callback_ack_network_timeout_does_not_block_authorized_action():
@@ -135,7 +135,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 @pytest.mark.parametrize(
@@ -231,9 +231,9 @@ def test_container_query_failure_returns_safe_admin_message_without_traceback():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append((args[1], args[2])) or True), patch.object(bot, "_docker_query", side_effect=RuntimeError("DATABASE_URL=secret")):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls[1][0] == "editMessageText"
-    assert "Не удалось получить данные ТОТИШа" in calls[1][1]["text"]
-    assert "secret" not in calls[1][1]["text"]
+    assert calls[0][0] == "editMessageText"
+    assert "Не удалось получить данные ТОТИШа" in calls[0][1]["text"]
+    assert "secret" not in calls[0][1]["text"]
 
 
 def test_offset_state_is_atomic_and_malformed_state_is_safe(tmp_path, monkeypatch):
@@ -274,6 +274,7 @@ def test_continuous_poller_retries_with_bounded_backoff_and_resets_after_success
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
     outcomes = iter((1, 1, 0, 0))
     monkeypatch.setattr(bot, "_poll_cycle", lambda *args: next(outcomes))
+    monkeypatch.setattr(bot._helper, "warmup", lambda **kwargs: {"ready": True})
     sleeps = []
 
     assert bot.run_forever(max_cycles=4, sleep=sleeps.append) == 0
@@ -286,6 +287,39 @@ def test_default_cli_mode_runs_continuous_poller(monkeypatch):
     monkeypatch.setattr("sys.argv", ["telegram_admin_bot.py"])
 
     assert bot.main() == 0
+
+
+def test_daemon_warmup_runs_once_before_polling(monkeypatch):
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    events = []
+    monkeypatch.setattr(bot._helper, "warmup", lambda **kwargs: events.append("warmup") or {"ready": True})
+    monkeypatch.setattr(bot, "_poll_cycle", lambda *args: events.append("poll") or 0)
+
+    assert bot.run_forever(max_cycles=2, sleep=lambda _: None) == 0
+    assert events == ["warmup", "poll", "poll"]
+
+
+def test_daemon_warmup_failure_is_nonfatal(monkeypatch):
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    monkeypatch.setattr(bot._helper, "warmup", lambda **kwargs: (_ for _ in ()).throw(BrokenPipeError("restart")))
+    polls = []
+    monkeypatch.setattr(bot, "_poll_cycle", lambda *args: polls.append(True) or 0)
+
+    assert bot.run_forever(max_cycles=1, sleep=lambda _: None) == 0
+    assert polls == [True]
+
+
+def test_send_menu_does_not_warm_helper(monkeypatch):
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_edit_or_send", lambda *args, **kwargs: True)
+    warmup = MagicMock()
+    monkeypatch.setattr(bot._helper, "warmup", warmup)
+    monkeypatch.setattr("sys.argv", ["telegram_admin_bot.py", "--send-menu"])
+
+    assert bot.main() == 0
+    warmup.assert_not_called()
 
 
 def test_expired_callback_advances_offset_after_successful_render(tmp_path, monkeypatch):
@@ -488,15 +522,17 @@ def test_persistent_helper_reuses_one_process_for_sequential_actions(monkeypatch
     popen = MagicMock(return_value=process)
     monkeypatch.setattr(bot.subprocess, "Popen", popen)
     responses = iter((
-        '{"id":1,"ok":true,"payload":{"matches":[]}}\n',
+        '{"id":1,"ok":true,"payload":{"ready":true}}\n',
         '{"id":2,"ok":true,"payload":{"matches":[]}}\n',
+        '{"id":3,"ok":true,"payload":{"matches":[]}}\n',
     ))
     monkeypatch.setattr(client, "_readline", lambda *args: next(responses))
 
+    assert client.warmup() == {"ready": True}
     assert client.query("today") == {"matches": []}
     assert client.query("calendar") == {"matches": []}
     assert popen.call_count == 1
-    assert len(process.stdin.writes) == 2
+    assert len(process.stdin.writes) == 3
 
 
 def test_persistent_helper_restarts_after_broken_pipe(monkeypatch):
@@ -544,6 +580,24 @@ def test_helper_server_handles_multiple_requests_and_rejects_malformed(monkeypat
     assert responses[0]["ok"] is True
     assert responses[1]["ok"] is False
     assert responses[2]["ok"] is True
+
+
+def test_protocol_warmup_initializes_db_without_business_data():
+    cursor = Cursor(first=(1,))
+    conn = db_cursor(cursor)
+    with patch.object(service, "get_db", return_value=conn), patch.object(service, "close_db") as close:
+        payload = service.dispatch_protocol_request({"command": "warmup"})
+
+    assert payload == {"ready": True}
+    assert cursor.queries == [("SELECT 1", None)]
+    close.assert_called_once_with(conn, cursor)
+
+
+def test_protocol_rejects_unknown_internal_command():
+    with pytest.raises(ValueError, match="invalid_command"):
+        service.dispatch_protocol_request({"command": "business-data"})
+    with pytest.raises(ValueError, match="invalid_command"):
+        service.dispatch_protocol_request({"command": "warmup", "match_id": 1})
 
 
 @pytest.mark.parametrize(

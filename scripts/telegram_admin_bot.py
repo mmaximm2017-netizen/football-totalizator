@@ -139,6 +139,12 @@ def _answer_callback_best_effort(token, callback_id):
             type(exc).__name__,
         )
         return False
+    except (RuntimeError, json.JSONDecodeError, TimeoutError) as exc:
+        logger.warning(
+            "telegram_admin_callback_ack_error type=%s",
+            type(exc).__name__,
+        )
+        return False
     return True
 
 
@@ -362,23 +368,10 @@ class PersistentHelper:
             raise BrokenPipeError("telegram helper closed stdout")
         return line
 
-    def query(self, action, *, kind=None, match_id=None, metadata=None, timeout=QUERY_TIMEOUT):
-        if action not in HELPER_ACTIONS:
-            raise ValueError("invalid_helper_action")
-        if kind is not None and kind not in {"rpl", "cup"}:
-            raise ValueError("invalid_helper_kind")
-        if match_id is not None and (isinstance(match_id, bool) or not isinstance(match_id, int) or match_id < 1):
-            raise ValueError("invalid_helper_match_id")
-
+    def _exchange(self, request, timeout):
         request_id = self.next_request_id
         self.next_request_id += 1
-        request = {
-            "id": request_id,
-            "action": action,
-            "kind": kind,
-            "match_id": match_id,
-            "metadata": metadata or {},
-        }
+        request = {"id": request_id, **request}
         for attempt in range(2):
             process = self._start()
             try:
@@ -398,6 +391,29 @@ class PersistentHelper:
                 self.close()
                 raise
         raise RuntimeError("container_query_failed")
+
+    def warmup(self, timeout=QUERY_TIMEOUT):
+        payload = self._exchange({"command": "warmup"}, timeout)
+        if payload != {"ready": True}:
+            raise RuntimeError("container_warmup_failed")
+        return payload
+
+    def query(self, action, *, kind=None, match_id=None, metadata=None, timeout=QUERY_TIMEOUT):
+        if action not in HELPER_ACTIONS:
+            raise ValueError("invalid_helper_action")
+        if kind is not None and kind not in {"rpl", "cup"}:
+            raise ValueError("invalid_helper_kind")
+        if match_id is not None and (isinstance(match_id, bool) or not isinstance(match_id, int) or match_id < 1):
+            raise ValueError("invalid_helper_match_id")
+        return self._exchange(
+            {
+                "action": action,
+                "kind": kind,
+                "match_id": match_id,
+                "metadata": metadata or {},
+            },
+            timeout,
+        )
 
 
 _helper = PersistentHelper()
@@ -530,8 +546,6 @@ def _handle_update(token, admin_chat_id, update):
     if isinstance(callback, dict):
         callback_id = callback.get("id")
         callback_started = time.monotonic()
-        if callback_id:
-            _answer_callback_best_effort(token, callback_id)
         try:
             rendered = _render_callback(callback.get("data", ""))
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
@@ -553,6 +567,12 @@ def _handle_update(token, admin_chat_id, update):
                     markup,
                     callback.get("message", {}).get("message_id"),
                 )
+        logger.info(
+            "telegram_admin_callback_delivery_ready duration_ms=%s",
+            int((time.monotonic() - callback_started) * 1000),
+        )
+        if callback_id:
+            _answer_callback_best_effort(token, callback_id)
         logger.info(
             "telegram_admin_callback duration_ms=%s",
             int((time.monotonic() - callback_started) * 1000),
@@ -608,6 +628,20 @@ def run_forever(max_cycles=None, sleep=time.sleep):
     if lock is None:
         return 0
     logger.info("telegram_admin_started")
+    warmup_started = time.monotonic()
+    try:
+        _helper.warmup(timeout=QUERY_TIMEOUT)
+        logger.info(
+            "telegram_admin_helper_warmup duration_ms=%s",
+            int((time.monotonic() - warmup_started) * 1000),
+        )
+    except Exception as exc:  # noqa: BLE001 - warmup is an optional startup optimization.
+        _helper.close()
+        logger.warning(
+            "telegram_admin_helper_warmup_failed type=%s duration_ms=%s",
+            type(exc).__name__,
+            int((time.monotonic() - warmup_started) * 1000),
+        )
     backoff_index = 0
     cycles = 0
     try:

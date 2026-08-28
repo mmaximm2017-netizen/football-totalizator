@@ -365,6 +365,30 @@ def dispatch_request(request):
     )
 
 
+def warmup():
+    conn = cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        row = cur.fetchone()
+        if not row or row[0] != 1:
+            raise RuntimeError("database_readiness_failed")
+        return {"ready": True}
+    finally:
+        if conn is not None:
+            close_db(conn, cur)
+
+
+def dispatch_protocol_request(request):
+    command = request.get("command")
+    if command is None:
+        return dispatch_request(request)
+    if command != "warmup" or not set(request).issubset({"id", "command"}):
+        raise ValueError("invalid_command")
+    return warmup()
+
+
 def serve(input_stream=sys.stdin, output_stream=sys.stdout):
     for line in input_stream:
         request_id = None
@@ -375,7 +399,7 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
             request_id = request.get("id")
             if isinstance(request_id, bool) or not isinstance(request_id, int) or request_id < 1:
                 raise ValueError("invalid_request_id")
-            payload = dispatch_request(request)
+            payload = dispatch_protocol_request(request)
             response = {"id": request_id, "ok": True, "payload": payload}
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             response = {"id": request_id, "ok": False, "error": str(exc) or "invalid_request"}
