@@ -656,12 +656,12 @@ def test_prediction_status_before_deadline_returns_participation_only():
 def test_prediction_score_renderer_refuses_forged_predeadline_callback():
     text, _ = bot._format_prediction_scores({"match": {"match_id": 42, "home_team": "Акрон", "away_team": "ЦСКА"}, "deadline_open": True, "predictions": [{"username": "Игрок", "home_goals": 2, "away_goals": 1}]})
 
-    assert text == "🔒 Прогнозы пока закрыты."
+    assert "🔒 Прогнозы пока закрыты." in text
     assert "2:1" not in text
 
 
 def test_prediction_screen_callbacks_are_bound_to_displayed_match():
-    _, markup = bot._format_prediction_status({"match": {"match_id": 42, "home_team": "Акрон", "away_team": "ЦСКА", "kickoff_time": "2026-08-28T15:00:00+00:00"}, "deadline_open": False, "participants": []})
+    _, markup = bot._format_prediction_status({"match": {"match_id": 42, "tournament_name": "Чемпионат России 🇷🇺", "home_team": "Акрон", "away_team": "ЦСКА", "kickoff_time": "2026-08-28T15:00:00+00:00"}, "deadline_open": False, "participants": []})
     callbacks = [button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row]
 
     assert "adm:pred:show:42" in callbacks
@@ -740,19 +740,19 @@ def test_host_metadata_reads_only_stat_for_worker_logs(monkeypatch):
 
 
 def test_system_renderer_shows_truthful_workers_and_unknown_relay():
-    text, _ = bot._format_system({"system": {"container": "ok", "local": "ok", "db": "ok", "public": "ok"}, "worker_statuses": [{"label": "Worker дедлайнов", "state": "ok", "minutes": 4}, {"label": "Worker обработки результатов", "state": "stale", "minutes": 17}]})
+    text, _ = bot._format_system({"system": {"container": "ok", "local": "ok", "db": "ok", "public": "ok"}, "worker_statuses": [{"key": "deadline", "label": "Worker дедлайнов", "state": "ok", "minutes": 4}, {"key": "result", "label": "Worker обработки результатов", "state": "stale", "minutes": 17}]})
 
-    assert "🟢 Worker дедлайнов — 4 мин назад" in text
-    assert "🟠 Worker обработки результатов — 17 мин назад" in text
-    assert "⚪ Telegram relay — нет данных" in text
+    assert "🟢 Дедлайны — 4 мин назад" in text
+    assert "🟠 Обработка результатов — 17 мин назад" in text
+    assert "⚪ Relay — нет данных" in text
 
 
 def test_system_renderer_shows_missing_and_future_worker_metadata_without_false_alert():
     statuses = service.worker_heartbeat_statuses(10_000, None, 10_060)
     text, _ = bot._format_system({"system": {}, "worker_statuses": statuses})
 
-    assert "🔴 Worker дедлайнов — нет данных" in text
-    assert "🟢 Worker обработки результатов — 0 мин назад" in text
+    assert "🔴 Дедлайны — нет данных" in text
+    assert "🟢 Обработка результатов — 0 мин назад" in text
 
 
 def test_systemd_unit_matches_user_service_runtime():
@@ -762,3 +762,110 @@ def test_systemd_unit_matches_user_service_runtime():
     assert "WorkingDirectory=/opt/football-totalizator" in unit
     assert "ExecStart=/usr/bin/python3 scripts/telegram_admin_bot.py" in unit
     assert "WantedBy=default.target" in unit
+
+
+def test_visual_today_empty_and_grouped_matches(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    empty, _ = bot._format_today({"matches": []})
+    matches = [
+        {"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-28T15:00:00+00:00", "home_team": "Акрон", "away_team": "ЦСКА", "predicted_count": 6, "participant_count": 6},
+        {"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-28T17:00:00+00:00", "home_team": "Локомотив", "away_team": "Динамо", "predicted_count": 5, "participant_count": 6},
+        {"tournament_name": "Кубок России", "kickoff_time": "2026-08-28T18:00:00+00:00", "home_team": "Зенит", "away_team": "Ростов", "predicted_count": 4, "participant_count": 6},
+    ]
+    text, _ = bot._format_today({"matches": matches})
+
+    assert empty == "⚽ Сегодня\n🕒 Обновлено: 15:00\n\nСегодня матчей нет."
+    assert text.count("🏆 РПЛ") == 1
+    assert text.count("🏆 Кубок России") == 1
+    assert "Акрон — ЦСКА\n🕕 18:00\n🎯 6/6" in text
+    assert "Локомотив — Динамо\n🕗 20:00\n🎯 5/6" in text
+
+
+def test_visual_prediction_status_and_scores_preserve_confidentiality(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    status_payload = {
+        "match": {"match_id": 42, "tournament_name": "Чемпионат России 🇷🇺", "home_team": "Факел", "away_team": "Зенит", "kickoff_time": "2026-08-29T12:00:00+00:00"},
+        "deadline_open": True,
+        "participants": [{"username": "Bowb", "has_prediction": True}, {"username": "Byza-Zenit", "has_prediction": False}],
+    }
+    status_text, _ = bot._format_prediction_status(status_payload)
+    score_payload = {
+        "match": {"match_id": 42, "tournament_name": "Чемпионат России 🇷🇺", "home_team": "Факел", "away_team": "Зенит"},
+        "deadline_open": False,
+        "predictions": [{"username": "Bowb", "home_goals": 1, "away_goals": 2}, {"username": "Byza-Zenit", "home_goals": None, "away_goals": None}],
+    }
+    score_text, _ = bot._format_prediction_scores(score_payload)
+
+    assert "👥 Поставили: 1/2" in status_text
+    assert "✅ Bowb" in status_text
+    assert "❌ Byza-Zenit" in status_text
+    assert "1:2" not in status_text
+    assert "🔒 Сами прогнозы будут доступны после дедлайна." in status_text
+    assert "🔓 Прогнозы открыты" in score_text
+    assert "Bowb — 1:2" in score_text
+    assert "Byza-Zenit — нет прогноза" in score_text
+
+
+def test_visual_ranking_medals_and_tabs_are_preserved(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    payload = {
+        "tournament": {"name": "Чемпионат России 🇷🇺"},
+        "ranking": [
+            {"place": 1, "username": "A", "points": 161},
+            {"place": 2, "username": "B", "points": 151},
+            {"place": 3, "username": "C", "points": 148},
+            {"place": 4, "username": "D", "points": 141},
+        ],
+    }
+    text, markup = bot._format_table(payload)
+    callbacks = {button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row}
+
+    assert "🥇 A — 161" in text
+    assert "🥈 B — 151" in text
+    assert "🥉 C — 148" in text
+    assert "4. D — 141" in text
+    assert {"adm:table:rpl", "adm:table:cup"} <= callbacks
+
+
+def test_visual_calendar_groups_moscow_dates_and_tournaments_without_locale(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    payload = {
+        "matches": [
+            {"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-29T12:00:00+00:00", "home_team": "Факел", "away_team": "Зенит"},
+            {"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-29T17:00:00+00:00", "home_team": "Локомотив", "away_team": "Динамо"},
+            {"tournament_name": "Кубок России", "kickoff_time": "2026-09-01T13:15:00+00:00", "home_team": "Акрон", "away_team": "Локомотив"},
+        ]
+    }
+    text, _ = bot._format_calendar(payload)
+
+    assert text.count("29 августа") == 1
+    assert text.count("1 сентября") == 1
+    assert text.count("🏆 РПЛ") == 1
+    assert text.count("🏆 Кубок России") == 1
+    assert text.index("Факел — Зенит") < text.index("Локомотив — Динамо")
+
+
+def test_visual_problems_and_message_limit(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    healthy, _ = bot._format_problems({"issues": []})
+    failed, _ = bot._format_problems({"issues": ["🔴 Ошибка"]})
+    bounded, _ = bot._format_problems({"issues": ["x" * (bot.MAX_MESSAGE_LENGTH + 100)]})
+
+    assert healthy.startswith("🟢 Всё работает штатно\n🕒 Обновлено: 15:00")
+    assert "Проблем не обнаружено." in healthy
+    assert failed.startswith("🚨 Обнаружена проблема\n🕒 Обновлено: 15:00")
+    assert len(bounded) == bot.MAX_MESSAGE_LENGTH
+
+
+def test_visual_system_blocks_and_updated_time(monkeypatch):
+    monkeypatch.setattr(bot, "_updated_line", lambda now=None: "🕒 Обновлено: 15:00")
+    text, _ = bot._format_system({"system": {"container": "ok", "local": "problem", "db": "unknown", "public": "ok"}, "worker_statuses": [{"key": "deadline", "label": "Worker дедлайнов", "state": "ok", "minutes": 0}, {"key": "result", "label": "Worker результатов", "state": "unavailable", "minutes": None}]})
+
+    assert "🩺 Сервисы" in text
+    assert "🟢 Сайт" in text
+    assert "🔴 Local health" in text
+    assert "⚪ База данных" in text
+    assert "⚙️ Workers" in text
+    assert "🟢 Дедлайны — 0 мин назад" in text
+    assert "🔴 Обработка результатов — нет данных" in text
+    assert "📡 Telegram\n\n⚪ Relay — нет данных" in text

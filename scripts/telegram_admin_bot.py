@@ -38,6 +38,23 @@ QUERY_TIMEOUT = 20
 BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
 MSK = ZoneInfo("Europe/Moscow")
+RU_MONTHS = (
+    "",
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+)
+CLOCK_HOURS = ("🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚")
+CLOCK_HALVES = ("🕧", "🕜", "🕝", "🕞", "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦")
 HELPER_ACTIONS = {
     "today",
     "prediction-status",
@@ -188,35 +205,64 @@ def _friendly_tournament(name):
     return {"Чемпионат России 🇷🇺": "РПЛ", "Кубок России": "Кубок России"}.get(name, name)
 
 
+def _updated_line(now=None):
+    now = now or datetime.now(MSK)
+    return f"🕒 Обновлено: {now.astimezone(MSK).strftime('%H:%M')}"
+
+
+def _format_date(value):
+    value = value.astimezone(MSK)
+    return f"{value.day} {RU_MONTHS[value.month]}"
+
+
+def _clock_emoji(value):
+    value = value.astimezone(MSK)
+    hour = value.hour % 12
+    return CLOCK_HALVES[hour] if value.minute >= 30 else CLOCK_HOURS[hour]
+
+
+def _tournament_heading(name, table=False):
+    friendly = _friendly_tournament(name)
+    if friendly == "РПЛ":
+        return f"{'🇷🇺' if table else '🏆'} РПЛ"
+    return f"🏆 {friendly}"
+
+
+def _main_text():
+    return f"🤖 ТОТИШ — Администратор\n{_updated_line()}"
+
+
 def _format_today(payload):
     matches = payload.get("matches", [])
-    lines = ["⚽ Сегодня"]
+    lines = ["⚽ Сегодня", _updated_line()]
     if not matches:
         lines.extend(["", "Сегодня матчей нет."])
-        return "\n".join(lines), _dashboard_keyboard("adm:today:refresh")
+        return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:today:refresh")
     groups = {}
     for match in matches:
         groups.setdefault(_friendly_tournament(match["tournament_name"]), []).append(match)
     for tournament, group in sorted(groups.items()):
-        lines.extend(["", tournament])
+        lines.extend(["", _tournament_heading(tournament), ""])
         for match in group:
-            kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK).strftime("%H:%M")
-            lines.append(f"{kickoff} — {match['home_team']} — {match['away_team']}")
-            lines.append(f"Прогнозы: {match['predicted_count']}/{match['participant_count']}")
-    return "\n".join(lines), _dashboard_keyboard("adm:today:refresh")
+            kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK)
+            lines.append(f"{match['home_team']} — {match['away_team']}")
+            lines.append(f"{_clock_emoji(kickoff)} {kickoff.strftime('%H:%M')}")
+            prediction_label = "🎯 Прогнозы:" if len(group) == 1 else "🎯"
+            lines.extend([f"{prediction_label} {match['predicted_count']}/{match['participant_count']}", ""])
+    return _safe_text("\n".join(lines).rstrip()), _dashboard_keyboard("adm:today:refresh")
 
 
 def _format_prediction_status(payload):
     match = payload.get("match")
-    lines = ["🎯 Прогнозы"]
+    lines = ["🎯 Прогнозы", _updated_line()]
     if not match:
         lines.extend(["", "Нет ближайшего матча."])
-        return "\n".join(lines), _dashboard_keyboard("adm:predictions")
-    kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK).strftime("%d.%m %H:%M")
-    lines.extend(["", f"{match['home_team']} — {match['away_team']}", f"{kickoff}", ""])
+        return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:predictions")
+    kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK)
+    lines.extend(["", _tournament_heading(match["tournament_name"]), "", f"{match['home_team']} — {match['away_team']}", f"📅 {_format_date(kickoff)} • {kickoff.strftime('%H:%M')}", ""])
     participants = payload.get("participants", [])
     placed = sum(1 for participant in participants if participant.get("has_prediction"))
-    lines.append(f"Поставили: {placed}/{len(participants)}")
+    lines.extend([f"👥 Поставили: {placed}/{len(participants)}", ""])
     for participant in participants:
         lines.append(f"{'✅' if participant.get('has_prediction') else '❌'} {participant['username']}")
     match_id = match["match_id"]
@@ -231,10 +277,10 @@ def _format_prediction_status(payload):
 def _format_prediction_scores(payload):
     match = payload.get("match")
     if not match:
-        return "🎯 Прогнозы\n\nНет ближайшего матча.", _dashboard_keyboard("adm:predictions")
+        return _safe_text(f"🎯 Прогнозы\n{_updated_line()}\n\nНет ближайшего матча."), _dashboard_keyboard("adm:predictions")
     if payload.get("deadline_open"):
-        return "🔒 Прогнозы пока закрыты.", _dashboard_keyboard(f"adm:pred:refresh:{match['match_id']}")
-    lines = ["🎯 Прогнозы", "", f"{match['home_team']} — {match['away_team']}", "Дедлайн прошёл", ""]
+        return _safe_text(f"🎯 Прогнозы\n{_updated_line()}\n\n🔒 Прогнозы пока закрыты."), _dashboard_keyboard(f"adm:pred:refresh:{match['match_id']}")
+    lines = ["🎯 Прогнозы", _updated_line(), "", _tournament_heading(match["tournament_name"]), "", f"{match['home_team']} — {match['away_team']}", "🔓 Прогнозы открыты", ""]
     for prediction in payload.get("predictions", []):
         score = "нет прогноза" if prediction["home_goals"] is None or prediction["away_goals"] is None else f"{prediction['home_goals']}:{prediction['away_goals']}"
         lines.append(f"{prediction['username']} — {score}")
@@ -244,49 +290,63 @@ def _format_prediction_scores(payload):
 def _format_table(payload):
     tournament = payload.get("tournament")
     if not tournament:
-        return "🏆 Таблица\n\nТурнир не найден.", _dashboard_keyboard("adm:table:rpl")
-    lines = [f"🏆 {_friendly_tournament(tournament['name'])}", ""]
+        return _safe_text(f"🏆 Турнирная таблица\n{_updated_line()}\n\nТурнир не найден."), _dashboard_keyboard("adm:table:rpl")
+    lines = ["🏆 Турнирная таблица", _updated_line(), "", _tournament_heading(tournament["name"], table=True), ""]
+    medals = {1: "🥇", 2: "🥈", 3: "🥉"}
     for row in payload.get("ranking", [])[:20]:
-        lines.append(f"{row['place']}. {row['username']} — {row['points']}")
+        place = medals.get(row["place"], f"{row['place']}.")
+        lines.append(f"{place} {row['username']} — {row['points']}")
     kind = "rpl" if tournament["name"] == "Чемпионат России 🇷🇺" else "cup"
     tabs = [[{"text": "🇷🇺 РПЛ", "callback_data": "adm:table:rpl"}, {"text": "🏆 Кубок", "callback_data": "adm:table:cup"}]]
     return _safe_text("\n".join(lines)), _dashboard_keyboard(f"adm:table:{kind}", tabs)
 
 
 def _format_calendar(payload):
-    lines = ["📅 Ближайшие матчи"]
+    lines = ["📅 Календарь", _updated_line()]
     matches = payload.get("matches", [])
     if not matches:
         lines.extend(["", "Ближайших матчей нет."])
     else:
-        for match in matches:
+        grouped = {}
+        for match in sorted(matches, key=lambda item: item["kickoff_time"]):
             kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK)
-            lines.extend(["", kickoff.strftime("%d %B"), _friendly_tournament(match["tournament_name"]), f"{kickoff.strftime('%H:%M')} — {match['home_team']} — {match['away_team']}"])
+            date_group = grouped.setdefault(kickoff.date(), {})
+            date_group.setdefault(match["tournament_name"], []).append((kickoff, match))
+        for match_date, tournaments in grouped.items():
+            lines.extend(["", f"{match_date.day} {RU_MONTHS[match_date.month]}"])
+            for tournament_name, group in tournaments.items():
+                lines.extend(["", _tournament_heading(tournament_name), ""])
+                for kickoff, match in group:
+                    lines.extend([f"{match['home_team']} — {match['away_team']}", f"{_clock_emoji(kickoff)} {kickoff.strftime('%H:%M')}", ""])
     return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:calendar:refresh")
 
 
 def _format_problems(payload):
     issues = payload.get("issues", [])
-    text = "🚨 Проблемы\n\n" + ("\n".join(issues) if issues else "✅ Проблем не обнаружено.")
+    title = "🚨 Обнаружена проблема" if issues else "🟢 Всё работает штатно"
+    text = f"{title}\n{_updated_line()}\n\n" + ("\n".join(issues) if issues else "Проблем не обнаружено.")
     return _safe_text(text), _dashboard_keyboard("adm:problems:refresh")
 
 
 def _format_system(payload):
     system = payload.get("system", {})
     labels = (("container", "Сайт"), ("local", "Local health"), ("db", "База данных"), ("public", "Public health"))
-    lines = ["⚙️ ТОТИШ — система", ""]
+    lines = ["⚙️ ТОТИШ — система", _updated_line(), "", "🩺 Сервисы", ""]
     for key, label in labels:
         value = system.get(key, "unknown")
         icon = "🟢" if value == "ok" else "🔴" if value == "problem" else "⚪"
         lines.append(f"{icon} {label}")
+    lines.extend(["", "⚙️ Workers", ""])
+    worker_labels = {"deadline": "Дедлайны", "result": "Обработка результатов"}
     for worker in payload.get("worker_statuses", []):
+        label = worker_labels.get(worker.get("key"), worker["label"])
         if worker["state"] == "ok":
-            lines.append(f"🟢 {worker['label']} — {worker['minutes']} мин назад")
+            lines.append(f"🟢 {label} — {worker['minutes']} мин назад")
         elif worker["state"] == "stale":
-            lines.append(f"🟠 {worker['label']} — {worker['minutes']} мин назад")
+            lines.append(f"🟠 {label} — {worker['minutes']} мин назад")
         else:
-            lines.append(f"🔴 {worker['label']} — нет данных")
-    lines.append("⚪ Telegram relay — нет данных")
+            lines.append(f"🔴 {label} — нет данных")
+    lines.extend(["", "📡 Telegram", "", "⚪ Relay — нет данных"])
     return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:system:refresh")
 
 
@@ -505,7 +565,7 @@ def _render_callback(callback_data):
         return _format_prediction_scores(payload) if action == "show" else _format_prediction_status(payload)
     action = callback_data.replace(":refresh", "")
     if action == "adm:main":
-        return "🤖 ТОТИШ — Администратор", main_keyboard()
+        return _main_text(), main_keyboard()
     if action == "adm:today":
         return _format_today(_docker_query("today"))
     if action == "adm:predictions":
@@ -580,7 +640,7 @@ def _handle_update(token, admin_chat_id, update):
         return True
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") in {"/start", "/menu"}:
-        _deliver_with_retry(token, chat_id, "🤖 ТОТИШ — Администратор", main_keyboard())
+        _deliver_with_retry(token, chat_id, _main_text(), main_keyboard())
     return True
 
 
@@ -675,7 +735,7 @@ def main():
     args = parser.parse_args()
     token, admin_chat_id = _config()
     if args.send_menu:
-        _edit_or_send(token, admin_chat_id, "🤖 ТОТИШ — Администратор", main_keyboard())
+        _edit_or_send(token, admin_chat_id, _main_text(), main_keyboard())
         return 0
     if args.once:
         return run_once()
