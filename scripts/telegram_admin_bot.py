@@ -131,7 +131,8 @@ def _answer_callback_best_effort(token, callback_id):
         if exc.code == 400 and any(marker in error_text for marker in expired_markers):
             logger.warning("telegram_admin_callback_ack_expired")
             return False
-        raise
+        logger.warning("telegram_admin_callback_ack_http_error code=%s", exc.code)
+        return False
     except URLError as exc:
         logger.warning(
             "telegram_admin_callback_ack_network_error type=%s",
@@ -439,6 +440,44 @@ def _edit_or_send(token, chat_id, text, markup, message_id=None):
         raise
 
 
+def _deliver_with_retry(token, chat_id, text, markup, message_id=None, sleep=None):
+    sleep = sleep or time.sleep
+    method = "sendMessage" if message_id is None else "editMessageText"
+    for attempt in (1, 2):
+        started = time.monotonic()
+        try:
+            result = _edit_or_send(token, chat_id, text, markup, message_id)
+            logger.info(
+                "telegram_admin_delivery method=%s attempt=%s duration_ms=%s",
+                method,
+                attempt,
+                int((time.monotonic() - started) * 1000),
+            )
+            return True, result
+        except (HTTPError, URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as exc:
+            transient = isinstance(exc, (URLError, TimeoutError)) or (
+                isinstance(exc, HTTPError) and (exc.code == 429 or exc.code >= 500)
+            )
+            if transient and attempt == 1:
+                logger.warning(
+                    "telegram_admin_delivery_retry method=%s type=%s attempt=%s",
+                    method,
+                    type(exc).__name__,
+                    attempt,
+                )
+                sleep(0.2)
+                continue
+            logger.error(
+                "telegram_admin_delivery_failed method=%s type=%s attempts=%s duration_ms=%s",
+                method,
+                type(exc).__name__,
+                attempt,
+                int((time.monotonic() - started) * 1000),
+            )
+            return False, None
+    return False, None
+
+
 def _render_callback(callback_data):
     prediction_callback = re.fullmatch(r"adm:pred:(show|refresh):([1-9][0-9]*)", callback_data)
     if prediction_callback:
@@ -490,11 +529,14 @@ def _handle_update(token, admin_chat_id, update):
         return True
     if isinstance(callback, dict):
         callback_id = callback.get("id")
+        callback_started = time.monotonic()
+        if callback_id:
+            _answer_callback_best_effort(token, callback_id)
         try:
             rendered = _render_callback(callback.get("data", ""))
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
             logger.error("telegram_admin_query_failed type=%s", type(exc).__name__)
-            _edit_or_send(
+            _deliver_with_retry(
                 token,
                 chat_id,
                 "⚠️ Не удалось получить данные ТОТИШа.\nПопробуйте обновить позже.",
@@ -504,13 +546,21 @@ def _handle_update(token, admin_chat_id, update):
         else:
             if rendered is not None:
                 text, markup = rendered
-                _edit_or_send(token, chat_id, text, markup, callback.get("message", {}).get("message_id"))
-        if callback_id:
-            _answer_callback_best_effort(token, callback_id)
+                _deliver_with_retry(
+                    token,
+                    chat_id,
+                    text,
+                    markup,
+                    callback.get("message", {}).get("message_id"),
+                )
+        logger.info(
+            "telegram_admin_callback duration_ms=%s",
+            int((time.monotonic() - callback_started) * 1000),
+        )
         return True
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") in {"/start", "/menu"}:
-        _edit_or_send(token, chat_id, "🤖 ТОТИШ — Администратор", main_keyboard())
+        _deliver_with_retry(token, chat_id, "🤖 ТОТИШ — Администратор", main_keyboard())
     return True
 
 
@@ -581,6 +631,10 @@ def run_forever(max_cycles=None, sleep=time.sleep):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument("--send-menu", action="store_true")
     parser.add_argument("--once", action="store_true")

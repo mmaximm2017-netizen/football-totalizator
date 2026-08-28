@@ -88,7 +88,7 @@ def test_authorized_callback_acknowledges_then_edits_message():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append(args[1]) or True):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 def test_message_not_modified_is_benign():
@@ -118,7 +118,7 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 def test_callback_ack_network_timeout_does_not_block_authorized_action():
@@ -135,7 +135,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
         callback_http_error(500, "Internal Server Error"),
     ),
 )
-def test_nonexpired_callback_ack_errors_are_not_suppressed(error):
+def test_nonexpired_callback_ack_errors_do_not_block_render(error):
     update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
@@ -157,9 +157,8 @@ def test_nonexpired_callback_ack_errors_are_not_suppressed(error):
     with (
         patch.object(bot, "_telegram_request", side_effect=request),
         patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render,
-        pytest.raises(HTTPError),
     ):
-        bot._handle_update("token", 123, update)
+        assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
 
@@ -232,9 +231,9 @@ def test_container_query_failure_returns_safe_admin_message_without_traceback():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append((args[1], args[2])) or True), patch.object(bot, "_docker_query", side_effect=RuntimeError("DATABASE_URL=secret")):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls[0][0] == "editMessageText"
-    assert "Не удалось получить данные ТОТИШа" in calls[0][1]["text"]
-    assert "secret" not in calls[0][1]["text"]
+    assert calls[1][0] == "editMessageText"
+    assert "Не удалось получить данные ТОТИШа" in calls[1][1]["text"]
+    assert "secret" not in calls[1][1]["text"]
 
 
 def test_offset_state_is_atomic_and_malformed_state_is_safe(tmp_path, monkeypatch):
@@ -345,6 +344,58 @@ def test_get_updates_network_error_remains_controlled_poller_failure(tmp_path, m
 
     assert bot.run_once() == 1
     assert bot._state() is None
+
+
+def test_delivery_retries_once_then_succeeds_and_advances_offset(monkeypatch):
+    updates = [{"update_id": 10, "callback_query": {"id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}}]
+    edit_attempts = []
+    saved_offsets = []
+
+    def request(token, method, payload, timeout, **kwargs):
+        if method == "getUpdates":
+            return updates
+        if method == "editMessageText":
+            edit_attempts.append(payload["message_id"])
+            if len(edit_attempts) == 1:
+                raise URLError("timed out")
+        return True
+
+    monkeypatch.setattr(bot, "_state", lambda: None)
+    monkeypatch.setattr(bot, "_save_offset", saved_offsets.append)
+    monkeypatch.setattr(bot, "_telegram_request", request)
+    monkeypatch.setattr(bot.time, "sleep", lambda _: None)
+
+    assert bot._poll_cycle("token", 123) == 0
+    assert edit_attempts == [7, 7]
+    assert saved_offsets == [11]
+
+
+def test_poisoned_delivery_does_not_block_next_update_or_offset(monkeypatch):
+    updates = [
+        {"update_id": 10, "callback_query": {"id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}},
+        {"update_id": 11, "callback_query": {"id": "cb2", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 8}}},
+    ]
+    attempts = {7: 0, 8: 0}
+    saved_offsets = []
+
+    def request(token, method, payload, timeout, **kwargs):
+        if method == "getUpdates":
+            return updates
+        if method == "editMessageText":
+            message_id = payload["message_id"]
+            attempts[message_id] += 1
+            if message_id == 7:
+                raise URLError("timed out")
+        return True
+
+    monkeypatch.setattr(bot, "_state", lambda: None)
+    monkeypatch.setattr(bot, "_save_offset", saved_offsets.append)
+    monkeypatch.setattr(bot, "_telegram_request", request)
+    monkeypatch.setattr(bot.time, "sleep", lambda _: None)
+
+    assert bot._poll_cycle("token", 123) == 0
+    assert attempts == {7: 2, 8: 1}
+    assert saved_offsets == [11, 12]
 
 
 def test_malformed_update_with_id_advances_offset_and_does_not_block_following_update(tmp_path, monkeypatch):
