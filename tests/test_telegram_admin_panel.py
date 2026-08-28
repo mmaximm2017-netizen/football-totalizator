@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timezone
+from io import BytesIO
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 import pytest
 
@@ -36,6 +38,16 @@ def db_cursor(cursor):
     return conn
 
 
+def callback_http_error(code, description):
+    return HTTPError(
+        "https://api.telegram.org/bot/token/answerCallbackQuery",
+        code,
+        "Bad Request",
+        None,
+        BytesIO(description.encode("utf-8")),
+    )
+
+
 def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
@@ -62,6 +74,50 @@ def test_authorized_callback_acknowledges_then_edits_message():
         assert bot._handle_update("token", 123, update) is True
 
     assert calls == ["answerCallbackQuery", "editMessageText"]
+
+
+@pytest.mark.parametrize(
+    "description",
+    (
+        "Bad Request: query is too old and response timeout expired or query ID is invalid",
+        "Bad Request: query ID is invalid",
+    ),
+)
+def test_expired_callback_acknowledgement_does_not_block_authorized_action(description):
+    calls = []
+    update = {"callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout):
+        calls.append(method)
+        if method == "answerCallbackQuery":
+            raise callback_http_error(400, description)
+        return True
+
+    with patch.object(bot, "_telegram_request", side_effect=request), patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render:
+        assert bot._handle_update("token", 123, update) is True
+
+    render.assert_called_once_with("adm:today")
+    assert calls == ["answerCallbackQuery", "editMessageText"]
+
+
+@pytest.mark.parametrize(
+    "error",
+    (
+        callback_http_error(400, "Bad Request: unrelated error"),
+        callback_http_error(401, "Unauthorized"),
+        callback_http_error(500, "Internal Server Error"),
+    ),
+)
+def test_nonexpired_callback_ack_errors_are_not_suppressed(error):
+    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    with (
+        patch.object(bot, "_telegram_request", side_effect=error),
+        patch.object(bot, "_render_callback") as render,
+        pytest.raises(HTTPError),
+    ):
+        bot._handle_update("token", 123, update)
+
+    render.assert_not_called()
 
 
 def test_unknown_callback_is_safe():
@@ -132,6 +188,29 @@ def test_duplicate_update_is_not_processed_after_offset_persisted(tmp_path, monk
     assert bot.run_once() == 0
     assert bot.run_once() == 0
     assert handled == [10]
+
+
+def test_expired_callback_advances_offset_after_successful_render(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(bot, "OFFSET_FILE", tmp_path / "offset.json")
+    monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    update = {"update_id": 10, "callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout):
+        if method == "getUpdates":
+            return [update]
+        if method == "answerCallbackQuery":
+            raise callback_http_error(400, "query is too old")
+        return True
+
+    monkeypatch.setattr(bot, "_telegram_request", request)
+    with patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render:
+        assert bot.run_once() == 0
+
+    render.assert_called_once_with("adm:today")
+    assert bot._state() == 11
 
 
 def test_malformed_update_with_id_advances_offset_and_does_not_block_following_update(tmp_path, monkeypatch):

@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -93,6 +94,29 @@ def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT):
     if not isinstance(value, dict) or value.get("ok") is not True:
         raise RuntimeError("telegram_api_error")
     return value.get("result")
+
+
+def _answer_callback_best_effort(token, callback_id):
+    try:
+        _telegram_request(
+            token,
+            "answerCallbackQuery",
+            {"callback_query_id": callback_id},
+            timeout=10,
+        )
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace").lower()
+        error_text = f"{exc.reason} {error_body}".lower()
+        expired_markers = (
+            "query is too old",
+            "query id is invalid",
+            "response timeout expired",
+        )
+        if exc.code == 400 and any(marker in error_text for marker in expired_markers):
+            logger.warning("telegram_admin_callback_ack_expired")
+            return False
+        raise
+    return True
 
 
 def _keyboard(rows):
@@ -324,13 +348,13 @@ def _handle_update(token, admin_chat_id, update):
     callback = update.get("callback_query")
     if chat_id != admin_chat_id:
         if isinstance(callback, dict) and callback.get("id"):
-            _telegram_request(token, "answerCallbackQuery", {"callback_query_id": callback["id"]}, timeout=10)
+            _answer_callback_best_effort(token, callback["id"])
         logger.warning("telegram_admin_unauthorized_update chat_id=%s", chat_id)
         return True
     if isinstance(callback, dict):
         callback_id = callback.get("id")
         if callback_id:
-            _telegram_request(token, "answerCallbackQuery", {"callback_query_id": callback_id}, timeout=10)
+            _answer_callback_best_effort(token, callback_id)
         try:
             rendered = _render_callback(callback.get("data", ""))
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
