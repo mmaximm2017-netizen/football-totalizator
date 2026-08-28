@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -91,6 +91,23 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
         calls.append(method)
         if method == "answerCallbackQuery":
             raise callback_http_error(400, description)
+        return True
+
+    with patch.object(bot, "_telegram_request", side_effect=request), patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render:
+        assert bot._handle_update("token", 123, update) is True
+
+    render.assert_called_once_with("adm:today")
+    assert calls == ["answerCallbackQuery", "editMessageText"]
+
+
+def test_callback_ack_network_timeout_does_not_block_authorized_action():
+    calls = []
+    update = {"callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout):
+        calls.append(method)
+        if method == "answerCallbackQuery":
+            raise URLError("timed out")
         return True
 
     with patch.object(bot, "_telegram_request", side_effect=request), patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render:
@@ -211,6 +228,41 @@ def test_expired_callback_advances_offset_after_successful_render(tmp_path, monk
 
     render.assert_called_once_with("adm:today")
     assert bot._state() == 11
+
+
+def test_callback_network_timeout_advances_offset_after_successful_render(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(bot, "OFFSET_FILE", tmp_path / "offset.json")
+    monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    update = {"update_id": 10, "callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout):
+        if method == "getUpdates":
+            return [update]
+        if method == "answerCallbackQuery":
+            raise URLError("timed out")
+        return True
+
+    monkeypatch.setattr(bot, "_telegram_request", request)
+    with patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render:
+        assert bot.run_once() == 0
+
+    render.assert_called_once_with("adm:today")
+    assert bot._state() == 11
+
+
+def test_get_updates_network_error_remains_controlled_poller_failure(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(bot, "OFFSET_FILE", tmp_path / "offset.json")
+    monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    monkeypatch.setattr(bot, "_telegram_request", lambda *args, **kwargs: (_ for _ in ()).throw(URLError("timed out")))
+
+    assert bot.run_once() == 1
+    assert bot._state() is None
 
 
 def test_malformed_update_with_id_advances_offset_and_does_not_block_following_update(tmp_path, monkeypatch):

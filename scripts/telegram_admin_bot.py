@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -116,6 +116,12 @@ def _answer_callback_best_effort(token, callback_id):
             logger.warning("telegram_admin_callback_ack_expired")
             return False
         raise
+    except URLError as exc:
+        logger.warning(
+            "telegram_admin_callback_ack_network_error type=%s",
+            type(exc).__name__,
+        )
+        return False
     return True
 
 
