@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import select
 import subprocess
 import tempfile
 import time
@@ -37,6 +38,16 @@ QUERY_TIMEOUT = 20
 BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
 MSK = ZoneInfo("Europe/Moscow")
+HELPER_ACTIONS = {
+    "today",
+    "prediction-status",
+    "prediction-scores",
+    "table-tournaments",
+    "ranking",
+    "calendar",
+    "problems",
+    "system",
+}
 
 logger = logging.getLogger("totish.telegram_admin")
 
@@ -298,25 +309,119 @@ def _host_metadata(docker_bin):
     }
 
 
+class PersistentHelper:
+    def __init__(self, docker_bin=None):
+        self.docker_bin = docker_bin or os.getenv("TOTISH_DOCKER_BIN", "docker")
+        self.process = None
+        self.next_request_id = 1
+
+    def close(self):
+        process = self.process
+        self.process = None
+        if process is None:
+            return
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+
+    def _start(self):
+        if self.process is not None and self.process.poll() is None:
+            return self.process
+        self.close()
+        self.process = subprocess.Popen(
+            [
+                self.docker_bin,
+                "exec",
+                "-i",
+                CONTAINER_NAME,
+                "python",
+                "-u",
+                "-m",
+                "app.services.telegram_admin_service",
+                "--server",
+            ],
+            cwd=ROOT,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        return self.process
+
+    def _readline(self, process, timeout):
+        ready, _, _ = select.select([process.stdout], [], [], timeout)
+        if not ready:
+            raise subprocess.TimeoutExpired(process.args, timeout)
+        line = process.stdout.readline()
+        if not line:
+            raise BrokenPipeError("telegram helper closed stdout")
+        return line
+
+    def query(self, action, *, kind=None, match_id=None, metadata=None, timeout=QUERY_TIMEOUT):
+        if action not in HELPER_ACTIONS:
+            raise ValueError("invalid_helper_action")
+        if kind is not None and kind not in {"rpl", "cup"}:
+            raise ValueError("invalid_helper_kind")
+        if match_id is not None and (isinstance(match_id, bool) or not isinstance(match_id, int) or match_id < 1):
+            raise ValueError("invalid_helper_match_id")
+
+        request_id = self.next_request_id
+        self.next_request_id += 1
+        request = {
+            "id": request_id,
+            "action": action,
+            "kind": kind,
+            "match_id": match_id,
+            "metadata": metadata or {},
+        }
+        for attempt in range(2):
+            process = self._start()
+            try:
+                process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
+                process.stdin.flush()
+                response = json.loads(self._readline(process, timeout))
+                if not isinstance(response, dict) or response.get("id") != request_id:
+                    raise RuntimeError("container_query_invalid_response")
+                if response.get("ok") is not True or not isinstance(response.get("payload"), dict):
+                    raise RuntimeError("container_query_failed")
+                return response["payload"]
+            except (BrokenPipeError, OSError, json.JSONDecodeError):
+                self.close()
+                if attempt == 1:
+                    raise RuntimeError("container_query_failed") from None
+            except subprocess.TimeoutExpired:
+                self.close()
+                raise
+        raise RuntimeError("container_query_failed")
+
+
+_helper = PersistentHelper()
+
+
 def _docker_query(action, kind=None, match_id=None, timeout=QUERY_TIMEOUT):
-    docker_bin = os.getenv("TOTISH_DOCKER_BIN", "docker")
-    command = [docker_bin, "exec"]
-    for key, value in _host_metadata(docker_bin).items():
-        command.extend(["-e", f"{key}={value}"])
-    command.extend([CONTAINER_NAME, "python", "-m", "app.services.telegram_admin_service", "--action", action])
-    if kind:
-        command.extend(["--kind", kind])
-    if match_id is not None:
-        command.extend(["--match-id", str(match_id)])
-    completed = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=timeout, check=False)
-    if completed.returncode != 0:
-        raise RuntimeError("container_query_failed")
-    try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("container_query_invalid_json") from exc
-    if not isinstance(payload, dict) or payload.get("ok") is not True:
-        raise RuntimeError("container_query_failed")
+    started = time.monotonic()
+    host_metadata = _host_metadata(_helper.docker_bin)
+    payload = _helper.query(
+        action,
+        kind=kind,
+        match_id=match_id,
+        metadata={
+            "host_now_epoch": host_metadata["TOTISH_DIGEST_HOST_NOW_EPOCH"],
+            "deadline_worker_mtime": host_metadata["TOTISH_DEADLINE_WORKER_MTIME"],
+            "result_worker_mtime": host_metadata["TOTISH_RESULT_WORKER_MTIME"],
+            "container_state": host_metadata["TOTISH_CONTAINER_STATE"],
+        },
+        timeout=timeout,
+    )
+    logger.info(
+        "telegram_admin_query action=%s duration_ms=%s",
+        action,
+        int((time.monotonic() - started) * 1000),
+    )
     return payload
 
 
@@ -443,6 +548,7 @@ def run_once():
     try:
         return _poll_cycle(token, admin_chat_id)
     finally:
+        _helper.close()
         lock.close()
 
 
@@ -470,6 +576,7 @@ def run_forever(max_cycles=None, sleep=time.sleep):
         logger.info("telegram_admin_stopped")
         return 0
     finally:
+        _helper.close()
         lock.close()
 
 

@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from io import BytesIO
+from io import BytesIO, StringIO
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
@@ -379,14 +379,134 @@ def test_telegram_api_timeout_is_not_exposed(monkeypatch):
 
 
 def test_container_query_timeout_and_bad_json_fail_closed(monkeypatch):
-    monkeypatch.setattr(bot, "_host_metadata", lambda _: {})
-    monkeypatch.setattr(bot.subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutExpired("docker", 1)))
+    monkeypatch.setattr(
+        bot,
+        "_host_metadata",
+        lambda _: {
+            "TOTISH_DIGEST_HOST_NOW_EPOCH": "1",
+            "TOTISH_DEADLINE_WORKER_MTIME": "1",
+            "TOTISH_RESULT_WORKER_MTIME": "1",
+            "TOTISH_CONTAINER_STATE": "running|true|false",
+        },
+    )
+    monkeypatch.setattr(bot._helper, "query", lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutExpired("docker", 1)))
     with pytest.raises(TimeoutExpired):
         bot._docker_query("today")
 
-    monkeypatch.setattr(bot.subprocess, "run", lambda *args, **kwargs: type("Result", (), {"returncode": 0, "stdout": "not-json"})())
-    with pytest.raises(RuntimeError, match="invalid_json"):
+    monkeypatch.setattr(bot._helper, "query", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("container_query_invalid_response")))
+    with pytest.raises(RuntimeError, match="invalid_response"):
         bot._docker_query("today")
+
+
+class FakePipe:
+    def __init__(self):
+        self.writes = []
+
+    def write(self, value):
+        self.writes.append(value)
+
+    def flush(self):
+        pass
+
+
+class FakeProcess:
+    def __init__(self):
+        self.args = ["docker", "exec"]
+        self.stdin = FakePipe()
+        self.stdout = object()
+        self.returncode = None
+        self.terminated = False
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        self.terminated = True
+        self.returncode = 0
+
+    def kill(self):
+        self.returncode = -9
+
+    def wait(self, timeout=None):
+        return self.returncode
+
+
+def test_persistent_helper_reuses_one_process_for_sequential_actions(monkeypatch):
+    process = FakeProcess()
+    client = bot.PersistentHelper("docker")
+    popen = MagicMock(return_value=process)
+    monkeypatch.setattr(bot.subprocess, "Popen", popen)
+    responses = iter((
+        '{"id":1,"ok":true,"payload":{"matches":[]}}\n',
+        '{"id":2,"ok":true,"payload":{"matches":[]}}\n',
+    ))
+    monkeypatch.setattr(client, "_readline", lambda *args: next(responses))
+
+    assert client.query("today") == {"matches": []}
+    assert client.query("calendar") == {"matches": []}
+    assert popen.call_count == 1
+    assert len(process.stdin.writes) == 2
+
+
+def test_persistent_helper_restarts_after_broken_pipe(monkeypatch):
+    first = FakeProcess()
+    second = FakeProcess()
+    client = bot.PersistentHelper("docker")
+    popen = MagicMock(side_effect=(first, second))
+    monkeypatch.setattr(bot.subprocess, "Popen", popen)
+    responses = iter((BrokenPipeError("restart"), '{"id":1,"ok":true,"payload":{"matches":[]}}\n'))
+
+    def read(*args):
+        value = next(responses)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    monkeypatch.setattr(client, "_readline", read)
+
+    assert client.query("today") == {"matches": []}
+    assert popen.call_count == 2
+    assert first.terminated is True
+
+
+def test_persistent_helper_timeout_stops_process(monkeypatch):
+    process = FakeProcess()
+    client = bot.PersistentHelper("docker")
+    monkeypatch.setattr(bot.subprocess, "Popen", lambda *args, **kwargs: process)
+    monkeypatch.setattr(client, "_readline", lambda *args: (_ for _ in ()).throw(TimeoutExpired("helper", 1)))
+
+    with pytest.raises(TimeoutExpired):
+        client.query("today", timeout=1)
+
+    assert process.terminated is True
+
+
+def test_helper_server_handles_multiple_requests_and_rejects_malformed(monkeypatch):
+    calls = []
+    monkeypatch.setattr(service, "dispatch_request", lambda request: calls.append(request["action"]) or {"ok": True})
+    input_stream = StringIO('{"id":1,"action":"today"}\nnot-json\n{"id":2,"action":"calendar"}\n')
+    output_stream = StringIO()
+
+    assert service.serve(input_stream, output_stream) == 0
+    responses = [json.loads(line) for line in output_stream.getvalue().splitlines()]
+    assert calls == ["today", "calendar"]
+    assert responses[0]["ok"] is True
+    assert responses[1]["ok"] is False
+    assert responses[2]["ok"] is True
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        {"action": "unknown"},
+        {"action": "ranking", "kind": "invalid"},
+        {"action": "prediction-scores", "match_id": "1"},
+        {"action": "prediction-scores", "match_id": 0},
+    ),
+)
+def test_helper_request_schema_rejects_unknown_or_invalid_values(payload):
+    with pytest.raises(ValueError):
+        service.dispatch_request(payload)
 
 
 def test_prediction_scores_are_not_selected_before_deadline():
@@ -528,3 +648,12 @@ def test_system_renderer_shows_missing_and_future_worker_metadata_without_false_
 
     assert "🔴 Worker дедлайнов — нет данных" in text
     assert "🟢 Worker обработки результатов — 0 мин назад" in text
+
+
+def test_systemd_unit_matches_user_service_runtime():
+    unit = (bot.ROOT / "deploy" / "systemd" / "totish-telegram-admin.service").read_text(encoding="utf-8")
+
+    assert "User=" not in unit
+    assert "WorkingDirectory=/opt/football-totalizator" in unit
+    assert "ExecStart=/usr/bin/python3 scripts/telegram_admin_bot.py" in unit
+    assert "WantedBy=default.target" in unit

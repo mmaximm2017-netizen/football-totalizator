@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import sys
 from datetime import datetime
 from urllib.request import urlopen
 
@@ -18,6 +19,16 @@ from app.services.ranking_service import get_tournament_ranking
 from app.utils import MSK, is_before_deadline
 
 MAX_CALENDAR_MATCHES = 10
+ALLOWED_ACTIONS = {
+    "today",
+    "prediction-status",
+    "prediction-scores",
+    "table-tournaments",
+    "ranking",
+    "calendar",
+    "problems",
+    "system",
+}
 
 
 def _iso(value):
@@ -294,32 +305,116 @@ def system(now_epoch, deadline_mtime, result_mtime, container_state):
     return {"ok": True, "system": result, "worker_statuses": worker_heartbeat_statuses(now_epoch, deadline_mtime, result_mtime)}
 
 
+def _positive_match_id(value):
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("invalid_match_id")
+    return value
+
+
+def dispatch_request(request):
+    if not isinstance(request, dict):
+        raise TypeError("invalid_request")
+    action = request.get("action")
+    if action not in ALLOWED_ACTIONS:
+        raise ValueError("invalid_action")
+    kind = request.get("kind")
+    if kind is not None and kind not in {"rpl", "cup"}:
+        raise ValueError("invalid_kind")
+    match_id = _positive_match_id(request.get("match_id"))
+    metadata = request.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        raise TypeError("invalid_metadata")
+    allowed_metadata = {
+        "host_now_epoch",
+        "deadline_worker_mtime",
+        "result_worker_mtime",
+        "container_state",
+    }
+    if not set(metadata).issubset(allowed_metadata):
+        raise ValueError("invalid_metadata")
+
+    if action == "today":
+        return today_matches()
+    if action == "prediction-status":
+        return prediction_status(match_id)
+    if action == "prediction-scores":
+        if match_id is None:
+            raise ValueError("match_id_required")
+        return prediction_scores(match_id)
+    if action == "table-tournaments":
+        return table_tournaments()
+    if action == "ranking":
+        if kind is None:
+            raise ValueError("kind_required")
+        return ranking(kind)
+    if action == "calendar":
+        return calendar()
+    if action == "problems":
+        return problems(
+            metadata.get("host_now_epoch"),
+            metadata.get("deadline_worker_mtime"),
+            metadata.get("result_worker_mtime"),
+        )
+    return system(
+        metadata.get("host_now_epoch"),
+        metadata.get("deadline_worker_mtime"),
+        metadata.get("result_worker_mtime"),
+        metadata.get("container_state"),
+    )
+
+
+def serve(input_stream=sys.stdin, output_stream=sys.stdout):
+    for line in input_stream:
+        request_id = None
+        try:
+            request = json.loads(line)
+            if not isinstance(request, dict):
+                raise TypeError("invalid_request")
+            request_id = request.get("id")
+            if isinstance(request_id, bool) or not isinstance(request_id, int) or request_id < 1:
+                raise ValueError("invalid_request_id")
+            payload = dispatch_request(request)
+            response = {"id": request_id, "ok": True, "payload": payload}
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            response = {"id": request_id, "ok": False, "error": str(exc) or "invalid_request"}
+        except Exception:  # noqa: BLE001 - protocol must return a bounded safe error.
+            response = {"id": request_id, "ok": False, "error": "query_failed"}
+        output_stream.write(json.dumps(response, ensure_ascii=False, default=str) + "\n")
+        output_stream.flush()
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--action", required=True, choices=("today", "prediction-status", "prediction-scores", "table-tournaments", "ranking", "calendar", "problems", "system"))
+    parser.add_argument("--server", action="store_true")
+    parser.add_argument("--action", choices=tuple(sorted(ALLOWED_ACTIONS)))
     parser.add_argument("--kind", choices=("rpl", "cup"))
     parser.add_argument("--match-id", type=lambda value: int(value) if value.isdigit() and int(value) > 0 else (_ for _ in ()).throw(argparse.ArgumentTypeError("match_id must be a positive integer")))
     args = parser.parse_args()
+    if args.server:
+        return serve()
+    if args.action is None:
+        parser.error("--action is required unless --server is used")
     now_epoch = os.getenv("TOTISH_DIGEST_HOST_NOW_EPOCH")
     deadline_mtime = os.getenv("TOTISH_DEADLINE_WORKER_MTIME")
     result_mtime = os.getenv("TOTISH_RESULT_WORKER_MTIME")
     container_state = os.getenv("TOTISH_CONTAINER_STATE")
     try:
-        actions = {
-            "today": today_matches,
-            "prediction-status": lambda: prediction_status(args.match_id),
-            "prediction-scores": lambda: prediction_scores(args.match_id),
-            "table-tournaments": table_tournaments,
-            "calendar": calendar,
-        }
-        if args.action == "ranking":
-            payload = ranking(args.kind)
-        elif args.action == "problems":
-            payload = problems(now_epoch, deadline_mtime, result_mtime)
-        elif args.action == "system":
-            payload = system(now_epoch, deadline_mtime, result_mtime, container_state)
-        else:
-            payload = actions[args.action]()
+        payload = dispatch_request(
+            {
+                "action": args.action,
+                "kind": args.kind,
+                "match_id": args.match_id,
+                "metadata": {
+                    "host_now_epoch": now_epoch,
+                    "deadline_worker_mtime": deadline_mtime,
+                    "result_worker_mtime": result_mtime,
+                    "container_state": container_state,
+                },
+            }
+        )
         print(json.dumps(payload, ensure_ascii=False, default=str))
         return 0
     except Exception:  # noqa: BLE001 - CLI must not expose internal traceback.

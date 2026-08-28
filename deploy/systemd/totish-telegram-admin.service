@@ -1,11 +1,8 @@
 [Unit]
 Description=TOTISH Telegram Admin Panel poller
-After=network-online.target docker.service
-Wants=network-online.target
+After=default.target
 
 [Service]
-# Replace __TOTISH_DEPLOY_USER__ with the existing VPS deploy user before install.
-User=__TOTISH_DEPLOY_USER__
 WorkingDirectory=/opt/football-totalizator
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 scripts/telegram_admin_bot.py
@@ -15,4 +12,4 @@ NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
