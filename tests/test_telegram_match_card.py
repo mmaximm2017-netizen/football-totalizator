@@ -1,8 +1,12 @@
+import os
+import stat
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from PIL import Image
 
+from app.services import telegram_match_card_service as renderer
 from scripts import render_telegram_match_card as card
 
 
@@ -105,3 +109,69 @@ def test_test_send_requires_explicit_flag(tmp_path):
         )
 
     send.assert_called_once_with(Path(output))
+
+
+def test_today_renderer_uses_minimal_dynamic_pages_and_local_assets(tmp_path):
+    matches = []
+    for index in range(4):
+        matches.append(
+            {
+                "tournament_name": "Чемпионат России 🇷🇺",
+                "home_team": "Акрон",
+                "away_team": "ЦСКА",
+                "kickoff_time": f"2026-08-28T{12 + index:02d}:00:00+00:00",
+                "deadline_open": True,
+                "participants": [{"username": "Игрок", "has_prediction": True}],
+                "predictions": [],
+            }
+        )
+
+    with patch.object(renderer, "urlopen", create=True, side_effect=AssertionError("network not allowed")):
+        pages = renderer.render_today_cards(matches, tmp_path)
+
+    assert len(pages) == 2
+    for page in pages:
+        with Image.open(page) as image:
+            assert image.format == "PNG"
+            assert image.width == renderer.TODAY_WIDTH
+            assert image.height < 1800
+
+
+def test_today_renderer_unknown_logo_is_safe(tmp_path):
+    matches = [
+        {
+            "tournament_name": "Неизвестный турнир",
+            "home_team": "Неизвестный клуб",
+            "away_team": "ЦСКА",
+            "kickoff_time": "2026-08-28T15:00:00+00:00",
+            "deadline_open": False,
+            "participants": [],
+            "predictions": [{"username": "Игрок", "home_goals": None, "away_goals": None}],
+        }
+    ]
+
+    pages = renderer.render_today_cards(matches, tmp_path)
+
+    assert len(pages) == 1
+    assert pages[0].is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits are not enforceable on Windows")
+def test_today_renderer_sets_host_read_and_cleanup_permissions(tmp_path):
+    output_dir = tmp_path / "admin-cards"
+    matches = [
+        {
+            "tournament_name": "РПЛ",
+            "home_team": "Акрон",
+            "away_team": "ЦСКА",
+            "kickoff_time": "2026-08-28T15:00:00+00:00",
+            "deadline_open": True,
+            "participants": [],
+            "predictions": [],
+        }
+    ]
+
+    page = renderer.render_today_cards(matches, output_dir)[0]
+
+    assert stat.S_IMODE(output_dir.stat().st_mode) == 0o733
+    assert stat.S_IMODE(page.stat().st_mode) == 0o644

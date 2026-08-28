@@ -4,7 +4,9 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import datetime
+from pathlib import Path
 from urllib.request import urlopen
 
 from app.db import close_db, get_db
@@ -16,11 +18,13 @@ from app.services.morning_digest_service import (
     worker_heartbeat_statuses,
 )
 from app.services.ranking_service import get_tournament_ranking
+from app.services.telegram_match_card_service import render_today_cards
 from app.utils import MSK, is_before_deadline
 
 MAX_CALENDAR_MATCHES = 10
 ALLOWED_ACTIONS = {
     "today",
+    "today-dashboard",
     "prediction-status",
     "prediction-scores",
     "table-tournaments",
@@ -108,6 +112,107 @@ def today_matches():
     finally:
         if conn is not None:
             close_db(conn, cur)
+
+
+def today_dashboard(now=None):
+    data_started = time.monotonic()
+    conn = cur = None
+    matches = []
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        today = (now.astimezone(MSK).date() if now else _today_msk()).isoformat()
+        cur.execute(
+            """
+            SELECT m.id, m.tournament_id, t.name, m.home_team, m.away_team,
+                   m.kickoff_time, m.deadline, m.status
+            FROM matches m
+            LEFT JOIN tournaments t ON t.id = m.tournament_id
+            WHERE (m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date = %s
+            ORDER BY m.kickoff_time ASC NULLS LAST, m.id ASC
+            """,
+            (today,),
+        )
+        matches = [_match_dict(row) for row in cur.fetchall()]
+        participants = _visible_participants(cur)
+        participant_by_id = {item["user_id"]: item for item in participants}
+        match_ids = [item["match_id"] for item in matches]
+        participation = {match_id: set() for match_id in match_ids}
+        if match_ids:
+            # Participation query deliberately contains no prediction score fields.
+            cur.execute(
+                """
+                SELECT p.match_id, p.user_id
+                FROM predictions p
+                JOIN matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
+                WHERE p.match_id = ANY(%s)
+                """,
+                (match_ids,),
+            )
+            for match_id, user_id in cur.fetchall():
+                if user_id in participant_by_id:
+                    participation.setdefault(match_id, set()).add(user_id)
+
+        for match in matches:
+            match["deadline_open"] = is_before_deadline({"deadline": match["deadline"]}, now=now)
+            predicted_ids = participation.get(match["match_id"], set())
+            match["participants"] = [
+                {
+                    "username": participant["username"],
+                    "has_prediction": participant["user_id"] in predicted_ids,
+                }
+                for participant in participants
+            ]
+            match["predicted_count"] = len(predicted_ids)
+            match["participant_count"] = len(participants)
+            match["predictions"] = []
+            if not match["deadline_open"]:
+                # Score fields are selected only after the canonical per-match deadline gate.
+                cur.execute(
+                    """
+                    SELECT u.username, p.home_goals, p.away_goals
+                    FROM users u
+                    LEFT JOIN predictions p
+                      ON p.user_id = u.id
+                     AND p.match_id = %s
+                     AND p.tournament_id = %s
+                    WHERE u.is_admin = 0
+                      AND COALESCE(u.is_deleted, 0) = 0
+                    ORDER BY u.username ASC, u.id ASC
+                    """,
+                    (match["match_id"], match["tournament_id"]),
+                )
+                match["predictions"] = [
+                    {"username": row[0], "home_goals": row[1], "away_goals": row[2]}
+                    for row in cur.fetchall()
+                ]
+    finally:
+        if conn is not None:
+            close_db(conn, cur)
+
+    payload = {
+        "ok": True,
+        "matches": matches,
+        "photo_paths": [],
+        "photo_error": False,
+        "data_duration_ms": int((time.monotonic() - data_started) * 1000),
+        "render_duration_ms": 0,
+    }
+    if not matches:
+        return payload
+    output_dir = Path(os.getenv("TELEGRAM_ADMIN_CARD_DIR", "/app/runtime/telegram-outbox/admin-cards"))
+    render_started = time.monotonic()
+    try:
+        pages = render_today_cards(matches, output_dir, date_value=datetime.fromisoformat(today).date())
+        runtime_root = Path("/app/runtime/telegram-outbox")
+        payload["photo_paths"] = [
+            str(path.relative_to(runtime_root)) if path.is_relative_to(runtime_root) else str(path)
+            for path in pages
+        ]
+    except Exception:  # noqa: BLE001 - text Today remains available when Pillow/filesystem fails.
+        payload["photo_error"] = True
+    payload["render_duration_ms"] = int((time.monotonic() - render_started) * 1000)
+    return payload
 
 
 def _relevant_match(cur, match_id=None):
@@ -337,6 +442,8 @@ def dispatch_request(request):
 
     if action == "today":
         return today_matches()
+    if action == "today-dashboard":
+        return today_dashboard()
     if action == "prediction-status":
         return prediction_status(match_id)
     if action == "prediction-scores":

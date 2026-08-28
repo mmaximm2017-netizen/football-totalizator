@@ -10,6 +10,7 @@ import select
 import subprocess
 import tempfile
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -57,6 +58,7 @@ CLOCK_HOURS = ("🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "
 CLOCK_HALVES = ("🕧", "🕜", "🕝", "🕞", "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦")
 HELPER_ACTIONS = {
     "today",
+    "today-dashboard",
     "prediction-status",
     "prediction-scores",
     "table-tournaments",
@@ -67,6 +69,8 @@ HELPER_ACTIONS = {
 }
 
 logger = logging.getLogger("totish.telegram_admin")
+TODAY_PHOTO_ROOT = (ROOT / "runtime" / "telegram-outbox" / "admin-cards").resolve()
+_today_photo_messages = {}
 
 
 def _config():
@@ -173,9 +177,9 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
     rows = list(extra_rows)
     rows.extend(
         [
-            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}],
-            [{"text": "🏆 Таблица", "callback_data": "adm:table"}, {"text": "📅 Календарь", "callback_data": "adm:calendar"}],
-            [{"text": "🚨 Проблемы", "callback_data": "adm:problems"}, {"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
+            [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
+            [{"text": "⚙️ Система", "callback_data": "adm:system"}],
             [{"text": "🔄 Обновить", "callback_data": refresh_callback}],
         ]
     )
@@ -185,9 +189,9 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
 def main_keyboard():
     return _keyboard(
         [
-            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}],
-            [{"text": "🏆 Таблица", "callback_data": "adm:table"}, {"text": "📅 Календарь", "callback_data": "adm:calendar"}],
-            [{"text": "🚨 Проблемы", "callback_data": "adm:problems"}, {"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
+            [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
+            [{"text": "⚙️ Система", "callback_data": "adm:system"}],
             [{"text": "🔄 Обновить", "callback_data": "adm:main"}],
         ]
     )
@@ -250,6 +254,13 @@ def _format_today(payload):
             prediction_label = "🎯 Прогнозы:" if len(group) == 1 else "🎯"
             lines.extend([f"{prediction_label} {match['predicted_count']}/{match['participant_count']}", ""])
     return _safe_text("\n".join(lines).rstrip()), _dashboard_keyboard("adm:today:refresh")
+
+
+def _format_today_dashboard(payload):
+    if not payload.get("matches") or payload.get("photo_error"):
+        return (*_format_today(payload), payload)
+    text = _safe_text(f"⚽ Сегодня\n{_updated_line()}\n\nВсе подробности находятся в графической карточке.")
+    return text, _dashboard_keyboard("adm:today:refresh"), payload
 
 
 def _format_prediction_status(payload):
@@ -554,6 +565,123 @@ def _deliver_with_retry(token, chat_id, text, markup, message_id=None, sleep=Non
     return False, None
 
 
+def _multipart_photo_request(token, method, fields, photo_path, timeout=15):
+    boundary = f"----totish-{uuid.uuid4().hex}"
+    chunks = []
+    for name, value in fields.items():
+        chunks.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode())
+    chunks.append(
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"totish_today.png\"\r\nContent-Type: image/png\r\n\r\n".encode()
+        + photo_path.read_bytes()
+        + b"\r\n"
+    )
+    chunks.append(f"--{boundary}--\r\n".encode())
+    request = Request(
+        f"https://api.telegram.org/bot{token}/{method}",
+        data=b"".join(chunks),
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    with urlopen(request, timeout=timeout) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if payload.get("ok") is not True:
+        raise RuntimeError("telegram_photo_api_error")
+    return payload.get("result")
+
+
+def _today_photo_path(relative_path):
+    if not isinstance(relative_path, str) or Path(relative_path).is_absolute():
+        raise ValueError("invalid_today_photo_path")
+    candidate = (ROOT / "runtime" / "telegram-outbox" / relative_path).resolve()
+    if not candidate.is_relative_to(TODAY_PHOTO_ROOT) or candidate.suffix.lower() != ".png":
+        raise ValueError("invalid_today_photo_path")
+    return candidate
+
+
+def _send_today_photo(token, chat_id, path, caption):
+    return _multipart_photo_request(
+        token,
+        "sendPhoto",
+        {"chat_id": chat_id, "caption": caption},
+        path,
+    )
+
+
+def _edit_today_photo(token, chat_id, message_id, path, caption):
+    media = json.dumps({"type": "photo", "media": "attach://photo", "caption": caption}, ensure_ascii=False)
+    try:
+        return _multipart_photo_request(
+            token,
+            "editMessageMedia",
+            {"chat_id": chat_id, "message_id": message_id, "media": media},
+            path,
+        )
+    except HTTPError as exc:
+        if exc.code == 400 and "message is not modified" in _telegram_error_text(exc):
+            logger.info("telegram_admin_today_photo_not_modified")
+            return None
+        raise
+
+
+def _sync_today_photos(token, chat_id, payload):
+    started = time.monotonic()
+    if payload.get("photo_error"):
+        logger.warning("telegram_admin_today_photo_failed stage=render")
+        return False
+    relative_paths = payload.get("photo_paths") or []
+    if not relative_paths:
+        return True
+    existing_ids = _today_photo_messages.get(chat_id, [])
+    next_ids = []
+    paths = []
+    try:
+        paths = [_today_photo_path(path) for path in relative_paths]
+        for index, path in enumerate(paths):
+            caption = f"⚽ Сегодня • {index + 1}/{len(paths)}" if len(paths) > 1 else "⚽ Сегодня"
+            method = "sendPhoto"
+            result = None
+            if index < len(existing_ids):
+                method = "editMessageMedia"
+                delivery_started = time.monotonic()
+                try:
+                    result = _edit_today_photo(token, chat_id, existing_ids[index], path, caption)
+                    logger.info(
+                        "telegram_admin_today_photo_delivery method=%s duration_ms=%s",
+                        method,
+                        int((time.monotonic() - delivery_started) * 1000),
+                    )
+                    next_ids.append(existing_ids[index])
+                    continue
+                except Exception as exc:  # noqa: BLE001 - sendPhoto fallback keeps Today usable.
+                    logger.warning("telegram_admin_today_photo_failed stage=edit type=%s", type(exc).__name__)
+            method = "sendPhoto"
+            delivery_started = time.monotonic()
+            result = _send_today_photo(token, chat_id, path, caption)
+            logger.info(
+                "telegram_admin_today_photo_delivery method=%s duration_ms=%s",
+                method,
+                int((time.monotonic() - delivery_started) * 1000),
+            )
+            if isinstance(result, dict) and isinstance(result.get("message_id"), int):
+                next_ids.append(result["message_id"])
+        if next_ids:
+            _today_photo_messages[chat_id] = next_ids
+        return True
+    except Exception as exc:  # noqa: BLE001 - photo failure must not fail the callback.
+        logger.warning("telegram_admin_today_photo_failed stage=delivery type=%s", type(exc).__name__)
+        return False
+    finally:
+        for path in paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("telegram_admin_today_photo_failed stage=cleanup")
+        logger.info(
+            "telegram_admin_today_photo_total duration_ms=%s",
+            int((time.monotonic() - started) * 1000),
+        )
+
+
 def _render_callback(callback_data):
     prediction_callback = re.fullmatch(r"adm:pred:(show|refresh):([1-9][0-9]*)", callback_data)
     if prediction_callback:
@@ -567,9 +695,15 @@ def _render_callback(callback_data):
     if action == "adm:main":
         return _main_text(), main_keyboard()
     if action == "adm:today":
-        return _format_today(_docker_query("today"))
+        payload = _docker_query("today-dashboard")
+        logger.info("telegram_admin_today_data duration_ms=%s", payload.get("data_duration_ms", 0))
+        logger.info("telegram_admin_today_render duration_ms=%s", payload.get("render_duration_ms", 0))
+        return _format_today_dashboard(payload)
     if action == "adm:predictions":
-        return _format_prediction_status(_docker_query("prediction-status"))
+        payload = _docker_query("today-dashboard")
+        logger.info("telegram_admin_today_data duration_ms=%s", payload.get("data_duration_ms", 0))
+        logger.info("telegram_admin_today_render duration_ms=%s", payload.get("render_duration_ms", 0))
+        return _format_today_dashboard(payload)
     if action == "adm:table":
         return _format_table(_docker_query("ranking", "rpl"))
     if action == "adm:table:rpl":
@@ -619,7 +753,7 @@ def _handle_update(token, admin_chat_id, update):
             )
         else:
             if rendered is not None:
-                text, markup = rendered
+                text, markup = rendered[:2]
                 _deliver_with_retry(
                     token,
                     chat_id,
@@ -627,6 +761,17 @@ def _handle_update(token, admin_chat_id, update):
                     markup,
                     callback.get("message", {}).get("message_id"),
                 )
+                if len(rendered) == 3:
+                    photo_payload = rendered[2]
+                    if not _sync_today_photos(token, chat_id, photo_payload):
+                        fallback_text, fallback_markup = _format_today(photo_payload)
+                        _deliver_with_retry(
+                            token,
+                            chat_id,
+                            fallback_text,
+                            fallback_markup,
+                            callback.get("message", {}).get("message_id"),
+                        )
         logger.info(
             "telegram_admin_callback_delivery_ready duration_ms=%s",
             int((time.monotonic() - callback_started) * 1000),

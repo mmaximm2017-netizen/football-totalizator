@@ -32,6 +32,20 @@ class Cursor:
         return self.rows
 
 
+class SequencedCursor:
+    def __init__(self, result_sets):
+        self.result_sets = iter(result_sets)
+        self.current = []
+        self.queries = []
+
+    def execute(self, query, params=None):
+        self.queries.append((query, params))
+        self.current = next(self.result_sets)
+
+    def fetchall(self):
+        return self.current
+
+
 def db_cursor(cursor):
     conn = MagicMock()
     conn.cursor.return_value = cursor
@@ -52,7 +66,8 @@ def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
 
-    assert callbacks == ["adm:today", "adm:predictions", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:main"]
+    assert callbacks == ["adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:main"]
+    assert "adm:predictions" not in callbacks
     assert all(callback.startswith("adm:") for callback in callbacks)
 
 
@@ -64,11 +79,21 @@ def test_dashboard_navigation_is_present_on_main_sections():
         bot._format_problems({"issues": []}),
         bot._format_system({"system": {}, "worker_statuses": []}),
     )
-    required = {"adm:today", "adm:predictions", "adm:table", "adm:calendar", "adm:problems", "adm:system"}
+    required = {"adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system"}
     for _, markup in renderers:
         callbacks = {button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row}
         assert required <= callbacks
         assert all(len(callback) <= 64 for callback in callbacks)
+
+
+def test_legacy_predictions_callback_routes_to_today_dashboard():
+    payload = {"ok": True, "matches": [], "photo_paths": [], "photo_error": False}
+    with patch.object(bot, "_docker_query", return_value=payload) as query:
+        text, _markup, returned = bot._render_callback("adm:predictions")
+
+    query.assert_called_once_with("today-dashboard")
+    assert "⚽ Сегодня" in text
+    assert returned is payload
 
 
 def test_unauthorized_callback_is_acknowledged_without_query():
@@ -653,6 +678,41 @@ def test_prediction_status_before_deadline_returns_participation_only():
     assert all("home_goals" not in query for query, _ in cursor.queries)
 
 
+def test_today_dashboard_mixed_deadlines_select_scores_only_for_closed_match(tmp_path):
+    closed_deadline = datetime(2026, 8, 28, 11, 0, tzinfo=timezone.utc)
+    open_deadline = datetime(2026, 8, 28, 13, 0, tzinfo=timezone.utc)
+    matches = [
+        (1, 5, "Чемпионат России 🇷🇺", "Акрон", "ЦСКА", datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc), closed_deadline, "SCHEDULED"),
+        (2, 5, "Чемпионат России 🇷🇺", "Зенит", "Ростов", datetime(2026, 8, 28, 15, 0, tzinfo=timezone.utc), open_deadline, "SCHEDULED"),
+    ]
+    cursor = SequencedCursor(
+        [
+            matches,
+            [(10, "Игрок A"), (11, "Игрок B")],
+            [(1, 10), (2, 11)],
+            [("Игрок A", 2, 1), ("Игрок B", None, None)],
+        ]
+    )
+    conn = db_cursor(cursor)
+    with (
+        patch.object(service, "get_db", return_value=conn),
+        patch.object(service, "close_db"),
+        patch.object(service, "render_today_cards", return_value=[tmp_path / "today.png"]),
+        patch.dict("os.environ", {"TELEGRAM_ADMIN_CARD_DIR": str(tmp_path)}),
+    ):
+        payload = service.today_dashboard(now=datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc))
+
+    closed, opened = payload["matches"]
+    assert closed["deadline_open"] is False
+    assert closed["predictions"][0]["home_goals"] == 2
+    assert opened["deadline_open"] is True
+    assert opened["predictions"] == []
+    score_queries = [(query, params) for query, params in cursor.queries if "p.home_goals" in query]
+    assert len(score_queries) == 1
+    assert score_queries[0][1] == (1, 5)
+    assert all("p.home_goals" not in query for query, _ in cursor.queries[:3])
+
+
 def test_prediction_score_renderer_refuses_forged_predeadline_callback():
     text, _ = bot._format_prediction_scores({"match": {"match_id": 42, "home_team": "Акрон", "away_team": "ЦСКА"}, "deadline_open": True, "predictions": [{"username": "Игрок", "home_goals": 2, "away_goals": 1}]})
 
@@ -710,6 +770,170 @@ def test_today_renderer_never_renders_future_prediction_scores():
 
     assert "Прогнозы: 5/6" in text
     assert "2:1" not in text
+
+
+def test_first_today_sends_photo_and_refresh_edits_existing_photo(tmp_path, monkeypatch):
+    first = tmp_path / "first.png"
+    second = tmp_path / "second.png"
+    first.write_bytes(b"png")
+    second.write_bytes(b"png")
+    monkeypatch.setattr(bot, "_today_photo_path", lambda value: first if value == "first" else second)
+    bot._today_photo_messages.clear()
+    send = MagicMock(return_value={"message_id": 77})
+    edit = MagicMock(return_value=True)
+    monkeypatch.setattr(bot, "_send_today_photo", send)
+    monkeypatch.setattr(bot, "_edit_today_photo", edit)
+
+    assert bot._sync_today_photos("token", 123, {"photo_paths": ["first"], "photo_error": False}) is True
+    assert bot._today_photo_messages[123] == [77]
+    assert bot._sync_today_photos("token", 123, {"photo_paths": ["second"], "photo_error": False}) is True
+
+    assert send.call_count == 1
+    edit.assert_called_once()
+    assert not first.exists()
+    assert not second.exists()
+
+
+def test_today_photo_edit_failure_falls_back_to_send(tmp_path, monkeypatch):
+    image = tmp_path / "page.png"
+    image.write_bytes(b"png")
+    monkeypatch.setattr(bot, "_today_photo_path", lambda value: image)
+    bot._today_photo_messages[123] = [77]
+    monkeypatch.setattr(bot, "_edit_today_photo", MagicMock(side_effect=URLError("network")))
+    send = MagicMock(return_value={"message_id": 88})
+    monkeypatch.setattr(bot, "_send_today_photo", send)
+
+    assert bot._sync_today_photos("token", 123, {"photo_paths": ["page"], "photo_error": False}) is True
+    assert bot._today_photo_messages[123] == [88]
+    send.assert_called_once()
+
+
+def test_today_photo_not_modified_does_not_create_duplicate(tmp_path, monkeypatch):
+    image = tmp_path / "same.png"
+    image.write_bytes(b"png")
+    monkeypatch.setattr(bot, "_today_photo_path", lambda value: image)
+    bot._today_photo_messages[123] = [77]
+    monkeypatch.setattr(bot, "_edit_today_photo", MagicMock(return_value=None))
+    send = MagicMock()
+    monkeypatch.setattr(bot, "_send_today_photo", send)
+
+    assert bot._sync_today_photos("token", 123, {"photo_paths": ["same"], "photo_error": False}) is True
+    assert bot._today_photo_messages[123] == [77]
+    send.assert_not_called()
+
+
+def test_send_photo_builds_real_multipart_and_returns_message_id(tmp_path, monkeypatch):
+    image = tmp_path / "page.png"
+    image.write_bytes(b"\x89PNG\r\nprototype")
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"ok":true,"result":{"message_id":77}}'
+
+    def fake_urlopen(request, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(bot, "urlopen", fake_urlopen)
+
+    result = bot._send_today_photo("token", 123, image, "Today")
+    request = captured["request"]
+    content_type = request.headers["Content-type"]
+    boundary = content_type.split("boundary=", 1)[1].encode()
+
+    assert request.full_url.endswith("/sendPhoto")
+    assert content_type.startswith("multipart/form-data; boundary=")
+    assert b'name="chat_id"\r\n\r\n123' in request.data
+    assert b'name="caption"\r\n\r\nToday' in request.data
+    assert b'name="photo"; filename="totish_today.png"' in request.data
+    assert b"\x89PNG\r\nprototype" in request.data
+    assert request.data.endswith(b"--" + boundary + b"--\r\n")
+    assert result == {"message_id": 77}
+
+
+def test_edit_message_media_builds_attach_photo_multipart(tmp_path, monkeypatch):
+    image = tmp_path / "page.png"
+    image.write_bytes(b"png-binary")
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"ok":true,"result":{"message_id":77}}'
+
+    def fake_urlopen(request, timeout):
+        captured["request"] = request
+        return Response()
+
+    monkeypatch.setattr(bot, "urlopen", fake_urlopen)
+
+    result = bot._edit_today_photo("token", 123, 77, image, "Today")
+    request = captured["request"]
+
+    assert request.full_url.endswith("/editMessageMedia")
+    assert b'name="chat_id"\r\n\r\n123' in request.data
+    assert b'name="message_id"\r\n\r\n77' in request.data
+    assert b'"media": "attach://photo"' in request.data
+    assert b'name="photo"; filename="totish_today.png"' in request.data
+    assert b"png-binary" in request.data
+    assert result == {"message_id": 77}
+
+
+def test_edit_message_media_not_modified_is_benign(tmp_path, monkeypatch):
+    image = tmp_path / "page.png"
+    image.write_bytes(b"png")
+    error = callback_http_error(400, "Bad Request: message is not modified")
+    monkeypatch.setattr(bot, "_multipart_photo_request", MagicMock(side_effect=error))
+
+    assert bot._edit_today_photo("token", 123, 77, image, "Today") is None
+
+
+def test_today_photo_failure_keeps_text_callback_handled(monkeypatch):
+    payload = {"matches": [{"tournament_name": "РПЛ", "kickoff_time": "2026-08-28T15:00:00+00:00", "home_team": "Акрон", "away_team": "ЦСКА", "predicted_count": 1, "participant_count": 2}], "photo_paths": ["bad"], "photo_error": False}
+    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    deliveries = []
+    monkeypatch.setattr(bot, "_render_callback", lambda data: bot._format_today_dashboard(payload))
+    monkeypatch.setattr(bot, "_deliver_with_retry", lambda *args, **kwargs: deliveries.append(args[2]) or (True, None))
+    monkeypatch.setattr(bot, "_sync_today_photos", lambda *args, **kwargs: False)
+    monkeypatch.setattr(bot, "_answer_callback_best_effort", lambda *args: True)
+
+    assert bot._handle_update("token", 123, update) is True
+    assert len(deliveries) == 2
+    assert "Все подробности" in deliveries[0]
+    assert "Акрон — ЦСКА" in deliveries[1]
+
+
+def test_today_without_matches_never_sends_photo(monkeypatch):
+    payload = {"matches": [], "photo_paths": [], "photo_error": False}
+    text, _markup, returned = bot._format_today_dashboard(payload)
+    send = MagicMock()
+    monkeypatch.setattr(bot, "_send_today_photo", send)
+
+    assert "Сегодня матчей нет." in text
+    assert bot._sync_today_photos("token", 123, returned) is True
+    send.assert_not_called()
+
+
+def test_non_today_callbacks_never_invoke_photo_pipeline(monkeypatch):
+    payload = {"system": {}, "worker_statuses": []}
+    with patch.object(bot, "_docker_query", return_value=payload), patch.object(bot, "_sync_today_photos") as photos:
+        rendered = bot._render_callback("adm:system")
+
+    assert len(rendered) == 2
+    photos.assert_not_called()
 
 
 def test_ranking_service_is_reused_without_writes():
