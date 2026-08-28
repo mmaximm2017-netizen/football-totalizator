@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -33,6 +34,7 @@ LOCK_FILE = STATE_DIR / "telegram-admin-poller.lock"
 MAX_MESSAGE_LENGTH = 3800
 POLL_TIMEOUT = 50
 QUERY_TIMEOUT = 20
+BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
 MSK = ZoneInfo("Europe/Moscow")
 
@@ -96,6 +98,10 @@ def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT):
     return value.get("result")
 
 
+def _telegram_error_text(error):
+    return f"{error.reason} {error.read().decode('utf-8', errors='replace')}".lower()
+
+
 def _answer_callback_best_effort(token, callback_id):
     try:
         _telegram_request(
@@ -105,8 +111,7 @@ def _answer_callback_best_effort(token, callback_id):
             timeout=10,
         )
     except HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace").lower()
-        error_text = f"{exc.reason} {error_body}".lower()
+        error_text = _telegram_error_text(exc)
         expired_markers = (
             "query is too old",
             "query id is invalid",
@@ -129,12 +134,26 @@ def _keyboard(rows):
     return json.dumps({"inline_keyboard": rows}, ensure_ascii=False)
 
 
+def _dashboard_keyboard(refresh_callback, extra_rows=()):
+    rows = list(extra_rows)
+    rows.extend(
+        [
+            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}],
+            [{"text": "🏆 Таблица", "callback_data": "adm:table"}, {"text": "📅 Календарь", "callback_data": "adm:calendar"}],
+            [{"text": "🚨 Проблемы", "callback_data": "adm:problems"}, {"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "🔄 Обновить", "callback_data": refresh_callback}],
+        ]
+    )
+    return _keyboard(rows)
+
+
 def main_keyboard():
     return _keyboard(
         [
-            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
-            [{"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
-            [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}],
+            [{"text": "🏆 Таблица", "callback_data": "adm:table"}, {"text": "📅 Календарь", "callback_data": "adm:calendar"}],
+            [{"text": "🚨 Проблемы", "callback_data": "adm:problems"}, {"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "🔄 Обновить", "callback_data": "adm:main"}],
         ]
     )
 
@@ -156,7 +175,7 @@ def _format_today(payload):
     lines = ["⚽ Сегодня"]
     if not matches:
         lines.extend(["", "Сегодня матчей нет."])
-        return "\n".join(lines), _keyboard([[{"text": "🔄 Обновить", "callback_data": "adm:today:refresh"}], _menu_button()])
+        return "\n".join(lines), _dashboard_keyboard("adm:today:refresh")
     groups = {}
     for match in matches:
         groups.setdefault(_friendly_tournament(match["tournament_name"]), []).append(match)
@@ -166,7 +185,7 @@ def _format_today(payload):
             kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK).strftime("%H:%M")
             lines.append(f"{kickoff} — {match['home_team']} — {match['away_team']}")
             lines.append(f"Прогнозы: {match['predicted_count']}/{match['participant_count']}")
-    return "\n".join(lines), _keyboard([[{"text": "🎯 Прогнозы", "callback_data": "adm:predictions"}, {"text": "🔄 Обновить", "callback_data": "adm:today:refresh"}], _menu_button()])
+    return "\n".join(lines), _dashboard_keyboard("adm:today:refresh")
 
 
 def _format_prediction_status(payload):
@@ -174,7 +193,7 @@ def _format_prediction_status(payload):
     lines = ["🎯 Прогнозы"]
     if not match:
         lines.extend(["", "Нет ближайшего матча."])
-        return "\n".join(lines), _keyboard([[{"text": "🔄 Обновить", "callback_data": "adm:predictions:refresh"}], _menu_button()])
+        return "\n".join(lines), _dashboard_keyboard("adm:predictions")
     kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK).strftime("%d.%m %H:%M")
     lines.extend(["", f"{match['home_team']} — {match['away_team']}", f"{kickoff}", ""])
     participants = payload.get("participants", [])
@@ -183,36 +202,37 @@ def _format_prediction_status(payload):
     for participant in participants:
         lines.append(f"{'✅' if participant.get('has_prediction') else '❌'} {participant['username']}")
     match_id = match["match_id"]
-    rows = [[{"text": "🔄 Обновить", "callback_data": f"adm:pred:refresh:{match_id}"}]]
+    rows = []
     if not payload.get("deadline_open"):
-        rows[0].insert(0, {"text": "👁 Показать прогнозы", "callback_data": f"adm:pred:show:{match_id}"})
+        rows.append([{"text": "👁 Показать прогнозы", "callback_data": f"adm:pred:show:{match_id}"}])
     if payload.get("deadline_open"):
         lines.extend(["", "🔒 Сами прогнозы будут доступны после дедлайна."])
-    rows.append(_menu_button())
-    return _safe_text("\n".join(lines)), _keyboard(rows)
+    return _safe_text("\n".join(lines)), _dashboard_keyboard(f"adm:pred:refresh:{match_id}", rows)
 
 
 def _format_prediction_scores(payload):
     match = payload.get("match")
     if not match:
-        return "🎯 Прогнозы\n\nНет ближайшего матча.", _keyboard([_menu_button()])
+        return "🎯 Прогнозы\n\nНет ближайшего матча.", _dashboard_keyboard("adm:predictions")
     if payload.get("deadline_open"):
-        return "🔒 Прогнозы пока закрыты.", _keyboard([[{"text": "🔄 Обновить", "callback_data": f"adm:pred:refresh:{match['match_id']}"}], _menu_button()])
+        return "🔒 Прогнозы пока закрыты.", _dashboard_keyboard(f"adm:pred:refresh:{match['match_id']}")
     lines = ["🎯 Прогнозы", "", f"{match['home_team']} — {match['away_team']}", "Дедлайн прошёл", ""]
     for prediction in payload.get("predictions", []):
         score = "нет прогноза" if prediction["home_goals"] is None or prediction["away_goals"] is None else f"{prediction['home_goals']}:{prediction['away_goals']}"
         lines.append(f"{prediction['username']} — {score}")
-    return _safe_text("\n".join(lines)), _keyboard([[{"text": "🔄 Обновить", "callback_data": f"adm:pred:show:{match['match_id']}"}], _menu_button()])
+    return _safe_text("\n".join(lines)), _dashboard_keyboard(f"adm:pred:show:{match['match_id']}")
 
 
 def _format_table(payload):
     tournament = payload.get("tournament")
     if not tournament:
-        return "🏆 Таблица\n\nТурнир не найден.", _keyboard([_menu_button()])
+        return "🏆 Таблица\n\nТурнир не найден.", _dashboard_keyboard("adm:table:rpl")
     lines = [f"🏆 {_friendly_tournament(tournament['name'])}", ""]
     for row in payload.get("ranking", [])[:20]:
         lines.append(f"{row['place']}. {row['username']} — {row['points']}")
-    return _safe_text("\n".join(lines)), _keyboard([_menu_button()])
+    kind = "rpl" if tournament["name"] == "Чемпионат России 🇷🇺" else "cup"
+    tabs = [[{"text": "🇷🇺 РПЛ", "callback_data": "adm:table:rpl"}, {"text": "🏆 Кубок", "callback_data": "adm:table:cup"}]]
+    return _safe_text("\n".join(lines)), _dashboard_keyboard(f"adm:table:{kind}", tabs)
 
 
 def _format_calendar(payload):
@@ -224,13 +244,13 @@ def _format_calendar(payload):
         for match in matches:
             kickoff = datetime.fromisoformat(match["kickoff_time"]).astimezone(MSK)
             lines.extend(["", kickoff.strftime("%d %B"), _friendly_tournament(match["tournament_name"]), f"{kickoff.strftime('%H:%M')} — {match['home_team']} — {match['away_team']}"])
-    return _safe_text("\n".join(lines)), _keyboard([[{"text": "🔄 Обновить", "callback_data": "adm:calendar:refresh"}], _menu_button()])
+    return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:calendar:refresh")
 
 
 def _format_problems(payload):
     issues = payload.get("issues", [])
     text = "🚨 Проблемы\n\n" + ("\n".join(issues) if issues else "✅ Проблем не обнаружено.")
-    return _safe_text(text), _keyboard([[{"text": "🔄 Проверить снова", "callback_data": "adm:problems:refresh"}], _menu_button()])
+    return _safe_text(text), _dashboard_keyboard("adm:problems:refresh")
 
 
 def _format_system(payload):
@@ -249,7 +269,7 @@ def _format_system(payload):
         else:
             lines.append(f"🔴 {worker['label']} — нет данных")
     lines.append("⚪ Telegram relay — нет данных")
-    return _safe_text("\n".join(lines)), _keyboard([[{"text": "🔄 Обновить", "callback_data": "adm:system:refresh"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}], _menu_button()])
+    return _safe_text("\n".join(lines)), _dashboard_keyboard("adm:system:refresh")
 
 
 def _host_metadata(docker_bin):
@@ -305,7 +325,13 @@ def _edit_or_send(token, chat_id, text, markup, message_id=None):
     if message_id is None:
         return _telegram_request(token, "sendMessage", payload, timeout=10)
     payload["message_id"] = message_id
-    return _telegram_request(token, "editMessageText", payload, timeout=10)
+    try:
+        return _telegram_request(token, "editMessageText", payload, timeout=10)
+    except HTTPError as exc:
+        if exc.code == 400 and "message is not modified" in _telegram_error_text(exc):
+            logger.info("telegram_admin_message_not_modified")
+            return None
+        raise
 
 
 def _render_callback(callback_data):
@@ -325,7 +351,7 @@ def _render_callback(callback_data):
     if action == "adm:predictions":
         return _format_prediction_status(_docker_query("prediction-status"))
     if action == "adm:table":
-        return "🏆 Турнирная таблица", _keyboard([[{"text": "🇷🇺 РПЛ", "callback_data": "adm:table:rpl"}], [{"text": "🏆 Кубок России", "callback_data": "adm:table:cup"}], _menu_button()])
+        return _format_table(_docker_query("ranking", "rpl"))
     if action == "adm:table:rpl":
         return _format_table(_docker_query("ranking", "rpl"))
     if action == "adm:table:cup":
@@ -384,11 +410,7 @@ def _handle_update(token, admin_chat_id, update):
     return True
 
 
-def run_once():
-    token, admin_chat_id = _config()
-    lock = _lock()
-    if lock is None:
-        return 0
+def _poll_cycle(token, admin_chat_id):
     try:
         offset = _state()
         payload = {"limit": 25, "timeout": POLL_TIMEOUT, "allowed_updates": json.dumps(["message", "callback_query"])}
@@ -407,10 +429,47 @@ def run_once():
                 continue
             if _handle_update(token, admin_chat_id, update):
                 _save_offset(update_id + 1)
+                logger.info("telegram_admin_update_processed update_id=%s", update_id)
         return 0
-    except Exception as exc:  # noqa: BLE001 - one-shot poller reports controlled failure.
+    except Exception as exc:  # noqa: BLE001 - poll cycle uses bounded retry in daemon mode.
         logger.error("telegram_admin_poller_failed type=%s", type(exc).__name__)
         return 1
+
+
+def run_once():
+    token, admin_chat_id = _config()
+    lock = _lock()
+    if lock is None:
+        return 0
+    try:
+        return _poll_cycle(token, admin_chat_id)
+    finally:
+        lock.close()
+
+
+def run_forever(max_cycles=None, sleep=time.sleep):
+    token, admin_chat_id = _config()
+    lock = _lock()
+    if lock is None:
+        return 0
+    logger.info("telegram_admin_started")
+    backoff_index = 0
+    cycles = 0
+    try:
+        while max_cycles is None or cycles < max_cycles:
+            status = _poll_cycle(token, admin_chat_id)
+            cycles += 1
+            if status == 0:
+                backoff_index = 0
+                continue
+            delay = BACKOFF_SECONDS[backoff_index]
+            logger.warning("telegram_admin_api_backoff seconds=%s", delay)
+            sleep(delay)
+            backoff_index = min(backoff_index + 1, len(BACKOFF_SECONDS) - 1)
+        return 0
+    except KeyboardInterrupt:
+        logger.info("telegram_admin_stopped")
+        return 0
     finally:
         lock.close()
 
@@ -418,12 +477,15 @@ def run_once():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--send-menu", action="store_true")
+    parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
     token, admin_chat_id = _config()
     if args.send_menu:
         _edit_or_send(token, admin_chat_id, "🤖 ТОТИШ — Администратор", main_keyboard())
         return 0
-    return run_once()
+    if args.once:
+        return run_once()
+    return run_forever()
 
 
 if __name__ == "__main__":

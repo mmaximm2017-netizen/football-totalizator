@@ -52,8 +52,23 @@ def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
 
-    assert callbacks == ["adm:today", "adm:problems", "adm:predictions", "adm:table", "adm:calendar", "adm:system"]
+    assert callbacks == ["adm:today", "adm:predictions", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:main"]
     assert all(callback.startswith("adm:") for callback in callbacks)
+
+
+def test_dashboard_navigation_is_present_on_main_sections():
+    renderers = (
+        bot._format_today({"matches": []}),
+        bot._format_prediction_status({"match": None, "participants": []}),
+        bot._format_calendar({"matches": []}),
+        bot._format_problems({"issues": []}),
+        bot._format_system({"system": {}, "worker_statuses": []}),
+    )
+    required = {"adm:today", "adm:predictions", "adm:table", "adm:calendar", "adm:problems", "adm:system"}
+    for _, markup in renderers:
+        callbacks = {button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row}
+        assert required <= callbacks
+        assert all(len(callback) <= 64 for callback in callbacks)
 
 
 def test_unauthorized_callback_is_acknowledged_without_query():
@@ -74,6 +89,12 @@ def test_authorized_callback_acknowledges_then_edits_message():
         assert bot._handle_update("token", 123, update) is True
 
     assert calls == ["answerCallbackQuery", "editMessageText"]
+
+
+def test_message_not_modified_is_benign():
+    error = callback_http_error(400, "Bad Request: message is not modified")
+    with patch.object(bot, "_telegram_request", side_effect=error):
+        assert bot._edit_or_send("token", 123, "same", bot.main_keyboard(), message_id=7) is None
 
 
 @pytest.mark.parametrize(
@@ -205,6 +226,25 @@ def test_duplicate_update_is_not_processed_after_offset_persisted(tmp_path, monk
     assert bot.run_once() == 0
     assert bot.run_once() == 0
     assert handled == [10]
+
+
+def test_continuous_poller_retries_with_bounded_backoff_and_resets_after_success(monkeypatch):
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
+    outcomes = iter((1, 1, 0, 0))
+    monkeypatch.setattr(bot, "_poll_cycle", lambda *args: next(outcomes))
+    sleeps = []
+
+    assert bot.run_forever(max_cycles=4, sleep=sleeps.append) == 0
+    assert sleeps == [1, 2]
+
+
+def test_default_cli_mode_runs_continuous_poller(monkeypatch):
+    monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
+    monkeypatch.setattr(bot, "run_forever", lambda: 0)
+    monkeypatch.setattr("sys.argv", ["telegram_admin_bot.py"])
+
+    assert bot.main() == 0
 
 
 def test_expired_callback_advances_offset_after_successful_render(tmp_path, monkeypatch):
@@ -359,6 +399,7 @@ def test_prediction_screen_callbacks_are_bound_to_displayed_match():
 
     assert "adm:pred:show:42" in callbacks
     assert "adm:pred:refresh:42" in callbacks
+    assert all(len(callback) <= 64 for callback in callbacks)
 
 
 def test_old_prediction_callback_queries_its_bound_match_not_new_nearest_match():
@@ -366,6 +407,16 @@ def test_old_prediction_callback_queries_its_bound_match_not_new_nearest_match()
         bot._render_callback("adm:pred:show:42")
 
     query.assert_called_once_with("prediction-scores", match_id=42)
+
+
+def test_table_opens_rpl_directly_and_preserves_tabs():
+    payload = {"tournament": {"name": "Чемпионат России 🇷🇺"}, "ranking": []}
+    with patch.object(bot, "_docker_query", return_value=payload) as query:
+        _, markup = bot._render_callback("adm:table")
+
+    query.assert_called_once_with("ranking", "rpl")
+    callbacks = {button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row}
+    assert {"adm:table:rpl", "adm:table:cup"} <= callbacks
 
 
 def test_malformed_prediction_callback_never_reaches_docker():
