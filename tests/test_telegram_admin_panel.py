@@ -822,6 +822,113 @@ def test_today_photo_not_modified_does_not_create_duplicate(tmp_path, monkeypatc
     send.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "callback_data",
+    (
+        "adm:table",
+        "adm:table:rpl",
+        "adm:table:cup",
+        "adm:calendar",
+        "adm:calendar:refresh",
+        "adm:problems",
+        "adm:problems:refresh",
+        "adm:system",
+        "adm:system:refresh",
+        "adm:main",
+    ),
+)
+def test_leaving_today_deletes_photo_before_opening_text_section(callback_data, monkeypatch):
+    bot._today_photo_messages[123] = [77]
+    calls = []
+    update = {"callback_query": {"id": "cb", "data": callback_data, "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout, **kwargs):
+        calls.append(method)
+        return True
+
+    monkeypatch.setattr(bot, "_telegram_request", request)
+    monkeypatch.setattr(bot, "_render_callback", lambda data: ("section", bot.main_keyboard()))
+
+    assert bot._handle_update("token", 123, update) is True
+    assert calls == ["deleteMessage", "editMessageText", "answerCallbackQuery"]
+    assert 123 not in bot._today_photo_messages
+
+
+def test_today_refresh_keeps_photo_and_uses_media_edit(monkeypatch):
+    bot._today_photo_messages[123] = [77]
+    payload = {"matches": [{}], "photo_paths": ["page"], "photo_error": False}
+    update = {"callback_query": {"id": "cb", "data": "adm:today:refresh", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    delete = MagicMock()
+    sync = MagicMock(return_value=True)
+    monkeypatch.setattr(bot, "_delete_today_photos_if_present", delete)
+    monkeypatch.setattr(bot, "_sync_today_photos", sync)
+    monkeypatch.setattr(bot, "_render_callback", lambda data: ("today", bot.main_keyboard(), payload))
+    monkeypatch.setattr(bot, "_deliver_with_retry", lambda *args, **kwargs: (True, None))
+    monkeypatch.setattr(bot, "_answer_callback_best_effort", lambda *args: True)
+
+    assert bot._handle_update("token", 123, update) is True
+    delete.assert_not_called()
+    sync.assert_called_once_with("token", 123, payload)
+
+
+def test_today_cleanup_deletes_all_pages(monkeypatch):
+    bot._today_photo_messages[123] = [71, 72, 73]
+    deleted = []
+    monkeypatch.setattr(bot, "_telegram_request", lambda token, method, payload, timeout: deleted.append(payload["message_id"]) or True)
+
+    bot._delete_today_photos_if_present("token", 123)
+
+    assert deleted == [71, 72, 73]
+    assert 123 not in bot._today_photo_messages
+
+
+def test_today_cleanup_benign_delete_error_does_not_block(monkeypatch):
+    bot._today_photo_messages[123] = [77]
+    error = callback_http_error(400, "Bad Request: message to delete not found")
+    monkeypatch.setattr(bot, "_telegram_request", MagicMock(side_effect=error))
+
+    bot._delete_today_photos_if_present("token", 123)
+
+    assert 123 not in bot._today_photo_messages
+
+
+def test_today_cleanup_network_error_is_bounded_and_nonfatal(monkeypatch):
+    bot._today_photo_messages[123] = [77]
+    request = MagicMock(side_effect=URLError("timed out"))
+    monkeypatch.setattr(bot, "_telegram_request", request)
+
+    bot._delete_today_photos_if_present("token", 123, sleep=lambda _: None)
+
+    assert request.call_count == 2
+    assert 123 not in bot._today_photo_messages
+
+
+def test_text_section_to_text_section_uses_edit_not_new_message(monkeypatch):
+    update = {"callback_query": {"id": "cb", "data": "adm:system", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    calls = []
+    monkeypatch.setattr(bot, "_render_callback", lambda data: ("system", bot.main_keyboard()))
+    monkeypatch.setattr(bot, "_telegram_request", lambda token, method, payload, timeout: calls.append(method) or True)
+
+    assert bot._handle_update("token", 123, update) is True
+    assert "editMessageText" in calls
+    assert "sendMessage" not in calls
+
+
+def test_ui_delivery_methods_use_three_second_timeout(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(bot, "_telegram_request", lambda token, method, payload, timeout: calls.append((method, timeout)) or True)
+    bot._edit_or_send("token", 123, "text", bot.main_keyboard(), message_id=7)
+    bot._edit_or_send("token", 123, "text", bot.main_keyboard())
+    bot._today_photo_messages[123] = [77]
+    bot._delete_today_photos_if_present("token", 123)
+
+    assert calls == [
+        ("editMessageText", bot.UI_REQUEST_TIMEOUT),
+        ("sendMessage", bot.UI_REQUEST_TIMEOUT),
+        ("deleteMessage", bot.UI_REQUEST_TIMEOUT),
+    ]
+
+
 def test_send_photo_builds_real_multipart_and_returns_message_id(tmp_path, monkeypatch):
     image = tmp_path / "page.png"
     image.write_bytes(b"\x89PNG\r\nprototype")
@@ -857,6 +964,7 @@ def test_send_photo_builds_real_multipart_and_returns_message_id(tmp_path, monke
     assert b"\x89PNG\r\nprototype" in request.data
     assert request.data.endswith(b"--" + boundary + b"--\r\n")
     assert result == {"message_id": 77}
+    assert captured["timeout"] == bot.UI_REQUEST_TIMEOUT
 
 
 def test_edit_message_media_builds_attach_photo_multipart(tmp_path, monkeypatch):
@@ -876,6 +984,7 @@ def test_edit_message_media_builds_attach_photo_multipart(tmp_path, monkeypatch)
 
     def fake_urlopen(request, timeout):
         captured["request"] = request
+        captured["timeout"] = timeout
         return Response()
 
     monkeypatch.setattr(bot, "urlopen", fake_urlopen)
@@ -890,6 +999,7 @@ def test_edit_message_media_builds_attach_photo_multipart(tmp_path, monkeypatch)
     assert b'name="photo"; filename="totish_today.png"' in request.data
     assert b"png-binary" in request.data
     assert result == {"message_id": 77}
+    assert captured["timeout"] == bot.UI_REQUEST_TIMEOUT
 
 
 def test_edit_message_media_not_modified_is_benign(tmp_path, monkeypatch):

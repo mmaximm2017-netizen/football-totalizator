@@ -36,6 +36,7 @@ LOCK_FILE = STATE_DIR / "telegram-admin-poller.lock"
 MAX_MESSAGE_LENGTH = 3800
 POLL_TIMEOUT = 50
 QUERY_TIMEOUT = 20
+UI_REQUEST_TIMEOUT = 3
 BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
 MSK = ZoneInfo("Europe/Moscow")
@@ -516,10 +517,10 @@ def _docker_query(action, kind=None, match_id=None, timeout=QUERY_TIMEOUT):
 def _edit_or_send(token, chat_id, text, markup, message_id=None):
     payload = {"chat_id": chat_id, "text": _safe_text(text), "reply_markup": markup}
     if message_id is None:
-        return _telegram_request(token, "sendMessage", payload, timeout=10)
+        return _telegram_request(token, "sendMessage", payload, timeout=UI_REQUEST_TIMEOUT)
     payload["message_id"] = message_id
     try:
-        return _telegram_request(token, "editMessageText", payload, timeout=10)
+        return _telegram_request(token, "editMessageText", payload, timeout=UI_REQUEST_TIMEOUT)
     except HTTPError as exc:
         if exc.code == 400 and "message is not modified" in _telegram_error_text(exc):
             logger.info("telegram_admin_message_not_modified")
@@ -565,7 +566,7 @@ def _deliver_with_retry(token, chat_id, text, markup, message_id=None, sleep=Non
     return False, None
 
 
-def _multipart_photo_request(token, method, fields, photo_path, timeout=15):
+def _multipart_photo_request(token, method, fields, photo_path, timeout=UI_REQUEST_TIMEOUT):
     boundary = f"----totish-{uuid.uuid4().hex}"
     chunks = []
     for name, value in fields.items():
@@ -682,6 +683,61 @@ def _sync_today_photos(token, chat_id, payload):
         )
 
 
+def _delete_today_photos_if_present(token, chat_id, sleep=None):
+    sleep = sleep or time.sleep
+    message_ids = _today_photo_messages.pop(chat_id, [])
+    benign_markers = (
+        "message to delete not found",
+        "message can't be deleted",
+        "message cannot be deleted",
+    )
+    for message_id in message_ids:
+        for attempt in (1, 2):
+            try:
+                _telegram_request(
+                    token,
+                    "deleteMessage",
+                    {"chat_id": chat_id, "message_id": message_id},
+                    timeout=UI_REQUEST_TIMEOUT,
+                )
+                logger.info("telegram_admin_today_photo_deleted message_id=%s", message_id)
+                break
+            except HTTPError as exc:
+                error_text = _telegram_error_text(exc)
+                if exc.code == 400 and any(marker in error_text for marker in benign_markers):
+                    logger.info("telegram_admin_today_photo_deleted message_id=%s", message_id)
+                    break
+                transient = exc.code == 429 or exc.code >= 500
+                if transient and attempt == 1:
+                    sleep(0.2)
+                    continue
+                logger.warning("telegram_admin_today_photo_delete_failed type=%s", type(exc).__name__)
+                break
+            except (URLError, TimeoutError) as exc:
+                if attempt == 1:
+                    sleep(0.2)
+                    continue
+                logger.warning("telegram_admin_today_photo_delete_failed type=%s", type(exc).__name__)
+            except (RuntimeError, json.JSONDecodeError) as exc:
+                logger.warning("telegram_admin_today_photo_delete_failed type=%s", type(exc).__name__)
+                break
+
+
+def _leaves_today_section(callback_data):
+    if callback_data in {"adm:today", "adm:today:refresh", "adm:predictions"}:
+        return False
+    action = callback_data.replace(":refresh", "")
+    return action in {
+        "adm:main",
+        "adm:table",
+        "adm:table:rpl",
+        "adm:table:cup",
+        "adm:calendar",
+        "adm:problems",
+        "adm:system",
+    } or callback_data.startswith("adm:pred:")
+
+
 def _render_callback(callback_data):
     prediction_callback = re.fullmatch(r"adm:pred:(show|refresh):([1-9][0-9]*)", callback_data)
     if prediction_callback:
@@ -739,9 +795,12 @@ def _handle_update(token, admin_chat_id, update):
         return True
     if isinstance(callback, dict):
         callback_id = callback.get("id")
+        callback_data = callback.get("data", "")
         callback_started = time.monotonic()
+        if _leaves_today_section(callback_data):
+            _delete_today_photos_if_present(token, chat_id)
         try:
-            rendered = _render_callback(callback.get("data", ""))
+            rendered = _render_callback(callback_data)
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
             logger.error("telegram_admin_query_failed type=%s", type(exc).__name__)
             _deliver_with_retry(
