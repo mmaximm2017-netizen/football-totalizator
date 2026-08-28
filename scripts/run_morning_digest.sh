@@ -104,6 +104,9 @@ if (( ! DRY_RUN )) && [[ -f "$STATE_FILE" ]] && [[ "$(<"$STATE_FILE")" == "$TODA
 fi
 
 CONTAINER_STATE="$("$DOCKER_BIN" inspect -f '{{.State.Status}}|{{.State.Running}}|{{.State.Restarting}}' football-totalizator-app-1 2>/dev/null || echo missing)"
+HOST_NOW_EPOCH="$(date +%s)"
+DEADLINE_WORKER_MTIME="$(stat -c %Y /var/log/totish-deadline-push.log 2>/dev/null || true)"
+RESULT_WORKER_MTIME="$(stat -c %Y /var/log/totish-match-result-push.log 2>/dev/null || true)"
 HEALTH_PY='import json, sys; from urllib.request import urlopen; response = urlopen(sys.argv[1], timeout=5); assert response.status == 200; print(json.dumps(json.loads(response.read().decode("utf-8"))))'
 LOCAL_HEALTH_JSON="$("$DOCKER_BIN" exec football-totalizator-app-1 python -c "$HEALTH_PY" http://127.0.0.1:8000/health 2>/dev/null || true)"
 DB_HEALTH_JSON="$("$DOCKER_BIN" exec football-totalizator-app-1 python -c "$HEALTH_PY" http://127.0.0.1:8000/health/db 2>/dev/null || true)"
@@ -120,6 +123,9 @@ timeout --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
         -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
         -e "MORNING_DIGEST_LOCAL_HEALTH_JSON=$LOCAL_HEALTH_JSON" \
         -e "MORNING_DIGEST_DB_HEALTH_JSON=$DB_HEALTH_JSON" \
+        -e "TOTISH_DIGEST_HOST_NOW_EPOCH=$HOST_NOW_EPOCH" \
+        -e "TOTISH_DEADLINE_WORKER_MTIME=$DEADLINE_WORKER_MTIME" \
+        -e "TOTISH_RESULT_WORKER_MTIME=$RESULT_WORKER_MTIME" \
         app "${ARGS[@]}" >>"$LOG_FILE" 2>&1
 STATUS=$?
 set -e

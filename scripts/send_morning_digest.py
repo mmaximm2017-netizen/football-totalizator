@@ -33,6 +33,9 @@ def main():
             container_state=args.container_state,
             local_health=_health_from_env("MORNING_DIGEST_LOCAL_HEALTH_JSON"),
             db_health=_health_from_env("MORNING_DIGEST_DB_HEALTH_JSON"),
+            host_now_epoch=os.getenv("TOTISH_DIGEST_HOST_NOW_EPOCH"),
+            deadline_worker_mtime=os.getenv("TOTISH_DEADLINE_WORKER_MTIME"),
+            result_worker_mtime=os.getenv("TOTISH_RESULT_WORKER_MTIME"),
         )
     )
     if args.dry_run:

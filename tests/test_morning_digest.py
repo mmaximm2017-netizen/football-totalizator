@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app.services import morning_digest_service as digest
 from app.services import telegram_error_notifier as notifier
@@ -183,6 +183,90 @@ def test_outbox_only_flags_conservatively_stale_messages(tmp_path):
     assert "1 сообщений" in digest.collect_outbox_issues(now=now, outbox_dir=tmp_path)[0]
 
 
+def test_deadline_worker_fresh_at_five_minutes_has_no_issue():
+    assert digest.collect_worker_issues(10_000, 9_700, 9_700) == []
+
+
+def test_deadline_worker_fresh_at_fourteen_minutes_fifty_nine_seconds_has_no_issue():
+    assert digest.collect_worker_issues(10_000, 9_101, 9_700) == []
+
+
+def test_deadline_worker_stale_at_exactly_fifteen_minutes():
+    issues = digest.collect_worker_issues(10_000, 9_100, 9_700)
+
+    assert issues == ["🟠 Worker дедлайнов не запускался 15 минут."]
+
+
+def test_deadline_worker_stale_age_uses_floor_minutes():
+    issues = digest.collect_worker_issues(10_000, 7_780, 9_700)
+
+    assert issues == ["🟠 Worker дедлайнов не запускался 37 минут."]
+
+
+def test_result_worker_stale_message():
+    issues = digest.collect_worker_issues(10_000, 9_700, 9_100)
+
+    assert issues == ["🟠 Worker обработки результатов не запускался 15 минут."]
+
+
+def test_both_workers_stale_produce_two_messages():
+    issues = digest.collect_worker_issues(10_000, 9_100, 9_100)
+
+    assert len(issues) == 2
+    assert "Worker дедлайнов" in issues[0]
+    assert "Worker обработки результатов" in issues[1]
+
+
+def test_missing_worker_timestamps_are_critical_issues():
+    deadline_missing = digest.collect_worker_issues(10_000, None, 9_700)
+    result_missing = digest.collect_worker_issues(10_000, 9_700, "")
+
+    assert deadline_missing == ["🔴 Нет данных о запуске worker дедлайнов."]
+    assert result_missing == ["🔴 Нет данных о запуске worker обработки результатов."]
+
+
+def test_malformed_worker_timestamp_is_unavailable_without_crash():
+    issues = digest.collect_worker_issues(10_000, "not-a-timestamp", 9_700)
+
+    assert issues == ["🔴 Нет данных о запуске worker дедлайнов."]
+
+
+def test_future_worker_timestamp_has_zero_age_and_no_alert():
+    assert digest.collect_worker_issues(10_000, 10_060, 10_060) == []
+
+
+def test_healthy_workers_keep_normal_digest_status():
+    issues = digest.collect_worker_issues(10_000, 9_700, 9_700)
+    message = digest.render_digest(digest_data(issues=issues))
+
+    assert "✅ Всё работает штатно." in message
+
+
+def test_collect_digest_adds_worker_issues_to_attention_block():
+    conn = MagicMock()
+    cur = MagicMock()
+    conn.cursor.return_value = cur
+    with (
+        patch.object(digest, "collect_health_issues", return_value=[]),
+        patch.object(digest, "fetch_schedule_matches", return_value=([], [])),
+        patch.object(digest, "find_finished_matches_without_result", return_value=[]),
+        patch.object(digest, "count_points_mismatches", return_value=0),
+        patch.object(digest, "latest_sync_has_problem", return_value=False),
+        patch.object(digest, "collect_outbox_issues", return_value=[]),
+        patch.object(digest, "get_db", return_value=conn),
+        patch.object(digest, "close_db"),
+    ):
+        data = digest.collect_digest(
+            now=datetime(2026, 8, 28, 5, 0, tzinfo=timezone.utc),
+            host_now_epoch=10_000,
+            deadline_worker_mtime=9_100,
+            result_worker_mtime=9_700,
+        )
+
+    assert data["issues"] == ["🟠 Worker дедлайнов не запускался 15 минут."]
+    assert "🚨 Требует внимания" in digest.render_digest(data)
+
+
 def test_dry_run_never_enqueues(monkeypatch, capsys):
     monkeypatch.setattr(cli, "collect_digest", lambda **_: digest_data())
     monkeypatch.setattr(cli, "render_digest", lambda _: "preview")
@@ -205,11 +289,17 @@ def test_cli_reads_host_checked_health_json(monkeypatch, capsys):
     )
     monkeypatch.setenv("MORNING_DIGEST_LOCAL_HEALTH_JSON", '{"status":"ok"}')
     monkeypatch.setenv("MORNING_DIGEST_DB_HEALTH_JSON", '{"db":"ok"}')
+    monkeypatch.setenv("TOTISH_DIGEST_HOST_NOW_EPOCH", "10000")
+    monkeypatch.setenv("TOTISH_DEADLINE_WORKER_MTIME", "9700")
+    monkeypatch.setenv("TOTISH_RESULT_WORKER_MTIME", "9700")
     monkeypatch.setattr("sys.argv", ["send_morning_digest.py", "--dry-run", "--container-state", "running|true|false"])
 
     assert cli.main() == 0
     assert captured["local_health"] == {"status": "ok"}
     assert captured["db_health"] == {"db": "ok"}
+    assert captured["host_now_epoch"] == "10000"
+    assert captured["deadline_worker_mtime"] == "9700"
+    assert captured["result_worker_mtime"] == "9700"
     assert capsys.readouterr().out.strip() == "preview"
 
 
@@ -242,6 +332,11 @@ def test_runner_checks_health_inside_named_production_container():
     assert "http://app:8000" not in source
     assert "MORNING_DIGEST_LOCAL_HEALTH_JSON" in source
     assert "MORNING_DIGEST_DB_HEALTH_JSON" in source
+    assert "stat -c %Y /var/log/totish-deadline-push.log" in source
+    assert "stat -c %Y /var/log/totish-match-result-push.log" in source
+    assert "TOTISH_DIGEST_HOST_NOW_EPOCH" in source
+    assert "TOTISH_DEADLINE_WORKER_MTIME" in source
+    assert "TOTISH_RESULT_WORKER_MTIME" in source
 
 
 def test_runner_uses_production_image_fallback_when_primary_container_is_missing():

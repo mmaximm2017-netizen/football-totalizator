@@ -16,6 +16,7 @@ from app.utils import RU_MONTHS_GENITIVE
 
 MSK = ZoneInfo("Europe/Moscow")
 OUTBOX_STALE_SECONDS = 15 * 60
+WORKER_STALE_SECONDS = 15 * 60
 PUBLIC_HEALTH_URL = "https://totish.ru/health"
 FRIENDLY_TOURNAMENT_NAMES = {
     "Чемпионат России 🇷🇺": "РПЛ",
@@ -166,6 +167,44 @@ def collect_outbox_issues(now=None, outbox_dir=None):
     ]
 
 
+def _parse_epoch(value):
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def collect_worker_issues(now_epoch, deadline_mtime, result_mtime):
+    now = _parse_epoch(now_epoch)
+    if now is None:
+        now = int(datetime.now(timezone.utc).timestamp())
+
+    workers = (
+        (
+            deadline_mtime,
+            "🔴 Нет данных о запуске worker дедлайнов.",
+            "🟠 Worker дедлайнов не запускался {minutes} минут.",
+        ),
+        (
+            result_mtime,
+            "🔴 Нет данных о запуске worker обработки результатов.",
+            "🟠 Worker обработки результатов не запускался {minutes} минут.",
+        ),
+    )
+    issues = []
+    for mtime, unavailable_message, stale_message in workers:
+        heartbeat = _parse_epoch(mtime)
+        if heartbeat is None:
+            issues.append(unavailable_message)
+            continue
+        age_seconds = max(0, now - heartbeat)
+        if age_seconds >= WORKER_STALE_SECONDS:
+            issues.append(stale_message.format(minutes=age_seconds // 60))
+    return issues
+
+
 def collect_health_issues(container_state=None, local_health=None, db_health=None, fetch_json=_fetch_json):
     issues = []
     if container_state and container_state != "running|true|false":
@@ -201,11 +240,21 @@ def collect_digest(
     container_state=None,
     local_health=None,
     db_health=None,
+    host_now_epoch=None,
+    deadline_worker_mtime=None,
+    result_worker_mtime=None,
     fetch_json=_fetch_json,
     outbox_dir=None,
 ):
     today = _today_msk(now)
     issues = collect_health_issues(container_state, local_health, db_health, fetch_json)
+    issues.extend(
+        collect_worker_issues(
+            host_now_epoch,
+            deadline_worker_mtime,
+            result_worker_mtime,
+        )
+    )
     conn = cur = None
     today_matches = []
     tomorrow_matches = []
