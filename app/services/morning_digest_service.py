@@ -13,7 +13,6 @@ from app.db import close_db, get_db
 from app.models.scoring import calculate_points, has_valid_finished_score
 from app.utils import RU_MONTHS_GENITIVE
 
-
 MSK = ZoneInfo("Europe/Moscow")
 OUTBOX_STALE_SECONDS = 15 * 60
 WORKER_STALE_SECONDS = 15 * 60
@@ -181,28 +180,29 @@ def collect_worker_issues(now_epoch, deadline_mtime, result_mtime):
     if now is None:
         now = int(datetime.now(timezone.utc).timestamp())
 
+    return [item["issue"] for item in worker_heartbeat_statuses(now, deadline_mtime, result_mtime) if item["issue"]]
+
+
+def worker_heartbeat_statuses(now_epoch, deadline_mtime, result_mtime):
+    now = _parse_epoch(now_epoch)
+    if now is None:
+        now = int(datetime.now(timezone.utc).timestamp())
     workers = (
-        (
-            deadline_mtime,
-            "🔴 Нет данных о запуске worker дедлайнов.",
-            "🟠 Worker дедлайнов не запускался {minutes} минут.",
-        ),
-        (
-            result_mtime,
-            "🔴 Нет данных о запуске worker обработки результатов.",
-            "🟠 Worker обработки результатов не запускался {minutes} минут.",
-        ),
+        ("deadline", deadline_mtime, "Worker дедлайнов", "Нет данных о запуске worker дедлайнов."),
+        ("result", result_mtime, "Worker обработки результатов", "Нет данных о запуске worker обработки результатов."),
     )
-    issues = []
-    for mtime, unavailable_message, stale_message in workers:
+    statuses = []
+    for key, mtime, label, unavailable in workers:
         heartbeat = _parse_epoch(mtime)
         if heartbeat is None:
-            issues.append(unavailable_message)
+            statuses.append({"key": key, "label": label, "state": "unavailable", "minutes": None, "issue": f"🔴 {unavailable}"})
             continue
-        age_seconds = max(0, now - heartbeat)
-        if age_seconds >= WORKER_STALE_SECONDS:
-            issues.append(stale_message.format(minutes=age_seconds // 60))
-    return issues
+        minutes = max(0, now - heartbeat) // 60
+        if minutes >= WORKER_STALE_SECONDS // 60:
+            statuses.append({"key": key, "label": label, "state": "stale", "minutes": minutes, "issue": f"🟠 {label} не запускался {minutes} минут."})
+        else:
+            statuses.append({"key": key, "label": label, "state": "ok", "minutes": minutes, "issue": None})
+    return statuses
 
 
 def collect_health_issues(container_state=None, local_health=None, db_health=None, fetch_json=_fetch_json):
@@ -230,7 +230,7 @@ def collect_health_issues(container_state=None, local_health=None, db_health=Non
         health = fetch_json(PUBLIC_HEALTH_URL)
         if health.get("status") != "ok":
             issues.append("🔴 Сайт недоступен пользователям из интернета.")
-    except Exception:
+    except Exception:  # noqa: BLE001 - public health failures are rendered as unavailable.
         issues.append("🔴 Публичный health-check сайта недоступен.")
     return issues
 
@@ -271,7 +271,7 @@ def collect_digest(
             issues.append(f"🟠 Обнаружено расхождение в начисленных очках: {mismatches} прогнозов.")
         if latest_sync_has_problem(cur):
             issues.append("🟠 Последняя синхронизация матчей завершилась с ошибками.")
-    except Exception:
+    except Exception:  # noqa: BLE001 - read-only digest must render database unavailability.
         issues.append("🔴 Не удалось получить данные ТОТИШ из базы данных.")
     finally:
         if conn is not None and cur is not None:

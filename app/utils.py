@@ -62,7 +62,7 @@ def parse_utc_time(utc_str):
     return parse_datetime(utc_str)
 
 
-def is_before_deadline(match):
+def is_before_deadline(match, now=None):
     try:
         if isinstance(match, dict):
             deadline = match.get("deadline")
@@ -71,7 +71,8 @@ def is_before_deadline(match):
         dt = parse_datetime(deadline)
         if not dt:
             return False
-        return utc_now() < dt
+        current_time = parse_datetime(now) if now is not None else utc_now()
+        return bool(current_time and current_time < dt)
     except Exception:
         return False
 
