@@ -88,7 +88,7 @@ def test_authorized_callback_acknowledges_then_edits_message():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append(args[1]) or True):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 def test_message_not_modified_is_benign():
@@ -108,7 +108,7 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
     calls = []
     update = {"callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
-    def request(token, method, payload, timeout):
+    def request(token, method, payload, timeout, **kwargs):
         calls.append(method)
         if method == "answerCallbackQuery":
             raise callback_http_error(400, description)
@@ -118,14 +118,14 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 def test_callback_ack_network_timeout_does_not_block_authorized_action():
     calls = []
     update = {"callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
-    def request(token, method, payload, timeout):
+    def request(token, method, payload, timeout, **kwargs):
         calls.append(method)
         if method == "answerCallbackQuery":
             raise URLError("timed out")
@@ -135,7 +135,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["answerCallbackQuery", "editMessageText"]
+    assert calls == ["editMessageText", "answerCallbackQuery"]
 
 
 @pytest.mark.parametrize(
@@ -148,14 +148,56 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
 )
 def test_nonexpired_callback_ack_errors_are_not_suppressed(error):
     update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+
+    def request(token, method, payload, timeout, **kwargs):
+        if method == "answerCallbackQuery":
+            raise error
+        return True
+
     with (
-        patch.object(bot, "_telegram_request", side_effect=error),
-        patch.object(bot, "_render_callback") as render,
+        patch.object(bot, "_telegram_request", side_effect=request),
+        patch.object(bot, "_render_callback", return_value=("today", bot.main_keyboard())) as render,
         pytest.raises(HTTPError),
     ):
         bot._handle_update("token", 123, update)
 
-    render.assert_not_called()
+    render.assert_called_once_with("adm:today")
+
+
+def test_callback_ack_uses_one_second_timeout():
+    with patch.object(bot, "_telegram_request", return_value=True) as request:
+        assert bot._answer_callback_best_effort("token", "callback") is True
+
+    request.assert_called_once_with(
+        "token",
+        "answerCallbackQuery",
+        {"callback_query_id": "callback"},
+        timeout=1,
+    )
+
+
+def test_long_poll_has_grace_timeout_but_regular_post_does_not(monkeypatch):
+    calls = []
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(self.payload).encode("utf-8")
+
+    monkeypatch.setattr(bot, "urlopen", lambda request, timeout: calls.append(timeout) or Response({"ok": True, "result": []}))
+
+    bot._telegram_request("token", "getUpdates", {}, timeout=50, long_poll=True)
+    bot._telegram_request("token", "sendMessage", {}, timeout=5)
+
+    assert calls == [60, 5]
 
 
 def test_unknown_callback_is_safe():
@@ -190,9 +232,9 @@ def test_container_query_failure_returns_safe_admin_message_without_traceback():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append((args[1], args[2])) or True), patch.object(bot, "_docker_query", side_effect=RuntimeError("DATABASE_URL=secret")):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls[1][0] == "editMessageText"
-    assert "Не удалось получить данные ТОТИШа" in calls[1][1]["text"]
-    assert "secret" not in calls[1][1]["text"]
+    assert calls[0][0] == "editMessageText"
+    assert "Не удалось получить данные ТОТИШа" in calls[0][1]["text"]
+    assert "secret" not in calls[0][1]["text"]
 
 
 def test_offset_state_is_atomic_and_malformed_state_is_safe(tmp_path, monkeypatch):
@@ -212,7 +254,7 @@ def test_duplicate_update_is_not_processed_after_offset_persisted(tmp_path, monk
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
     handled = []
 
-    def fake_request(token, method, payload, timeout):
+    def fake_request(token, method, payload, timeout, **kwargs):
         if method == "getUpdates":
             if payload.get("offset") is None:
                 return [{"update_id": 10, "message": {"chat": {"id": 999}}}]
@@ -255,7 +297,7 @@ def test_expired_callback_advances_offset_after_successful_render(tmp_path, monk
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
     update = {"update_id": 10, "callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
-    def request(token, method, payload, timeout):
+    def request(token, method, payload, timeout, **kwargs):
         if method == "getUpdates":
             return [update]
         if method == "answerCallbackQuery":
@@ -278,7 +320,7 @@ def test_callback_network_timeout_advances_offset_after_successful_render(tmp_pa
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
     update = {"update_id": 10, "callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
-    def request(token, method, payload, timeout):
+    def request(token, method, payload, timeout, **kwargs):
         if method == "getUpdates":
             return [update]
         if method == "answerCallbackQuery":

@@ -84,14 +84,14 @@ def _lock():
     return handle
 
 
-def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT):
+def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT, long_poll=False):
     body = urlencode(payload).encode("utf-8")
     request = Request(
         f"https://api.telegram.org/bot{token}/{method}",
         data=body,
         method="POST",
     )
-    with urlopen(request, timeout=timeout + 10) as response:
+    with urlopen(request, timeout=timeout + 10 if long_poll else timeout) as response:
         value = json.loads(response.read().decode("utf-8"))
     if not isinstance(value, dict) or value.get("ok") is not True:
         raise RuntimeError("telegram_api_error")
@@ -108,7 +108,7 @@ def _answer_callback_best_effort(token, callback_id):
             token,
             "answerCallbackQuery",
             {"callback_query_id": callback_id},
-            timeout=10,
+            timeout=1,
         )
     except HTTPError as exc:
         error_text = _telegram_error_text(exc)
@@ -385,8 +385,6 @@ def _handle_update(token, admin_chat_id, update):
         return True
     if isinstance(callback, dict):
         callback_id = callback.get("id")
-        if callback_id:
-            _answer_callback_best_effort(token, callback_id)
         try:
             rendered = _render_callback(callback.get("data", ""))
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
@@ -398,11 +396,12 @@ def _handle_update(token, admin_chat_id, update):
                 _keyboard([[{"text": "⬅️ Меню", "callback_data": "adm:main"}]]),
                 callback.get("message", {}).get("message_id"),
             )
-            return True
-        if rendered is None:
-            return True
-        text, markup = rendered
-        _edit_or_send(token, chat_id, text, markup, callback.get("message", {}).get("message_id"))
+        else:
+            if rendered is not None:
+                text, markup = rendered
+                _edit_or_send(token, chat_id, text, markup, callback.get("message", {}).get("message_id"))
+        if callback_id:
+            _answer_callback_best_effort(token, callback_id)
         return True
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") in {"/start", "/menu"}:
@@ -416,7 +415,7 @@ def _poll_cycle(token, admin_chat_id):
         payload = {"limit": 25, "timeout": POLL_TIMEOUT, "allowed_updates": json.dumps(["message", "callback_query"])}
         if offset is not None:
             payload["offset"] = offset
-        updates = _telegram_request(token, "getUpdates", payload, timeout=POLL_TIMEOUT)
+        updates = _telegram_request(token, "getUpdates", payload, timeout=POLL_TIMEOUT, long_poll=True)
         if not isinstance(updates, list):
             raise TypeError("telegram_updates_invalid")
         for update in sorted(
