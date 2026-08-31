@@ -5,9 +5,11 @@
 CREATE ROLE totish_gpt_reader LOGIN PASSWORD 'REPLACE_WITH_LONG_RANDOM_PASSWORD'
     NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
 
+REVOKE ALL ON DATABASE REPLACE_WITH_DATABASE_NAME FROM totish_gpt_reader;
 GRANT CONNECT ON DATABASE REPLACE_WITH_DATABASE_NAME TO totish_gpt_reader;
+REVOKE TEMPORARY ON DATABASE REPLACE_WITH_DATABASE_NAME FROM totish_gpt_reader;
+REVOKE ALL ON SCHEMA public FROM totish_gpt_reader;
 GRANT USAGE ON SCHEMA public TO totish_gpt_reader;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO totish_gpt_reader;
 
 -- Explicitly deny writes even if a future database default is permissive.
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM totish_gpt_reader;
@@ -16,9 +18,8 @@ REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM totish_gpt_reader;
 REVOKE CREATE ON SCHEMA public FROM totish_gpt_reader;
 
 -- Check this manually before relying on the role. PostgreSQL privileges are
--- additive, so a CREATE grant to PUBLIC also applies to this role. If `\dn+`
--- shows CREATE for PUBLIC, assess all application roles first, then run:
--- REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- additive, so CREATE or TEMPORARY granted to PUBLIC also applies to this role.
+-- Do not revoke either from PUBLIC without an application-wide privilege review.
 
 -- Run this as the role that owns future application tables.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
