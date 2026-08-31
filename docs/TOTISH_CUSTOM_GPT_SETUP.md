@@ -11,6 +11,15 @@ applies to the reader. Assess the application's migration role, then manually ru
 `REVOKE CREATE ON SCHEMA public FROM PUBLIC;` if appropriate. Do not apply that
 database-wide change automatically.
 
+Copy the example, replace the two placeholders, review it, and run it only after
+explicit production approval:
+
+```sh
+cp docs/totish_gpt_readonly_role.sql.example /tmp/totish_gpt_reader.sql
+${EDITOR:-vi} /tmp/totish_gpt_reader.sql
+psql "$DATABASE_URL" -f /tmp/totish_gpt_reader.sql
+```
+
 ```sh
 openssl rand -hex 32
 ```
@@ -22,8 +31,15 @@ TOTISH_GPT_API_KEY=<openssl-random-value>
 TOTISH_GPT_DATABASE_URL=postgresql://totish_gpt_reader:...@.../...
 ```
 
-Restart the existing application deployment by its normal operational procedure,
-then verify without exposing the token in shell history where possible:
+From the production repository root, apply the new environment with the existing
+Compose deployment (this does not modify Compose configuration):
+
+```sh
+docker compose up -d
+docker compose ps
+```
+
+Then verify without exposing the token in shell history where possible:
 
 ```sh
 curl -H "Authorization: Bearer $TOTISH_GPT_API_KEY" https://totish.ru/api/gpt/health
