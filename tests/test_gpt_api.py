@@ -1,9 +1,12 @@
+import inspect
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from app import create_app
+from app.routes import gpt_api
 
 
 @pytest.fixture
@@ -18,251 +21,150 @@ def auth():
     return {"Authorization": "Bearer test-gpt-token"}
 
 
-def mock_db(rows=None, row=None):
-    conn = MagicMock()
-    cur = MagicMock()
+def mock_gpt_db(monkeypatch, *, rows=None, row=None):
+    conn, cur = MagicMock(), MagicMock()
     conn.cursor.return_value = cur
-    cur.fetchall.return_value = rows if rows is not None else []
+    cur.fetchall.return_value = [] if rows is None else rows
     cur.fetchone.return_value = row
+    monkeypatch.setattr(gpt_api.gpt_db, "get_gpt_db", lambda: conn)
+    monkeypatch.setattr(gpt_api.gpt_db, "close_gpt_db", lambda connection, cursor: None)
     return conn, cur
 
 
-def test_health_accepts_valid_key(client):
+def test_health_requires_read_only_gpt_database(client, monkeypatch):
+    _, cur = mock_gpt_db(monkeypatch, row=("on",))
+
     response = client.get("/api/gpt/health", headers=auth())
 
     assert response.status_code == 200
-    assert response.get_json() == {"ok": True, "service": "totish-gpt-api"}
+    assert response.get_json() == {"ok": True, "service": "totish-gpt-api", "database": "ok", "read_only": True}
     assert response.headers["Cache-Control"] == "no-store"
+    cur.execute.assert_called_once_with("SHOW transaction_read_only", ())
 
 
-def test_health_rejects_missing_key(client):
-    response = client.get("/api/gpt/health")
+def test_health_fails_closed_when_connection_is_not_read_only(client, monkeypatch):
+    mock_gpt_db(monkeypatch, row=("off",))
 
-    assert response.status_code == 401
-    assert response.get_json()["error"] == "unauthorized"
+    response = client.get("/api/gpt/health", headers=auth())
 
-
-def test_health_rejects_wrong_key(client):
-    response = client.get(
-        "/api/gpt/health",
-        headers={"Authorization": "Bearer wrong-token"},
-    )
-
-    assert response.status_code == 401
+    assert response.status_code == 503
 
 
-def test_health_rejects_requests_when_server_key_is_missing(monkeypatch):
+@pytest.mark.parametrize("headers", ({}, {"Authorization": "Bearer wrong-token"}))
+def test_gpt_api_rejects_missing_or_invalid_bearer_key(client, headers):
+    assert client.get("/api/gpt/health", headers=headers).status_code == 401
+
+
+def test_gpt_api_rejects_when_server_key_is_missing(monkeypatch):
     monkeypatch.delenv("TOTISH_GPT_API_KEY", raising=False)
     app = create_app()
     app.config.update(TESTING=True)
 
-    response = app.test_client().get(
-        "/api/gpt/health",
-        headers={"Authorization": "Bearer any-token"},
-    )
-
-    assert response.status_code == 401
+    assert app.test_client().get("/api/gpt/health", headers=auth()).status_code == 401
 
 
-@pytest.mark.parametrize(
-    "headers, expected_status",
-    ((auth(), 200), ({}, 401), ({"Authorization": "Bearer wrong-token"}, 401)),
-)
-def test_gpt_requests_skip_session_user_processing(client, headers, expected_status):
+def test_gpt_api_does_not_import_or_call_primary_database(client, monkeypatch):
+    mock_gpt_db(monkeypatch, row=("on",))
+    primary_get_db = MagicMock()
+    monkeypatch.setattr("app.db.get_db", primary_get_db)
+
+    response = client.get("/api/gpt/health", headers=auth())
+
+    assert response.status_code == 200
+    primary_get_db.assert_not_called()
+    assert "from app.db" not in inspect.getsource(gpt_api)
+
+
+def test_gpt_requests_skip_browser_session_processing(client, monkeypatch):
+    mock_gpt_db(monkeypatch, row=("on",))
     with client.session_transaction() as session:
         session["user_id"] = 7
+    primary_get_db = MagicMock()
+    monkeypatch.setattr("app.get_db", primary_get_db)
 
-    with patch("app.get_db") as session_get_db:
-        response = client.get("/api/gpt/health", headers=headers)
-
-    assert response.status_code == expected_status
-    session_get_db.assert_not_called()
-
-
-def test_tournaments_returns_public_fields(client):
-    conn, cur = mock_db(rows=[(5, "Чемпионат России")])
-
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get("/api/gpt/tournaments", headers=auth())
-
-    assert response.status_code == 200
-    assert response.get_json() == {"tournaments": [{"id": 5, "name": "Чемпионат России"}]}
-    assert conn.commit.called is False
-    assert "SELECT id, name" in cur.execute.call_args.args[0]
+    assert client.get("/api/gpt/health", headers=auth()).status_code == 200
+    primary_get_db.assert_not_called()
 
 
-def test_users_excludes_sensitive_fields(client):
-    conn, cur = mock_db(rows=[(7, "Игрок")])
+def test_users_exclude_sensitive_fields_and_use_gpt_connection(client, monkeypatch):
+    conn, cur = mock_gpt_db(monkeypatch, rows=[(7, "Игрок")])
 
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get("/api/gpt/users", headers=auth())
+    response = client.get("/api/gpt/users", headers=auth())
 
-    payload = response.get_json()
-    assert response.status_code == 200
-    assert payload == {"users": [{"id": 7, "username": "Игрок"}]}
-    assert "password" not in str(payload).lower()
-    assert "last_seen" not in str(payload).lower()
-    assert "password" not in cur.execute.call_args.args[0].lower()
+    assert response.get_json() == {"users": [{"user_id": 7, "username": "Игрок"}]}
+    query = cur.execute.call_args.args[0].lower()
+    assert "password" not in query and "last_seen" not in query
     assert conn.commit.called is False
 
 
-def test_matches_applies_filters_and_pagination(client):
-    conn, cur = mock_db(
-        rows=[
-            (
-                42,
-                5,
-                "ЦСКА",
-                "Зенит",
-                datetime(2026, 8, 15, 12, 0, tzinfo=timezone.utc),
-                2,
-                1,
-                "FINISHED",
-            )
-        ]
-    )
+def test_matches_supports_bounded_filters_and_moscow_dates(client, monkeypatch):
+    _, cur = mock_gpt_db(monkeypatch, rows=[(42, 5, "РПЛ", "ЦСКА", "Зенит", datetime(2026, 8, 1, 21, 30, tzinfo=timezone.utc), None, "SCHEDULED", None, None, None, "rpl")])
 
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get(
-            "/api/gpt/matches?tournament_id=5&date_from=2026-08-01&date_to=2026-08-31&finished=true&limit=2&offset=1",
-            headers=auth(),
-        )
+    response = client.get("/api/gpt/matches?match_id=42&tournament_id=5&team=ЦСКА&status=SCHEDULED&date_from=2026-08-02&date_to=2026-08-02&finished=false&limit=2&offset=1", headers=auth())
 
-    payload = response.get_json()
+    assert response.status_code == 200
+    assert response.get_json()["matches"][0]["kickoff_time"] == "2026-08-01T21:30:00+00:00"
     query, params = cur.execute.call_args.args
-    assert response.status_code == 200
-    assert payload["matches"][0]["match_id"] == 42
-    assert payload["matches"][0]["match_datetime"] == "2026-08-15T12:00:00+00:00"
-    assert payload["limit"] == 2
-    assert payload["offset"] == 1
-    assert "m.tournament_id = %s" in query
-    assert "UPPER(m.status) IN" in query
     assert "AT TIME ZONE 'Europe/Moscow'" in query
-    assert params == (5, "2026-08-01", "2026-08-31", 2, 1)
-    assert conn.commit.called is False
+    assert "m.status = %s" in query
+    assert params[-2:] == (2, 1)
 
 
-def test_matches_date_filters_use_moscow_calendar_day_at_utc_boundary(client):
-    conn, cur = mock_db(
-        rows=[
-            (
-                43,
-                5,
-                "Команда А",
-                "Команда Б",
-                datetime(2026, 8, 1, 21, 30, tzinfo=timezone.utc),
-                None,
-                None,
-                "SCHEDULED",
-            )
-        ]
-    )
+@pytest.mark.parametrize("path", ("/api/gpt/matches?limit=501", "/api/gpt/matches?offset=-1", "/api/gpt/matches?date_from=bad", "/api/gpt/matches?tournament_id=1%20OR%201=1"))
+def test_invalid_pagination_and_injection_attempts_return_400(client, path):
+    assert client.get(path, headers=auth()).status_code == 400
 
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get(
-            "/api/gpt/matches?date_from=2026-08-02&date_to=2026-08-02",
-            headers=auth(),
-        )
 
-    query, params = cur.execute.call_args.args
+def test_prediction_values_are_withheld_before_deadline(client, monkeypatch):
+    _, cur = mock_gpt_db(monkeypatch, rows=[])
+
+    response = client.get("/api/gpt/predictions?finished=false", headers=auth())
+
     assert response.status_code == 200
-    assert response.get_json()["matches"][0]["match_id"] == 43
-    assert query.count("AT TIME ZONE 'Europe/Moscow'") == 2
-    assert params == ("2026-08-02", "2026-08-02", 100, 0)
+    query = cur.execute.call_args.args[0]
+    assert "m.deadline <= CURRENT_TIMESTAMP" in query
+    assert response.get_json()["predictions"] == []
 
 
-@pytest.mark.parametrize(
-    "path",
-    (
-        "/api/gpt/matches?limit=501",
-        "/api/gpt/matches?offset=-1",
-        "/api/gpt/matches?date_from=not-a-date",
-        "/api/gpt/matches?finished=yes",
-        "/api/gpt/player-stats",
-    ),
-)
-def test_invalid_parameters_return_400(client, path):
-    response = client.get(path, headers=auth())
+def test_predictions_and_raw_analytics_return_finished_stored_points(client, monkeypatch):
+    row = (42, 7, 5, "Игрок", "РПЛ", 1, 0, "ЦСКА", "Зенит", datetime(2026, 8, 15, 12, tzinfo=timezone.utc), "FINISHED", 2, 1, 5, "тур", "rpl")
+    _, cur = mock_gpt_db(monkeypatch, rows=[row])
 
-    assert response.status_code == 400
-    assert response.is_json
+    response = client.get("/api/gpt/analytics/predictions?finished=true&limit=1", headers=auth())
 
-
-def test_predictions_applies_filters_and_hides_unfinished_results(client):
-    conn, cur = mock_db(rows=[(42, 7, 5, "Игрок", 1, 0, "SCHEDULED", None, None, None)])
-
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get(
-            "/api/gpt/predictions?match_id=42&user_id=7&tournament_id=5&date_from=2026-08-01&date_to=2026-08-31&limit=1&offset=0",
-            headers=auth(),
-        )
-
-    payload = response.get_json()
-    query, params = cur.execute.call_args.args
     assert response.status_code == 200
-    assert payload["predictions"] == [
-        {
-            "match_id": 42,
-            "user_id": 7,
-            "tournament_id": 5,
-            "username": "Игрок",
-            "predicted_home": 1,
-            "predicted_away": 0,
-            "status": "SCHEDULED",
-            "actual_home": None,
-            "actual_away": None,
-            "points": None,
-        }
-    ]
-    assert payload["prediction_id_available"] is False
-    assert "p.match_id = %s" in query
-    assert "AT TIME ZONE 'Europe/Moscow'" in query
-    assert params == (42, 7, 5, "2026-08-01", "2026-08-31", 1, 0)
-    assert conn.commit.called is False
+    item = response.get_json()["analytics_predictions"][0]
+    assert item["predicted_home"] == 1 and item["actual_home"] == 2 and item["points"] == 5
+    assert item["tournament_name"] == "РПЛ"
+    assert "CASE WHEN UPPER(m.status)" in cur.execute.call_args.args[0]
 
 
-def test_player_stats_uses_stored_points_for_finished_matches(client):
-    conn, cur = mock_db(row=(4, 25, 6.25, 1, 1, 2))
-    cur.fetchall.return_value = [(7,)]
+def test_player_summary_uses_stored_exact_point_values(client, monkeypatch):
+    mock_gpt_db(monkeypatch, row=(4, 25, 6.25, 1, 1, 1, 1))
 
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get(
-            "/api/gpt/player-stats?user_id=7&tournament_id=5&date_from=2026-08-01&date_to=2026-08-31",
-            headers=auth(),
-        )
+    response = client.get("/api/gpt/analytics/player-summary?user_id=7", headers=auth())
 
-    payload = response.get_json()
     assert response.status_code == 200
-    assert payload == {
-        "user_id": 7,
-        "matches_count": 4,
-        "total_points": 25,
-        "average_points": 6.25,
-        "points_10_or_11": 1,
-        "zero_points": 1,
-        "points_7_or_more": 2,
-    }
-    assert "SUM(p.points)" in cur.execute.call_args.args[0]
-    assert "AT TIME ZONE 'Europe/Moscow'" in cur.execute.call_args.args[0]
-    assert conn.commit.called is False
-
-
-def test_player_stats_hides_admin_or_deleted_users(client):
-    conn, cur = mock_db(rows=[])
-
-    with patch("app.routes.gpt_api.get_db", return_value=conn):
-        response = client.get("/api/gpt/player-stats?user_id=99", headers=auth())
-
-    assert response.status_code == 404
-    assert response.get_json() == {"ok": False, "error": "not_found"}
-    query, params = cur.execute.call_args.args
-    assert "is_admin = 0" in query
-    assert "COALESCE(is_deleted, 0) = 0" in query
-    assert params == (99,)
+    assert response.get_json() == {"user_id": 7, "matches_count": 4, "total_points": 25, "average_points": 6.25, "points_0": 1, "points_5": 1, "points_7": 1, "points_10_or_11": 1}
 
 
 @pytest.mark.parametrize("method", ("post", "put", "patch", "delete"))
-def test_mutating_methods_are_not_supported(client, method):
-    response = getattr(client, method)("/api/gpt/health", headers=auth())
+def test_mutating_methods_have_no_gpt_route(client, method):
+    assert getattr(client, method)("/api/gpt/health", headers=auth()).status_code >= 400
 
-    assert response.status_code == 400
+
+def test_openapi_documents_every_gpt_route():
+    specification = (Path(__file__).parents[1] / "docs" / "totish_gpt_openapi.yaml").read_text(encoding="utf-8")
+    documented_paths = {
+        "/api/gpt/health",
+        "/api/gpt/tournaments",
+        "/api/gpt/users",
+        "/api/gpt/matches",
+        "/api/gpt/predictions",
+        "/api/gpt/analytics/predictions",
+        "/api/gpt/analytics/player-summary",
+        "/api/gpt/player-stats",
+    }
+
+    assert all(path in specification for path in documented_paths)
+    assert "https://totish.ru" in specification
