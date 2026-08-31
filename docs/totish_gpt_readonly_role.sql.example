@@ -15,6 +15,11 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO totish_gpt_reader;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM totish_gpt_reader;
 REVOKE CREATE ON SCHEMA public FROM totish_gpt_reader;
 
+-- Check this manually before relying on the role. PostgreSQL privileges are
+-- additive, so a CREATE grant to PUBLIC also applies to this role. If `\dn+`
+-- shows CREATE for PUBLIC, assess all application roles first, then run:
+-- REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+
 -- Run this as the role that owns future application tables.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 REVOKE ALL ON TABLES FROM totish_gpt_reader;

@@ -5,6 +5,12 @@ Run `docs/totish_gpt_readonly_role.sql.example` manually as the Neon database ow
 replacing its placeholders. Use a new long random password and construct the Neon
 connection string for `totish_gpt_reader`.
 
+Before relying on the role, inspect schema grants with `\dn+ public` in `psql`.
+If `PUBLIC` has `CREATE` on `public`, privileges are additive and that grant also
+applies to the reader. Assess the application's migration role, then manually run
+`REVOKE CREATE ON SCHEMA public FROM PUBLIC;` if appropriate. Do not apply that
+database-wide change automatically.
+
 ```sh
 openssl rand -hex 32
 ```
