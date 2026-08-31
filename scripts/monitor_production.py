@@ -177,15 +177,29 @@ def check_local_health():
         return False
 
 def check_db_health():
-    try:
-        health = fetch_json("http://127.0.0.1:8000/health/db")
-    except Exception as exc:
+    health = None
+    last_exc = None
+
+    for attempt in range(1, 3):
+        try:
+            health = fetch_json(
+                "http://127.0.0.1:8000/health/db",
+                timeout=10,
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 - every probe failure gets one bounded retry.
+            last_exc = exc
+            if attempt == 1:
+                print(f"DB HEALTH RETRY: {type(exc).__name__}: {exc}")
+                time.sleep(2)
+
+    if health is None:
         alert(
             "health:db:connection",
             "Что именно произошло:\n"
-            "Не удалось получить ответ от проверки базы данных.\n"
+            "Проверка базы данных не ответила два раза подряд.\n"
             "Возможные функции ТОТИШа, зависящие от БД, сейчас могут не работать.\n\n"
-            f"Причина: {type(exc).__name__}: {exc}",
+            f"Причина последней ошибки: {type(last_exc).__name__}: {last_exc}",
         )
         return False
 
