@@ -17,6 +17,9 @@ gpt_api_bp = Blueprint("gpt_api", __name__, url_prefix="/api/gpt")
 MAX_LIMIT = 500
 DEFAULT_LIMIT = 100
 MAX_OFFSET = 100_000
+MAX_QUERY_ROWS = 500
+MAX_QUERY_CHARS = 12_000
+ALLOWED_QUERY_PREFIXES = ("select", "with")
 FINISHED_STATUSES_SQL = "('FINISHED', 'COMPLETE', 'COMPLETED')"
 MOSCOW_MATCH_DATE_SQL = "(m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date"
 
@@ -145,7 +148,7 @@ def _match_conditions():
     finished = _parse_finished()
     status, team = _parse_text("status", 64), _parse_text("team")
     conditions, params = [], []
-    for column, value in (("m.id", match_id), ("m.tournament_id", tournament_id), ("m.status", status)):
+    for column, value in (("m.match_id", match_id), ("m.tournament_id", tournament_id), ("m.status", status)):
         if value is not None:
             conditions.append(f"{column} = %s")
             params.append(value)
@@ -153,10 +156,10 @@ def _match_conditions():
         conditions.append("(m.home_team ILIKE %s OR m.away_team ILIKE %s)")
         params.extend([f"%{team}%", f"%{team}%"])
     if date_from is not None:
-        conditions.append(f"{MOSCOW_MATCH_DATE_SQL} >= %s::date")
+        conditions.append("(m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date >= %s::date")
         params.append(date_from.isoformat())
     if date_to is not None:
-        conditions.append(f"{MOSCOW_MATCH_DATE_SQL} <= %s::date")
+        conditions.append("(m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date <= %s::date")
         params.append(date_to.isoformat())
     if finished is True:
         conditions.append(f"UPPER(m.status) IN {FINISHED_STATUSES_SQL}")
@@ -181,7 +184,7 @@ def health():
 @gpt_api_bp.get("/tournaments")
 @gpt_required
 def tournaments():
-    rows = _read("SELECT id, name, is_active, start_date, end_date FROM tournaments ORDER BY id")
+    rows = _read("SELECT tournament_id, tournament_name, is_active, start_date, end_date FROM gpt_safe.tournaments ORDER BY tournament_id")
     if rows is None:
         return _database_error()
     return _response({"tournaments": [{"tournament_id": row[0], "name": row[1], "is_active": bool(row[2]), "start_date": row[3], "end_date": row[4]} for row in rows]})
@@ -190,7 +193,7 @@ def tournaments():
 @gpt_api_bp.get("/users")
 @gpt_required
 def users():
-    rows = _read("SELECT id, username FROM users WHERE is_admin = 0 AND COALESCE(is_deleted, 0) = 0 ORDER BY username ASC, id ASC")
+    rows = _read("SELECT user_id, username FROM gpt_safe.users ORDER BY username ASC, user_id ASC")
     if rows is None:
         return _database_error()
     return _response({"users": [{"user_id": row[0], "username": row[1]} for row in rows]})
@@ -206,11 +209,13 @@ def matches():
         return _bad_request(str(exc))
     rows = _read(
         f"""
-        SELECT m.id, m.tournament_id, t.name, m.home_team, m.away_team, m.kickoff_time,
-               m.deadline, m.status, m.home_score, m.away_score, m.playoff_stage, m.league
-        FROM matches m LEFT JOIN tournaments t ON t.id = m.tournament_id
+        SELECT m.match_id, m.tournament_id, m.tournament_name,
+               m.home_team, m.away_team, m.kickoff_time,
+               m.deadline, m.status, m.home_score, m.away_score,
+               m.stage, m.league
+        FROM gpt_safe.matches m
         {_where(conditions)}
-        ORDER BY m.kickoff_time ASC NULLS LAST, m.id ASC LIMIT %s OFFSET %s
+        ORDER BY m.kickoff_time ASC NULLS LAST, m.match_id ASC LIMIT %s OFFSET %s
         """,
         tuple(params + [limit, offset]),
     )
@@ -225,22 +230,22 @@ def _prediction_conditions():
     tournament_id = _parse_positive_int("tournament_id")
     date_from, date_to = _parse_date_range()
     finished = _parse_finished()
-    conditions = ["u.is_admin = 0", "COALESCE(u.is_deleted, 0) = 0", "m.deadline <= CURRENT_TIMESTAMP"]
+    conditions = []
     params = []
     for column, value in (("p.match_id", match_id), ("p.user_id", user_id), ("p.tournament_id", tournament_id)):
         if value is not None:
             conditions.append(f"{column} = %s")
             params.append(value)
     if date_from is not None:
-        conditions.append(f"{MOSCOW_MATCH_DATE_SQL} >= %s::date")
+        conditions.append("(p.kickoff_time AT TIME ZONE 'Europe/Moscow')::date >= %s::date")
         params.append(date_from.isoformat())
     if date_to is not None:
-        conditions.append(f"{MOSCOW_MATCH_DATE_SQL} <= %s::date")
+        conditions.append("(p.kickoff_time AT TIME ZONE 'Europe/Moscow')::date <= %s::date")
         params.append(date_to.isoformat())
     if finished is True:
-        conditions.append(f"UPPER(m.status) IN {FINISHED_STATUSES_SQL}")
+        conditions.append(f"UPPER(p.status) IN {FINISHED_STATUSES_SQL}")
     elif finished is False:
-        conditions.append(f"(m.status IS NULL OR UPPER(m.status) NOT IN {FINISHED_STATUSES_SQL})")
+        conditions.append(f"(p.status IS NULL OR UPPER(p.status) NOT IN {FINISHED_STATUSES_SQL})")
     return conditions, params
 
 
@@ -252,18 +257,15 @@ def _prediction_rows():
         return None, _bad_request(str(exc))
     rows = _read(
         f"""
-        SELECT p.match_id, p.user_id, p.tournament_id, u.username, t.name, p.home_goals,
-               p.away_goals, m.home_team, m.away_team, m.kickoff_time, m.status,
-               CASE WHEN UPPER(m.status) IN {FINISHED_STATUSES_SQL} THEN m.home_score END,
-               CASE WHEN UPPER(m.status) IN {FINISHED_STATUSES_SQL} THEN m.away_score END,
-               CASE WHEN UPPER(m.status) IN {FINISHED_STATUSES_SQL} THEN p.points END,
-               m.playoff_stage, m.league
-        FROM predictions p
-        JOIN matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
-        JOIN users u ON u.id = p.user_id
-        LEFT JOIN tournaments t ON t.id = p.tournament_id
+        SELECT p.match_id, p.user_id, p.tournament_id,
+               p.username, p.tournament_name,
+               p.predicted_home, p.predicted_away,
+               p.home_team, p.away_team, p.kickoff_time, p.status,
+               p.actual_home, p.actual_away, p.points,
+               p.stage, p.league
+        FROM gpt_safe.predictions p
         {_where(conditions)}
-        ORDER BY m.kickoff_time ASC NULLS LAST, p.user_id ASC LIMIT %s OFFSET %s
+        ORDER BY p.kickoff_time ASC NULLS LAST, p.user_id ASC LIMIT %s OFFSET %s
         """,
         tuple(params + [limit, offset]),
     )
@@ -303,13 +305,13 @@ def player_summary():
         date_from, date_to = _parse_date_range()
     except ValueError as exc:
         return _bad_request(str(exc))
-    conditions, params = [f"UPPER(m.status) IN {FINISHED_STATUSES_SQL}", "p.user_id = %s"], [user_id]
+    conditions, params = [f"UPPER(p.status) IN {FINISHED_STATUSES_SQL}", "p.user_id = %s"], [user_id]
     if tournament_id is not None:
         conditions.append("p.tournament_id = %s")
         params.append(tournament_id)
     for date_value, operator in ((date_from, ">="), (date_to, "<=")):
         if date_value is not None:
-            conditions.append(f"{MOSCOW_MATCH_DATE_SQL} {operator} %s::date")
+            conditions.append(f"(p.kickoff_time AT TIME ZONE 'Europe/Moscow')::date {operator} %s::date")
             params.append(date_value.isoformat())
     row = _read(
         f"""
@@ -318,9 +320,8 @@ def player_summary():
                COALESCE(SUM(CASE WHEN p.points = 5 THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN p.points = 7 THEN 1 ELSE 0 END), 0),
                COALESCE(SUM(CASE WHEN p.points IN (10, 11) THEN 1 ELSE 0 END), 0)
-        FROM predictions p JOIN matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
-        JOIN users u ON u.id = p.user_id
-        WHERE u.is_admin = 0 AND COALESCE(u.is_deleted, 0) = 0 AND {' AND '.join(conditions)}
+        FROM gpt_safe.predictions p
+        WHERE {' AND '.join(conditions)}
         """,
         tuple(params),
         one=True,
@@ -328,3 +329,122 @@ def player_summary():
     if row is None:
         return _database_error()
     return _response({"user_id": user_id, "matches_count": row[0], "total_points": row[1], "average_points": float(row[2]), "points_0": row[3], "points_5": row[4], "points_7": row[5], "points_10_or_11": row[6]})
+
+
+def _validate_analytics_sql(sql):
+    """Accept one read-only SELECT/CTE query for the isolated analytics schema."""
+    if not isinstance(sql, str):
+        raise ValueError("invalid_sql")
+
+    sql = sql.strip()
+    if not sql:
+        raise ValueError("invalid_sql")
+
+    if len(sql) > MAX_QUERY_CHARS:
+        raise ValueError("sql_too_long")
+
+    # Permit an optional final semicolon, but never multiple statements.
+    body = sql[:-1].rstrip() if sql.endswith(";") else sql
+    if ";" in body:
+        raise ValueError("multiple_statements_not_allowed")
+
+    first_word = body.lstrip().split(None, 1)[0].lower() if body.strip() else ""
+    if first_word not in ALLOWED_QUERY_PREFIXES:
+        raise ValueError("select_only")
+
+    lowered = body.lower()
+
+    # The database role will ultimately have SELECT only on gpt_safe views.
+    # These checks additionally stop obvious attempts to reach metadata or
+    # explicitly-qualified non-safe schemas before PostgreSQL sees the query.
+    forbidden_fragments = (
+        "information_schema",
+        "pg_catalog",
+        "pg_toast",
+        "pg_temp",
+        "public.",
+    )
+    if any(fragment in lowered for fragment in forbidden_fragments):
+        raise ValueError("unsafe_relation")
+
+    import re
+
+    forbidden_keywords = {
+        "insert", "update", "delete", "merge",
+        "create", "alter", "drop", "truncate",
+        "copy", "grant", "revoke",
+        "call", "do", "execute",
+        "reset",
+        "vacuum", "analyze", "refresh",
+        "lock", "listen", "notify",
+    }
+
+    words = set(re.findall(r"\b[a-z_]+\b", lowered))
+    if words & forbidden_keywords:
+        raise ValueError("select_only")
+
+    # PostgreSQL implicitly exposes pg_catalog even when it is not present
+    # in search_path. Block unqualified system objects such as pg_tables,
+    # pg_class, pg_roles, pg_settings, etc.
+    if re.search(r"\bpg_[a-z0-9_]*\b", lowered):
+        raise ValueError("unsafe_relation")
+
+    return body
+
+
+@gpt_api_bp.post("/query")
+@gpt_required
+def analytics_query():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _bad_request("invalid_json")
+
+    try:
+        sql = _validate_analytics_sql(payload.get("sql"))
+    except ValueError as exc:
+        return _bad_request(str(exc))
+
+    conn = cur = None
+    try:
+        conn = gpt_db.get_gpt_db()
+        cur = conn.cursor()
+
+        # Resolve unqualified names only inside the isolated safe schema.
+        cur.execute("SET LOCAL search_path = gpt_safe")
+        cur.execute(sql)
+
+        if cur.description is None:
+            return _bad_request("query_must_return_rows")
+
+        columns = [
+            item.name if hasattr(item, "name") else item[0]
+            for item in cur.description
+        ]
+
+        rows = cur.fetchmany(MAX_QUERY_ROWS + 1)
+        truncated = len(rows) > MAX_QUERY_ROWS
+        rows = rows[:MAX_QUERY_ROWS]
+
+        result = []
+        for row in rows:
+            item = {}
+            for key, value in zip(columns, row):
+                if hasattr(value, "isoformat"):
+                    value = value.isoformat()
+                item[key] = value
+            result.append(item)
+
+        return _response({
+            "rows": result,
+            "row_count": len(result),
+            "truncated": truncated,
+            "max_rows": MAX_QUERY_ROWS,
+        })
+
+    except gpt_db.GPTDatabaseUnavailable:
+        return _database_error()
+    except Exception as exc:
+        logger.warning("gpt_analytics_query_failed type=%s", type(exc).__name__)
+        return _bad_request("query_failed")
+    finally:
+        gpt_db.close_gpt_db(conn, cur)

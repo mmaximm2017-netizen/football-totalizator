@@ -224,6 +224,11 @@ def create_app():
         # Exempt by registered endpoint, not by a user-controlled path prefix.
         if request.endpoint and request.endpoint.startswith("agent_api."):
             return
+
+        # GPT API also authenticates every request with its own bearer token.
+        # POST /api/gpt/query must not depend on a browser CSRF session.
+        if request.endpoint and request.endpoint.startswith("gpt_api."):
+            return
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return
 

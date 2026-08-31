@@ -1,146 +1,342 @@
 openapi: 3.1.0
 info:
   title: TOTISH GPT Read-Only Analytics API
-  version: 2.0.0
-  description: Read-only production analytics for the TOTISH Custom GPT. All prediction values are withheld until a match deadline passes.
+  version: 3.0.0
+  description: Safe read-only production analytics for TOTISH.
+
 servers:
   - url: https://totish.ru
+
 security:
   - bearerAuth: []
+
 paths:
+
   /api/gpt/health:
     get:
       operationId: getTotishHealth
-      summary: Verify bearer authentication and the isolated read-only database.
+      summary: Check TOTISH GPT API and read-only database.
       responses:
-        '200': {description: API and read-only database state, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Service state
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/tournaments:
     get:
       operationId: listTotishTournaments
-      summary: List tournaments before requesting tournament-specific analytics.
+      summary: List tournaments.
       responses:
-        '200': {description: Tournament list}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Tournament list
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/users:
     get:
       operationId: listTotishUsers
-      summary: List non-admin, non-deleted participant identifiers and usernames.
+      summary: List TOTISH participants.
       responses:
-        '200': {description: Participant list}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Participant list
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/matches:
     get:
       operationId: listTotishMatches
-      summary: List match metadata and actual scores using Moscow calendar dates.
+      summary: List matches with optional filters.
       parameters:
-        - {$ref: '#/components/parameters/MatchId'}
-        - {$ref: '#/components/parameters/TournamentId'}
-        - {$ref: '#/components/parameters/DateFrom'}
-        - {$ref: '#/components/parameters/DateTo'}
-        - {$ref: '#/components/parameters/Finished'}
-        - {$ref: '#/components/parameters/Status'}
-        - {$ref: '#/components/parameters/Team'}
-        - {$ref: '#/components/parameters/Limit'}
-        - {$ref: '#/components/parameters/Offset'}
+        - name: match_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: finished
+          in: query
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: team
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
       responses:
-        '200': {description: Paginated matches}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Match list
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/predictions:
     get:
       operationId: listTotishPredictions
-      summary: List prediction records after their deadlines. Actual scores and stored points exist only for finished matches.
+      summary: List safe prediction records after their deadlines.
       parameters:
-        - {$ref: '#/components/parameters/MatchId'}
-        - {$ref: '#/components/parameters/UserId'}
-        - {$ref: '#/components/parameters/TournamentId'}
-        - {$ref: '#/components/parameters/DateFrom'}
-        - {$ref: '#/components/parameters/DateTo'}
-        - {$ref: '#/components/parameters/Finished'}
-        - {$ref: '#/components/parameters/Limit'}
-        - {$ref: '#/components/parameters/Offset'}
+        - name: match_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: finished
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
       responses:
-        '200': {description: Paginated safe prediction records}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Prediction list
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/analytics/predictions:
     get:
       operationId: getTotishAnalyticsPredictions
-      summary: Get the flat one-row-per-player-per-match dataset for historical comparisons, exact point distributions, streaks, teams, and head-to-head analysis.
+      summary: Get flat historical prediction data for fallback analysis.
       parameters:
-        - {$ref: '#/components/parameters/MatchId'}
-        - {$ref: '#/components/parameters/UserId'}
-        - {$ref: '#/components/parameters/TournamentId'}
-        - {$ref: '#/components/parameters/DateFrom'}
-        - {$ref: '#/components/parameters/DateTo'}
-        - {$ref: '#/components/parameters/Finished'}
-        - {$ref: '#/components/parameters/Limit'}
-        - {$ref: '#/components/parameters/Offset'}
+        - name: match_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: finished
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
       responses:
-        '200': {description: Paginated analytics dataset}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Historical prediction data
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/analytics/player-summary:
     get:
       operationId: getTotishPlayerStats
-      summary: Get a finished-match summary with exact 0, 5, 7, and 10-or-11 point counts for one participant.
+      summary: Get stored finished-match statistics for one participant.
       parameters:
-        - {$ref: '#/components/parameters/UserIdRequired'}
-        - {$ref: '#/components/parameters/TournamentId'}
-        - {$ref: '#/components/parameters/DateFrom'}
-        - {$ref: '#/components/parameters/DateTo'}
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
       responses:
-        '200': {description: Player summary}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Player statistics
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
   /api/gpt/player-stats:
     get:
       operationId: getLegacyTotishPlayerStats
       deprecated: true
-      summary: Backward-compatible alias for getTotishPlayerStats.
+      summary: Legacy alias for participant statistics.
       parameters:
-        - {$ref: '#/components/parameters/UserIdRequired'}
-        - {$ref: '#/components/parameters/TournamentId'}
-        - {$ref: '#/components/parameters/DateFrom'}
-        - {$ref: '#/components/parameters/DateTo'}
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: tournament_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
       responses:
-        '200': {description: Player summary}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '503': {$ref: '#/components/responses/Unavailable'}
+        '200':
+          description: Player statistics
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
+  /api/gpt/query:
+    post:
+      operationId: runTotishQuery
+      summary: Run one safe read-only PostgreSQL analytics query.
+      description: >
+        Preferred action for non-trivial analytics. PostgreSQL performs the
+        aggregation and comparison directly. Queries may use only the safe
+        relations users, tournaments, matches and predictions. Future prediction
+        rows are physically absent from predictions until their deadline.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sql
+              additionalProperties: false
+              properties:
+                sql:
+                  type: string
+                  maxLength: 12000
+                  description: >
+                    One SELECT or WITH...SELECT PostgreSQL query. Use only
+                    users, tournaments, matches and predictions from the
+                    isolated gpt_safe search path.
+      responses:
+        '200':
+          description: Query result, maximum 500 rows
+        '400':
+          description: Invalid, unsafe or failed query
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service unavailable
+
 components:
+  schemas: {}
   securitySchemes:
-    bearerAuth: {type: http, scheme: bearer}
-  responses:
-    BadRequest: {description: Invalid bounded filter or pagination parameter}
-    Unauthorized: {description: Missing or invalid Bearer token}
-    Unavailable: {description: Isolated read-only database unavailable}
-  parameters:
-    MatchId: {name: match_id, in: query, schema: {type: integer, minimum: 1}}
-    UserId: {name: user_id, in: query, schema: {type: integer, minimum: 1}}
-    UserIdRequired: {name: user_id, in: query, required: true, schema: {type: integer, minimum: 1}}
-    TournamentId: {name: tournament_id, in: query, schema: {type: integer, minimum: 1}}
-    DateFrom: {name: date_from, in: query, description: Inclusive Moscow date YYYY-MM-DD, schema: {type: string, format: date}}
-    DateTo: {name: date_to, in: query, description: Inclusive Moscow date YYYY-MM-DD, schema: {type: string, format: date}}
-    Finished: {name: finished, in: query, schema: {type: boolean}}
-    Status: {name: status, in: query, schema: {type: string, maxLength: 64}}
-    Team: {name: team, in: query, schema: {type: string, maxLength: 100}}
-    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
-    Offset: {name: offset, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
-  schemas:
-    Health:
-      type: object
-      required: [ok, service, database, read_only]
-      properties:
-        ok: {type: boolean, const: true}
-        service: {type: string, const: totish-gpt-api}
-        database: {type: string, const: ok}
-        read_only: {type: boolean, const: true}
+    bearerAuth:
+      type: http
+      scheme: bearer
