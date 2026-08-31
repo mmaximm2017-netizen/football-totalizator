@@ -93,7 +93,9 @@ def test_users_exclude_sensitive_fields_and_use_gpt_connection(client, monkeypat
 
     assert response.get_json() == {"users": [{"user_id": 7, "username": "Игрок"}]}
     query = cur.execute.call_args.args[0].lower()
+    assert "from gpt_safe.users" in query
     assert "password" not in query and "last_seen" not in query
+    assert "public." not in query
     assert conn.commit.called is False
 
 
@@ -106,7 +108,9 @@ def test_matches_supports_bounded_filters_and_moscow_dates(client, monkeypatch):
     assert response.get_json()["matches"][0]["kickoff_time"] == "2026-08-01T21:30:00+00:00"
     query, params = cur.execute.call_args.args
     assert "AT TIME ZONE 'Europe/Moscow'" in query
+    assert "FROM gpt_safe.matches m" in query
     assert "m.status = %s" in query
+    assert "public." not in query
     assert params[-2:] == (2, 1)
 
 
@@ -122,7 +126,8 @@ def test_prediction_values_are_withheld_before_deadline(client, monkeypatch):
 
     assert response.status_code == 200
     query = cur.execute.call_args.args[0]
-    assert "m.deadline <= CURRENT_TIMESTAMP" in query
+    assert "FROM gpt_safe.predictions p" in query
+    assert "public." not in query
     assert response.get_json()["predictions"] == []
 
 
@@ -136,7 +141,11 @@ def test_predictions_and_raw_analytics_return_finished_stored_points(client, mon
     item = response.get_json()["analytics_predictions"][0]
     assert item["predicted_home"] == 1 and item["actual_home"] == 2 and item["points"] == 5
     assert item["tournament_name"] == "РПЛ"
-    assert "CASE WHEN UPPER(m.status)" in cur.execute.call_args.args[0]
+    query = cur.execute.call_args.args[0]
+    assert "FROM gpt_safe.predictions p" in query
+    assert "p.actual_home" in query
+    assert "p.points" in query
+    assert "public." not in query
 
 
 def test_player_summary_uses_stored_exact_point_values(client, monkeypatch):
@@ -164,7 +173,141 @@ def test_openapi_documents_every_gpt_route():
         "/api/gpt/analytics/predictions",
         "/api/gpt/analytics/player-summary",
         "/api/gpt/player-stats",
+        "/api/gpt/query",
     }
 
     assert all(path in specification for path in documented_paths)
     assert "https://totish.ru" in specification
+
+
+def test_universal_query_requires_bearer_auth(client):
+    response = client.post(
+        "/api/gpt/query",
+        json={"sql": "SELECT username FROM users"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_universal_query_executes_select_inside_safe_schema(client, monkeypatch):
+    conn, cur = mock_gpt_db(monkeypatch)
+    cur.description = [("username",), ("total_points",)]
+    cur.fetchmany.return_value = [
+        ("Макс Зенит", 100),
+        ("Byza-Zenit", 95),
+    ]
+
+    response = client.post(
+        "/api/gpt/query",
+        headers=auth(),
+        json={
+            "sql": """
+                SELECT username, SUM(points) AS total_points
+                FROM predictions
+                GROUP BY username
+                ORDER BY total_points DESC
+            """
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "rows": [
+            {"username": "Макс Зенит", "total_points": 100},
+            {"username": "Byza-Zenit", "total_points": 95},
+        ],
+        "row_count": 2,
+        "truncated": False,
+        "max_rows": 500,
+    }
+
+    calls = cur.execute.call_args_list
+    assert calls[0].args == ("SET LOCAL search_path = gpt_safe",)
+    assert "SELECT username" in calls[1].args[0]
+    conn.commit.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("sql", "expected_error"),
+    (
+        ("INSERT INTO users VALUES (1)", "select_only"),
+        ("UPDATE users SET username = 'x'", "select_only"),
+        ("DELETE FROM users", "select_only"),
+        ("DROP TABLE users", "select_only"),
+        ("SELECT 1; SELECT 2", "multiple_statements_not_allowed"),
+        ("SELECT * FROM public.users", "unsafe_relation"),
+        ("SELECT * FROM information_schema.tables", "unsafe_relation"),
+        ("SELECT * FROM pg_catalog.pg_tables", "unsafe_relation"),
+        ("SELECT * FROM pg_tables", "unsafe_relation"),
+        ("SELECT * FROM pg_class", "unsafe_relation"),
+        ("SELECT * FROM pg_roles", "unsafe_relation"),
+        ("WITH x AS (DELETE FROM predictions RETURNING *) SELECT * FROM x", "select_only"),
+    ),
+)
+def test_universal_query_rejects_unsafe_sql(client, sql, expected_error):
+    response = client.post(
+        "/api/gpt/query",
+        headers=auth(),
+        json={"sql": sql},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == expected_error
+
+
+def test_universal_query_accepts_cte_select(client, monkeypatch):
+    _, cur = mock_gpt_db(monkeypatch)
+    cur.description = [("username",)]
+    cur.fetchmany.return_value = [("Макс Зенит",)]
+
+    response = client.post(
+        "/api/gpt/query",
+        headers=auth(),
+        json={
+            "sql": """
+                WITH leaders AS (
+                    SELECT username, SUM(points) AS total_points
+                    FROM predictions
+                    GROUP BY username
+                )
+                SELECT username
+                FROM leaders
+                ORDER BY total_points DESC
+                LIMIT 1
+            """
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["rows"] == [{"username": "Макс Зенит"}]
+
+
+def test_universal_query_caps_result_at_500_rows(client, monkeypatch):
+    _, cur = mock_gpt_db(monkeypatch)
+    cur.description = [("value",)]
+    cur.fetchmany.return_value = [(i,) for i in range(501)]
+
+    response = client.post(
+        "/api/gpt/query",
+        headers=auth(),
+        json={"sql": "SELECT 1 AS value FROM predictions"},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["row_count"] == 500
+    assert payload["truncated"] is True
+    assert len(payload["rows"]) == 500
+    cur.fetchmany.assert_called_once_with(501)
+
+
+def test_universal_query_rejects_invalid_json(client):
+    response = client.post(
+        "/api/gpt/query",
+        headers=auth(),
+        data="not-json",
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "invalid_json"
