@@ -4,7 +4,6 @@ import types
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 RANKING_PATH = ROOT / "app" / "services" / "ranking_service.py"
 
@@ -149,6 +148,46 @@ class RankingMovementTests(unittest.TestCase):
         self.assertIn("UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')", cur.query)
         self.assertIn("m.kickoff_time <= NOW()", cur.query)
         self.assertIn("m.id <> %s", cur.query)
+
+    def test_finished_ranking_uses_one_combined_current_previous_aggregate(self):
+        class Cursor:
+            def __init__(self):
+                self.queries = []
+                self.one_rows = iter([(1,), (42,)])
+
+            def execute(self, query, params):
+                self.queries.append((query, params))
+
+            def fetchone(self):
+                return next(self.one_rows)
+
+            def fetchall(self):
+                return [
+                    (1, "alpha", 10, 1, 0, 0, 1, 1, 2),
+                    (2, "beta", 8, 0, 1, 0, 2, 1, 1),
+                ]
+
+        class Connection:
+            def __init__(self, cursor):
+                self.cursor_value = cursor
+
+            def cursor(self):
+                return self.cursor_value
+
+        cur = Cursor()
+        original_get_db, original_close_db = ranking.get_db, ranking.close_db
+        ranking.get_db = lambda: Connection(cur)
+        ranking.close_db = lambda conn, cursor: None
+        try:
+            result = ranking.get_tournament_ranking(7)
+        finally:
+            ranking.get_db, ranking.close_db = original_get_db, original_close_db
+
+        self.assertEqual(len(cur.queries), 3)
+        self.assertIn("previous_place_rank", cur.queries[2][0])
+        self.assertEqual(result[0]["movement"], "up")
+        self.assertEqual(result[1]["movement"], "down")
+        self.assertNotIn("previous_place", result[0])
 
     def leader_status_for_gap(self, gap):
         ranking_rows = [row(1, 1, 100), row(2, 2, 100 - gap)]

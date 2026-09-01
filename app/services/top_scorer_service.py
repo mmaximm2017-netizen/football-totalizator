@@ -65,11 +65,11 @@ def get_tournament_top_scorers(tournament_id, cur=None):
             SELECT
                 u.id,
                 u.username,
-                p.home_goals,
-                p.away_goals,
-                m.home_score,
-                m.away_score,
-                COALESCE(p.points, 0)
+                COUNT(*) FILTER (
+                    WHERE p.home_goals = m.home_score
+                      AND p.away_goals = m.away_score
+                ) AS scorer_goals,
+                COALESCE(SUM(p.points), 0) AS points
             FROM predictions p
             JOIN users u ON u.id = p.user_id
             JOIN matches m ON m.id = p.match_id
@@ -83,24 +83,22 @@ def get_tournament_top_scorers(tournament_id, cur=None):
               AND m.away_score IS NOT NULL
               AND p.home_goals IS NOT NULL
               AND p.away_goals IS NOT NULL
+            GROUP BY u.id, u.username
+            HAVING COUNT(*) FILTER (
+                WHERE p.home_goals = m.home_score
+                  AND p.away_goals = m.away_score
+            ) > 0
+            ORDER BY scorer_goals DESC, points DESC, u.username ASC
             """,
             (tournament_id, tournament_is_active, list(FINISHED_STATUSES)),
         )
-
-        rows = [
-            {
-                "user_id": row[0],
-                "username": row[1],
-                "pred_home": row[2],
-                "pred_away": row[3],
-                "home_score": row[4],
-                "away_score": row[5],
-                "points": row[6],
-            }
+        scorers = [
+            {"user_id": row[0], "username": row[1], "scorer_goals": row[2], "points": row[3]}
             for row in cur.fetchall()
         ]
-
-        return build_top_scorers(rows)
+        for index, scorer in enumerate(scorers, start=1):
+            scorer["place"] = index
+        return scorers
     finally:
         if conn is not None:
             close_db(conn, cur)

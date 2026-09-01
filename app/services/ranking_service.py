@@ -1,4 +1,4 @@
-from app.db import get_db, close_db
+from app.db import close_db, get_db
 
 
 def apply_rank_movements(current_ranking, previous_ranking, has_finished_match=True):
@@ -211,6 +211,74 @@ def _fetch_latest_played_finished_match_id(cur, tournament_id):
     return row[0] if row else None
 
 
+def _fetch_ranking_with_previous(cur, tournament_id, tournament_is_active, latest_match_id):
+    """Aggregate current and pre-latest standings in one tournament scan."""
+    cur.execute(
+        """
+        WITH player_scores AS (
+            SELECT
+                u.id AS user_id,
+                u.username,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL THEN p.points ELSE 0 END), 0) AS total_points,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points >= 10 THEN 1 ELSE 0 END), 0) AS exact_scores,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS exact_diffs,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND p.points = 3 THEN 1 ELSE 0 END), 0) AS outcomes,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND m.id <> %s THEN p.points ELSE 0 END), 0) AS previous_points,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND m.id <> %s AND p.points >= 10 THEN 1 ELSE 0 END), 0) AS previous_exact_scores,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND m.id <> %s AND p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0) AS previous_exact_diffs,
+                COALESCE(SUM(CASE WHEN m.id IS NOT NULL AND m.id <> %s AND p.points = 3 THEN 1 ELSE 0 END), 0) AS previous_outcomes
+            FROM users u
+            LEFT JOIN predictions p
+                ON p.user_id = u.id
+                AND p.tournament_id = %s
+            LEFT JOIN matches m
+                ON m.id = p.match_id
+                AND m.tournament_id = p.tournament_id
+                AND UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
+                AND m.kickoff_time <= NOW()
+            WHERE u.is_admin = 0
+              AND (%s = FALSE OR COALESCE(u.is_deleted, 0) = 0)
+            GROUP BY u.id, u.username
+        ),
+        ranked AS (
+            SELECT
+                *,
+                RANK() OVER (ORDER BY total_points DESC, exact_scores DESC, exact_diffs DESC, outcomes DESC, username ASC) AS place_rank,
+                RANK() OVER (ORDER BY previous_points DESC, previous_exact_scores DESC, previous_exact_diffs DESC, previous_outcomes DESC, username ASC) AS previous_place_rank
+            FROM player_scores
+        )
+        SELECT
+            user_id, username, total_points, exact_scores, exact_diffs, outcomes,
+            place_rank, COUNT(*) OVER (PARTITION BY place_rank) AS shared_count,
+            previous_place_rank
+        FROM ranked
+        ORDER BY total_points DESC, exact_scores DESC, exact_diffs DESC, outcomes DESC, username ASC
+        """,
+        (
+            latest_match_id,
+            latest_match_id,
+            latest_match_id,
+            latest_match_id,
+            tournament_id,
+            tournament_is_active,
+        ),
+    )
+    return [
+        {
+            "user_id": row[0],
+            "username": row[1],
+            "points": row[2] or 0,
+            "exact_scores": row[3] or 0,
+            "exact_diffs": row[4] or 0,
+            "outcomes": row[5] or 0,
+            "place": row[6],
+            "shared": (row[7] or 0) > 1,
+            "previous_place": row[8],
+        }
+        for row in cur.fetchall()
+    ]
+
+
 def get_tournament_ranking(tournament_id):
     """
     Canonical ranking logic for leaderboard/profile.
@@ -238,21 +306,24 @@ def get_tournament_ranking(tournament_id):
         tournament = cur.fetchone()
         tournament_is_active = bool(tournament and tournament[0])
 
-        current_ranking = _fetch_ranking(cur, tournament_id, tournament_is_active)
-
         last_finished_match_id = _fetch_latest_played_finished_match_id(cur, tournament_id)
 
         if not last_finished_match_id:
+            current_ranking = _fetch_ranking(cur, tournament_id, tournament_is_active)
             return apply_leader_status(
                 apply_rank_movements(current_ranking, [], has_finished_match=False)
             )
 
-        previous_ranking = _fetch_ranking(
+        current_ranking = _fetch_ranking_with_previous(
             cur,
             tournament_id,
             tournament_is_active,
-            exclude_match_id=last_finished_match_id,
+            latest_match_id=last_finished_match_id,
         )
+        previous_ranking = [
+            {"user_id": row["user_id"], "place": row.pop("previous_place")}
+            for row in current_ranking
+        ]
 
         return apply_leader_status(apply_rank_movements(current_ranking, previous_ranking))
     finally:

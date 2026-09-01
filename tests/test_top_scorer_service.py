@@ -4,7 +4,6 @@ import types
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE_PATH = ROOT / "app" / "services" / "top_scorer_service.py"
 
@@ -105,6 +104,47 @@ class TopScorerServiceTests(unittest.TestCase):
         result = top_scorers.build_top_scorers(rows)
 
         self.assertEqual([row["username"] for row in result], ["Anton", "Boris"])
+
+    def test_database_query_aggregates_and_orders_scorers_before_fetchall(self):
+        class Cursor:
+            def __init__(self):
+                self.queries = []
+                self.one_rows = iter([(1,)])
+
+            def execute(self, query, params):
+                self.queries.append((query, params))
+
+            def fetchone(self):
+                return next(self.one_rows)
+
+            def fetchall(self):
+                return [(2, "Boris", 2, 23), (1, "Anton", 1, 10)]
+
+        class Connection:
+            def __init__(self, cursor):
+                self.cursor_value = cursor
+
+            def cursor(self):
+                return self.cursor_value
+
+        cursor = Cursor()
+        original_get_db, original_close_db = top_scorers.get_db, top_scorers.close_db
+        top_scorers.get_db = lambda: Connection(cursor)
+        top_scorers.close_db = lambda conn, cur: None
+        try:
+            result = top_scorers.get_tournament_top_scorers(7)
+        finally:
+            top_scorers.get_db, top_scorers.close_db = original_get_db, original_close_db
+
+        query, params = cursor.queries[1]
+        self.assertIn("GROUP BY u.id, u.username", query)
+        self.assertIn("HAVING COUNT(*) FILTER", query)
+        self.assertIn("ORDER BY scorer_goals DESC, points DESC, u.username ASC", query)
+        self.assertEqual(params[0], 7)
+        self.assertEqual(result, [
+            {"user_id": 2, "username": "Boris", "scorer_goals": 2, "points": 23, "place": 1},
+            {"user_id": 1, "username": "Anton", "scorer_goals": 1, "points": 10, "place": 2},
+        ])
 
 
 if __name__ == "__main__":
