@@ -11,6 +11,10 @@ from flask import (
 )
 
 from app.db import close_db, get_db
+from app.services.profile_stats_service import (
+    ProfileStatsIntegrityError,
+    get_profile_stats,
+)
 from app.services.ranking_service import get_tournament_ranking
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
@@ -21,7 +25,6 @@ from app.services.tournament_service import (
     get_tournament_by_id,
 )
 from app.utils import get_club_logo, get_flag
-
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -262,4 +265,59 @@ def profile():
         current_tournament_id=tournament_id,
         current_tournament_name=current_tournament_name,
         position_metric=position_metric,
+    )
+
+
+@profile_bp.route('/profile/stats')
+def profile_stats():
+    uid = session.get('user_id')
+    if not uid:
+        flash("Сессия не найдена", "error")
+        return redirect(url_for('auth.login'))
+
+    all_tournaments = get_all_tournaments()
+    active_tournaments = [t for t in all_tournaments if t.get("is_active")]
+    tournament_state = get_tournament_state_flags(all_tournaments)
+    tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
+    if not tournament_id:
+        flash("Активный турнир не найден", "error")
+        return redirect(url_for('table.table'))
+
+    selected_tournament = get_tournament_by_id(tournament_id)
+    ranking = get_tournament_ranking(tournament_id)
+    user_row = next((row for row in ranking if str(row.get("user_id")) == str(uid)), None)
+
+    conn = cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT username FROM users WHERE id = %s AND COALESCE(is_deleted, 0) = 0",
+            (uid,),
+        )
+        row = cur.fetchone()
+    finally:
+        if conn is not None:
+            close_db(conn, cur)
+    if not row:
+        flash("Пользователь не найден", "error")
+        return redirect(url_for('auth.login'))
+
+    try:
+        stats = get_profile_stats(uid, tournament_id)
+    except ProfileStatsIntegrityError:
+        flash("Статистика временно недоступна: обнаружены некорректные данные очков", "error")
+        return redirect(url_for('profile.profile', tid=tournament_id))
+
+    return render_template(
+        'profile_stats.html',
+        username=row[0],
+        stats=stats,
+        current_place=user_row['place'] if user_row else None,
+        tournaments=all_tournaments,
+        active_tournaments=active_tournaments,
+        **tournament_state,
+        current_tournament_id=tournament_id,
+        current_tournament_name=selected_tournament['name'] if selected_tournament else 'Турнир',
+        is_own_profile=True,
     )

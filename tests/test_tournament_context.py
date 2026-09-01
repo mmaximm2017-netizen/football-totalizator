@@ -270,7 +270,7 @@ class BaseTournamentThemeTests(unittest.TestCase):
         self.assertIn('href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
         self.assertIn("profile_subject_username|urlencode", source)
         self.assertIn("is_own_profile|default(true)", source)
-        self.assertIn("request.path == '/profile' and (is_own_profile|default(false))", source)
+        self.assertIn("request.path in ['/profile', '/profile/stats'] and (is_own_profile|default(false))", source)
         self.assertNotIn('{% set current_tid', source)
 
 

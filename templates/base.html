@@ -1496,7 +1496,7 @@ body {
             {% set current_archive.value = true %}
         {% endif %}
     {% endfor %}
-    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/')) %}
+    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile/stats' if request.path == '/profile/stats' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/'))) %}
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -1582,7 +1582,7 @@ body {
         {% else %}
         <a
             href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
-            class="{% if request.path == '/profile' and (is_own_profile|default(false)) %}active{% endif %}"
+            class="{% if request.path in ['/profile', '/profile/stats'] and (is_own_profile|default(false)) %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Профиль
@@ -1687,7 +1687,7 @@ body {
         });
 
         (function persistTournamentSelection() {
-            const tournamentPages = new Set(['/', '/table', '/profile', '/my-predictions']);
+            const tournamentPages = new Set(['/', '/table', '/profile', '/profile/stats', '/my-predictions']);
             const path = window.location.pathname;
             if (!tournamentPages.has(path)) return;
 

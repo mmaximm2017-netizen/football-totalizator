@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .profile-stats-screen { display: grid; gap: 14px; min-width: 0; }
+    .profile-stats-hero, .profile-stats-card {
+        border: 1px solid rgba(255,255,255,0.58);
+        border-radius: 24px;
+        padding: 17px;
+        background: linear-gradient(160deg, rgba(255,255,255,0.86), rgba(232,246,255,0.66));
+        box-shadow: 0 12px 30px rgba(0,78,140,0.11), inset 0 1px 0 rgba(255,255,255,0.48);
+    }
+    .profile-stats-hero { padding: 19px 16px; }
+    .profile-stats-kicker { color: #5d7894; font-size: 12px; font-weight: 800; }
+    .profile-stats-title { margin-top: 5px; color: #063b73; font-size: 27px; font-weight: 1000; line-height: 1.08; }
+    .profile-stats-subtitle { margin-top: 8px; color: #5d7894; font-size: 13px; font-weight: 700; }
+    .profile-stats-place { display: inline-flex; margin-top: 14px; padding: 8px 13px; border: 1px solid rgba(0,119,200,0.18); border-radius: var(--radius-round); background: rgba(0,119,200,0.10); color: #0077c8; font-size: 14px; font-weight: 1000; }
+    .profile-stats-title-small { margin-bottom: 13px; color: #063b73; font-size: 18px; font-weight: 1000; }
+    .profile-stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .profile-stats-metric { min-width: 0; padding: 13px 11px; border: 1px solid rgba(0,119,200,0.10); border-radius: 16px; background: rgba(255,255,255,0.50); text-align: center; }
+    .profile-stats-value { color: #0077c8; font-size: 25px; font-weight: 1000; line-height: 1; overflow-wrap: anywhere; }
+    .profile-stats-label { margin-top: 7px; color: #5d7894; font-size: 11px; font-weight: 800; line-height: 1.25; }
+    .bucket-list { display: grid; gap: 10px; }
+    .bucket-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 34px; align-items: center; gap: 9px; color: #063b73; font-size: 13px; font-weight: 900; }
+    .bucket-track { height: 10px; overflow: hidden; border-radius: var(--radius-round); background: rgba(0,119,200,0.10); }
+    .bucket-fill { display: block; width: var(--bucket-width); min-width: var(--bucket-min-width, 0); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0077c8, #2aa8ff); }
+    .form-points { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+    .form-point { min-height: 40px; display: grid; place-items: center; border: 1px solid rgba(0,119,200,0.12); border-radius: 12px; background: rgba(255,255,255,0.50); color: #063b73; font-size: 14px; font-weight: 1000; }
+    .form-point-good { color: #2e7d32; }
+    .form-point-zero { color: #5d7894; }
+    .form-caption, .profile-stats-empty { margin-top: 12px; color: #5d7894; font-size: 12px; font-weight: 700; line-height: 1.35; }
+    .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .comparison-value { margin-top: 5px; color: #0077c8; font-size: 23px; font-weight: 1000; }
+    .comparison-delta { margin-top: 12px; color: #063b73; font-size: 14px; font-weight: 1000; text-align: center; }
+    .profile-stats-back { min-height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: linear-gradient(135deg, #0077c8, var(--wc-accent-blue)); color: #fff; font-size: 15px; font-weight: 1000; text-decoration: none; box-shadow: 0 14px 30px rgba(0,119,200,0.22); }
+    body.tournament-wc2026 .profile-stats-hero, body.tournament-wc2026 .profile-stats-card,
+    body.tournament-rpl .profile-stats-hero, body.tournament-rpl .profile-stats-card,
+    body.tournament-rcup .profile-stats-hero, body.tournament-rcup .profile-stats-card { color: var(--text-main); }
+    body.tournament-wc2026 .profile-stats-hero, body.tournament-wc2026 .profile-stats-card { background: linear-gradient(150deg, var(--wc-bg-gradient-start), var(--wc-bg-gradient-end)); border-color: var(--wc-border-light); }
+    body.tournament-rpl .profile-stats-hero, body.tournament-rpl .profile-stats-card { background: rgba(255,255,255,0.92); border-color: rgba(0,102,214,0.18); }
+    body.tournament-rcup .profile-stats-hero, body.tournament-rcup .profile-stats-card { background: #310027; border-color: rgba(232,0,36,0.56); }
+    body.tournament-wc2026 .profile-stats-title, body.tournament-wc2026 .profile-stats-title-small,
+    body.tournament-rcup .profile-stats-title, body.tournament-rcup .profile-stats-title-small { color: #fff; }
+    body.tournament-wc2026 .profile-stats-subtitle, body.tournament-wc2026 .profile-stats-kicker,
+    body.tournament-rcup .profile-stats-subtitle, body.tournament-rcup .profile-stats-kicker { color: rgba(255,255,255,0.72); }
+    body.tournament-rcup .profile-stats-label, body.tournament-rcup .form-caption,
+    body.tournament-rcup .profile-stats-empty { color: rgba(255,255,255,0.72); }
+    body.tournament-rcup .profile-stats-metric, body.tournament-rcup .form-point { background: #3A0A32; border-color: rgba(232,0,36,0.34); }
+    body.tournament-rcup .profile-stats-value, body.tournament-rcup .comparison-value,
+    body.tournament-rcup .form-point, body.tournament-rcup .bucket-row,
+    body.tournament-rcup .comparison-delta { color: #fff; }
+    body.tournament-wc2026 .profile-stats-back, body.tournament-rcup .profile-stats-back { background: #E80024; }
+    body.tournament-rpl .profile-stats-back { background: #0066d6; }
+    @media (max-width: 390px) { .profile-stats-title { font-size: 23px; } .form-points { gap: 4px; } .form-point { min-height: 36px; font-size: 12px; } }
+</style>
+
+<div class="profile-stats-screen">
+    <section class="profile-stats-hero">
+        <div class="profile-stats-kicker">👤 {{ username }} · {{ current_tournament_name }}</div>
+        <h1 class="profile-stats-title">Расширенная статистика</h1>
+        <div class="profile-stats-subtitle">Только завершённые матчи и сделанные прогнозы</div>
+        {% if current_place %}<div class="profile-stats-place">🏆 {{ current_place }} место</div>{% endif %}
+    </section>
+
+    <section class="profile-stats-card">
+        <h2 class="profile-stats-title-small">Краткая сводка</h2>
+        <div class="profile-stats-grid">
+            <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.total_points }}</div><div class="profile-stats-label">Всего очков</div></div>
+            <div class="profile-stats-metric"><div class="profile-stats-value">{{ ('%.1f'|format(stats.percentage)).replace('.', ',') }}%</div><div class="profile-stats-label">От максимума</div></div>
+            <div class="profile-stats-metric"><div class="profile-stats-value">{{ ('%.1f'|format(stats.average_points)).replace('.', ',') }}</div><div class="profile-stats-label">Средний балл</div></div>
+            <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.submitted_count }}</div><div class="profile-stats-label">Прогнозов на завершённые матчи</div></div>
+        </div>
+    </section>
+
+    <section class="profile-stats-card">
+        <h2 class="profile-stats-title-small">Распределение очков</h2>
+        <div class="bucket-list">
+            {% for bucket in stats.buckets %}
+            <div class="bucket-row"><span>{{ bucket.points }}</span><span class="bucket-track"><span class="bucket-fill" style="--bucket-width: {{ bucket.percent }}%;{% if bucket.count %} --bucket-min-width: 8px;{% endif %}"></span></span><strong>{{ bucket.count }}</strong></div>
+            {% endfor %}
+        </div>
+        <p class="form-caption">Только реально сделанные прогнозы: {{ stats.submitted_count }}.</p>
+    </section>
+
+    <section class="profile-stats-card">
+        <h2 class="profile-stats-title-small">Форма: последние прогнозы</h2>
+        {% if stats.recent_points %}
+        <div class="form-points" aria-label="От более старого к более новому">
+            {% for points in stats.recent_points %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}
+        </div>
+        <p class="form-caption">Порядок: от более старого к более новому.</p>
+        {% if stats.comparison %}
+        <div class="comparison-grid">
+            <div class="profile-stats-metric"><div class="profile-stats-label">Последние 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.latest_five }}</div></div>
+            <div class="profile-stats-metric"><div class="profile-stats-label">5 прогнозов перед ними</div><div class="comparison-value">{{ stats.comparison.previous_five }}</div></div>
+        </div>
+        <div class="comparison-delta">{% if stats.comparison.difference > 0 %}+{% endif %}{{ stats.comparison.difference }} очков</div>
+        <p class="form-caption">Сравнение двух последних отрезков по 5 прогнозов.</p>
+        {% else %}
+        <p class="form-caption">Сравнение появится после 10 завершённых прогнозов.</p>
+        {% endif %}
+        {% else %}<div class="profile-stats-empty">Пока нет завершённых прогнозов.</div>{% endif %}
+    </section>
+
+    <a class="profile-stats-back" href="{{ url_for('profile.profile', tid=current_tournament_id) }}">← Вернуться в профиль</a>
+</div>
+{% endblock %}
