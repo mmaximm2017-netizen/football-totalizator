@@ -49,19 +49,7 @@ class TopScorerPlayerParser(HTMLParser):
 
 class TableContentUiTests(unittest.TestCase):
     def setUp(self):
-        self.template = (
-            (ROOT / "templates" / "table_content.html").read_text(encoding="utf-8")
-            + (ROOT / "static" / "css" / "table-content.css").read_text(encoding="utf-8")
-        )
-
-    def test_table_page_loads_extracted_assets_with_cache_busting(self):
-        page = (ROOT / "templates" / "table.html").read_text(encoding="utf-8")
-
-        self.assertIn("css/table-page.css", page)
-        self.assertIn("css/table-content.css", page)
-        self.assertIn("js/table-page.js", page)
-        self.assertIn("20260901-table-assets", page)
-        self.assertNotIn("<style>", page)
+        self.template = (ROOT / "templates" / "table_content.html").read_text(encoding="utf-8")
 
     def test_all_leader_and_outsider_statuses_remain_in_markup(self):
         for text in (
@@ -293,7 +281,7 @@ class TableContentUiTests(unittest.TestCase):
             "denis-05.webp",
         ):
             self.assertEqual(rpl_html.count(f"/static/scorers/{photo}"), 1)
-        self.assertIn(".top-scorer-photo {\n        display: block;\n        width: 64px;\n        height: 64px;", self.template)
+        self.assertIn(".top-scorer-photo {\n        display: block;\n        width: 64px;\n        height: 64px;", rpl_html)
         self.assertNotIn('Без фото</span>\n                            <span class="top-scorer-photos"', rpl_html)
 
         cup_parser = TopScorerPlayerParser()

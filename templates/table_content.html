@@ -1,3 +1,2308 @@
+<style>
+    .table-shell {
+        overflow-x: auto;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-top: 16px;
+        background: #fff;
+    }
+
+    .standings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        background: #fff;
+        table-layout: fixed;
+    }
+
+    .standings-table thead tr {
+        background: #263238;
+        color: #fff;
+    }
+
+    .standings-table th {
+        padding: 12px 8px;
+        color: #fff !important;
+        background: #263238;
+    }
+
+    .standings-table th:first-child {
+        text-align: center;
+        width: 54px;
+        border-radius: 12px 0 0 0;
+    }
+
+    .standings-table th:nth-child(2) {
+        text-align: left;
+    }
+
+    .standings-table th:last-child {
+        text-align: center;
+        width: 72px;
+        border-radius: 0 12px 0 0;
+    }
+
+    .player-row {
+        border-bottom: 1px solid #eee;
+    }
+
+    .player-row td:first-child {
+        text-align: center;
+        padding: 14px 8px;
+        width: 54px;
+    }
+
+    .player-row td:nth-child(2) {
+        padding: 14px 8px;
+        min-width: 0;
+    }
+
+    .player-row td:last-child {
+        text-align: center;
+        padding: 14px 8px;
+        width: 72px;
+        white-space: nowrap;
+    }
+
+    .player-line {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        width: 100%;
+        white-space: nowrap;
+    }
+
+    .place-box {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    .player-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+        font-size: 14px;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .rank-movement {
+        display: inline-flex;
+        align-items: center;
+        flex: 0 0 auto;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .rank-movement.up {
+        color: #39ff88;
+        text-shadow: 0 0 8px rgba(57,255,136,0.34);
+    }
+
+    .rank-movement.down {
+        color: #ff4d5e;
+        text-shadow: 0 0 8px rgba(255,77,94,0.30);
+    }
+
+    .points-number {
+        display: inline-flex;
+        justify-content: center;
+        min-width: 0;
+        color: #2e7d32;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .top-1 {
+        background: linear-gradient(135deg, #fff9c4, #fff176);
+    }
+
+    .top-1 .points-number {
+        color: #c9a03d !important;
+        font-weight: 800;
+        font-size: 20px;
+    }
+
+    .top-1 td:first-child {
+        width: 48px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .top-1 td:nth-child(2) {
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .top-1 td:last-child {
+        width: 64px;
+        padding-left: 4px;
+        padding-right: 6px;
+    }
+
+    .top-1 .player-line {
+        gap: 4px;
+    }
+
+    .top-1 .player-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 800;
+        font-size: 18px;
+    }
+
+    .top-1 .leader-badge {
+        flex: 0 0 auto;
+        max-width: none;
+        width: fit-content;
+        overflow: visible;
+        text-overflow: clip;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .top-1 .place-box {
+        font-size: 28px;
+    }
+
+    .top-2 {
+        background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    }
+
+    .top-2 .points-number {
+        color: #8a8a8a !important;
+        font-weight: 700;
+        font-size: 18px;
+    }
+
+    .top-2 .player-name {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .top-2 .place-box {
+        font-size: 24px;
+    }
+
+    .top-3 {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    }
+
+    .top-3 .points-number {
+        color: #cd7f32 !important;
+        font-weight: 700;
+        font-size: 17px;
+    }
+
+    .top-3 .player-name {
+        font-weight: 700;
+        font-size: 15px;
+    }
+
+    .top-3 .place-box {
+        font-size: 22px;
+    }
+
+    .leader-badge {
+        display: inline-flex;
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background: linear-gradient(135deg, #ffd700, #ffb300);
+        color: #1a1a2e;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .leader-badge.confident,
+    .leader-badge.dominant,
+    .leader-badge.dominating,
+    .leader-badge.absolute,
+    .leader-badge.sole-leader {
+        box-shadow: 0 0 10px rgba(255,215,0,0.38);
+    }
+
+    .leader-badge.outsider-badge {
+        background: linear-gradient(135deg, #ff7043, #b71c1c);
+        color: #fff8f2;
+        box-shadow: 0 0 10px rgba(183,28,28,0.30);
+    }
+
+    .leader-badge.outsider-badge.confident {
+        background: linear-gradient(135deg, #ff3d2e, #c1121f);
+    }
+
+    .leader-badge.outsider-badge.dominant {
+        background: linear-gradient(135deg, #d31f2f, #7f111b);
+    }
+
+    .leader-badge.outsider-badge.absolute {
+        background: linear-gradient(135deg, #7f111b, #32070c);
+        box-shadow: 0 0 12px rgba(127,17,27,0.36);
+    }
+
+    .top-scorers-card {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 20px;
+        background:
+            radial-gradient(circle at 94% 8%, rgba(216,255,34,0.24) 0 13%, transparent 13.5%),
+            radial-gradient(circle at 8% 18%, rgba(31,231,255,0.20) 0 18%, transparent 18.5%),
+            linear-gradient(150deg, rgba(0,23,216,0.94), rgba(0,8,84,0.92));
+        border: 1px solid rgba(31,231,255,0.28);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 16px 34px rgba(0,5,70,0.30);
+        overflow: hidden;
+    }
+
+    .top-scorers-title {
+        margin-bottom: 9px;
+        color: #d8ff22;
+        font-size: 20px;
+        font-weight: 1000;
+        line-height: 1.1;
+        text-shadow: 0 1px 8px rgba(0,0,0,0.28);
+    }
+
+    .top-scorers-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 6px;
+        font-size: 13px;
+        table-layout: fixed;
+    }
+
+    .top-scorers-table th,
+    .top-scorers-table td {
+        padding: 8px 8px;
+    }
+
+    .top-scorers-table th {
+        color: rgba(255,255,255,0.62);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .35px;
+    }
+
+    .top-scorers-table tbody tr {
+        background: rgba(1,8,68,0.48);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .top-scorers-table tbody tr:first-child {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(216,255,34,0.28) 0 14%, transparent 14.5%),
+            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(0,23,216,0.54));
+        box-shadow:
+            inset 3px 0 0 #d8ff22,
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 0 18px rgba(216,255,34,0.10);
+    }
+
+    .top-scorers-table tbody td:first-child {
+        border-radius: 14px 0 0 14px;
+    }
+
+    .top-scorers-table tbody td:last-child {
+        border-radius: 0 14px 14px 0;
+    }
+
+    .top-scorers-table th:first-child,
+    .top-scorers-table td:first-child,
+    .top-scorers-table th:last-child,
+    .top-scorers-table td:last-child {
+        text-align: center;
+        width: 56px;
+    }
+
+    .top-scorer-place {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        height: 30px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.12);
+        color: #d8ff22;
+        border: 1px solid rgba(216,255,34,0.18);
+        font-weight: 1000;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+
+    .top-scorer-name {
+        flex: 0 1 auto;
+        min-width: 0;
+        color: #ffffff;
+        font-weight: 900;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.22);
+    }
+
+    .top-scorer-player {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex-wrap: nowrap;
+    }
+
+    .top-scorer-photos {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+    }
+
+    .top-scorer-photo {
+        display: block;
+        width: 64px;
+        height: 64px;
+        flex: 0 0 64px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 12px;
+        border: 1px solid rgba(0,102,214,0.18);
+        box-shadow:
+            0 4px 10px rgba(0,43,122,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.36);
+        background: rgba(255,255,255,0.58);
+    }
+
+    .top-scorer-goals {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        min-height: 30px;
+        padding: 5px 9px;
+        border-radius: 13px;
+        background: linear-gradient(135deg, #d8ff22, #26f0c8);
+        color: #06102d;
+        border: 1px solid rgba(255,255,255,0.38);
+        font-weight: 1000;
+        white-space: nowrap;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.24),
+            0 0 14px rgba(216,255,34,0.14);
+    }
+
+    .top-scorers-empty {
+        padding: 14px 8px 6px;
+        color: rgba(255,255,255,0.76);
+        font-weight: 800;
+        text-align: center;
+    }
+
+    .shared-place {
+        font-size: 9px;
+        color: #888;
+        display: block;
+    }
+
+    /* WC-2026 premium table */
+    body.tournament-wc2026 .table-shell {
+        background: rgba(10, 20, 40, 0.6);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(216, 180, 90, 0.3);
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    body.tournament-wc2026 .standings-table {
+        background: rgba(10, 20, 40, 0.6);
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        min-height: auto !important;
+    }
+
+    body.tournament-wc2026 .standings-table thead tr {
+        background: #0d1f3a;
+        border-bottom: 2px solid #b89a3e;
+    }
+
+    body.tournament-wc2026 .standings-table th {
+        color: #d8b45a !important;
+        background: #0d1f3a !important;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 16px 12px;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr {
+        border-bottom: 1px solid rgba(216, 180, 90, 0.2);
+        transition: background 0.2s ease;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr:hover {
+        background: rgba(216, 180, 90, 0.1);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 {
+        background: linear-gradient(135deg, rgba(216, 180, 90, 0.25), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #d8b45a;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 {
+        background: linear-gradient(135deg, rgba(192, 192, 192, 0.2), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #c0c0c0;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 {
+        background: linear-gradient(135deg, rgba(205, 127, 50, 0.2), rgba(10, 20, 40, 0.8));
+        border-left: 4px solid #cd7f32;
+    }
+
+    body.tournament-wc2026 .standings-table td {
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        color: #ffffff;
+        font-size: 17px !important;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-1 td,
+    body.tournament-wc2026 .standings-table tr.top-2 td,
+    body.tournament-wc2026 .standings-table tr.top-3 td {
+        font-size: 19px !important;
+    }
+
+    body.tournament-wc2026 .standings-table td.place-cell {
+        font-weight: 700;
+        font-size: 24px !important;
+        width: 60px;
+        text-align: center;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell {
+        font-size: 32px !important;
+        font-weight: 600 !important;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-1 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-2 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-3 td.player-cell {
+        font-size: 38px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell a {
+        color: #ffffff;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    body.tournament-wc2026 .standings-table td.player-cell a:hover {
+        color: #d8b45a;
+    }
+
+    body.tournament-wc2026 .standings-table td.points-cell {
+        font-weight: 800 !important;
+        font-size: 32px !important;
+        text-align: center;
+        width: 80px;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-1 td.points-cell {
+        color: #d8b45a;
+        text-shadow: 0 0 6px rgba(216, 180, 90, 0.4);
+        font-size: 36px !important;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-2 td.points-cell {
+        color: #c0c0c0;
+        font-size: 36px !important;
+    }
+
+    body.tournament-wc2026 .standings-table tr.top-3 td.points-cell {
+        color: #cd7f32;
+        font-size: 36px !important;
+    }
+
+    body.tournament-wc2026 .standings-table .place-emoji {
+        font-size: 32px !important;
+        display: inline-block;
+    }
+
+    body.tournament-wc2026 .leader-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: max-content;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap !important;
+        margin-left: 1px !important;
+        font-size: 12px !important;
+        padding: 5px 9px !important;
+        border-radius: 12px !important;
+        vertical-align: middle !important;
+    }
+
+    .player-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated {
+        background:
+            radial-gradient(circle at 50% 0%, rgba(118,128,144,0.18), transparent 42%),
+            linear-gradient(160deg, rgba(214,224,235,0.16), rgba(192,204,218,0.10)) !important;
+        border-left: 4px solid #6c757d !important;
+        opacity: 0.9;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated td,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .player-name,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .points-number,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .leader-badge,
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .rank-movement {
+        filter: grayscale(0.88) saturate(0.42) contrast(0.92);
+        color: rgba(214,224,235,0.76) !important;
+        text-shadow: none !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.wc-eliminated .leader-badge {
+        background: rgba(108,117,125,0.26) !important;
+        border-color: rgba(214,224,235,0.18) !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-wc2026 .empty-table {
+        background: rgba(10, 20, 40, 0.6);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        color: #ffffff;
+        border: 1px solid rgba(216, 180, 90, 0.24);
+    }
+
+    /* Cup premium light table */
+    body.tournament-cup .table-shell {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(42, 168, 255, 0.3);
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    body.tournament-cup .standings-table {
+        background: rgba(255, 255, 255, 0.7);
+        width: 100% !important;
+        min-height: auto !important;
+    }
+
+    body.tournament-cup .standings-table thead tr {
+        background: #263238;
+    }
+
+    body.tournament-cup .standings-table th {
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 16px 12px;
+    }
+
+    body.tournament-cup .standings-table tbody tr {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        transition: background 0.2s ease;
+    }
+
+    body.tournament-cup .standings-table tbody tr:hover {
+        background: rgba(42, 168, 255, 0.08);
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-1 {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #ffd700;
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-2 {
+        background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #c0c0c0;
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-3 {
+        background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(255, 255, 255, 0.7));
+        border-left: 4px solid #cd7f32;
+    }
+
+    body.tournament-cup .standings-table td {
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        color: #1a1a1a;
+        font-size: 15px;
+    }
+
+    body.tournament-cup .standings-table td.place-cell {
+        font-size: 20px !important;
+        font-weight: 700;
+        width: 60px;
+        text-align: center;
+    }
+
+    body.tournament-cup .standings-table td.player-cell {
+        font-size: 24px !important;
+        font-weight: 600 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.player-cell,
+    body.tournament-cup .standings-table tr.top-2 td.player-cell,
+    body.tournament-cup .standings-table tr.top-3 td.player-cell {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell a {
+        color: #1a1a1a;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    body.tournament-cup .standings-table td.player-cell a:hover {
+        color: #2aa8ff;
+    }
+
+    body.tournament-cup .standings-table td.points-cell {
+        font-size: 28px !important;
+        font-weight: 800 !important;
+        text-align: center;
+        width: 80px;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.points-cell {
+        color: #c9a03d;
+        font-size: 32px !important;
+        font-weight: 800 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-2 td.points-cell {
+        color: #8a8a8a;
+        font-size: 32px !important;
+        font-weight: 800 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-3 td.points-cell {
+        color: #cd7f32;
+        font-size: 32px !important;
+        font-weight: 800 !important;
+    }
+
+    body.tournament-cup .standings-table .place-emoji {
+        font-size: 28px !important;
+        display: inline-block;
+    }
+
+    body.tournament-cup .leader-badge {
+        display: inline-block !important;
+        white-space: nowrap !important;
+        margin-left: 8px !important;
+        font-size: 12px !important;
+        padding: 2px 6px !important;
+        border-radius: 12px !important;
+        vertical-align: middle !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell,
+    body.tournament-wc2026 .standings-table td.player-cell {
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+    body.tournament-cup .empty-table {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        color: #1a1a1a;
+    }
+
+    /* ========== FINAL UNIFIED TABLE SIZING (CUP + WC) ========== */
+    body.tournament-cup .standings-table td,
+    body.tournament-wc2026 .standings-table td {
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    body.tournament-cup .standings-table,
+    body.tournament-wc2026 .standings-table {
+        min-height: auto !important;
+        height: auto !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell,
+    body.tournament-cup .standings-table td.points-cell,
+    body.tournament-wc2026 .standings-table td.player-cell,
+    body.tournament-wc2026 .standings-table td.points-cell {
+        font-size: 36px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-3 td.player-cell,
+    body.tournament-cup .standings-table tr.top-3 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-3 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-3 td.points-cell {
+        font-size: 38px !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-2 td.player-cell,
+    body.tournament-cup .standings-table tr.top-2 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-2 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-2 td.points-cell {
+        font-size: 42px !important;
+    }
+
+    body.tournament-cup .standings-table tr.top-1 td.player-cell,
+    body.tournament-cup .standings-table tr.top-1 td.points-cell,
+    body.tournament-wc2026 .standings-table tr.top-1 td.player-cell,
+    body.tournament-wc2026 .standings-table tr.top-1 td.points-cell {
+        font-size: 46px !important;
+    }
+
+    body.tournament-cup .standings-table td.place-cell,
+    body.tournament-wc2026 .standings-table td.place-cell {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+
+    body.tournament-cup .standings-table .place-emoji,
+    body.tournament-wc2026 .standings-table .place-emoji {
+        font-size: 36px !important;
+    }
+
+    body.tournament-cup .leader-badge,
+    body.tournament-wc2026 .leader-badge {
+        display: inline-block !important;
+        white-space: nowrap !important;
+        margin-left: 8px !important;
+        font-size: 16px !important;
+        padding: 4px 8px !important;
+        border-radius: 16px !important;
+        vertical-align: middle !important;
+    }
+
+    body.tournament-cup .standings-table td.player-cell,
+    body.tournament-wc2026 .standings-table td.player-cell {
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+
+    /* Table page polish: keep data/links intact, align visual feel with Match Cards V2. */
+    .table-shell {
+        margin-top: 12px;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.62);
+        box-shadow:
+            0 14px 34px rgba(0,78,140,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.46);
+    }
+
+    .standings-table {
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .standings-table tr {
+        border-bottom: 0;
+    }
+
+    .player-row {
+        position: relative;
+        border-bottom: 0;
+        transition: background 0.16s ease, transform 0.16s ease;
+    }
+
+    .player-row:active {
+        transform: scale(0.995);
+    }
+
+    .player-row + .player-row td {
+        border-top: 1px solid rgba(0,119,200,0.10);
+    }
+
+    .standings-table td.place-cell {
+        width: 62px !important;
+        padding: 13px 8px 13px 12px !important;
+        vertical-align: middle;
+        line-height: 1;
+    }
+
+    .standings-table td.player-cell {
+        min-width: 0;
+        padding: 13px 8px !important;
+        vertical-align: middle;
+        line-height: 1;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+    }
+
+    .standings-table td.points-cell {
+        width: 82px !important;
+        padding: 13px 12px 13px 8px !important;
+        vertical-align: middle;
+        text-align: center;
+        line-height: 1;
+    }
+
+    .standings-table tbody td {
+        vertical-align: middle;
+    }
+
+    .place-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        border-radius: 13px;
+        background: rgba(255,255,255,0.52);
+        color: #063b73;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+        line-height: 1;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
+    }
+
+    .place-emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 23px !important;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .shared-place {
+        margin-top: 4px;
+        color: rgba(93,120,148,0.72);
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.05;
+    }
+
+    .player-name {
+        display: inline-block;
+        max-width: min(100%, 310px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+        color: #063b73;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        line-height: 1.18;
+        text-decoration: none;
+    }
+
+    .points-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 54px;
+        height: 34px;
+        padding: 6px 10px;
+        border-radius: 14px;
+        background: rgba(46,125,50,0.12);
+        color: #2e7d32 !important;
+        border: 1px solid rgba(46,125,50,0.18);
+        font-size: 18px !important;
+        font-weight: 1000 !important;
+        line-height: 1;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
+        vertical-align: middle;
+        transform: translateY(-1px);
+    }
+
+    .leader-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: max-content;
+        max-width: none;
+        margin-left: 1px !important;
+        padding: 5px 9px !important;
+        border-radius: 999px !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        line-height: 1;
+        white-space: nowrap !important;
+        overflow: visible;
+        text-overflow: clip;
+        vertical-align: middle !important;
+    }
+
+    .leader-badge.confident,
+    .leader-badge.dominant,
+    .leader-badge.sole-leader {
+        font-size: 11.5px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    .leader-badge.absolute {
+        font-size: 11px !important;
+        letter-spacing: -0.15px;
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+    }
+
+    .leader-badge.dominating {
+        font-size: 10.5px !important;
+        letter-spacing: -0.2px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .standings-table tbody tr.top-1,
+    .standings-table tbody tr.top-2,
+    .standings-table tbody tr.top-3 {
+        box-shadow: inset 4px 0 0 rgba(0,119,200,0.22);
+    }
+
+    .standings-table tbody tr.top-1 .place-box,
+    .standings-table tbody tr.top-2 .place-box,
+    .standings-table tbody tr.top-3 .place-box {
+        background: rgba(255,255,255,0.72);
+    }
+
+    .standings-table tbody tr.top-1 .player-name {
+        font-size: 20px !important;
+        font-weight: 1000 !important;
+    }
+
+    .standings-table tbody tr.top-1 .points-number {
+        background: rgba(255,215,0,0.18);
+        color: #9a6a00 !important;
+        border-color: rgba(201,160,61,0.24);
+    }
+
+    .standings-table tbody tr.top-2 .points-number {
+        background: rgba(93,120,148,0.10);
+        color: #5d7894 !important;
+        border-color: rgba(93,120,148,0.16);
+    }
+
+    .standings-table tbody tr.top-3 .points-number {
+        background: rgba(205,127,50,0.12);
+        color: #9a5d24 !important;
+        border-color: rgba(205,127,50,0.20);
+    }
+
+    body.tournament-cup .table-shell {
+        background:
+            linear-gradient(160deg, rgba(255,255,255,0.90), rgba(232,246,255,0.78));
+        border-color: rgba(255,255,255,0.62);
+        box-shadow:
+            0 14px 34px rgba(0,78,140,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.54);
+    }
+
+    body.tournament-cup .standings-table {
+        background: transparent;
+    }
+
+    body.tournament-cup .standings-table tbody tr {
+        background: rgba(255,255,255,0.36);
+    }
+
+    body.tournament-cup .standings-table tbody tr:nth-child(even) {
+        background: rgba(255,255,255,0.22);
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-1 {
+        background:
+            linear-gradient(135deg, rgba(255,215,0,0.20), rgba(255,255,255,0.48));
+        box-shadow: inset 4px 0 0 rgba(201,160,61,0.62);
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-2 {
+        background:
+            linear-gradient(135deg, rgba(192,192,192,0.18), rgba(255,255,255,0.42));
+        box-shadow: inset 4px 0 0 rgba(138,138,138,0.36);
+    }
+
+    body.tournament-cup .standings-table tbody tr.top-3 {
+        background:
+            linear-gradient(135deg, rgba(205,127,50,0.15), rgba(255,255,255,0.42));
+        box-shadow: inset 4px 0 0 rgba(205,127,50,0.40);
+    }
+
+    body.tournament-wc2026 .table-shell {
+        background:
+            radial-gradient(circle at 50% 0%, rgba(216,180,90,0.12), transparent 46%),
+            linear-gradient(160deg, rgba(10,20,40,0.92), rgba(13,31,58,0.86));
+        border-color: rgba(216,180,90,0.24);
+        box-shadow:
+            0 16px 36px rgba(0,0,0,0.26),
+            inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    body.tournament-wc2026 .standings-table {
+        background: transparent;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr {
+        background: rgba(255,255,255,0.035);
+        border-bottom: 0;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr:nth-child(even) {
+        background: rgba(255,255,255,0.055);
+    }
+
+    body.tournament-wc2026 .player-row + .player-row td {
+        border-top-color: rgba(216,180,90,0.16);
+    }
+
+    body.tournament-wc2026 .player-name {
+        color: rgba(255,255,255,0.94);
+    }
+
+    body.tournament-wc2026 .place-box {
+        background: rgba(255,255,255,0.08);
+        color: #d8b45a;
+    }
+
+    body.tournament-wc2026 .shared-place {
+        color: rgba(255,255,255,0.58);
+    }
+
+    body.tournament-wc2026 .points-number {
+        background: rgba(216,180,90,0.12);
+        color: #d8b45a !important;
+        border-color: rgba(216,180,90,0.22);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 {
+        background:
+            linear-gradient(135deg, rgba(216,180,90,0.22), rgba(10,20,40,0.44));
+        box-shadow: inset 4px 0 0 rgba(216,180,90,0.72);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 {
+        background:
+            linear-gradient(135deg, rgba(192,192,192,0.14), rgba(10,20,40,0.38));
+        box-shadow: inset 4px 0 0 rgba(192,192,192,0.46);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 {
+        background:
+            linear-gradient(135deg, rgba(205,127,50,0.14), rgba(10,20,40,0.38));
+        box-shadow: inset 4px 0 0 rgba(205,127,50,0.50);
+    }
+
+    body.tournament-wc2026 .leader-badge {
+        background: rgba(216,180,90,0.18);
+        color: #f6d56b;
+        border: 1px solid rgba(216,180,90,0.26);
+    }
+
+    .standings-table tbody tr.top-1 .place-box,
+    .standings-table tbody tr.top-2 .place-box,
+    .standings-table tbody tr.top-3 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-1 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-2 .place-box,
+    body.tournament-wc2026 .standings-table tbody tr.top-3 .place-box {
+        min-width: auto;
+        width: auto;
+        height: auto;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .empty-table {
+        border-radius: 24px !important;
+        padding: 38px 18px !important;
+        border: 1px solid rgba(255,255,255,0.62);
+        box-shadow:
+            0 14px 34px rgba(0,78,140,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.46);
+    }
+
+    @media (max-width: 430px) {
+        /* Standings shell uses the same mobile width as RPL; only RCup needs
+           parent-padding compensation because its page container is wider-padded. */
+        :is(body.tournament-rpl, body.tournament-rcup) .table-shell {
+            width: calc(100vw - 20px);
+        }
+
+        body.tournament-rcup .table-shell {
+            margin-left: calc((100% - (100vw - 20px)) / 2);
+            margin-right: calc((100% - (100vw - 20px)) / 2);
+        }
+
+        .table-shell {
+            margin-top: 10px;
+            border-radius: 22px;
+        }
+
+        .standings-table td.place-cell {
+            width: 54px !important;
+            padding: 12px 6px 12px 10px !important;
+        }
+
+        .standings-table td.player-cell {
+            padding: 12px 6px !important;
+        }
+
+        .standings-table td.points-cell {
+            width: 74px !important;
+            padding: 12px 10px 12px 6px !important;
+        }
+
+        .place-box {
+            min-width: 31px;
+            height: 31px;
+            border-radius: 12px;
+            font-size: 15px !important;
+        }
+
+        .place-emoji {
+            font-size: 21px !important;
+        }
+
+        .player-name {
+            max-width: calc(100vw - 178px);
+            font-size: 16px !important;
+        }
+
+        .standings-table tbody tr.top-1 .player-name {
+            font-size: 17px !important;
+        }
+
+        .points-number {
+            width: 48px;
+            height: 31px;
+            padding: 5px 8px;
+            border-radius: 12px;
+            font-size: 16px !important;
+        }
+
+        .leader-badge {
+            margin-left: 5px !important;
+            padding: 3px 6px !important;
+            font-size: 8px !important;
+        }
+    }
+
+    /* WC2026 V2 table rollout: scoped, keeps ranking/AJAX/links intact. */
+    body.tournament-wc2026 .table-container {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-wc2026 .table-container::before,
+    body.tournament-wc2026 .table-container::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        filter: none;
+    }
+
+    body.tournament-wc2026 .table-container::before {
+        width: min(430px, 82vw);
+        height: min(430px, 82vw);
+        right: -25%;
+        top: 92px;
+        border-radius: 50%;
+        background:
+            radial-gradient(circle at 40% 35%, #ff5f50 0 26%, transparent 26.5%),
+            radial-gradient(circle at 78% 70%, #d8ff22 0 20%, transparent 20.5%),
+            radial-gradient(circle at 18% 76%, #1fe7ff 0 18%, transparent 18.5%);
+        opacity: 0.68;
+    }
+
+    body.tournament-wc2026 .table-container::after {
+        width: min(380px, 74vw);
+        height: min(380px, 74vw);
+        left: -31%;
+        bottom: 56px;
+        border-radius: 54% 46% 48% 52%;
+        background:
+            radial-gradient(circle at 72% 20%, #b832ff 0 26%, transparent 26.5%),
+            radial-gradient(circle at 26% 62%, #0614c8 0 30%, transparent 30.5%),
+            radial-gradient(circle at 68% 82%, #d8ff22 0 18%, transparent 18.5%);
+        opacity: 0.56;
+    }
+
+    body.tournament-wc2026 .table-shell {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 96% 4%, #ff5f50 0 9%, transparent 9.5%),
+            radial-gradient(circle at 6% 28%, rgba(216,255,34,0.74) 0 7%, transparent 7.5%),
+            radial-gradient(circle at 58% 0%, rgba(31,231,255,0.30) 0 18%, transparent 18.5%),
+            linear-gradient(150deg, rgba(0,23,216,0.94), rgba(0,8,84,0.92)) !important;
+        border-color: rgba(31,231,255,0.34) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 18px 38px rgba(0,5,70,0.38) !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    body.tournament-wc2026 .standings-table {
+        background: transparent !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr {
+        background: rgba(1,8,68,0.42) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr:nth-child(even) {
+        background: rgba(2,13,110,0.40) !important;
+    }
+
+    body.tournament-wc2026 .player-row + .player-row td {
+        border-top-color: rgba(31,231,255,0.14) !important;
+    }
+
+    body.tournament-wc2026 .place-box,
+    body.tournament-wc2026 .points-number,
+    body.tournament-wc2026 .leader-badge {
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        letter-spacing: 0;
+    }
+
+    body.tournament-wc2026 .player-name {
+        color: #ffffff !important;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.24);
+    }
+
+    body.tournament-wc2026 .place-box {
+        background: rgba(255,255,255,0.12) !important;
+        color: #d8ff22 !important;
+        border: 1px solid rgba(216,255,34,0.18);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 8px 16px rgba(0,4,42,0.20);
+    }
+
+    body.tournament-wc2026 .points-number {
+        background:
+            linear-gradient(135deg, rgba(216,255,34,0.20), rgba(38,240,200,0.12)) !important;
+        color: #d8ff22 !important;
+        border-color: rgba(216,255,34,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            0 0 18px rgba(216,255,34,0.12);
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(216,255,34,0.30) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(216,255,34,0.18), rgba(0,23,216,0.54)) !important;
+        box-shadow:
+            inset 4px 0 0 #d8ff22,
+            inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(31,231,255,0.24) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(31,231,255,0.16), rgba(0,13,148,0.50)) !important;
+        box-shadow:
+            inset 4px 0 0 #1fe7ff,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(255,95,80,0.22) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(255,95,80,0.14), rgba(0,13,148,0.48)) !important;
+        box-shadow:
+            inset 4px 0 0 #ff5f50,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-1 .points-number {
+        background: linear-gradient(135deg, #d8ff22, #26f0c8) !important;
+        color: #06102d !important;
+        border-color: rgba(255,255,255,0.42) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-2 .points-number {
+        background: linear-gradient(135deg, #1fe7ff, #26f0c8) !important;
+        color: #06102d !important;
+        border-color: rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-wc2026 .standings-table tbody tr.top-3 .points-number {
+        background: linear-gradient(135deg, #ff5f50, #b832ff) !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.30) !important;
+    }
+
+    body.tournament-wc2026 .leader-badge {
+        background: linear-gradient(135deg, #d8ff22, #26f0c8) !important;
+        color: #06102d !important;
+        border: 1px solid rgba(255,255,255,0.38) !important;
+        box-shadow: 0 0 16px rgba(216,255,34,0.16);
+    }
+
+    body.tournament-wc2026 .leader-badge.dominating {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a0a00 !important;
+        border-color: rgba(255,215,0,0.50) !important;
+        box-shadow: 0 0 20px rgba(255,215,0,0.30) !important;
+    }
+
+    body.tournament-wc2026 .shared-place {
+        color: rgba(255,255,255,0.66) !important;
+    }
+
+    body.tournament-wc2026 .empty-table {
+        background:
+            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.30) 0 14%, transparent 14.5%),
+            linear-gradient(145deg, rgba(0,23,216,0.88), rgba(0,8,78,0.84)) !important;
+        border-color: rgba(31,231,255,0.24) !important;
+        color: #ffffff !important;
+    }
+
+    /* RPL table rollout: scoped visual layer only. */
+    body.tournament-rpl .table-container {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-rpl .table-shell {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 92% 0%, rgba(227,6,19,0.24), transparent 28%),
+            radial-gradient(circle at 8% 24%, rgba(42,168,255,0.20), transparent 26%),
+            linear-gradient(155deg, rgba(7,22,52,0.88), rgba(4,10,28,0.84)) !important;
+        border-color: rgba(42,168,255,0.26) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 18px 38px rgba(0,6,28,0.36),
+            0 0 0 1px rgba(227,6,19,0.08) !important;
+        backdrop-filter: blur(16px) saturate(130%);
+        -webkit-backdrop-filter: blur(16px) saturate(130%);
+    }
+
+    body.tournament-rpl .standings-table {
+        background: transparent !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr {
+        background: rgba(255,255,255,0.045) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+
+    body.tournament-rpl .standings-table tbody tr:nth-child(even) {
+        background: rgba(42,168,255,0.055) !important;
+    }
+
+    body.tournament-rpl .player-row + .player-row td {
+        border-top-color: rgba(42,168,255,0.14) !important;
+    }
+
+    body.tournament-rpl .place-box,
+    body.tournament-rpl .points-number,
+    body.tournament-rpl .leader-badge {
+        letter-spacing: 0;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .player-name {
+        font-size: 18px !important;
+        font-weight: 950 !important;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .table-shell {
+        overflow: hidden;
+    }
+
+    body.tournament-rpl .player-name {
+        color: #ffffff !important;
+        text-shadow: 0 1px 8px rgba(0,0,0,0.28);
+    }
+
+    body.tournament-rpl .place-box {
+        background: rgba(255,255,255,0.10) !important;
+        color: #7fd3ff !important;
+        border: 1px solid rgba(42,168,255,0.20);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.14),
+            0 8px 16px rgba(0,6,28,0.22);
+    }
+
+    body.tournament-rpl .shared-place {
+        color: rgba(255,255,255,0.62) !important;
+    }
+
+    body.tournament-rpl .points-number {
+        background: linear-gradient(135deg, rgba(42,168,255,0.22), rgba(127,211,255,0.12)) !important;
+        color: #9fe0ff !important;
+        border-color: rgba(42,168,255,0.30) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 0 18px rgba(42,168,255,0.12);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(227,6,19,0.24) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(227,6,19,0.18), rgba(7,22,52,0.58)) !important;
+        box-shadow:
+            inset 4px 0 0 #e30613,
+            inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(42,168,255,0.24) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(42,168,255,0.20), rgba(7,22,52,0.54)) !important;
+        box-shadow:
+            inset 4px 0 0 #2aa8ff,
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 {
+        background:
+            radial-gradient(circle at 98% 18%, rgba(255,255,255,0.15) 0 12%, transparent 12.5%),
+            linear-gradient(135deg, rgba(255,255,255,0.12), rgba(7,22,52,0.52)) !important;
+        box-shadow:
+            inset 4px 0 0 rgba(255,255,255,0.78),
+            inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 .points-number {
+        background: linear-gradient(135deg, rgba(227,6,19,0.34), rgba(255,107,115,0.20)) !important;
+        color: #ffffff !important;
+        border-color: rgba(255,107,115,0.36) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 .points-number {
+        background: linear-gradient(135deg, #2aa8ff, #9fe0ff) !important;
+        color: #041022 !important;
+        border-color: rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 .points-number {
+        background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(159,224,255,0.56)) !important;
+        color: #041022 !important;
+        border-color: rgba(255,255,255,0.34) !important;
+    }
+
+    body.tournament-rpl .leader-badge {
+        background: linear-gradient(135deg, #2aa8ff, #9fe0ff) !important;
+        color: #041022 !important;
+        border: 1px solid rgba(255,255,255,0.36) !important;
+        box-shadow: 0 0 16px rgba(42,168,255,0.18);
+    }
+
+    body.tournament-rpl .leader-badge.dominating {
+        background: linear-gradient(135deg, #ffd700, #ff8c00) !important;
+        color: #1a0a00 !important;
+        border-color: rgba(255,215,0,0.50) !important;
+        box-shadow: 0 0 20px rgba(255,215,0,0.30) !important;
+    }
+
+    body.tournament-rpl .empty-table {
+        background:
+            radial-gradient(circle at 88% 10%, rgba(227,6,19,0.24) 0 14%, transparent 14.5%),
+            linear-gradient(145deg, rgba(7,22,52,0.88), rgba(4,10,28,0.84)) !important;
+        border-color: rgba(42,168,255,0.24) !important;
+        color: #ffffff !important;
+    }
+
+    .standings-table tbody tr.top-1 td:first-child {
+        width: 44px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .standings-table tbody tr.top-1 td:nth-child(2) {
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .standings-table tbody tr.top-1 td:last-child {
+        width: 58px;
+        padding-left: 3px;
+        padding-right: 4px;
+    }
+
+    .standings-table tbody tr.top-1 .player-line {
+        gap: 3px;
+    }
+
+    .standings-table tbody tr.top-1 .player-name {
+        flex: 0 0 auto;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
+    .standings-table tbody tr.top-1 .leader-badge {
+        flex: 0 0 auto;
+        width: fit-content;
+        max-width: none;
+        margin-left: 0 !important;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
+    .standings-table .leader-badge.outsider-badge {
+        background: linear-gradient(135deg, #FF7A45, #D72638) !important;
+        color: #fff8f2 !important;
+        border-color: rgba(255,255,255,0.28) !important;
+        margin-left: 0 !important;
+        box-shadow: 0 0 12px rgba(215,38,56,0.24) !important;
+    }
+
+    .standings-table .leader-badge.outsider-badge.confident {
+        background: linear-gradient(135deg, #FF5A3D, #C9182B) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 12px rgba(201,24,43,0.26) !important;
+    }
+
+    .standings-table .leader-badge.outsider-badge.dominant {
+        background: linear-gradient(135deg, #D72638, #7F111B) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 12px rgba(127,17,27,0.28) !important;
+    }
+
+    .standings-table .leader-badge.outsider-badge.absolute {
+        background: linear-gradient(135deg, #7F111B, #32070C) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 14px rgba(127,17,27,0.34) !important;
+    }
+
+    .standings-table tbody tr:last-child .outsider-badge {
+        flex: 0 0 auto;
+        width: fit-content;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 430px) {
+        .player-row td:first-child {
+            width: 48px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        .player-row td:last-child {
+            width: 64px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        .player-line {
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+
+        .leader-badge {
+            font-size: 12px !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+        }
+
+        body.tournament-wc2026 .player-name {
+            font-size: 16px !important;
+        }
+
+        body.tournament-wc2026 .points-number {
+            font-size: 16px !important;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .player-name,
+        :is(body.tournament-rpl, body.tournament-rcup) .points-number {
+            font-size: 16px !important;
+        }
+
+        .top-1 td:first-child {
+            width: 38px;
+            padding-left: 3px;
+            padding-right: 3px;
+        }
+
+        .top-1 td:nth-child(2) {
+            padding-left: 3px;
+            padding-right: 3px;
+        }
+
+        .top-1 td:last-child {
+            width: 52px;
+            padding-left: 3px;
+            padding-right: 4px;
+        }
+
+        .top-1 .place-box {
+            font-size: 23px;
+        }
+
+        .top-1 .player-line {
+            flex-wrap: nowrap;
+        }
+
+        .top-1 .player-name {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 16px !important;
+        }
+
+        .top-1 .points-number {
+            width: 50px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        .top-1 .leader-badge {
+            align-self: center;
+            flex: 0 0 auto;
+            flex-basis: auto;
+            width: max-content;
+            max-width: none;
+            padding-left: 7px !important;
+            padding-right: 7px !important;
+        }
+
+    }
+
+    @media (max-width: 340px) {
+        .leader-badge {
+            padding-left: 7px;
+            padding-right: 7px;
+            font-size: 11px !important;
+        }
+
+        .top-1 .leader-badge {
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+
+    }
+
+    body.tournament-rcup .table-shell,
+    body.tournament-rcup .top-scorers-card {
+        background: rgba(36, 43, 53, 0.88);
+        border: 1px solid rgba(232, 0, 36, 0.22);
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .standings-table,
+    body.tournament-rcup .top-scorers-table {
+        background: transparent;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .standings-table thead tr,
+    body.tournament-rcup .standings-table th {
+        background: #000005;
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .standings-table tbody tr,
+    body.tournament-rcup .top-scorers-table tbody tr {
+        background: rgba(0, 0, 5, 0.42);
+        border-bottom-color: rgba(232, 0, 36, 0.16);
+    }
+
+    body.tournament-rcup .standings-table tbody tr.top-1 {
+        background: linear-gradient(135deg, rgba(232, 0, 36, 0.22), rgba(36, 43, 53, 0.72));
+    }
+
+    body.tournament-rcup .player-name,
+    body.tournament-rcup .top-scorer-name,
+    body.tournament-rcup .place-box {
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .top-scorer-goals,
+    body.tournament-rcup .leader-badge {
+        background: #E80024;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    /* The base points color is green with !important; RCup intentionally overrides it. */
+    body.tournament-rcup .points-number {
+        background: #310027;
+        border-color: rgba(232, 0, 36, 0.75);
+        color: #ffffff !important;
+    }
+
+    body.tournament-rcup .standings-table tbody tr.top-1 .points-number {
+        background: #E80024;
+        border-color: #E80024;
+        color: #ffffff !important;
+    }
+
+    body.tournament-rcup .standings-table tbody tr:not(.top-1) {
+        background: rgba(0, 0, 5, 0.42);
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 34px;
+        height: 34px;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 13px;
+        background: rgba(255,255,255,0.52);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.46);
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+        line-height: 1;
+    }
+
+    body.tournament-rcup .standings-table tbody tr:not(.top-1) .points-number {
+        background: #310027;
+        border-color: rgba(232, 0, 36, 0.75);
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rcup .standings-table tbody tr:not(.top-1) .place-box {
+            min-width: 31px;
+            height: 31px;
+            border-radius: 12px;
+            font-size: 15px !important;
+        }
+    }
+
+    body.tournament-rcup .top-scorers-title,
+    body.tournament-rcup .top-scorer-place {
+        color: #ffffff;
+        text-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-card {
+        overflow: hidden;
+        border: 1px solid rgba(232, 0, 36, 0.55);
+        background: #310027;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-title {
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .top-scorers-table {
+        color: #ffffff;
+    }
+
+    body.tournament-rcup .top-scorers-table tbody tr,
+    body.tournament-rcup .top-scorers-table tbody tr:first-child {
+        background: #3A0A32;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-table tbody td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.tournament-rcup .top-scorers-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    body.tournament-rcup .top-scorer-goals {
+        background: #E80024;
+        border-color: transparent;
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    body.tournament-rcup .top-scorers-empty {
+        color: rgba(255, 255, 255, 0.66);
+    }
+
+    /* RPL scorer table: scoped glass statistics layer. */
+    body.tournament-rpl .top-scorers-card {
+        position: relative;
+        overflow: hidden;
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 20px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(231, 243, 255, 0.62));
+        box-shadow: 0 14px 30px rgba(0, 57, 166, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+        backdrop-filter: blur(16px) saturate(125%);
+        -webkit-backdrop-filter: blur(16px) saturate(125%);
+    }
+
+    body.tournament-rpl .top-scorers-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        color: #082b74;
+        font-size: 19px;
+        font-weight: 900;
+        line-height: 1.1;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorers-title::after {
+        content: "";
+        flex: 1;
+        min-width: 24px;
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.94), #1f90ff 56%, #d52b1e 100%);
+    }
+
+    body.tournament-rpl .top-scorers-table {
+        width: 100%;
+        border-spacing: 0 7px;
+        color: #082b74;
+    }
+
+    body.tournament-rpl .top-scorers-table th {
+        padding: 0 8px 4px;
+        color: rgba(8, 43, 116, 0.58);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.35px;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr,
+    body.tournament-rpl .top-scorers-table tbody tr:first-child {
+        background: rgba(255, 255, 255, 0.58);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td {
+        padding: 10px 8px;
+        border-top: 1px solid rgba(10, 108, 194, 0.08);
+        border-bottom: 1px solid rgba(10, 108, 194, 0.08);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td:first-child {
+        border-left: 1px solid rgba(10, 108, 194, 0.08);
+        border-radius: 14px 0 0 14px;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody td:last-child {
+        border-right: 1px solid rgba(10, 108, 194, 0.08);
+        border-radius: 0 14px 14px 0;
+    }
+
+    body.tournament-rpl .top-scorer-place {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 11px;
+        background: rgba(31, 144, 255, 0.12);
+        border-color: rgba(31, 144, 255, 0.26);
+        color: #0a4ea8;
+        box-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr:first-child .top-scorer-place {
+        background: #1f90ff;
+        border-color: #1f90ff;
+        color: #ffffff;
+    }
+
+    body.tournament-rpl .top-scorer-name {
+        color: #082b74;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .top-scorer-goals {
+        min-width: 56px;
+        min-height: 36px;
+        padding: 5px 8px;
+        border: 1px solid rgba(31, 144, 255, 0.30);
+        border-radius: 12px;
+        background: rgba(31, 144, 255, 0.12);
+        color: #082b74;
+        font-size: 16px;
+        font-weight: 900;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+    }
+
+    body.tournament-rpl .top-scorers-table tbody tr:first-child .top-scorer-goals {
+        border-color: #d52b1e;
+        box-shadow: inset 3px 0 0 #d52b1e, inset 0 1px 0 rgba(255, 255, 255, 0.64);
+    }
+
+    body.tournament-rpl .top-scorers-empty {
+        padding: 20px 10px;
+        border: 1px dashed rgba(10, 108, 194, 0.22);
+        border-radius: 14px;
+        color: rgba(8, 43, 116, 0.62);
+        font-weight: 700;
+    }
+
+    /* RPL and Russian Cup share scorer-table geometry; their palettes stay scoped above. */
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 20px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 19px;
+        font-weight: 900;
+        line-height: 1.1;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table {
+        width: 100%;
+        border-spacing: 0 7px;
+        table-layout: fixed;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table th {
+        padding: 0 8px 4px;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td {
+        padding: 10px 8px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-place {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 11px;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name {
+        font-weight: 700;
+    }
+
+    :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals {
+        min-width: 56px;
+        min-height: 36px;
+        padding: 5px 8px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    @media (max-width: 430px) {
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody {
+            display: block;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody tr,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody tr:first-child {
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr) 68px;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid transparent;
+            border-radius: 14px;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:first-child,
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:last-child {
+            display: block;
+            width: auto;
+            min-width: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            text-align: left;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorers-table tbody td:last-child {
+            text-align: right;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-name {
+            display: block;
+            flex: 0 1 auto;
+            font-size: 14px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-player {
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-photos {
+            gap: 4px;
+        }
+
+        :is(body.tournament-rpl, body.tournament-rcup) .top-scorer-goals {
+            min-width: 60px;
+            min-height: 42px;
+            font-size: 17px;
+        }
+
+        body.tournament-rpl .top-scorers-table tbody tr,
+        body.tournament-rpl .top-scorers-table tbody tr:first-child {
+            border-color: rgba(10, 108, 194, 0.10);
+            background: rgba(255, 255, 255, 0.62);
+        }
+
+        /* Match the RPL mobile card width exactly: viewport minus its 10px side padding. */
+        body.tournament-rcup .top-scorers-card {
+            width: calc(100% + 4px);
+        }
+    }
+    /* RPL light broadcast table layer. */
+    body.tournament-rpl .table-shell {
+        background: rgba(255,255,255,0.92) !important;
+        border: 1px solid rgba(0,102,214,0.18) !important;
+        box-shadow:
+            0 12px 30px rgba(0,43,122,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.86) !important;
+        backdrop-filter: blur(16px) saturate(118%);
+        -webkit-backdrop-filter: blur(16px) saturate(118%);
+    }
+
+    body.tournament-rpl .standings-table tbody tr,
+    body.tournament-rpl .standings-table tbody tr:nth-child(even) {
+        background: rgba(255,255,255,0.86) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    body.tournament-rpl .standings-table tbody tr:hover {
+        background: rgba(0,102,214,0.08) !important;
+    }
+
+    body.tournament-rpl .player-row + .player-row td {
+        border-top-color: rgba(0,102,214,0.12) !important;
+    }
+
+    body.tournament-rpl .player-name {
+        color: #001b4d !important;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .place-box {
+        background: rgba(0,102,214,0.10) !important;
+        color: #0039a6 !important;
+        border-color: rgba(0,102,214,0.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+    }
+
+    body.tournament-rpl .shared-place {
+        color: rgba(0,27,77,0.58) !important;
+    }
+
+    body.tournament-rpl .points-number {
+        background: rgba(255,255,255,0.76) !important;
+        color: #001b4d !important;
+        border-color: rgba(0,102,214,0.18) !important;
+        box-shadow: 0 5px 12px rgba(0,43,122,0.10), inset 0 1px 0 rgba(255,255,255,0.86);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 {
+        background: rgba(0,102,214,0.12) !important;
+        box-shadow: inset 4px 0 0 #0066d6, inset 0 1px 0 rgba(255,255,255,0.76) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2,
+    body.tournament-rpl .standings-table tbody tr.top-3 {
+        background: rgba(0,102,214,0.06) !important;
+        box-shadow: inset 4px 0 0 rgba(0,102,214,0.42), inset 0 1px 0 rgba(255,255,255,0.76) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 .points-number {
+        background: #001b4d !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.36) !important;
+        box-shadow: 0 6px 14px rgba(0,27,77,0.22), inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 {
+        background: rgba(0,128,255,0.10) !important;
+        box-shadow: inset 3px 0 0 #0080ff, inset 0 1px 0 rgba(255,255,255,0.76) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 {
+        background: rgba(0,102,214,0.045) !important;
+        box-shadow: inset 3px 0 0 rgba(0,102,214,0.34), inset 0 1px 0 rgba(255,255,255,0.76) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 .points-number {
+        background: #0066d6 !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.36) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 .points-number {
+        background: #d8efff !important;
+        color: #001b4d !important;
+        border-color: rgba(0,102,214,0.20) !important;
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-1 .place-box {
+        background: #0066d6 !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,0.40);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-2 .place-box {
+        background: #d8efff !important;
+        color: #0066d6 !important;
+        border-color: rgba(0,102,214,0.24);
+    }
+
+    body.tournament-rpl .standings-table tbody tr.top-3 .place-box {
+        background: #f2f8ff !important;
+        color: #2b72ba !important;
+        border-color: rgba(0,102,214,0.16);
+    }
+
+    body.tournament-rpl .top-scorers-card {
+        background: rgba(255,255,255,0.92) !important;
+        border-color: rgba(0,102,214,0.18) !important;
+        box-shadow: 0 12px 30px rgba(0,43,122,0.14), inset 0 1px 0 rgba(255,255,255,0.86) !important;
+    }
+
+    body.tournament-rpl .top-scorers-title,
+    body.tournament-rpl .top-scorer-name,
+    body.tournament-rpl .top-scorer-place,
+    body.tournament-rpl .top-scorer-goals {
+        color: #001b4d !important;
+        text-shadow: none;
+    }
+
+    /* Keep the reigning-champion shield immediately beside the nickname. */
+    body.tournament-rpl .player-line--rpl-champion .player-name {
+        flex: 0 1 auto;
+    }
+
+    /* RPL reigning champion mark: Russian tricolour in a gold scudetto-style shield. */
+    body.tournament-rpl .rpl-champion-shield {
+        position: relative;
+        display: inline-block;
+        flex: 0 0 auto;
+        width: 23px;
+        height: 27px;
+        margin-left: 1px;
+        vertical-align: middle;
+        background: linear-gradient(
+            145deg,
+            #fff2a8 0%,
+            #e4b447 24%,
+            #fff0a0 50%,
+            #b77c12 74%,
+            #f7d76e 100%
+        );
+        clip-path: polygon(
+            50% 0%,
+            94% 12%,
+            92% 61%,
+            74% 83%,
+            50% 100%,
+            26% 83%,
+            8% 61%,
+            6% 12%
+        );
+        filter: drop-shadow(0 2px 3px rgba(106, 67, 0, 0.24));
+    }
+
+    body.tournament-rpl .rpl-champion-shield::before {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        clip-path: inherit;
+        background: linear-gradient(
+            to bottom,
+            #ffffff 0%,
+            #ffffff 33.333%,
+            #0039a6 33.333%,
+            #0039a6 66.666%,
+            #d52b1e 66.666%,
+            #d52b1e 100%
+        );
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-rpl .rpl-champion-shield {
+            width: 22px;
+            height: 26px;
+        }
+    }
+</style>
 
 {% if table %}
 <div class="table-shell">
