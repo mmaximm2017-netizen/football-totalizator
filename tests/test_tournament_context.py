@@ -270,7 +270,7 @@ class BaseTournamentThemeTests(unittest.TestCase):
         self.assertIn('href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}', source)
         self.assertIn("profile_subject_username|urlencode", source)
         self.assertIn("is_own_profile|default(true)", source)
-        self.assertIn("request.path in ['/profile', '/profile/stats'] and (is_own_profile|default(false))", source)
+        self.assertIn("request.path.startswith('/profile') and (is_own_profile|default(false))", source)
         self.assertNotIn('{% set current_tid', source)
 
 
@@ -415,7 +415,7 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         for value, expected in ((0, "0 очков"), (1, "1 очко"), (2, "2 очка"), (4, "4 очка"), (5, "5 очков"), (11, "11 очков"), (14, "14 очков"), (21, "21 очко"), (22, "22 очка"), (25, "25 очков")):
             self.assertEqual(format_profile_points(value), expected)
 
-    def test_foreign_profile_uses_subject_uid_and_is_not_own_profile(self):
+    def test_legacy_foreign_profile_redirects_to_stable_public_user_id(self):
         from app.routes.profile import profile_bp
 
         app = self.make_test_app(profile_bp)
@@ -427,12 +427,6 @@ class TournamentRouteSmokeTests(unittest.TestCase):
             ],
             fetchall_results=[[], []],
         )
-        captured = {}
-
-        def render_profile(_template, **context):
-            captured.update(context)
-            return "profile"
-
         with (
             app.test_client() as client,
             patch("app.routes.profile.get_db", return_value=FakeConnection(cursor)),
@@ -444,19 +438,13 @@ class TournamentRouteSmokeTests(unittest.TestCase):
                 {"user_id": 1, "place": 1, "points": 42},
                 {"user_id": 2, "place": 2, "points": 34},
             ]),
-            patch("app.routes.profile.render_template", side_effect=render_profile),
         ):
             with client.session_transaction() as sess:
                 sess["user_id"] = 1
             response = client.get("/profile?username=Other%20Name&tid=42")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(captured["is_own_profile"])
-        self.assertEqual(captured["profile_subject_username"], "Other Name")
-        self.assertEqual(captured["username"], "Other Name")
-        self.assertEqual(captured["position_metric"]["points"], 8)
-        subject_params = [args[1] for args, _ in cursor.executed if len(args) > 1 and args[1]]
-        self.assertIn((2,), subject_params)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/profile/2?tid=42"))
 
 
 if __name__ == "__main__":

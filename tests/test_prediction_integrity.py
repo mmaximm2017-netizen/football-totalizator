@@ -125,7 +125,9 @@ class PredictionWriteValidationTests(unittest.TestCase):
 
 class PredictionScopedJoinTests(unittest.TestCase):
     def test_prediction_match_joins_include_tournament_key(self):
-        self.assertNotIn("FROM predictions", inspect.getsource(profile))
+        profile_source = inspect.getsource(profile)
+        self.assertIn("m.status = 'FINISHED'", profile_source)
+        self.assertIn("m.tournament_id = p.tournament_id", profile_source)
         self.assertIn("AND p.tournament_id = m.tournament_id", inspect.getsource(prediction_routes))
 
         from app.services import scoring_recalculation_service

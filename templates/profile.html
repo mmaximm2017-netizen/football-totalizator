@@ -148,13 +148,23 @@
         <label class="push-toggle"><span class="push-toggle-label">Получать уведомления</span><input class="push-toggle-input" type="checkbox" data-push-toggle role="switch" aria-label="Уведомления"><span class="push-toggle-track" aria-hidden="true"><span class="push-toggle-thumb"></span></span></label>
         <button type="button" class="web-push-button web-push-button-secondary" data-push-test hidden>Отправить тестовое уведомление</button>
     </section>
-    <section class="profile-actions" aria-label="Разделы профиля">
-        <a class="profile-action-link" href="{{ url_for('profile.profile_stats', tid=current_tournament_id) }}">📊 Расширенная статистика</a>
-        <a class="profile-action-link profile-action-link-secondary" href="{{ url_for('predictions.my_predictions', tid=current_tournament_id) }}">⚽ Результаты прогнозов</a>
-    </section>
     {% endif %}
 
+    <section class="profile-actions" aria-label="Разделы профиля">
+        {% if is_own_profile %}
+        <a class="profile-action-link" href="{{ url_for('profile.profile_stats', tid=current_tournament_id) }}">📊 Расширенная статистика</a>
+        <a class="profile-action-link profile-action-link-secondary" href="{{ url_for('predictions.my_predictions', tid=current_tournament_id) }}">⚽ Результаты прогнозов</a>
+        {% else %}
+        <a class="profile-action-link" href="{{ url_for('profile.public_profile_stats', user_id=public_profile_user_id, tid=current_tournament_id) }}">📊 Расширенная статистика</a>
+        <a class="profile-action-link profile-action-link-secondary" href="{{ url_for('profile.public_profile_predictions', user_id=public_profile_user_id, tid=current_tournament_id) }}">⚽ Результаты прогнозов</a>
+        {% endif %}
+    </section>
+
+    {% if is_own_profile %}
     <a href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}" class="back-btn">← Вернуться к матчам</a>
+    {% else %}
+    <a href="{{ url_for('table.table', tid=current_tournament_id) }}" class="back-btn">← Вернуться к таблице</a>
+    {% endif %}
 </div>
 
 {% if is_own_profile %}<script src="{{ url_for('static', filename='js/web-push.js', v='20260817-notification-toggle') }}" defer></script>{% endif %}

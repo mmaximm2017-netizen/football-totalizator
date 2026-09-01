@@ -1496,7 +1496,7 @@ body {
             {% set current_archive.value = true %}
         {% endif %}
     {% endfor %}
-    {% set tournament_switch_base = '/table' if request.path == '/table' else ('/profile/stats' if request.path == '/profile/stats' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/'))) %}
+    {% set tournament_switch_base = public_tournament_switch_base|default('/table' if request.path == '/table' else ('/profile/stats' if request.path == '/profile/stats' else ('/profile' if request.path == '/profile' else ('/my-predictions' if request.path == '/my-predictions' else '/')))) %}
 
     <div id="app-splash">
         <div class="splash-inner">
@@ -1582,7 +1582,7 @@ body {
         {% else %}
         <a
             href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
-            class="{% if request.path in ['/profile', '/profile/stats'] and (is_own_profile|default(false)) %}active{% endif %}"
+            class="{% if request.path.startswith('/profile') and (is_own_profile|default(false)) %}active{% endif %}"
         >
             <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
             Профиль
@@ -1612,7 +1612,7 @@ body {
             {% if active_items %}
             <div class="tournament-section-label">Активные турниры</div>
             {% for t in active_items %}
-            <a href="{% if request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
+            <a href="{% if public_profile_user_id|default(false) %}{{ tournament_switch_base }}?tid={{ t.id }}{% elif request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="1" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="active-badge">Активный</span>
             </a>
@@ -1622,7 +1622,7 @@ body {
             {% if archive_items %}
             <div class="tournament-section-label">Архив</div>
             {% for t in archive_items %}
-            <a href="{% if request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
+            <a href="{% if public_profile_user_id|default(false) %}{{ tournament_switch_base }}?tid={{ t.id }}{% elif request.path == '/profile' and not (is_own_profile|default(true)) and profile_subject_username %}/profile?username={{ profile_subject_username|urlencode }}&amp;tid={{ t.id }}{% else %}{{ tournament_switch_base }}?tid={{ t.id }}{% endif %}" data-ajax-table data-tid="{{ t.id }}" data-tournament-active="0" class="tournament-item {% if current_tournament_id == t.id %}active{% endif %}">
                 <span class="tournament-name">{{ t.name }}</span>
                 <span class="archive-badge">Архив</span>
             </a>
@@ -1689,7 +1689,7 @@ body {
         (function persistTournamentSelection() {
             const tournamentPages = new Set(['/', '/table', '/profile', '/profile/stats', '/my-predictions']);
             const path = window.location.pathname;
-            if (!tournamentPages.has(path)) return;
+            if (!tournamentPages.has(path) && !path.startsWith('/profile/')) return;
 
             const params = new URLSearchParams(window.location.search);
             const currentTid = params.get('tid');

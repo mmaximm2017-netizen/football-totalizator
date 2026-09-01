@@ -70,16 +70,18 @@
 
 <div class="my-predictions-page">
     <section class="predictions-hero">
-        <h1 class="predictions-title">📋 Результаты прогнозов</h1>
+        <h1 class="predictions-title">📋 Результаты прогнозов{% if is_public_history|default(false) %} — {{ profile_subject_username }}{% endif %}</h1>
         <p class="predictions-subtitle">{{ current_tournament_name }}</p>
     </section>
 
+    {% if not is_public_history|default(false) %}
     <nav class="predictions-tabs" aria-label="Фильтр прогнозов">
         <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='active') }}" class="predictions-tab{% if current_filter == 'active' %} active{% endif %}">Активные</a>
         <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='finished') }}" class="predictions-tab{% if current_filter == 'finished' %} active{% endif %}">Завершённые</a>
     </nav>
+    {% endif %}
 
-    {% if current_filter == 'active' %}
+    {% if not is_public_history|default(false) and current_filter == 'active' %}
     <section class="predictions-section">
         <h2 class="predictions-section-title">Активные прогнозы</h2>
         {% if pending or awaiting %}
@@ -105,12 +107,12 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not pending and not awaiting and not cancelled %}🎯{% else %}⚽{% endif %}</span>{% if not pending and not awaiting and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Нет завершённых матчей.{% endif %}</div>
+        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not is_public_history|default(false) and not pending and not awaiting and not cancelled %}🎯{% else %}⚽{% endif %}</span>{% if not is_public_history|default(false) and not pending and not awaiting and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Нет завершённых матчей.{% endif %}</div>
         {% endif %}
     </section>
     {% endif %}
 
-    {% if cancelled %}
+    {% if not is_public_history|default(false) and cancelled %}
     <section class="predictions-section">
         <h2 class="predictions-section-title">Отменённые / перенесённые</h2>
         <div class="prediction-list">

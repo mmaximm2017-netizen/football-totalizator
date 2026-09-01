@@ -146,6 +146,10 @@
         {% else %}<div class="profile-stats-empty">Пока нет завершённых прогнозов.</div>{% endif %}
     </section>
 
+    {% if is_own_profile %}
     <a class="profile-stats-back" href="{{ url_for('profile.profile', tid=current_tournament_id) }}">← Вернуться в профиль</a>
+    {% else %}
+    <a class="profile-stats-back" href="{{ url_for('profile.public_profile', user_id=public_profile_user_id, tid=current_tournament_id) }}">← Вернуться в профиль</a>
+    {% endif %}
 </div>
 {% endblock %}

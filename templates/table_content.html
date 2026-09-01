@@ -2324,7 +2324,11 @@
                 </td>
                 <td class="player-cell">
                     <div class="player-line{% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %} player-line--rpl-champion{% endif %}">
-                        <a href="/profile?username={{ row.username }}{% if selected_tid %}&tid={{ selected_tid }}{% endif %}" class="player-name">{{ row.username }}</a>
+                        {% if row.user_id is defined %}
+                        <a href="{{ url_for('profile.public_profile', user_id=row.user_id, tid=selected_tid) }}" class="player-name">{{ row.username }}</a>
+                        {% else %}
+                        <span class="player-name">{{ row.username }}</span>
+                        {% endif %}
                         {% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %}
                             <span class="rpl-champion-shield" role="img" aria-label="Действующий чемпион России" title="Действующий чемпион России"></span>
                         {% endif %}
