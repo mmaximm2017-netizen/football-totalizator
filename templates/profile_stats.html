@@ -108,6 +108,7 @@
             <div class="profile-stats-metric"><div class="profile-stats-value">{{ ('%.1f'|format(stats.average_points)).replace('.', ',') }}</div><div class="profile-stats-label">Средний балл</div></div>
             <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.submitted_count }}</div><div class="profile-stats-label">Сделано прогнозов</div></div>
         </div>
+        <p class="form-caption">Максимум зависит от итогового счёта матча: 10 или 11 очков.</p>
     </section>
 
     <section class="profile-stats-card">
@@ -118,7 +119,6 @@
             {% endfor %}
         </div>
         <p class="form-caption">Только реально сделанные прогнозы: {{ stats.submitted_count }}.</p>
-        <p class="form-caption">Максимум зависит от итогового счёта матча: 10 или 11 очков.</p>
     </section>
 
     <section class="profile-stats-card">

@@ -365,7 +365,7 @@ def public_profile_predictions(user_id):
         return redirect(url_for("auth.login"))
     context = _profile_tournament_context()
     if str(viewer_user_id) == str(user_id):
-        return redirect(url_for("predictions.my_predictions", tid=context["tournament_id"], filter="finished"))
+        return redirect(url_for("predictions.my_predictions", tid=context["tournament_id"]))
     user = _public_user(user_id)
     conn = cur = None
     try:

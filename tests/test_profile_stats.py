@@ -174,3 +174,12 @@ def test_template_uses_declined_delta_and_compact_comparison_labels():
     assert "Слева — более старые, справа — более новые." not in source
     assert ".comparison-grid .profile-stats-label" in source
     assert "white-space: nowrap" in source
+
+
+def test_maximum_explanation_is_in_summary_not_distribution():
+    source = (Path(__file__).resolve().parents[1] / "templates" / "profile_stats.html").read_text(encoding="utf-8")
+    summary = source.split('<section class="profile-stats-card">', 2)[1]
+    distribution = source.split('<section class="profile-stats-card">', 3)[2]
+
+    assert "Максимум зависит от итогового счёта матча: 10 или 11 очков." in summary
+    assert "Максимум зависит от итогового счёта матча: 10 или 11 очков." not in distribution

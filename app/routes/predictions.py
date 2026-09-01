@@ -16,7 +16,6 @@ from app.utils import (
     get_flag,
     is_before_deadline,
     parse_datetime,
-    utc_now,
 )
 
 predictions_bp = Blueprint('predictions', __name__)
@@ -145,10 +144,6 @@ def my_predictions():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
-    current_filter = request.args.get('filter', 'active')
-    if current_filter not in {'active', 'finished'}:
-        current_filter = 'active'
-
     conn = get_db()
     cur = conn.cursor()
 
@@ -163,68 +158,6 @@ def my_predictions():
         if not tournament_id:
             flash("Активный турнир не найден", "error")
             return redirect(url_for('main.index'))
-
-        now = utc_now()
-
-        # =================================================
-        # PENDING (before deadline)
-        # =================================================
-
-        cur.execute("""
-            SELECT m.id, m.home_team, m.away_team,
-                   p.home_goals, p.away_goals,
-                   m.kickoff_time, m.deadline
-            FROM predictions p
-            JOIN matches m ON p.match_id = m.id
-                         AND p.tournament_id = m.tournament_id
-            WHERE p.user_id = %s
-              AND p.tournament_id = %s
-              AND m.deadline::timestamptz > %s
-        """, (uid, tournament_id, now))
-
-        pending = [
-            {
-                'id': r[0],
-                'home_team': r[1],
-                'away_team': r[2],
-                'home_goals': r[3],
-                'away_goals': r[4],
-                'kickoff_time': r[5],
-                'deadline': r[6],
-            }
-            for r in cur.fetchall()
-        ]
-
-        # =================================================
-        # AWAITING (deadline passed, not finished)
-        # =================================================
-
-        cur.execute("""
-            SELECT m.id, m.home_team, m.away_team,
-                   p.home_goals, p.away_goals
-            FROM predictions p
-            JOIN matches m ON p.match_id = m.id
-                         AND p.tournament_id = m.tournament_id
-            WHERE p.user_id = %s
-              AND p.tournament_id = %s
-              AND m.deadline <= %s
-              AND m.status NOT IN ('FINISHED','POSTPONED','CANCELLED')
-        """, (uid, tournament_id, now))
-
-        awaiting = [
-            {
-                'id': r[0],
-                'home_team': r[1],
-                'away_team': r[2],
-                'home_goals': r[3],
-                'away_goals': r[4],
-            }
-            for r in cur.fetchall()
-        ]
-
-        # =================================================
-        # FINISHED
-        # =================================================
 
         cur.execute("""
             SELECT m.id,
@@ -260,35 +193,6 @@ def my_predictions():
             for r in cur.fetchall()
         ]
 
-        # =================================================
-        # CANCELLED / POSTPONED
-        # =================================================
-
-        cur.execute("""
-            SELECT m.id,
-                   m.home_team,
-                   m.away_team,
-                   m.status,
-                   COALESCE(p.points, 0)
-            FROM predictions p
-            JOIN matches m ON p.match_id = m.id
-                         AND p.tournament_id = m.tournament_id
-            WHERE p.user_id = %s
-              AND p.tournament_id = %s
-              AND m.status IN ('POSTPONED','CANCELLED')
-        """, (uid, tournament_id))
-
-        cancelled = [
-            {
-                'id': r[0],
-                'home_team': r[1],
-                'away_team': r[2],
-                'status': r[3],
-                'points': r[4],
-            }
-            for r in cur.fetchall()
-        ]
-
     finally:
         close_db(conn, cur)
 
@@ -297,11 +201,7 @@ def my_predictions():
 
     return render_template(
         'my_predictions.html',
-        pending=pending,
-        awaiting=awaiting,
         finished=finished,
-        cancelled=cancelled,
-        current_filter=current_filter,
         to_msk=cached_to_msk,
         tournaments=tournaments,
         active_tournaments=active_tournaments,

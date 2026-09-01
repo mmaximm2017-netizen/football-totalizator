@@ -9,15 +9,15 @@ from app.routes.predictions import predictions_bp
 
 
 class Cursor:
-    def __init__(self, result_sets):
-        self.result_sets = iter(result_sets)
+    def __init__(self, rows):
+        self.rows = rows
         self.calls = []
 
     def execute(self, query, params):
         self.calls.append((query, params))
 
     def fetchall(self):
-        return next(self.result_sets)
+        return self.rows
 
 
 class Connection:
@@ -38,8 +38,8 @@ def app():
     return app
 
 
-def request_context(app, monkeypatch, path, result_sets):
-    cursor = Cursor(result_sets)
+def request_context(app, path, rows):
+    cursor = Cursor(rows)
     captured = {}
 
     def render(_template, **context):
@@ -62,50 +62,40 @@ def request_context(app, monkeypatch, path, result_sets):
     return response, captured, cursor
 
 
-def test_default_filter_is_active_and_preserves_selected_tournament(app, monkeypatch):
-    response, context, cursor = request_context(app, monkeypatch, "/my-predictions?tid=42", [[], [], [], []])
-
-    assert response.status_code == 200
-    assert context["current_filter"] == "active"
-    assert context["current_tournament_id"] == 42
-    assert all(params[1] == 42 for _, params in cursor.calls)
-
-
-def test_finished_filter_passes_finished_predictions_to_template(app, monkeypatch):
+def test_history_loads_only_finished_predictions_for_selected_tournament(app):
     finished_row = (1, datetime(2026, 8, 31, 15, tzinfo=timezone.utc), "ЦСКА", "Зенит", 2, 1, 1, 0, 5)
-    response, context, cursor = request_context(app, monkeypatch, "/my-predictions?tid=42&filter=finished", [[], [], [finished_row], []])
+    response, context, cursor = request_context(app, "/my-predictions?tid=42", [finished_row])
 
     assert response.status_code == 200
-    assert context["current_filter"] == "finished"
-    assert context["finished"] == [{"id": 1, "date": "31 августа", "home_team": "ЦСКА", "away_team": "Зенит", "home_score": 2, "away_score": 1, "home_goals": 1, "away_goals": 0, "points": 5}]
-    assert "ORDER BY m.kickoff_time DESC, m.id DESC" in cursor.calls[2][0]
+    assert context["current_tournament_id"] == 42
+    assert context["finished"][0]["date"] == "31 августа"
+    assert len(cursor.calls) == 1
+    query, params = cursor.calls[0]
+    assert "m.status = 'FINISHED'" in query
+    assert "ORDER BY m.kickoff_time DESC, m.id DESC" in query
+    assert "deadline" not in query.lower()
+    assert params == (7, 42)
 
 
-def test_invalid_filter_falls_back_to_active(app, monkeypatch):
-    _, context, _ = request_context(app, monkeypatch, "/my-predictions?filter=unexpected", [[], [], [], []])
+@pytest.mark.parametrize("legacy_filter", ("active", "finished", "unexpected"))
+def test_legacy_filter_urls_keep_finished_only_history(app, legacy_filter):
+    response, context, cursor = request_context(app, f"/my-predictions?tid=42&filter={legacy_filter}", [])
 
-    assert context["current_filter"] == "active"
+    assert response.status_code == 200
+    assert context["finished"] == []
+    assert len(cursor.calls) == 1
+    assert "m.status = 'FINISHED'" in cursor.calls[0][0]
 
 
-def test_template_tabs_preserve_tid_and_filters_and_have_selected_empty_states():
+def test_template_has_no_filter_tabs_and_keeps_finished_card_themes():
     source = (Path(__file__).resolve().parents[1] / "templates" / "my_predictions.html").read_text(encoding="utf-8")
 
-    assert "url_for('predictions.my_predictions', tid=current_tournament_id, filter='active')" in source
-    assert "url_for('predictions.my_predictions', tid=current_tournament_id, filter='finished')" in source
-    assert "Сейчас нет активных прогнозов." in source
-    assert "Нет завершённых матчей." in source
-    assert source.count("У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.") == 2
-    assert "{% if current_filter == 'active' %}" in source
-    assert "{% else %}\n    <section class=\"predictions-section\">" in source
-
-
-def test_template_uses_scoped_tournament_themes_without_legacy_table_styles():
-    source = (Path(__file__).resolve().parents[1] / "templates" / "my_predictions.html").read_text(encoding="utf-8")
-
+    assert "predictions-tabs" not in source
+    assert "Активные" not in source
+    assert "current_filter" not in source
+    assert "Завершённые прогнозы" in source
+    assert "У вас пока нет завершённых прогнозов." in source
     for theme in ("body.tournament-rpl", "body.tournament-rcup", "body.tournament-wc2026"):
         assert theme in source
-    for legacy_color in ("#e8f5e9", "#fff3e0", "#ffebee", "background: white"):
-        assert legacy_color not in source
-    assert "<table" not in source
     assert "prediction-date" in source
     assert "prediction-points-premium" in source

@@ -11,9 +11,6 @@
     }
     .predictions-title { color: #063b73; font-size: 25px; font-weight: 1000; line-height: 1.08; }
     .predictions-subtitle { margin-top: 7px; color: #5d7894; font-size: 13px; font-weight: 700; }
-    .predictions-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .predictions-tab { display: flex; align-items: center; justify-content: center; min-height: 46px; border: 1px solid rgba(0,119,200,.18); border-radius: 15px; background: rgba(255,255,255,.55); color: #07558d; font-size: 13px; font-weight: 900; text-align: center; text-decoration: none; }
-    .predictions-tab.active { border-color: transparent; background: #0077c8; box-shadow: 0 9px 20px rgba(0,119,200,.20); color: #fff; }
     .predictions-section-title { margin-bottom: 12px; color: #063b73; font-size: 17px; font-weight: 1000; }
     .prediction-list { display: grid; gap: 7px; }
     .prediction-card { display: grid; gap: 7px; min-width: 0; border: 1px solid rgba(0,119,200,.11); border-radius: 17px; padding: 10px 11px; background: rgba(255,255,255,.52); box-shadow: inset 0 1px 0 rgba(255,255,255,.44); }
@@ -37,7 +34,6 @@
     body.tournament-rpl .predictions-hero { box-shadow: inset 3px 0 0 #d52b1e, 0 12px 30px rgba(0,43,122,.18), inset 0 1px 0 rgba(255,255,255,.86); }
     body.tournament-rpl .predictions-title, body.tournament-rpl .predictions-section-title, body.tournament-rpl .prediction-teams { color: #001b4d; }
     body.tournament-rpl .predictions-subtitle, body.tournament-rpl .prediction-meta, body.tournament-rpl .prediction-status, body.tournament-rpl .predictions-empty { color: rgba(0,27,77,.66); }
-    body.tournament-rpl .predictions-tab.active { background: #0066d6; }
     body.tournament-rpl .prediction-card { border-color: rgba(0,102,214,.14); background: rgba(255,255,255,.76); }
     body.tournament-rpl .prediction-score, body.tournament-rpl .prediction-points-mid, body.tournament-rpl .prediction-link { color: #0066d6; }
     body.tournament-rpl .prediction-points-high { background: #0066d6; color: #fff; }
@@ -46,8 +42,6 @@
     body.tournament-rcup .predictions-hero, body.tournament-rcup .predictions-section { border-color: rgba(232,0,36,.56); background: #310027; box-shadow: none; }
     body.tournament-rcup .predictions-title, body.tournament-rcup .predictions-section-title, body.tournament-rcup .prediction-teams, body.tournament-rcup .prediction-meta strong { color: #fff; }
     body.tournament-rcup .predictions-subtitle, body.tournament-rcup .prediction-meta, body.tournament-rcup .prediction-status, body.tournament-rcup .predictions-empty { color: rgba(255,255,255,.70); }
-    body.tournament-rcup .predictions-tab { border-color: rgba(232,0,36,.46); background: #3A0A32; color: #fff; }
-    body.tournament-rcup .predictions-tab.active { background: #E80024; }
     body.tournament-rcup .prediction-card, body.tournament-rcup .predictions-empty { border-color: rgba(232,0,36,.34); background: #3A0A32; box-shadow: none; }
     body.tournament-rcup .prediction-score, body.tournament-rcup .prediction-points-mid, body.tournament-rcup .prediction-link { background: rgba(232,0,36,.18); color: #fff; }
     body.tournament-rcup .prediction-points-high { background: #E80024; color: #fff; }
@@ -57,8 +51,6 @@
     body.tournament-wc2026 .predictions-hero, body.tournament-wc2026 .predictions-section { border-color: var(--wc-border-light); background: linear-gradient(150deg, var(--wc-bg-gradient-start), var(--wc-bg-gradient-end)); box-shadow: var(--shadow-wc-card); }
     body.tournament-wc2026 .predictions-title, body.tournament-wc2026 .predictions-section-title, body.tournament-wc2026 .prediction-teams, body.tournament-wc2026 .prediction-meta strong { color: #fff; }
     body.tournament-wc2026 .predictions-subtitle, body.tournament-wc2026 .prediction-meta, body.tournament-wc2026 .prediction-status, body.tournament-wc2026 .predictions-empty { color: rgba(255,255,255,.76); }
-    body.tournament-wc2026 .predictions-tab { border-color: rgba(31,231,255,.25); background: rgba(1,12,118,.45); color: #fff; }
-    body.tournament-wc2026 .predictions-tab.active { background: #d8ff22; color: #06102d; }
     body.tournament-wc2026 .prediction-card, body.tournament-wc2026 .predictions-empty { border-color: rgba(31,231,255,.18); background: linear-gradient(145deg, rgba(1,12,118,.52), rgba(3,9,58,.34)); }
     body.tournament-wc2026 .prediction-score, body.tournament-wc2026 .prediction-points-mid, body.tournament-wc2026 .prediction-link { background: rgba(31,231,255,.18); color: #bdfaff; }
     body.tournament-wc2026 .prediction-points-high { background: #d8ff22; color: #06102d; }
@@ -74,30 +66,6 @@
         <p class="predictions-subtitle">{{ current_tournament_name }}</p>
     </section>
 
-    {% if not is_public_history|default(false) %}
-    <nav class="predictions-tabs" aria-label="Фильтр прогнозов">
-        <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='active') }}" class="predictions-tab{% if current_filter == 'active' %} active{% endif %}">Активные</a>
-        <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='finished') }}" class="predictions-tab{% if current_filter == 'finished' %} active{% endif %}">Завершённые</a>
-    </nav>
-    {% endif %}
-
-    {% if not is_public_history|default(false) and current_filter == 'active' %}
-    <section class="predictions-section">
-        <h2 class="predictions-section-title">Активные прогнозы</h2>
-        {% if pending or awaiting %}
-        <div class="prediction-list">
-            {% for p in pending %}
-            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ p.home_team }} — {{ p.away_team }}</div><div class="prediction-score">{{ p.home_goals }}:{{ p.away_goals }}</div></div><div class="prediction-meta"><div>Дедлайн<strong>{{ to_msk(p.deadline) }}</strong></div><div>Статус<strong>Ожидает матча</strong></div></div></article>
-            {% endfor %}
-            {% for a in awaiting %}
-            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ a.home_team }} — {{ a.away_team }}</div><div class="prediction-score">{{ a.home_goals }}:{{ a.away_goals }}</div></div><div class="prediction-meta"><div>Статус<strong>Ожидает результата</strong></div><div><a class="prediction-link" href="{{ url_for('predictions.match_predictions', match_id=a.id) }}">📋 Ставки</a></div></div></article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not finished and not cancelled %}🎯{% else %}⏳{% endif %}</span>{% if not finished and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Сейчас нет активных прогнозов.{% endif %}</div>
-        {% endif %}
-    </section>
-    {% else %}
     <section class="predictions-section">
         <h2 class="predictions-section-title">Завершённые прогнозы</h2>
         {% if finished %}
@@ -107,21 +75,9 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not is_public_history|default(false) and not pending and not awaiting and not cancelled %}🎯{% else %}⚽{% endif %}</span>{% if not is_public_history|default(false) and not pending and not awaiting and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Нет завершённых матчей.{% endif %}</div>
+        <div class="predictions-empty"><span class="predictions-empty-icon">🎯</span>{% if is_public_history|default(false) %}Нет завершённых матчей.{% else %}У вас пока нет завершённых прогнозов.{% endif %}</div>
         {% endif %}
     </section>
-    {% endif %}
-
-    {% if not is_public_history|default(false) and cancelled %}
-    <section class="predictions-section">
-        <h2 class="predictions-section-title">Отменённые / перенесённые</h2>
-        <div class="prediction-list">
-            {% for c in cancelled %}
-            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ c.home_team }} — {{ c.away_team }}</div><div class="prediction-status">{% if c.status == 'POSTPONED' %}Перенесён{% else %}Отменён{% endif %}</div></div><div class="prediction-meta"><div>Очки<strong>{{ c.points }}</strong></div></div></article>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
 
 </div>
 {% endblock %}
