@@ -1,5 +1,5 @@
-import unittest
 import threading
+import unittest
 from unittest.mock import patch
 
 from app import db
@@ -11,30 +11,22 @@ class MockThreadedPool:
         self.returned = []
         self.minconn = minconn
         self.maxconn = maxconn
+        self.close_errors = []
         self._lock = threading.Lock()
-        self._rused = {}
         self._used = []
 
     def getconn(self, key=None):
-        if key is None:
-            key = threading.current_thread().ident
         with self._lock:
-            if key in self._rused:
-                return self._rused[key]
             if not self.connections:
                 raise db.PoolError("connection pool exhausted")
             conn = self.connections.pop(0)
-            self._rused[key] = conn
             self._used.append(conn)
             return conn
 
     def putconn(self, conn, key=None, close=False):
-        if key is None:
-            key = threading.current_thread().ident
         with self._lock:
-            if key not in self._rused or self._rused[key] is not conn:
+            if conn not in self._used:
                 raise db.PoolError("connection is not in the pool")
-            del self._rused[key]
             self._used.remove(conn)
             self.returned.append((conn, close))
             if close:
@@ -44,13 +36,12 @@ class MockThreadedPool:
 
     def closeall(self):
         with self._lock:
-            for conn in self._used + self._rused.values():
+            for conn in self._used:
                 try:
                     conn.close()
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001 - fake pool records close failures.
+                    self.close_errors.append(exc)
             self._used.clear()
-            self._rused.clear()
             self.connections.clear()
 
 
@@ -209,16 +200,41 @@ class DbPoolThreadSafetyTests(unittest.TestCase):
     def test_broken_connection_putconn_close_true(self):
         dead = FakeConnection(alive=False)
         replacement = FakeConnection(alive=True)
-        pool = MockThreadedPool([dead])
+        pool = MockThreadedPool([dead, replacement])
         db.db_pool = pool
 
-        with patch.object(db.psycopg2, "connect", return_value=replacement):
-            returned = db.get_db()
+        returned = db.get_db()
 
         self.assertIs(returned, replacement)
         self.assertEqual(len(pool.returned), 1)
         self.assertTrue(pool.returned[0][1])
         self.assertTrue(dead.closed)
+
+    def test_closed_pooled_connection_is_discarded_from_pool(self):
+        conn = FakeConnection()
+        pool = MockThreadedPool([conn])
+        db.db_pool = pool
+
+        returned = db.get_db()
+        returned.close()
+        db.close_db(returned)
+
+        self.assertEqual(pool.returned, [(returned, True)])
+
+    def test_cursor_cleanup_failure_still_returns_connection(self):
+        conn = FakeConnection()
+        pool = MockThreadedPool([conn])
+        db.db_pool = pool
+        cur = FakeCursor()
+        cur.close = lambda: (_ for _ in ()).throw(RuntimeError("cursor close failed"))
+
+        returned = db.get_db()
+        db.close_db(returned, cur)
+
+        self.assertEqual(pool.returned, [(returned, False)])
+
+    def test_primary_pool_has_no_direct_connection_fallback(self):
+        self.assertNotIn("psycopg2.connect", db.get_db.__code__.co_names)
 
     def test_putconn_on_raw_not_in_pool_closes_directly(self):
         """A connection that cannot be returned to pool is closed directly."""
@@ -273,6 +289,16 @@ class DbPoolThreadSafetyTests(unittest.TestCase):
         self.assertIsNot(db.db_pool, pool)
         self.assertIsInstance(db.db_pool, db.ThreadedConnectionPool)
 
+    def test_reset_pool_refuses_to_close_active_connections(self):
+        pool = MockThreadedPool([FakeConnection()])
+        db.db_pool = pool
+        conn = db.get_db()
+
+        with self.assertRaisesRegex(RuntimeError, "active_connections"):
+            db.reset_pool()
+
+        db.close_db(conn)
+
     def test_pool_exhaustion_raises_error(self):
         limited = MockThreadedPool([FakeConnection()], minconn=1, maxconn=1)
         db.db_pool = limited
@@ -292,6 +318,39 @@ class DbPoolThreadSafetyTests(unittest.TestCase):
 
         self.assertEqual(len(errors), 1)
         db.close_db(first)
+
+    def test_nested_checkout_exhausts_small_pool_but_owned_cursor_does_not(self):
+        pool = MockThreadedPool([FakeConnection()], minconn=1, maxconn=1)
+        db.db_pool = pool
+        outer = db.get_db()
+
+        with self.assertRaises(db.PoolExhausted):
+            db.get_db()
+
+        db.close_db(outer)
+
+    def test_four_threads_can_share_small_pool_without_nested_checkouts(self):
+        pool = MockThreadedPool([FakeConnection() for _ in range(4)], minconn=1, maxconn=4)
+        db.db_pool = pool
+        errors = []
+        barrier = threading.Barrier(4, timeout=10)
+
+        def worker():
+            try:
+                conn = db.get_db()
+                barrier.wait()
+                db.close_db(conn)
+            except Exception as exc:  # noqa: BLE001 - worker failures are test results.
+                errors.append(exc)
+
+        workers = [threading.Thread(target=worker) for _ in range(4)]
+        for worker_thread in workers:
+            worker_thread.start()
+        for worker_thread in workers:
+            worker_thread.join()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(pool.returned), 4)
 
     def test_concurrent_init_pool_creates_only_one_pool(self):
         db.db_pool = None

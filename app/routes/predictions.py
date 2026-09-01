@@ -150,10 +150,10 @@ def my_predictions():
     try:
 
         uid = session['user_id']
-        tournaments = get_all_tournaments()
+        tournaments = get_all_tournaments(cur=cur)
         active_tournaments = [t for t in tournaments if t.get("is_active")]
         tournament_state = get_tournament_state_flags(tournaments)
-        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
+        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int), cur=cur)
 
         if not tournament_id:
             flash("Активный турнир не найден", "error")

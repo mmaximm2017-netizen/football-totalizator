@@ -307,7 +307,7 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["current_tournament_id"], 42)
         self.assertEqual(response.get_json()["current_tournament_name"], "Selected")
-        selected.assert_called_once_with(42)
+        selected.assert_called_once_with(42, cur=cursor)
 
     def test_table_uses_selected_tournament_context(self):
         from app.routes.table import table_bp
@@ -336,7 +336,7 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertEqual(response.get_json()["current_tournament_id"], 42)
         self.assertEqual(response.get_json()["selected_tid"], 42)
         self.assertEqual(response.get_json()["selected_name"], "Selected")
-        selected.assert_called_once_with(42)
+        selected.assert_called_once_with(42, cur=cursor)
 
     def test_profile_uses_selected_tournament_context(self):
         from app.routes.profile import profile_bp
@@ -371,7 +371,7 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["current_tournament_id"], 42)
         self.assertEqual(response.get_json()["current_tournament_name"], "Selected")
-        selected.assert_called_once_with(42)
+        selected.assert_called_once_with(42, cur=cursor)
 
     def test_profile_has_place_and_titles_without_race_cue(self):
         profile = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")

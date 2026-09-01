@@ -107,7 +107,7 @@ def get_profile_stats(user_id, tournament_id):
                 (tournament_id,),
             )
             quality_ranks = _quality_ranks(cur.fetchall(), user_id)
-            top_scorers = get_tournament_top_scorers(tournament_id)
+            top_scorers = get_tournament_top_scorers(tournament_id, cur=cur)
             canonical_scorer = next(
                 (row for row in top_scorers if str(row["user_id"]) == str(user_id)),
                 None,

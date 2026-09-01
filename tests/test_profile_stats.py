@@ -44,7 +44,7 @@ def service_with(monkeypatch, points, recent_points=None, *, rank_rows=None, top
     connection.cursor.return_value = cursor
     monkeypatch.setattr(stats_service, "get_db", lambda: connection)
     monkeypatch.setattr(stats_service, "close_db", lambda conn, cur: None)
-    monkeypatch.setattr(stats_service, "get_tournament_top_scorers", lambda tournament_id: list(top_scorers))
+    monkeypatch.setattr(stats_service, "get_tournament_top_scorers", lambda tournament_id, cur=None: list(top_scorers))
     return cursor
 
 

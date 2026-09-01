@@ -18,9 +18,11 @@ def _row_to_tournament(row):
     }
 
 
-def get_all_tournaments():
-    conn = get_db()
-    cur = conn.cursor()
+def get_all_tournaments(cur=None):
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         cur.execute(
             """
@@ -31,12 +33,15 @@ def get_all_tournaments():
         )
         return [_row_to_tournament(r) for r in cur.fetchall()]
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
-def get_tournament_by_id(tournament_id):
-    conn = get_db()
-    cur = conn.cursor()
+def get_tournament_by_id(tournament_id, cur=None):
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         cur.execute(
             """
@@ -48,7 +53,8 @@ def get_tournament_by_id(tournament_id):
         )
         return _row_to_tournament(cur.fetchone())
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
 def get_active_tournament():

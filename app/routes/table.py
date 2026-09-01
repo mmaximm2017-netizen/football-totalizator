@@ -71,7 +71,7 @@ def table():
             else:
                 t['status'] = 'archive'
 
-        tid = get_selected_tournament_id(request.args.get('tid', type=int))
+        tid = get_selected_tournament_id(request.args.get('tid', type=int), cur=cur)
         if not tid:
             return render_template(
                 'table.html',

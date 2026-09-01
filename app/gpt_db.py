@@ -49,6 +49,7 @@ def _init_pool():
 
 def get_gpt_db():
     """Return a connection configured read-only for this request only."""
+    conn = None
     try:
         conn = _init_pool().getconn()
         if conn.closed:
@@ -61,6 +62,14 @@ def get_gpt_db():
             cur.execute("SET statement_timeout = %s", (GPT_DB_STATEMENT_TIMEOUT_MS,))
         return conn
     except (PoolError, OperationalError, InterfaceError, GPTDatabaseUnavailable) as exc:
+        if conn is not None:
+            try:
+                _pool.putconn(conn, close=True)
+            except (PoolError, OperationalError, InterfaceError):
+                try:
+                    conn.close()
+                except (OperationalError, InterfaceError):
+                    pass
         logger.warning("gpt_database_unavailable type=%s", type(exc).__name__)
         raise GPTDatabaseUnavailable("gpt_database_unavailable") from None
 

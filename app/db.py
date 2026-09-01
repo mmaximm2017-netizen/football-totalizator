@@ -3,12 +3,10 @@
 import logging
 import threading
 
-import psycopg2
-from psycopg2.pool import ThreadedConnectionPool, PoolError
-from psycopg2 import OperationalError, InterfaceError
+from psycopg2 import InterfaceError, OperationalError
+from psycopg2.pool import PoolError, ThreadedConnectionPool
 
-from app.config import DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD
-
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +56,13 @@ def init_pool():
 def reset_pool():
     global db_pool
 
-    if db_pool is not None:
-        try:
-            db_pool.closeall()
-        except Exception:
-            pass
-
-    db_pool = None
+    with _init_lock:
+        pool = db_pool
+        if pool is not None and getattr(pool, "_used", None):
+            raise RuntimeError("cannot_reset_pool_with_active_connections")
+        if pool is not None:
+            pool.closeall()
+        db_pool = None
     init_pool()
     logger.info("DB pool reset complete")
 
@@ -84,13 +82,11 @@ def is_connection_alive(conn):
 
         return True
 
-    except Exception:
+    except Exception:  # noqa: BLE001 - liveness probes must fail closed.
         return False
 
 
 def get_db():
-    global db_pool
-
     if db_pool is None:
         init_pool()
 
@@ -98,20 +94,12 @@ def get_db():
         conn = db_pool.getconn()
 
         if not is_connection_alive(conn):
-            try:
+            db_pool.putconn(conn, close=True)
+            logger.info("Dead pool connection discarded; obtaining pooled replacement")
+            conn = db_pool.getconn()
+            if not is_connection_alive(conn):
                 db_pool.putconn(conn, close=True)
-            except Exception:
-                pass
-
-            logger.info("Dead pool connection replaced; creating direct connect")
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                connect_timeout=10,
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=10,
-                keepalives_count=5,
-            )
+                raise OperationalError("pooled_connection_replacement_failed")
 
         return conn
 
@@ -119,35 +107,37 @@ def get_db():
         logger.error("DB pool exhausted (max=%d)", db_pool.maxconn)
         raise PoolExhausted("All database connections are in use")
 
-    except (OperationalError, InterfaceError) as e:
-        logger.warning("DB pool connection failed, resetting pool: %s", e)
-        reset_pool()
-        return db_pool.getconn()
+    except (OperationalError, InterfaceError) as exc:
+        logger.warning("DB pool connection failed type=%s", type(exc).__name__)
+        raise
 
 
 def close_db(conn, cur=None):
-    global db_pool
-
-    if cur is not None and not cur.closed:
-        cur.close()
-
-    if conn is not None and not conn.closed:
+    if cur is not None:
         try:
+            if not cur.closed:
+                cur.close()
+        except Exception:
+            logger.warning("DB cursor cleanup failed", exc_info=True)
+
+    if conn is None:
+        return
+    try:
+        if not conn.closed:
             conn.rollback()
-        except Exception:
-            pass
+    except Exception:
+        logger.warning("DB rollback failed", exc_info=True)
 
-        if db_pool is not None:
-            try:
-                db_pool.putconn(conn)
-                return
-            except Exception:
-                pass
-
+    if db_pool is not None:
         try:
-            conn.close()
+            db_pool.putconn(conn, close=bool(conn.closed))
+            return
         except Exception:
-            pass
+            logger.warning("DB pool return failed; closing connection", exc_info=True)
+    try:
+        conn.close()
+    except Exception:
+        logger.warning("DB connection close failed", exc_info=True)
 
 
 # =========================================================

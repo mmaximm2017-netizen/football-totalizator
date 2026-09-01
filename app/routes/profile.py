@@ -190,24 +190,19 @@ def profile():
             is_own_profile = False
         profile_subject_username = username
 
-        all_tournaments = get_all_tournaments()
+        all_tournaments = get_all_tournaments(cur=cur)
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         tournament_state = get_tournament_state_flags(all_tournaments)
 
-        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
+        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int), cur=cur)
         if not tournament_id:
             flash("Активный турнир не найден", "error")
             return redirect(url_for('table.table'))
 
-        selected_tournament = get_tournament_by_id(tournament_id)
+        selected_tournament = get_tournament_by_id(tournament_id, cur=cur)
         if user_is_deleted == 1 and selected_tournament and selected_tournament.get("is_active"):
             flash("Игрок не участвует в активном турнире", "error")
             return redirect(url_for('table.table', tid=tournament_id))
-
-        ranking = get_tournament_ranking(tournament_id)
-        user_row = next((r for r in ranking if str(r.get('user_id')) == str(uid)), None)
-        current_place = user_row['place'] if user_row else None
-        position_metric = build_profile_position_metric(ranking, uid)
 
         cur.execute(
             """
@@ -224,6 +219,10 @@ def profile():
 
     tournaments = all_tournaments
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+    ranking = get_tournament_ranking(tournament_id)
+    user_row = next((row for row in ranking if str(row.get("user_id")) == str(uid)), None)
+    current_place = user_row["place"] if user_row else None
+    position_metric = build_profile_position_metric(ranking, uid)
 
     return render_template(
         'profile.html',

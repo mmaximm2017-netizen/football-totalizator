@@ -50,3 +50,17 @@ def test_gpt_db_close_rolls_back_without_committing(monkeypatch):
     connection.rollback.assert_called_once()
     connection.commit.assert_not_called()
     pool.putconn.assert_called_once_with(connection, close=False)
+
+
+def test_gpt_setup_failure_discards_checked_out_connection(monkeypatch):
+    connection, pool = MagicMock(), MagicMock()
+    connection.closed = False
+    connection.set_session.side_effect = gpt_db.OperationalError("setup failed")
+    pool.getconn.return_value = connection
+    monkeypatch.setenv("TOTISH_GPT_DATABASE_URL", "postgresql://gpt-reader")
+    monkeypatch.setattr(gpt_db, "ThreadedConnectionPool", lambda **kwargs: pool)
+
+    with pytest.raises(gpt_db.GPTDatabaseUnavailable):
+        gpt_db.get_gpt_db()
+
+    pool.putconn.assert_called_once_with(connection, close=True)

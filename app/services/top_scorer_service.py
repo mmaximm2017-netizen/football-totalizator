@@ -1,6 +1,5 @@
 from app.db import close_db, get_db
 
-
 FINISHED_STATUSES = ("FINISHED", "COMPLETE", "COMPLETED")
 
 
@@ -43,9 +42,11 @@ def build_top_scorers(rows):
     return top_scorers
 
 
-def get_tournament_top_scorers(tournament_id):
-    conn = get_db()
-    cur = conn.cursor()
+def get_tournament_top_scorers(tournament_id, cur=None):
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
 
     try:
         cur.execute(
@@ -101,4 +102,5 @@ def get_tournament_top_scorers(tournament_id):
 
         return build_top_scorers(rows)
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)

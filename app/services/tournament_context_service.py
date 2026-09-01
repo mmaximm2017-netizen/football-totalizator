@@ -1,10 +1,10 @@
 from app.db import close_db, get_db
-from app.utils import utc_now
 from app.services.tournament_service import (
     get_active_tournament,
     get_active_tournament_id,
     get_tournament_by_id,
 )
+from app.utils import utc_now
 
 
 def get_session_start_tournament_id(cur):
@@ -107,26 +107,31 @@ def select_default_tournament_by_unfinished_match(cur, now=None):
     return row[0] if row and row[0] else None
 
 
-def get_nearest_upcoming_tournament_id():
+def get_nearest_upcoming_tournament_id(cur=None):
     """
     Historical default used by the main page and table:
     choose the tournament with the nearest upcoming match.
     """
-    conn = get_db()
-    cur = conn.cursor()
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         return get_session_start_tournament_id(cur)
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
-def get_first_active_tournament_id():
+def get_first_active_tournament_id(cur=None):
     """
     Historical fallback used by duplicated route helpers:
     first active tournament by id ASC.
     """
-    conn = get_db()
-    cur = conn.cursor()
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         cur.execute(
             """
@@ -140,16 +145,19 @@ def get_first_active_tournament_id():
         row = cur.fetchone()
         return row[0] if row else None
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
-def get_latest_tournament_id():
+def get_latest_tournament_id(cur=None):
     """
     Last-resort table fallback when no current/active tournament exists.
     Mirrors the table page ordering.
     """
-    conn = get_db()
-    cur = conn.cursor()
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         cur.execute(
             """
@@ -162,7 +170,8 @@ def get_latest_tournament_id():
         row = cur.fetchone()
         return row[0] if row else None
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
 def get_current_tournament_id():
@@ -187,20 +196,20 @@ def get_current_tournament():
     return get_tournament_by_id(tournament_id) if tournament_id else None
 
 
-def get_selected_tournament_id(requested_tid):
+def get_selected_tournament_id(requested_tid, cur=None):
     """
     Unified selected tournament state for user-facing pages.
 
     The explicit ?tid= query param is the primary state. If it is missing
     or points to a missing tournament, use the shared fallback order.
     """
-    if requested_tid and get_tournament_by_id(requested_tid):
+    if requested_tid and get_tournament_by_id(requested_tid, cur=cur):
         return requested_tid
 
     return (
-        get_nearest_upcoming_tournament_id()
-        or get_first_active_tournament_id()
-        or get_latest_tournament_id()
+        get_nearest_upcoming_tournament_id(cur=cur)
+        or get_first_active_tournament_id(cur=cur)
+        or get_latest_tournament_id(cur=cur)
     )
 
 

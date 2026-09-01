@@ -10,24 +10,23 @@ from flask import (
     url_for,
 )
 
-from app.db import get_db, close_db
+from app.db import close_db, get_db
+from app.routes.admin_actions import dispatch_admin_action
 from app.routes.admin_common import admin_required
-from app.routes.admin_actions import ALLOWED_TITLES, dispatch_admin_action
 from app.routes.admin_tournaments import (
     handle_activate_tournament,
     handle_archive_tournament,
 )
 from app.services.admin_view_service import (
-    prepare_admin_view_data,
-    parse_russian_cup_match_filters,
     parse_rpl_match_filters,
+    parse_russian_cup_match_filters,
+    prepare_admin_view_data,
     prepare_rpl_match_list,
     prepare_russian_cup_match_list,
 )
 from app.services.rpl_admin_service import prepare_rpl_admin_page_data
 from app.services.rpl_team_catalog import RPL_CANONICAL_TEAMS
 from app.services.russian_cup_admin_service import prepare_russian_cup_admin_page_data
-
 
 # =========================================================
 # BLUEPRINT
@@ -43,6 +42,9 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 @admin_bp.route('/', methods=['GET', 'POST'])
 @admin_required
 def admin():
+
+    if request.method == 'POST' and request.form.get('action') == 'update_matches':
+        return dispatch_admin_action('update_matches', None, None)
 
     conn = get_db()
     cur = conn.cursor()

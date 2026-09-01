@@ -1,5 +1,5 @@
-import unittest
 import inspect
+import unittest
 from unittest.mock import Mock, patch
 
 from app import db
@@ -149,15 +149,13 @@ class DbInitializationTests(unittest.TestCase):
     def test_dead_connection_is_replaced_and_close_db_returns_connection(self):
         dead = Connection(closed=True)
         replacement = Connection()
-        pool = Pool([dead])
+        pool = Pool([dead, replacement])
         db.db_pool = pool
 
-        with patch("app.db.psycopg2.connect", return_value=replacement) as connect:
-            returned = db.get_db()
+        returned = db.get_db()
 
         self.assertIs(returned, replacement)
         self.assertEqual(pool.returned, [(dead, True)])
-        connect.assert_called_once()
 
         db.close_db(replacement)
         self.assertEqual(pool.returned[-1], (replacement, False))

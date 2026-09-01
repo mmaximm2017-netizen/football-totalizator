@@ -1,37 +1,29 @@
 ﻿# app/routes/main.py
 
 import logging
-from datetime import datetime, timezone
 from collections import defaultdict
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
+    flash,
     g,
+    jsonify,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
-    flash,
     session,
-    jsonify
+    url_for,
 )
 
-from app.db import get_db, close_db
-from app.utils import (
-    get_flag,
-    get_club_logo,
-    cached_to_msk,
-    is_before_deadline,
-    format_date_ru,
-    format_month_label,
-)
 from app.config import START_DATE
+from app.db import close_db, get_db
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_session_start_tournament_id,
-    select_default_tournament_by_unfinished_match,
     get_tournament_state_flags,
+    select_default_tournament_by_unfinished_match,
 )
 from app.services.tournament_service import (
     get_all_tournaments,
@@ -42,6 +34,14 @@ from app.services.wc_playoff_service import (
     get_playoff_stage_label,
     get_playoff_stage_sort_order,
     is_wc2026_playoff_match,
+)
+from app.utils import (
+    cached_to_msk,
+    format_date_ru,
+    format_month_label,
+    get_club_logo,
+    get_flag,
+    is_before_deadline,
 )
 
 main_bp = Blueprint('main', __name__)
@@ -208,7 +208,7 @@ def index():
 
         league = request.args.get('league', 'all')
         requested_tid = request.args.get('tid', type=int)
-        all_tournaments = get_all_tournaments()
+        all_tournaments = get_all_tournaments(cur=cur)
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if request.method == 'GET' and requested_tid is None:
             default_tid = select_default_tournament_by_unfinished_match(cur)
@@ -238,7 +238,7 @@ def index():
         tid = (
             session_tid
             if request.method == 'POST' and requested_tid is None and session_tournament
-            else get_selected_tournament_id(requested_tid)
+            else get_selected_tournament_id(requested_tid, cur=cur)
         )
         requested_tournament = next(
             (tournament for tournament in all_tournaments if tournament.get("id") == requested_tid),
