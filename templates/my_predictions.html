@@ -1,112 +1,119 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 style="text-align: center; margin-bottom: 16px;">📋 Мои ставки</h2>
+<style>
+    .my-predictions-page { display: grid; gap: 14px; min-width: 0; }
+    .predictions-hero, .predictions-section {
+        border: 1px solid rgba(255,255,255,.58);
+        border-radius: 24px;
+        padding: 17px;
+        background: linear-gradient(160deg, rgba(255,255,255,.86), rgba(232,246,255,.66));
+        box-shadow: 0 12px 30px rgba(0,78,140,.11), inset 0 1px 0 rgba(255,255,255,.48);
+    }
+    .predictions-title { color: #063b73; font-size: 25px; font-weight: 1000; line-height: 1.08; }
+    .predictions-subtitle { margin-top: 7px; color: #5d7894; font-size: 13px; font-weight: 700; }
+    .predictions-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .predictions-tab { display: flex; align-items: center; justify-content: center; min-height: 46px; border: 1px solid rgba(0,119,200,.18); border-radius: 15px; background: rgba(255,255,255,.55); color: #07558d; font-size: 13px; font-weight: 900; text-align: center; text-decoration: none; }
+    .predictions-tab.active { border-color: transparent; background: #0077c8; box-shadow: 0 9px 20px rgba(0,119,200,.20); color: #fff; }
+    .predictions-section-title { margin-bottom: 12px; color: #063b73; font-size: 17px; font-weight: 1000; }
+    .prediction-list { display: grid; gap: 9px; }
+    .prediction-card { display: grid; gap: 10px; min-width: 0; border: 1px solid rgba(0,119,200,.11); border-radius: 17px; padding: 13px; background: rgba(255,255,255,.52); box-shadow: inset 0 1px 0 rgba(255,255,255,.44); }
+    .prediction-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .prediction-teams { min-width: 0; color: #063b73; font-size: 14px; font-weight: 900; line-height: 1.3; overflow-wrap: anywhere; }
+    .prediction-score { flex: 0 0 auto; border-radius: 11px; padding: 6px 9px; background: rgba(0,119,200,.10); color: #0077c8; font-size: 14px; font-weight: 1000; }
+    .prediction-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; color: #5d7894; font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .prediction-meta strong { display: block; margin-top: 3px; color: #063b73; font-size: 14px; font-weight: 1000; }
+    .prediction-link { color: #0077c8; font-size: 13px; font-weight: 900; text-decoration: none; }
+    .prediction-points { min-width: 46px; text-align: center; }
+    .prediction-points-high { background: rgba(46,125,50,.15); color: #2e7d32; }
+    .prediction-points-mid { background: rgba(0,119,200,.12); color: #0077c8; }
+    .prediction-points-zero { background: rgba(93,120,148,.11); color: #5d7894; }
+    .prediction-status { color: #5d7894; font-size: 12px; font-weight: 800; }
+    .predictions-empty { padding: 28px 18px; border: 1px solid rgba(0,119,200,.11); border-radius: 18px; background: rgba(255,255,255,.48); color: #5d7894; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.4; }
+    .predictions-empty-icon { display: block; margin-bottom: 8px; font-size: 30px; }
 
-<!-- Фильтр -->
-<div class="filter-bar" style="justify-content: center;">
-    <a href="?filter=active" class="filter-btn {% if current_filter == 'active' or not current_filter %}active{% endif %}">🟢 Активные</a>
-    <a href="?filter=finished" class="filter-btn {% if current_filter == 'finished' %}active{% endif %}">✅ Завершённые</a>
-</div>
+    body.tournament-rpl .predictions-hero, body.tournament-rpl .predictions-section { border-color: rgba(0,102,214,.18); background: rgba(255,255,255,.92); box-shadow: 0 12px 30px rgba(0,43,122,.18), inset 0 1px 0 rgba(255,255,255,.86); }
+    body.tournament-rpl .predictions-hero { box-shadow: inset 3px 0 0 #d52b1e, 0 12px 30px rgba(0,43,122,.18), inset 0 1px 0 rgba(255,255,255,.86); }
+    body.tournament-rpl .predictions-title, body.tournament-rpl .predictions-section-title, body.tournament-rpl .prediction-teams { color: #001b4d; }
+    body.tournament-rpl .predictions-subtitle, body.tournament-rpl .prediction-meta, body.tournament-rpl .prediction-status, body.tournament-rpl .predictions-empty { color: rgba(0,27,77,.66); }
+    body.tournament-rpl .predictions-tab.active { background: #0066d6; }
+    body.tournament-rpl .prediction-card { border-color: rgba(0,102,214,.14); background: rgba(255,255,255,.76); }
+    body.tournament-rpl .prediction-score, body.tournament-rpl .prediction-points-mid, body.tournament-rpl .prediction-link { color: #0066d6; }
 
-{% if (current_filter == 'active' or not current_filter) %}
-    {% if pending %}
-    <h3 style="margin-top: 20px;">🟢 Ожидающие</h3>
-    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-            <tr style="background: #e8f5e9;">
-                <th style="padding: 10px 8px;">Матч</th>
-                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-                <th style="padding: 10px 8px;">Дедлайн</th>
-            </tr>
+    body.tournament-rcup .predictions-hero, body.tournament-rcup .predictions-section { border-color: rgba(232,0,36,.56); background: #310027; box-shadow: none; }
+    body.tournament-rcup .predictions-title, body.tournament-rcup .predictions-section-title, body.tournament-rcup .prediction-teams, body.tournament-rcup .prediction-meta strong { color: #fff; }
+    body.tournament-rcup .predictions-subtitle, body.tournament-rcup .prediction-meta, body.tournament-rcup .prediction-status, body.tournament-rcup .predictions-empty { color: rgba(255,255,255,.70); }
+    body.tournament-rcup .predictions-tab { border-color: rgba(232,0,36,.46); background: #3A0A32; color: #fff; }
+    body.tournament-rcup .predictions-tab.active { background: #E80024; }
+    body.tournament-rcup .prediction-card, body.tournament-rcup .predictions-empty { border-color: rgba(232,0,36,.34); background: #3A0A32; box-shadow: none; }
+    body.tournament-rcup .prediction-score, body.tournament-rcup .prediction-points-mid, body.tournament-rcup .prediction-link { background: rgba(232,0,36,.18); color: #fff; }
+    body.tournament-rcup .prediction-points-high { background: #E80024; color: #fff; }
+    body.tournament-rcup .prediction-points-zero { background: rgba(255,255,255,.10); color: rgba(255,255,255,.68); }
+
+    body.tournament-wc2026 .predictions-hero, body.tournament-wc2026 .predictions-section { border-color: var(--wc-border-light); background: linear-gradient(150deg, var(--wc-bg-gradient-start), var(--wc-bg-gradient-end)); box-shadow: var(--shadow-wc-card); }
+    body.tournament-wc2026 .predictions-title, body.tournament-wc2026 .predictions-section-title, body.tournament-wc2026 .prediction-teams, body.tournament-wc2026 .prediction-meta strong { color: #fff; }
+    body.tournament-wc2026 .predictions-subtitle, body.tournament-wc2026 .prediction-meta, body.tournament-wc2026 .prediction-status, body.tournament-wc2026 .predictions-empty { color: rgba(255,255,255,.76); }
+    body.tournament-wc2026 .predictions-tab { border-color: rgba(31,231,255,.25); background: rgba(1,12,118,.45); color: #fff; }
+    body.tournament-wc2026 .predictions-tab.active { background: #d8ff22; color: #06102d; }
+    body.tournament-wc2026 .prediction-card, body.tournament-wc2026 .predictions-empty { border-color: rgba(31,231,255,.18); background: linear-gradient(145deg, rgba(1,12,118,.52), rgba(3,9,58,.34)); }
+    body.tournament-wc2026 .prediction-score, body.tournament-wc2026 .prediction-points-mid, body.tournament-wc2026 .prediction-link { background: rgba(31,231,255,.18); color: #bdfaff; }
+    body.tournament-wc2026 .prediction-points-high { background: #d8ff22; color: #06102d; }
+    body.tournament-wc2026 .prediction-points-zero { background: rgba(255,255,255,.10); color: rgba(255,255,255,.72); }
+
+    @media (max-width: 390px) { .predictions-hero, .predictions-section { border-radius: 19px; padding: 14px; } .predictions-title { font-size: 22px; } .prediction-card { padding: 12px; } }
+</style>
+
+<div class="my-predictions-page">
+    <section class="predictions-hero">
+        <h1 class="predictions-title">📋 Результаты прогнозов</h1>
+        <p class="predictions-subtitle">{{ current_tournament_name }}</p>
+    </section>
+
+    <nav class="predictions-tabs" aria-label="Фильтр прогнозов">
+        <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='active') }}" class="predictions-tab{% if current_filter == 'active' %} active{% endif %}">Активные</a>
+        <a href="{{ url_for('predictions.my_predictions', tid=current_tournament_id, filter='finished') }}" class="predictions-tab{% if current_filter == 'finished' %} active{% endif %}">Завершённые</a>
+    </nav>
+
+    {% if current_filter == 'active' %}
+    <section class="predictions-section">
+        <h2 class="predictions-section-title">Активные прогнозы</h2>
+        {% if pending or awaiting %}
+        <div class="prediction-list">
             {% for p in pending %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 10px 8px;">{{ p.home_team }} – {{ p.away_team }}</td>
-                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ p.home_goals }}:{{ p.away_goals }}</td>
-                <td style="padding: 10px 8px; font-size: 12px;">{{ to_msk(p.deadline) }}</td>
-            </tr>
+            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ p.home_team }} — {{ p.away_team }}</div><div class="prediction-score">{{ p.home_goals }}:{{ p.away_goals }}</div></div><div class="prediction-meta"><div>Дедлайн<strong>{{ to_msk(p.deadline) }}</strong></div><div>Статус<strong>Ожидает матча</strong></div></div></article>
             {% endfor %}
-        </table>
-    </div>
-    {% endif %}
-
-    {% if awaiting %}
-    <h3>⏳ Ожидают результата</h3>
-    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-            <tr style="background: #fff3e0;">
-                <th style="padding: 10px 8px;">Матч</th>
-                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-                <th style="padding: 10px 8px;">Действия</th>
-            </tr>
             {% for a in awaiting %}
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 10px 8px;">{{ a.home_team }} – {{ a.away_team }}</td>
-                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ a.home_goals }}:{{ a.away_goals }}</td>
-                <td style="padding: 10px 8px;"><a href="/match/{{ a.id }}/predictions" style="color: #2e7d32; text-decoration: none; font-weight: 600;">📋 Ставки</a></td>
-            </tr>
+            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ a.home_team }} — {{ a.away_team }}</div><div class="prediction-score">{{ a.home_goals }}:{{ a.away_goals }}</div></div><div class="prediction-meta"><div>Статус<strong>Ожидает результата</strong></div><div><a class="prediction-link" href="{{ url_for('predictions.match_predictions', match_id=a.id) }}">📋 Ставки</a></div></div></article>
             {% endfor %}
-        </table>
-    </div>
-    {% endif %}
-{% endif %}
-
-{% if current_filter == 'finished' %}
-    {% if finished %}
-    <h3>✅ Завершённые</h3>
-    <div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-        <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-            <tr style="background: #e8f5e9;">
-                <th style="padding: 10px 8px;">Матч</th>
-                <th style="padding: 10px 8px; text-align: center;">Результат</th>
-                <th style="padding: 10px 8px; text-align: center;">Прогноз</th>
-                <th style="padding: 10px 8px; text-align: center;">Очки</th>
-            </tr>
-            {% for f in finished %}
-            <tr style="border-bottom: 1px solid #eee; {% if f.points > 0 %}background: #f1f8e9;{% endif %}">
-                <td style="padding: 10px 8px;">{{ f.home_team }} – {{ f.away_team }}</td>
-                <td style="padding: 10px 8px; text-align: center; font-weight: 600;">{{ f.home_score }}:{{ f.away_score }}</td>
-                <td style="padding: 10px 8px; text-align: center;">{{ f.home_goals }}:{{ f.away_goals }}</td>
-                <td style="padding: 10px 8px; text-align: center;">
-                    {% if f.points > 0 %}
-                    <span style="background: #2e7d32; color: white; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 13px;">+{{ f.points }}</span>
-                    {% else %}0{% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
+        </div>
+        {% else %}
+        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not finished and not cancelled %}🎯{% else %}⏳{% endif %}</span>{% if not finished and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Сейчас нет активных прогнозов.{% endif %}</div>
+        {% endif %}
+    </section>
     {% else %}
-    <div class="card" style="text-align: center; padding: 30px;">
-        <p style="color: #888;">Нет завершённых матчей</p>
-    </div>
+    <section class="predictions-section">
+        <h2 class="predictions-section-title">Завершённые прогнозы</h2>
+        {% if finished %}
+        <div class="prediction-list">
+            {% for f in finished %}
+            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ f.home_team }} — {{ f.away_team }}</div><div class="prediction-score prediction-points{% if f.points >= 7 %} prediction-points-high{% elif f.points > 0 %} prediction-points-mid{% else %} prediction-points-zero{% endif %}">{% if f.points > 0 %}+{% endif %}{{ f.points }}</div></div><div class="prediction-meta"><div>Результат<strong>{{ f.home_score }}:{{ f.away_score }}</strong></div><div>Прогноз<strong>{{ f.home_goals }}:{{ f.away_goals }}</strong></div></div></article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="predictions-empty"><span class="predictions-empty-icon">{% if not pending and not awaiting and not cancelled %}🎯{% else %}⚽{% endif %}</span>{% if not pending and not awaiting and not cancelled %}У вас пока нет прогнозов. Перейдите к матчам и сделайте прогноз.{% else %}Нет завершённых матчей.{% endif %}</div>
+        {% endif %}
+    </section>
     {% endif %}
-{% endif %}
 
-{% if not pending and not awaiting and not finished %}
-<div class="card" style="text-align: center; padding: 40px;">
-    <p style="font-size: 48px; margin-bottom: 12px;">🎯</p>
-    <p style="font-size: 18px; font-weight: 600;">У вас пока нет ставок</p>
-    <p style="color: #888;">Перейдите на главную и сделайте прогноз</p>
-</div>
-{% endif %}
+    {% if cancelled %}
+    <section class="predictions-section">
+        <h2 class="predictions-section-title">Отменённые / перенесённые</h2>
+        <div class="prediction-list">
+            {% for c in cancelled %}
+            <article class="prediction-card"><div class="prediction-card-top"><div class="prediction-teams">{{ c.home_team }} — {{ c.away_team }}</div><div class="prediction-status">{% if c.status == 'POSTPONED' %}Перенесён{% else %}Отменён{% endif %}</div></div><div class="prediction-meta"><div>Очки<strong>{{ c.points }}</strong></div></div></article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
-{% if cancelled %}
-<h3>❌ Отменённые/перенесённые</h3>
-<div style="overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px;">
-    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 13px;">
-        <tr style="background: #ffebee;">
-            <th style="padding: 10px 8px;">Матч</th>
-            <th style="padding: 10px 8px;">Статус</th>
-            <th style="padding: 10px 8px; text-align: center;">Очки</th>
-        </tr>
-        {% for c in cancelled %}
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 10px 8px;">{{ c.home_team }} – {{ c.away_team }}</td>
-            <td style="padding: 10px 8px; font-size: 12px;">{% if c.status == 'POSTPONED' %}Перенесён{% else %}Отменён{% endif %}</td>
-            <td style="padding: 10px 8px; text-align: center;">{{ c.points }}</td>
-        </tr>
-        {% endfor %}
-    </table>
 </div>
-{% endif %}
 {% endblock %}

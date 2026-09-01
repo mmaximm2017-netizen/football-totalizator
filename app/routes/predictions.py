@@ -1,14 +1,20 @@
 ﻿# app/routes/predictions.py
 
-from flask import Blueprint, render_template, redirect, request, url_for, flash, session
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from app.db import get_db, close_db
+from app.db import close_db, get_db
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_tournament_state_flags,
 )
 from app.services.tournament_service import get_all_tournaments, get_tournament_by_id
-from app.utils import cached_to_msk, get_club_logo, get_flag, is_before_deadline, utc_now
+from app.utils import (
+    cached_to_msk,
+    get_club_logo,
+    get_flag,
+    is_before_deadline,
+    utc_now,
+)
 
 predictions_bp = Blueprint('predictions', __name__)
 
@@ -127,6 +133,10 @@ def my_predictions():
 
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
+
+    current_filter = request.args.get('filter', 'active')
+    if current_filter not in {'active', 'finished'}:
+        current_filter = 'active'
 
     conn = get_db()
     cur = conn.cursor()
@@ -277,6 +287,7 @@ def my_predictions():
         awaiting=awaiting,
         finished=finished,
         cancelled=cancelled,
+        current_filter=current_filter,
         to_msk=cached_to_msk,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
