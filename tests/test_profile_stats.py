@@ -8,9 +8,9 @@ from app.services import profile_stats_service as stats_service
 
 
 class Cursor:
-    def __init__(self, aggregate, recent_rows):
+    def __init__(self, aggregate, all_rows):
         self.aggregate = aggregate
-        self.recent_rows = recent_rows
+        self.all_rows = iter(all_rows)
         self.calls = []
 
     def execute(self, query, params):
@@ -20,7 +20,7 @@ class Cursor:
         return self.aggregate
 
     def fetchall(self):
-        return self.recent_rows
+        return next(self.all_rows)
 
 
 def aggregate(points, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
@@ -35,8 +35,10 @@ def aggregate(points, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexp
     )
 
 
-def service_with(monkeypatch, points, recent_points=None, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
-    cursor = Cursor(aggregate(points, maximum_points=maximum_points, quality_counts=quality_counts, unexpected=unexpected), [(value,) for value in (recent_points if recent_points is not None else points[:10])])
+def service_with(monkeypatch, points, recent_points=None, *, rank_rows=None, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
+    recent_rows = [(value,) for value in (recent_points if recent_points is not None else points[:10])]
+    all_rows = ([rank_rows or []] if points else []) + [recent_rows]
+    cursor = Cursor(aggregate(points, maximum_points=maximum_points, quality_counts=quality_counts, unexpected=unexpected), all_rows)
     connection = Mock()
     connection.cursor.return_value = cursor
     monkeypatch.setattr(stats_service, "get_db", lambda: connection)
@@ -50,7 +52,7 @@ def test_stats_are_scoped_to_selected_user_and_tournament(monkeypatch):
     result = stats_service.get_profile_stats(7, 42)
 
     assert result["submitted_count"] == 2
-    assert [params for _, params in cursor.calls] == [(7, 42), (7, 42)]
+    assert [params for _, params in cursor.calls] == [(7, 42), (42,), (7, 42)]
 
 
 def test_zero_points_are_a_real_bucket_and_missing_predictions_are_not(monkeypatch):
@@ -125,7 +127,7 @@ def test_quality_metrics_use_submitted_finished_prediction_denominator(monkeypat
 
     quality = stats_service.get_profile_stats(7, 42)["quality"]
 
-    assert quality == {
+    assert {name: {"count": item["count"], "percent": item["percent"]} for name, item in quality.items()} == {
         "correct_outcome": {"count": 5, "percent": 62.5},
         "seven_plus": {"count": 4, "percent": 50.0},
         "exact_score": {"count": 2, "percent": 25.0},
@@ -140,7 +142,8 @@ def test_missing_prediction_is_excluded_from_quality_denominator_and_zero_count(
     result = stats_service.get_profile_stats(7, 42)
 
     assert result["submitted_count"] == 2
-    assert result["quality"]["zero_points"] == {"count": 1, "percent": 50.0}
+    assert result["quality"]["zero_points"]["count"] == 1
+    assert result["quality"]["zero_points"]["percent"] == 50.0
 
 
 @pytest.mark.parametrize(
@@ -164,6 +167,56 @@ def test_quality_query_uses_canonical_outcome_exact_and_seven_plus_conditions(mo
     assert "p.points IN (7, 8, 10, 11)" in query
     assert "p.home_goals = m.home_score AND p.away_goals = m.away_score" in query
     assert "p.points = 0" in query
+
+
+def test_quality_rank_uses_highest_ratios_and_lowest_zero_ratio():
+    rows = [
+        (1, 4, 3, 2, 1, 1),
+        (2, 4, 4, 3, 2, 0),
+        (3, 4, 2, 4, 3, 2),
+    ]
+
+    ranks = stats_service._quality_ranks(rows, 2)
+
+    assert ranks["correct_outcome"] == {"place": 1, "total": 3}
+    assert ranks["seven_plus"] == {"place": 2, "total": 3}
+    assert ranks["exact_score"] == {"place": 2, "total": 3}
+    assert ranks["zero_points"] == {"place": 1, "total": 3}
+
+
+def test_quality_rank_uses_competition_places_and_exact_equal_ratios():
+    rows = [
+        (1, 2, 2, 0, 0, 0),
+        (2, 3, 2, 0, 0, 0),
+        (3, 6, 4, 0, 0, 0),
+        (4, 4, 1, 0, 0, 0),
+    ]
+
+    assert stats_service._quality_ranks(rows, 2)["correct_outcome"] == {"place": 2, "total": 4}
+    assert stats_service._quality_ranks(rows, 3)["correct_outcome"] == {"place": 2, "total": 4}
+    assert stats_service._quality_ranks(rows, 4)["correct_outcome"] == {"place": 4, "total": 4}
+
+
+def test_quality_rank_does_not_tie_near_equal_rounded_percentages():
+    rows = [(1, 3, 2, 0, 0, 0), (2, 1000, 667, 0, 0, 0)]
+
+    assert stats_service._quality_ranks(rows, 2)["correct_outcome"] == {"place": 1, "total": 2}
+    assert stats_service._quality_ranks(rows, 1)["correct_outcome"] == {"place": 2, "total": 2}
+
+
+def test_quality_rank_excludes_users_without_finished_submissions(monkeypatch):
+    rank_rows = [(7, 1, 1, 1, 1, 0)]
+    cursor = service_with(monkeypatch, [7], quality_counts=(1, 1, 1, 0), rank_rows=rank_rows)
+
+    result = stats_service.get_profile_stats(7, 42)
+
+    assert result["quality"]["correct_outcome"]["rank"] == {"place": 1, "total": 1}
+    ranking_query, ranking_params = cursor.calls[1]
+    assert "p.tournament_id = %s" in ranking_query
+    assert "u.is_admin = 0" in ranking_query
+    assert "COALESCE(u.is_deleted, 0) = 0" in ranking_query
+    assert "m.status = 'FINISHED'" in ranking_query
+    assert ranking_params == (42,)
 
 
 def test_form_is_displayed_oldest_to_newest_and_compares_full_five_match_windows(monkeypatch):

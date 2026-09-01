@@ -1,5 +1,7 @@
 """Read-only aggregate statistics for the signed-in participant profile."""
 
+from fractions import Fraction
+
 from app.db import close_db, get_db
 
 POINT_BUCKETS = (11, 10, 8, 7, 5, 3, 2, 0)
@@ -7,6 +9,36 @@ POINT_BUCKETS = (11, 10, 8, 7, 5, 3, 2, 0)
 
 class ProfileStatsIntegrityError(RuntimeError):
     """Finished prediction points contain values outside the scoring contract."""
+
+
+QUALITY_NAMES = ("correct_outcome", "seven_plus", "exact_score", "zero_points")
+
+
+def _quality_ranks(rows, user_id):
+    """Return competition ranks using exact count/total fractions."""
+    if not rows:
+        return {name: None for name in QUALITY_NAMES}
+
+    rankings = {}
+    for index, name in enumerate(QUALITY_NAMES, start=2):
+        lowest_is_best = name == "zero_points"
+        ranked = sorted(
+            ((row[0], Fraction(row[index], row[1])) for row in rows),
+            key=lambda item: item[1],
+            reverse=not lowest_is_best,
+        )
+        place = 0
+        previous_ratio = None
+        for position, (participant_id, ratio) in enumerate(ranked, start=1):
+            if ratio != previous_ratio:
+                place = position
+                previous_ratio = ratio
+            if str(participant_id) == str(user_id):
+                rankings[name] = {"place": place, "total": len(rows)}
+                break
+        else:
+            rankings[name] = None
+    return rankings
 
 
 def get_profile_stats(user_id, tournament_id):
@@ -50,6 +82,30 @@ def get_profile_stats(user_id, tournament_id):
         unexpected_count = int(aggregate[16] or 0)
         if unexpected_count or sum(bucket_counts.values()) != submitted_count:
             raise ProfileStatsIntegrityError("unexpected_finished_prediction_points")
+
+        quality_ranks = {name: None for name in QUALITY_NAMES}
+        if submitted_count:
+            cur.execute(
+                """
+                SELECT
+                    p.user_id,
+                    COUNT(*),
+                    COALESCE(SUM(CASE WHEN SIGN(p.home_goals - p.away_goals) = SIGN(m.home_score - m.away_score) THEN 1 ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN p.points IN (7, 8, 10, 11) THEN 1 ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN p.home_goals = m.home_score AND p.away_goals = m.away_score THEN 1 ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN p.points = 0 THEN 1 ELSE 0 END), 0)
+                FROM predictions p
+                JOIN matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
+                JOIN users u ON u.id = p.user_id
+                WHERE p.tournament_id = %s
+                  AND m.status = 'FINISHED'
+                  AND u.is_admin = 0
+                  AND COALESCE(u.is_deleted, 0) = 0
+                GROUP BY p.user_id
+                """,
+                (tournament_id,),
+            )
+            quality_ranks = _quality_ranks(cur.fetchall(), user_id)
 
         cur.execute(
             """
@@ -103,6 +159,7 @@ def get_profile_stats(user_id, tournament_id):
             name: {
                 "count": count,
                 "percent": round(count / submitted_count * 100, 1) if submitted_count else 0,
+                "rank": quality_ranks[name],
             }
             for name, count in quality_counts.items()
         },
