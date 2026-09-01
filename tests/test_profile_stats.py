@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from flask import Flask, g, render_template
 
 from app.routes.profile import format_profile_points
 from app.services import profile_stats_service as stats_service
@@ -297,3 +298,44 @@ def test_template_renders_quality_grid_for_own_and_public_stats():
     assert "stats.quality.zero_points" in source
     for theme in ("body.tournament-rpl", "body.tournament-rcup", "body.tournament-wc2026"):
         assert theme in source
+
+
+def test_quality_rank_values_render_only_when_present():
+    root = Path(__file__).resolve().parents[1]
+    app = Flask(__name__, template_folder=str(root / "templates"))
+    app.add_url_rule("/profile", "profile.profile", lambda: "profile")
+    stats = {
+        "total_points": 10,
+        "percentage": 50,
+        "average_points": 5,
+        "submitted_count": 2,
+        "buckets": [],
+        "recent_points": [],
+        "comparison": None,
+        "quality": {
+            "correct_outcome": {"count": 1, "percent": 50, "rank": {"place": 1, "total": 7}},
+            "seven_plus": {"count": 1, "percent": 50, "rank": {"place": 2, "total": 7}},
+            "exact_score": {"count": 0, "percent": 0, "rank": None},
+            "zero_points": {"count": 1, "percent": 50, "rank": None},
+        },
+    }
+
+    with app.test_request_context("/profile/stats"):
+        g.is_admin = False
+        html = render_template(
+            "profile_stats.html",
+            username="Игрок",
+            stats=stats,
+            current_place=1,
+            current_tournament_id=42,
+            current_tournament_name="РПЛ",
+            tournaments=[],
+            active_tournaments=[],
+            is_own_profile=True,
+            csrf_token="test",
+            format_profile_points=format_profile_points,
+        )
+
+    assert "1 место из 7" in html
+    assert "2 место из 7" in html
+    assert html.count("место из 7") == 2
