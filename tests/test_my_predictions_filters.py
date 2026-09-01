@@ -72,11 +72,12 @@ def test_default_filter_is_active_and_preserves_selected_tournament(app, monkeyp
 
 def test_finished_filter_passes_finished_predictions_to_template(app, monkeypatch):
     finished_row = (1, "ЦСКА", "Зенит", 2, 1, 1, 0, 5)
-    response, context, _ = request_context(app, monkeypatch, "/my-predictions?tid=42&filter=finished", [[], [], [finished_row], []])
+    response, context, cursor = request_context(app, monkeypatch, "/my-predictions?tid=42&filter=finished", [[], [], [finished_row], []])
 
     assert response.status_code == 200
     assert context["current_filter"] == "finished"
     assert context["finished"] == [{"id": 1, "home_team": "ЦСКА", "away_team": "Зенит", "home_score": 2, "away_score": 1, "home_goals": 1, "away_goals": 0, "points": 5}]
+    assert "ORDER BY m.kickoff_time DESC, m.id DESC" in cursor.calls[2][0]
 
 
 def test_invalid_filter_falls_back_to_active(app, monkeypatch):

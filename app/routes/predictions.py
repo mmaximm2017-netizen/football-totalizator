@@ -230,6 +230,7 @@ def my_predictions():
             WHERE p.user_id = %s
               AND p.tournament_id = %s
               AND m.status = 'FINISHED'
+            ORDER BY m.kickoff_time DESC, m.id DESC
         """, (uid, tournament_id))
 
         finished = [
