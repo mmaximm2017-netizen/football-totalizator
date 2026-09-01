@@ -23,19 +23,20 @@ class Cursor:
         return self.recent_rows
 
 
-def aggregate(points, *, maximum_points=None, unexpected=0):
+def aggregate(points, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
     return (
         len(points),
         sum(points),
         sum(points) / len(points) if points else 0,
         maximum_points if maximum_points is not None else len(points) * 11,
+        *quality_counts,
         *(points.count(value) for value in stats_service.POINT_BUCKETS),
         unexpected,
     )
 
 
-def service_with(monkeypatch, points, recent_points=None, *, maximum_points=None, unexpected=0):
-    cursor = Cursor(aggregate(points, maximum_points=maximum_points, unexpected=unexpected), [(value,) for value in (recent_points if recent_points is not None else points[:10])])
+def service_with(monkeypatch, points, recent_points=None, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
+    cursor = Cursor(aggregate(points, maximum_points=maximum_points, quality_counts=quality_counts, unexpected=unexpected), [(value,) for value in (recent_points if recent_points is not None else points[:10])])
     connection = Mock()
     connection.cursor.return_value = cursor
     monkeypatch.setattr(stats_service, "get_db", lambda: connection)
@@ -116,6 +117,53 @@ def test_no_predictions_has_zero_percentage_without_division_by_zero(monkeypatch
     assert result["percentage"] == 0
     assert result["average_points"] == 0
     assert result["comparison"] is None
+    assert all(item["count"] == 0 and item["percent"] == 0 for item in result["quality"].values())
+
+
+def test_quality_metrics_use_submitted_finished_prediction_denominator(monkeypatch):
+    service_with(monkeypatch, [7, 8, 10, 11, 0, 5, 3, 2], quality_counts=(5, 4, 2, 1))
+
+    quality = stats_service.get_profile_stats(7, 42)["quality"]
+
+    assert quality == {
+        "correct_outcome": {"count": 5, "percent": 62.5},
+        "seven_plus": {"count": 4, "percent": 50.0},
+        "exact_score": {"count": 2, "percent": 25.0},
+        "zero_points": {"count": 1, "percent": 12.5},
+    }
+
+
+def test_missing_prediction_is_excluded_from_quality_denominator_and_zero_count(monkeypatch):
+    # The tournament may have more finished matches, but this service sees only submitted rows.
+    service_with(monkeypatch, [7, 0], quality_counts=(1, 1, 0, 1))
+
+    result = stats_service.get_profile_stats(7, 42)
+
+    assert result["submitted_count"] == 2
+    assert result["quality"]["zero_points"] == {"count": 1, "percent": 50.0}
+
+
+@pytest.mark.parametrize(
+    ("predicted", "actual", "expected"),
+    (((2, 1), (3, 0), True), ((1, 1), (0, 0), True), ((0, 2), (1, 3), True), ((2, 1), (0, 1), False)),
+)
+def test_correct_outcome_sign_cases(predicted, actual, expected):
+    predicted_sign = (predicted[0] > predicted[1]) - (predicted[0] < predicted[1])
+    actual_sign = (actual[0] > actual[1]) - (actual[0] < actual[1])
+
+    assert (predicted_sign == actual_sign) is expected
+
+
+def test_quality_query_uses_canonical_outcome_exact_and_seven_plus_conditions(monkeypatch):
+    cursor = service_with(monkeypatch, [7, 8, 10, 11, 0], quality_counts=(3, 4, 2, 1))
+
+    stats_service.get_profile_stats(7, 42)
+
+    query = cursor.calls[0][0]
+    assert "SIGN(p.home_goals - p.away_goals) = SIGN(m.home_score - m.away_score)" in query
+    assert "p.points IN (7, 8, 10, 11)" in query
+    assert "p.home_goals = m.home_score AND p.away_goals = m.away_score" in query
+    assert "p.points = 0" in query
 
 
 def test_form_is_displayed_oldest_to_newest_and_compares_full_five_match_windows(monkeypatch):
@@ -183,3 +231,16 @@ def test_maximum_explanation_is_in_summary_not_distribution():
 
     assert "Максимум зависит от итогового счёта матча: 10 или 11 очков." in summary
     assert "Максимум зависит от итогового счёта матча: 10 или 11 очков." not in distribution
+
+
+def test_template_renders_quality_grid_for_own_and_public_stats():
+    source = (Path(__file__).resolve().parents[1] / "templates" / "profile_stats.html").read_text(encoding="utf-8")
+
+    for label in ("Качество прогнозов", "Верный исход", "7+ очков", "Точный счёт", "0 очков"):
+        assert label in source
+    assert "stats.quality.correct_outcome" in source
+    assert "stats.quality.seven_plus" in source
+    assert "stats.quality.exact_score" in source
+    assert "stats.quality.zero_points" in source
+    for theme in ("body.tournament-rpl", "body.tournament-rcup", "body.tournament-wc2026"):
+        assert theme in source

@@ -45,6 +45,14 @@
     .comparison-card-latest .comparison-value { color: #0077c8; }
     .comparison-value { margin-top: 5px; color: #0077c8; font-size: 23px; font-weight: 1000; }
     .comparison-delta { margin-top: 12px; color: #063b73; font-size: 14px; font-weight: 1000; text-align: center; }
+    .quality-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .quality-card { min-width: 0; padding: 11px 10px; border: 1px solid rgba(0,119,200,0.12); border-radius: 16px; background: rgba(255,255,255,0.50); text-align: center; }
+    .quality-percent { color: #2e7d32; font-size: 22px; font-weight: 1000; line-height: 1; }
+    .quality-label { margin-top: 6px; color: #5d7894; font-size: 11px; font-weight: 900; line-height: 1.2; }
+    .quality-count { margin-top: 4px; color: #5d7894; font-size: 11px; font-weight: 700; }
+    .quality-card-seven .quality-percent { color: #0077c8; }
+    .quality-card-exact .quality-percent { color: #c69214; }
+    .quality-card-zero .quality-percent { color: #5d7894; }
     .profile-stats-back { min-height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: linear-gradient(135deg, #0077c8, var(--wc-accent-blue)); color: #fff; font-size: 15px; font-weight: 1000; text-decoration: none; box-shadow: 0 14px 30px rgba(0,119,200,0.22); }
     body.tournament-wc2026 .profile-stats-hero, body.tournament-wc2026 .profile-stats-card,
     body.tournament-rpl .profile-stats-hero, body.tournament-rpl .profile-stats-card,
@@ -61,7 +69,11 @@
     body.tournament-rcup .profile-stats-metric, body.tournament-rcup .form-point { background: #3A0A32; border-color: rgba(232,0,36,0.34); }
     body.tournament-rcup .profile-stats-value, body.tournament-rcup .comparison-value,
     body.tournament-rcup .form-point, body.tournament-rcup .bucket-row,
-    body.tournament-rcup .comparison-delta { color: #fff; }
+    body.tournament-rcup .comparison-delta, body.tournament-rcup .quality-percent { color: #fff; }
+    body.tournament-rcup .quality-card { border-color: rgba(232,0,36,0.34); background: #3A0A32; }
+    body.tournament-rcup .quality-label, body.tournament-rcup .quality-count { color: rgba(255,255,255,0.70); }
+    body.tournament-rcup .quality-card-seven .quality-percent { color: #E80024; }
+    body.tournament-rcup .quality-card-exact .quality-percent { color: var(--rcup-lime, #C7F21A); }
     body.tournament-wc2026 .profile-stats-back, body.tournament-rcup .profile-stats-back { background: #E80024; }
     body.tournament-rpl .profile-stats-back { background: #0066d6; }
     body.tournament-rpl .form-group-previous, body.tournament-rpl .comparison-card-previous { border-color: rgba(0,102,214,0.16); background: #eef7ff; }
@@ -89,6 +101,10 @@
     body.tournament-rpl .bucket-fill-premium { background: linear-gradient(90deg, #c69214, #f3cf69); }
     body.tournament-rcup .bucket-fill-premium { background: var(--rcup-lime, #C7F21A); }
     body.tournament-wc2026 .bucket-fill-premium { background: #d8ff22; }
+    body.tournament-wc2026 .quality-card { border-color: rgba(31,231,255,0.18); background: rgba(1,12,118,0.38); }
+    body.tournament-wc2026 .quality-percent { color: #26f0c8; }
+    body.tournament-wc2026 .quality-label, body.tournament-wc2026 .quality-count { color: rgba(255,255,255,0.72); }
+    body.tournament-wc2026 .quality-card-seven .quality-percent, body.tournament-wc2026 .quality-card-exact .quality-percent { color: #d8ff22; }
     @media (max-width: 390px) { .profile-stats-title { font-size: 23px; } .form-points { gap: 4px; } .form-point { min-height: 36px; font-size: 12px; } .comparison-grid .profile-stats-metric { padding-right: 5px; padding-left: 5px; } }
 </style>
 
@@ -119,6 +135,16 @@
             {% endfor %}
         </div>
         <p class="form-caption">Только реально сделанные прогнозы: {{ stats.submitted_count }}.</p>
+    </section>
+
+    <section class="profile-stats-card">
+        <h2 class="profile-stats-title-small">Качество прогнозов</h2>
+        <div class="quality-grid">
+            <div class="quality-card"><div class="quality-percent">{{ ('%.1f'|format(stats.quality.correct_outcome.percent)).replace('.', ',') }}%</div><div class="quality-label">Верный исход</div><div class="quality-count">{{ stats.quality.correct_outcome.count }} из {{ stats.submitted_count }}</div></div>
+            <div class="quality-card quality-card-seven"><div class="quality-percent">{{ ('%.1f'|format(stats.quality.seven_plus.percent)).replace('.', ',') }}%</div><div class="quality-label">7+ очков</div><div class="quality-count">{{ stats.quality.seven_plus.count }} из {{ stats.submitted_count }}</div></div>
+            <div class="quality-card quality-card-exact"><div class="quality-percent">{{ ('%.1f'|format(stats.quality.exact_score.percent)).replace('.', ',') }}%</div><div class="quality-label">Точный счёт</div><div class="quality-count">{{ stats.quality.exact_score.count }} из {{ stats.submitted_count }}</div></div>
+            <div class="quality-card quality-card-zero"><div class="quality-percent">{{ ('%.1f'|format(stats.quality.zero_points.percent)).replace('.', ',') }}%</div><div class="quality-label">0 очков</div><div class="quality-count">{{ stats.quality.zero_points.count }} из {{ stats.submitted_count }}</div></div>
+        </div>
     </section>
 
     <section class="profile-stats-card">
