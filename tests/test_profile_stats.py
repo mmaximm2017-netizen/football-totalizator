@@ -36,7 +36,7 @@ def aggregate(points, *, maximum_points=None, quality_counts=(0, 0, 0, 0), unexp
     )
 
 
-def service_with(monkeypatch, points, recent_points=None, *, rank_rows=None, maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
+def service_with(monkeypatch, points, recent_points=None, *, rank_rows=None, top_scorers=(), maximum_points=None, quality_counts=(0, 0, 0, 0), unexpected=0):
     recent_rows = [(value,) for value in (recent_points if recent_points is not None else points[:10])]
     all_rows = ([rank_rows or []] if points else []) + [recent_rows]
     cursor = Cursor(aggregate(points, maximum_points=maximum_points, quality_counts=quality_counts, unexpected=unexpected), all_rows)
@@ -44,6 +44,7 @@ def service_with(monkeypatch, points, recent_points=None, *, rank_rows=None, max
     connection.cursor.return_value = cursor
     monkeypatch.setattr(stats_service, "get_db", lambda: connection)
     monkeypatch.setattr(stats_service, "close_db", lambda conn, cur: None)
+    monkeypatch.setattr(stats_service, "get_tournament_top_scorers", lambda tournament_id: list(top_scorers))
     return cursor
 
 
@@ -220,6 +221,23 @@ def test_quality_rank_excludes_users_without_finished_submissions(monkeypatch):
     assert ranking_params == (42,)
 
 
+def test_exact_score_rank_comes_from_canonical_top_scorer_table(monkeypatch):
+    rank_rows = [(7, 2, 2, 1, 1, 0), (8, 2, 0, 0, 0, 0)]
+    top_scorers = [{"user_id": 8, "place": 1}, {"user_id": 7, "place": 2}]
+    service_with(
+        monkeypatch,
+        [10, 3],
+        quality_counts=(2, 1, 1, 0),
+        rank_rows=rank_rows,
+        top_scorers=top_scorers,
+    )
+
+    quality = stats_service.get_profile_stats(7, 42)["quality"]
+
+    assert quality["exact_score"]["percent"] == 50.0
+    assert quality["exact_score"]["rank"] == {"place": 2, "total": 2}
+
+
 def test_form_is_displayed_oldest_to_newest_and_compares_full_five_match_windows(monkeypatch):
     newest_first = [11, 10, 8, 7, 5, 3, 2, 0, 0, 5]
     service_with(monkeypatch, newest_first, newest_first)
@@ -336,6 +354,7 @@ def test_quality_rank_values_render_only_when_present():
             format_profile_points=format_profile_points,
         )
 
-    assert "1 место из 7" in html
-    assert "2 место из 7" in html
-    assert html.count("место из 7") == 2
+    assert "1 место" in html
+    assert "2 место" in html
+    assert "место из" not in html
+    assert "1 из 2" not in html

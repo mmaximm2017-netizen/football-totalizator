@@ -3,6 +3,7 @@
 from fractions import Fraction
 
 from app.db import close_db, get_db
+from app.services.top_scorer_service import get_tournament_top_scorers
 
 POINT_BUCKETS = (11, 10, 8, 7, 5, 3, 2, 0)
 
@@ -106,6 +107,16 @@ def get_profile_stats(user_id, tournament_id):
                 (tournament_id,),
             )
             quality_ranks = _quality_ranks(cur.fetchall(), user_id)
+            top_scorers = get_tournament_top_scorers(tournament_id)
+            canonical_scorer = next(
+                (row for row in top_scorers if str(row["user_id"]) == str(user_id)),
+                None,
+            )
+            quality_ranks["exact_score"] = (
+                {"place": canonical_scorer["place"], "total": len(top_scorers)}
+                if canonical_scorer
+                else None
+            )
 
         cur.execute(
             """
