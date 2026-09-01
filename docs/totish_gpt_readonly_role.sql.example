@@ -1,0 +1,31 @@
+-- Run manually as the Neon database owner. Do not run from the application.
+-- Replace the password and database name before execution. Store the resulting
+-- connection string only in TOTISH_GPT_DATABASE_URL.
+
+CREATE ROLE totish_gpt_reader LOGIN PASSWORD 'REPLACE_WITH_LONG_RANDOM_PASSWORD'
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
+
+REVOKE ALL ON DATABASE REPLACE_WITH_DATABASE_NAME FROM totish_gpt_reader;
+GRANT CONNECT ON DATABASE REPLACE_WITH_DATABASE_NAME TO totish_gpt_reader;
+REVOKE TEMPORARY ON DATABASE REPLACE_WITH_DATABASE_NAME FROM totish_gpt_reader;
+REVOKE ALL ON SCHEMA public FROM totish_gpt_reader;
+GRANT USAGE ON SCHEMA public TO totish_gpt_reader;
+
+-- Explicitly deny writes even if a future database default is permissive.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM totish_gpt_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO totish_gpt_reader;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM totish_gpt_reader;
+REVOKE CREATE ON SCHEMA public FROM totish_gpt_reader;
+
+-- Check this manually before relying on the role. PostgreSQL privileges are
+-- additive, so CREATE or TEMPORARY granted to PUBLIC also applies to this role.
+-- Do not revoke either from PUBLIC without an application-wide privilege review.
+
+-- Run this as the role that owns future application tables.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+REVOKE ALL ON TABLES FROM totish_gpt_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT ON TABLES TO totish_gpt_reader;
+
+ALTER ROLE totish_gpt_reader SET default_transaction_read_only = on;
+ALTER ROLE totish_gpt_reader SET statement_timeout = '10s';
