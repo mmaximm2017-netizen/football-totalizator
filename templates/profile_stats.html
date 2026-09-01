@@ -38,6 +38,8 @@
     .form-point-zero { color: #5d7894; }
     .form-caption, .profile-stats-empty { margin-top: 12px; color: #5d7894; font-size: 12px; font-weight: 700; line-height: 1.35; }
     .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .comparison-grid .profile-stats-metric { padding-right: 6px; padding-left: 6px; }
+    .comparison-grid .profile-stats-label { font-size: 10px; letter-spacing: -0.25px; white-space: nowrap; }
     .comparison-card-previous { border-color: rgba(0,119,200,0.14); background: rgba(0,119,200,0.05); }
     .comparison-card-latest { border-color: rgba(0,119,200,0.30); background: rgba(0,119,200,0.10); }
     .comparison-card-latest .comparison-value { color: #0077c8; }
@@ -81,12 +83,13 @@
     body.tournament-rpl .profile-stats-hero { padding: 17px 15px; }
     body.tournament-rpl .profile-stats-grid { gap: 8px; }
     body.tournament-rpl .profile-stats-metric { padding: 11px 10px; }
+    body.tournament-rpl .comparison-grid .profile-stats-metric { padding-right: 6px; padding-left: 6px; }
     body.tournament-rpl .profile-stats-title-small { margin-bottom: 11px; }
     body.tournament-rpl .bucket-list { gap: 8px; }
     body.tournament-rpl .bucket-fill-premium { background: linear-gradient(90deg, #c69214, #f3cf69); }
     body.tournament-rcup .bucket-fill-premium { background: var(--rcup-lime, #C7F21A); }
     body.tournament-wc2026 .bucket-fill-premium { background: #d8ff22; }
-    @media (max-width: 390px) { .profile-stats-title { font-size: 23px; } .form-points { gap: 4px; } .form-point { min-height: 36px; font-size: 12px; } }
+    @media (max-width: 390px) { .profile-stats-title { font-size: 23px; } .form-points { gap: 4px; } .form-point { min-height: 36px; font-size: 12px; } .comparison-grid .profile-stats-metric { padding-right: 5px; padding-left: 5px; } }
 </style>
 
 <div class="profile-stats-screen">
@@ -127,13 +130,12 @@
             <span class="form-divider" aria-hidden="true"></span>
             <div class="form-group form-group-latest"><div class="form-points form-points-group">{% for points in stats.recent_points[5:] %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}</div><div class="form-group-label">Последние 5</div></div>
         </div>
-        <p class="form-caption">Слева — более старые, справа — более новые.</p>
         <div class="comparison-grid">
             <div class="profile-stats-metric comparison-card-previous"><div class="profile-stats-label">Предыдущие 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.previous_five }}</div></div>
             <div class="profile-stats-metric comparison-card-latest"><div class="profile-stats-label">Последние 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.latest_five }}</div></div>
         </div>
-        <div class="comparison-delta">{% if stats.comparison.difference > 0 %}+{% endif %}{{ stats.comparison.difference }} очков</div>
-        <p class="form-caption">Сравнение двух последних отрезков по 5 прогнозов.</p>
+        <div class="comparison-delta">{% if stats.comparison.difference > 0 %}+{% elif stats.comparison.difference < 0 %}-{% endif %}{{ format_profile_points(stats.comparison.difference) }}</div>
+        <p class="form-caption">Сравнение последних 5 прогнозов с предыдущими 5.</p>
         {% else %}
         <div class="form-points" aria-label="От более старого к более новому">
             {% for points in stats.recent_points %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}

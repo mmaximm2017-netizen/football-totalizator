@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.routes.profile import format_profile_points
 from app.services import profile_stats_service as stats_service
 
 
@@ -155,3 +156,21 @@ def test_template_splits_full_form_into_previous_and_latest_groups_only_with_com
     assert "stats.recent_points[5:]" in source
     assert "stats.comparison.previous_five" in source
     assert "stats.comparison.latest_five" in source
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    ((0, "0 очков"), (1, "1 очко"), (2, "2 очка"), (4, "4 очка"), (5, "5 очков"), (11, "11 очков"), (14, "14 очков"), (21, "21 очко"), (22, "22 очка"), (25, "25 очков"), (-1, "1 очко"), (-2, "2 очка"), (-4, "4 очка"), (-5, "5 очков"), (-11, "11 очков"), (-21, "21 очко"), (-22, "22 очка")),
+)
+def test_form_delta_reuses_russian_points_declension(value, expected):
+    assert format_profile_points(value) == expected
+
+
+def test_template_uses_declined_delta_and_compact_comparison_labels():
+    source = (Path(__file__).resolve().parents[1] / "templates" / "profile_stats.html").read_text(encoding="utf-8")
+
+    assert "format_profile_points(stats.comparison.difference)" in source
+    assert "Сравнение последних 5 прогнозов с предыдущими 5." in source
+    assert "Слева — более старые, справа — более новые." not in source
+    assert ".comparison-grid .profile-stats-label" in source
+    assert "white-space: nowrap" in source

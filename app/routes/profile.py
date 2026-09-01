@@ -233,4 +233,5 @@ def profile_stats():
         current_tournament_id=tournament_id,
         current_tournament_name=selected_tournament['name'] if selected_tournament else 'Турнир',
         is_own_profile=True,
+        format_profile_points=format_profile_points,
     )
