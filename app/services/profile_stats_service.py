@@ -21,6 +21,7 @@ def get_profile_stats(user_id, tournament_id):
                 COUNT(*),
                 COALESCE(SUM(p.points), 0),
                 COALESCE(AVG(p.points), 0),
+                COALESCE(SUM(CASE WHEN ABS(m.home_score - m.away_score) >= 3 THEN 11 ELSE 10 END), 0),
                 COALESCE(SUM(CASE WHEN p.points = 11 THEN 1 ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN p.points = 10 THEN 1 ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN p.points = 8 THEN 1 ELSE 0 END), 0),
@@ -39,10 +40,10 @@ def get_profile_stats(user_id, tournament_id):
             """,
             (user_id, tournament_id),
         )
-        aggregate = cur.fetchone() or (0,) * 12
+        aggregate = cur.fetchone() or (0,) * 13
         submitted_count = int(aggregate[0] or 0)
-        bucket_counts = dict(zip(POINT_BUCKETS, (int(value or 0) for value in aggregate[3:11])))
-        unexpected_count = int(aggregate[11] or 0)
+        bucket_counts = dict(zip(POINT_BUCKETS, (int(value or 0) for value in aggregate[4:12])))
+        unexpected_count = int(aggregate[12] or 0)
         if unexpected_count or sum(bucket_counts.values()) != submitted_count:
             raise ProfileStatsIntegrityError("unexpected_finished_prediction_points")
 
@@ -69,7 +70,7 @@ def get_profile_stats(user_id, tournament_id):
         raise ProfileStatsIntegrityError("unexpected_recent_prediction_points")
 
     total_points = int(aggregate[1] or 0)
-    maximum_points = submitted_count * 11
+    maximum_points = int(aggregate[3] or 0)
     percentage = round((total_points / maximum_points * 100) if maximum_points else 0, 1)
     recent_oldest_first = list(reversed(newest_first))
     comparison = None

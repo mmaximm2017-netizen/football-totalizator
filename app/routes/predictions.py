@@ -9,14 +9,25 @@ from app.services.tournament_context_service import (
 )
 from app.services.tournament_service import get_all_tournaments, get_tournament_by_id
 from app.utils import (
+    MSK,
+    RU_MONTHS_GENITIVE,
     cached_to_msk,
     get_club_logo,
     get_flag,
     is_before_deadline,
+    parse_datetime,
     utc_now,
 )
 
 predictions_bp = Blueprint('predictions', __name__)
+
+
+def format_prediction_date(value):
+    value = parse_datetime(value)
+    if value is None:
+        return "Дата не указана"
+    value = value.astimezone(MSK)
+    return f"{value.day} {RU_MONTHS_GENITIVE[value.month]}"
 
 
 # =========================================================
@@ -217,6 +228,7 @@ def my_predictions():
 
         cur.execute("""
             SELECT m.id,
+                   m.kickoff_time,
                    m.home_team,
                    m.away_team,
                    m.home_score,
@@ -236,13 +248,14 @@ def my_predictions():
         finished = [
             {
                 'id': r[0],
-                'home_team': r[1],
-                'away_team': r[2],
-                'home_score': r[3],
-                'away_score': r[4],
-                'home_goals': r[5],
-                'away_goals': r[6],
-                'points': r[7],
+                'date': format_prediction_date(r[1]),
+                'home_team': r[2],
+                'away_team': r[3],
+                'home_score': r[4],
+                'away_score': r[5],
+                'home_goals': r[6],
+                'away_goals': r[7],
+                'points': r[8],
             }
             for r in cur.fetchall()
         ]

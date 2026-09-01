@@ -23,6 +23,7 @@
     .bucket-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 34px; align-items: center; gap: 9px; color: #063b73; font-size: 13px; font-weight: 900; }
     .bucket-track { height: 10px; overflow: hidden; border-radius: var(--radius-round); background: rgba(0,119,200,0.10); }
     .bucket-fill { display: block; width: var(--bucket-width); min-width: var(--bucket-min-width, 0); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0077c8, #2aa8ff); }
+    .bucket-fill-premium { background: linear-gradient(90deg, #c69214, #f3cf69); }
     .form-points { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
     .form-point { min-height: 40px; display: grid; place-items: center; border: 1px solid rgba(0,119,200,0.12); border-radius: 12px; background: rgba(255,255,255,0.50); color: #063b73; font-size: 14px; font-weight: 1000; }
     .form-point-good { color: #2e7d32; }
@@ -50,6 +51,16 @@
     body.tournament-rcup .comparison-delta { color: #fff; }
     body.tournament-wc2026 .profile-stats-back, body.tournament-rcup .profile-stats-back { background: #E80024; }
     body.tournament-rpl .profile-stats-back { background: #0066d6; }
+    body.tournament-rpl .profile-stats-screen { gap: 12px; }
+    body.tournament-rpl .profile-stats-hero, body.tournament-rpl .profile-stats-card { padding: 15px; }
+    body.tournament-rpl .profile-stats-hero { padding: 17px 15px; }
+    body.tournament-rpl .profile-stats-grid { gap: 8px; }
+    body.tournament-rpl .profile-stats-metric { padding: 11px 10px; }
+    body.tournament-rpl .profile-stats-title-small { margin-bottom: 11px; }
+    body.tournament-rpl .bucket-list { gap: 8px; }
+    body.tournament-rpl .bucket-fill-premium { background: linear-gradient(90deg, #c69214, #f3cf69); }
+    body.tournament-rcup .bucket-fill-premium { background: var(--rcup-lime, #C7F21A); }
+    body.tournament-wc2026 .bucket-fill-premium { background: #d8ff22; }
     @media (max-width: 390px) { .profile-stats-title { font-size: 23px; } .form-points { gap: 4px; } .form-point { min-height: 36px; font-size: 12px; } }
 </style>
 
@@ -67,7 +78,7 @@
             <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.total_points }}</div><div class="profile-stats-label">Всего очков</div></div>
             <div class="profile-stats-metric"><div class="profile-stats-value">{{ ('%.1f'|format(stats.percentage)).replace('.', ',') }}%</div><div class="profile-stats-label">От максимума</div></div>
             <div class="profile-stats-metric"><div class="profile-stats-value">{{ ('%.1f'|format(stats.average_points)).replace('.', ',') }}</div><div class="profile-stats-label">Средний балл</div></div>
-            <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.submitted_count }}</div><div class="profile-stats-label">Прогнозов на завершённые матчи</div></div>
+            <div class="profile-stats-metric"><div class="profile-stats-value">{{ stats.submitted_count }}</div><div class="profile-stats-label">Сделано прогнозов</div></div>
         </div>
     </section>
 
@@ -75,10 +86,11 @@
         <h2 class="profile-stats-title-small">Распределение очков</h2>
         <div class="bucket-list">
             {% for bucket in stats.buckets %}
-            <div class="bucket-row"><span>{{ bucket.points }}</span><span class="bucket-track"><span class="bucket-fill" style="--bucket-width: {{ bucket.percent }}%;{% if bucket.count %} --bucket-min-width: 8px;{% endif %}"></span></span><strong>{{ bucket.count }}</strong></div>
+            <div class="bucket-row"><span>{{ bucket.points }}</span><span class="bucket-track"><span class="bucket-fill{% if bucket.points in [10, 11] %} bucket-fill-premium{% endif %}" style="--bucket-width: {{ bucket.percent }}%;{% if bucket.count %} --bucket-min-width: 8px;{% endif %}"></span></span><strong>{{ bucket.count }}</strong></div>
             {% endfor %}
         </div>
         <p class="form-caption">Только реально сделанные прогнозы: {{ stats.submitted_count }}.</p>
+        <p class="form-caption">Максимум зависит от итогового счёта матча: 10 или 11 очков.</p>
     </section>
 
     <section class="profile-stats-card">

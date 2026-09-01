@@ -22,18 +22,19 @@ class Cursor:
         return self.recent_rows
 
 
-def aggregate(points, *, unexpected=0):
+def aggregate(points, *, maximum_points=None, unexpected=0):
     return (
         len(points),
         sum(points),
         sum(points) / len(points) if points else 0,
+        maximum_points if maximum_points is not None else len(points) * 11,
         *(points.count(value) for value in stats_service.POINT_BUCKETS),
         unexpected,
     )
 
 
-def service_with(monkeypatch, points, recent_points=None, *, unexpected=0):
-    cursor = Cursor(aggregate(points, unexpected=unexpected), [(value,) for value in (recent_points if recent_points is not None else points[:10])])
+def service_with(monkeypatch, points, recent_points=None, *, maximum_points=None, unexpected=0):
+    cursor = Cursor(aggregate(points, maximum_points=maximum_points, unexpected=unexpected), [(value,) for value in (recent_points if recent_points is not None else points[:10])])
     connection = Mock()
     connection.cursor.return_value = cursor
     monkeypatch.setattr(stats_service, "get_db", lambda: connection)
@@ -76,15 +77,33 @@ def test_unexpected_finished_point_value_violates_the_invariant(monkeypatch):
         stats_service.get_profile_stats(7, 42)
 
 
-def test_percentage_and_average_use_only_submitted_finished_predictions(monkeypatch):
-    service_with(monkeypatch, [11, 5])
+def test_percentage_and_average_use_each_finished_match_maximum(monkeypatch):
+    service_with(monkeypatch, [10, 5], maximum_points=20)
 
     result = stats_service.get_profile_stats(7, 42)
 
-    assert result["total_points"] == 16
-    assert result["maximum_points"] == 22
-    assert result["percentage"] == 72.7
-    assert result["average_points"] == 8.0
+    assert result["total_points"] == 15
+    assert result["maximum_points"] == 20
+    assert result["percentage"] == 75.0
+    assert result["average_points"] == 7.5
+
+
+@pytest.mark.parametrize(("maximum_points", "expected"), ((10, 10), (11, 11)))
+def test_single_finished_match_uses_its_actual_score_maximum(monkeypatch, maximum_points, expected):
+    cursor = service_with(monkeypatch, [expected], maximum_points=maximum_points)
+
+    assert stats_service.get_profile_stats(7, 42)["maximum_points"] == expected
+    assert "ABS(m.home_score - m.away_score) >= 3 THEN 11 ELSE 10" in cursor.calls[0][0]
+
+
+def test_mixed_finished_match_maxima_exclude_missing_predictions(monkeypatch):
+    service_with(monkeypatch, [10, 11], maximum_points=21)
+
+    result = stats_service.get_profile_stats(7, 42)
+
+    assert result["submitted_count"] == 2
+    assert result["maximum_points"] == 21
+    assert result["percentage"] == 100.0
 
 
 def test_no_predictions_has_zero_percentage_without_division_by_zero(monkeypatch):
