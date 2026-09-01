@@ -24,7 +24,6 @@ from app.services.tournament_service import (
     get_all_tournaments,
     get_tournament_by_id,
 )
-from app.utils import get_club_logo, get_flag
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -152,87 +151,6 @@ def profile():
 
         cur.execute(
             """
-            SELECT COUNT(*)
-            FROM users u
-            JOIN tournaments t ON t.id = %s
-            WHERE u.is_admin = 0
-              AND (t.is_active = 0 OR COALESCE(u.is_deleted, 0) = 0)
-            """
-            ,
-            (tournament_id,),
-        )
-        total_players = cur.fetchone()[0] or 0
-
-        cur.execute(
-            """
-            SELECT
-                COUNT(*) AS total_bets,
-                COALESCE(SUM(CASE WHEN p.points >= 10 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points BETWEEN 7 AND 8 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points = 3 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points = 5 THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN p.points = 0 THEN 1 ELSE 0 END), 0),
-                ROUND(COALESCE(AVG(p.points), 0), 1),
-                COALESCE(SUM(p.points), 0)
-            FROM predictions p
-            JOIN matches m ON p.match_id = m.id
-                         AND p.tournament_id = m.tournament_id
-            WHERE p.user_id = %s
-              AND p.tournament_id = %s
-              AND m.status = 'FINISHED'
-            """,
-            (uid, tournament_id),
-        )
-
-        row = cur.fetchone() or (0, 0, 0, 0, 0, 0, 0, 0)
-        stats = {
-            'total_bets': row[0],
-            'exact_scores': row[1],
-            'exact_diffs': row[2],
-            'outcomes': row[3],
-            'close_misses': row[4],
-            'misses': row[5],
-            'avg_points': float(row[6]),
-            'total_points': row[7],
-        }
-
-        cur.execute(
-            """
-            SELECT
-                m.home_team,
-                m.away_team,
-                p.home_goals,
-                p.away_goals,
-                m.home_score,
-                m.away_score,
-                p.points
-            FROM predictions p
-            JOIN matches m ON p.match_id = m.id
-                         AND p.tournament_id = m.tournament_id
-            WHERE p.user_id = %s
-              AND p.tournament_id = %s
-              AND m.status = 'FINISHED'
-            ORDER BY m.kickoff_time DESC
-            LIMIT 10
-            """,
-            (uid, tournament_id),
-        )
-
-        recent = [
-            {
-                'home_team': r[0],
-                'away_team': r[1],
-                'home_goals': r[2],
-                'away_goals': r[3],
-                'home_score': r[4],
-                'away_score': r[5],
-                'points': r[6],
-            }
-            for r in cur.fetchall()
-        ]
-
-        cur.execute(
-            """
             SELECT title, awarded_at
             FROM user_titles
             WHERE user_id = %s
@@ -252,13 +170,8 @@ def profile():
         username=username,
         profile_subject_username=profile_subject_username,
         is_own_profile=is_own_profile,
-        stats=stats,
-        recent=recent,
         titles=titles,
         current_place=current_place,
-        total_players=total_players,
-        get_flag=get_flag,
-        get_club_logo=get_club_logo,
         tournaments=tournaments,
         active_tournaments=active_tournaments,
         **tournament_state,

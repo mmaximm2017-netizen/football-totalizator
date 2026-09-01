@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 from flask import Flask
 
 from app import db
-from app.routes.main import main_bp
 from app.routes import predictions as prediction_routes
 from app.routes import profile
+from app.routes.main import main_bp
 
 
 class IntegrityCursor:
@@ -101,7 +101,7 @@ class PredictionWriteValidationTests(unittest.TestCase):
         app.add_url_rule("/login", "auth.login", lambda: "login")
         conn = Connection()
 
-        with (
+        with (  # noqa: SIM117 - client lifecycle must remain inside patched application dependencies.
             patch("app.routes.main.get_db", return_value=conn),
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[]),
@@ -125,9 +125,8 @@ class PredictionWriteValidationTests(unittest.TestCase):
 
 class PredictionScopedJoinTests(unittest.TestCase):
     def test_prediction_match_joins_include_tournament_key(self):
-        for module in (profile, prediction_routes):
-            source = inspect.getsource(module)
-            self.assertIn("AND p.tournament_id = m.tournament_id", source)
+        self.assertNotIn("FROM predictions", inspect.getsource(profile))
+        self.assertIn("AND p.tournament_id = m.tournament_id", inspect.getsource(prediction_routes))
 
         from app.services import scoring_recalculation_service
 

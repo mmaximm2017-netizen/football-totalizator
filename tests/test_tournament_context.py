@@ -456,7 +456,6 @@ class TournamentRouteSmokeTests(unittest.TestCase):
         self.assertEqual(captured["username"], "Other Name")
         self.assertEqual(captured["position_metric"]["points"], 8)
         subject_params = [args[1] for args, _ in cursor.executed if len(args) > 1 and args[1]]
-        self.assertIn((2, 42), subject_params)
         self.assertIn((2,), subject_params)
 
 
