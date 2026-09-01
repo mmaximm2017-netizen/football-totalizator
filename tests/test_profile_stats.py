@@ -142,3 +142,16 @@ def test_profile_links_preserve_tid_and_stats_page_is_tournament_aware():
     assert "url_for('profile.profile_stats', tid=current_tournament_id)" in source
     assert "url_for('predictions.my_predictions', tid=current_tournament_id)" in source
     assert "'/profile/stats'" in base
+
+
+def test_template_splits_full_form_into_previous_and_latest_groups_only_with_comparison():
+    source = (Path(__file__).resolve().parents[1] / "templates" / "profile_stats.html").read_text(encoding="utf-8")
+
+    assert "form-groups" in source
+    assert "form-divider" in source
+    assert "Предыдущие 5" in source
+    assert "Последние 5" in source
+    assert "stats.recent_points[:5]" in source
+    assert "stats.recent_points[5:]" in source
+    assert "stats.comparison.previous_five" in source
+    assert "stats.comparison.latest_five" in source

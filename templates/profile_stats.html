@@ -25,11 +25,22 @@
     .bucket-fill { display: block; width: var(--bucket-width); min-width: var(--bucket-min-width, 0); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0077c8, #2aa8ff); }
     .bucket-fill-premium { background: linear-gradient(90deg, #c69214, #f3cf69); }
     .form-points { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+    .form-groups { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); align-items: start; gap: 7px; }
+    .form-group { min-width: 0; padding: 5px; border: 1px solid rgba(0,119,200,0.10); border-radius: 14px; }
+    .form-group-previous { background: rgba(0,119,200,0.05); }
+    .form-group-latest { border-color: rgba(0,119,200,0.30); background: rgba(0,119,200,0.10); }
+    .form-points-group { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+    .form-divider { align-self: stretch; margin: 5px 0 20px; background: rgba(0,119,200,0.28); border-radius: var(--radius-round); }
+    .form-group-label { margin-top: 5px; color: #5d7894; font-size: 10px; font-weight: 900; text-align: center; }
+    .form-group-latest .form-group-label { color: #0077c8; }
     .form-point { min-height: 40px; display: grid; place-items: center; border: 1px solid rgba(0,119,200,0.12); border-radius: 12px; background: rgba(255,255,255,0.50); color: #063b73; font-size: 14px; font-weight: 1000; }
     .form-point-good { color: #2e7d32; }
     .form-point-zero { color: #5d7894; }
     .form-caption, .profile-stats-empty { margin-top: 12px; color: #5d7894; font-size: 12px; font-weight: 700; line-height: 1.35; }
     .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .comparison-card-previous { border-color: rgba(0,119,200,0.14); background: rgba(0,119,200,0.05); }
+    .comparison-card-latest { border-color: rgba(0,119,200,0.30); background: rgba(0,119,200,0.10); }
+    .comparison-card-latest .comparison-value { color: #0077c8; }
     .comparison-value { margin-top: 5px; color: #0077c8; font-size: 23px; font-weight: 1000; }
     .comparison-delta { margin-top: 12px; color: #063b73; font-size: 14px; font-weight: 1000; text-align: center; }
     .profile-stats-back { min-height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: linear-gradient(135deg, #0077c8, var(--wc-accent-blue)); color: #fff; font-size: 15px; font-weight: 1000; text-decoration: none; box-shadow: 0 14px 30px rgba(0,119,200,0.22); }
@@ -51,6 +62,20 @@
     body.tournament-rcup .comparison-delta { color: #fff; }
     body.tournament-wc2026 .profile-stats-back, body.tournament-rcup .profile-stats-back { background: #E80024; }
     body.tournament-rpl .profile-stats-back { background: #0066d6; }
+    body.tournament-rpl .form-group-previous, body.tournament-rpl .comparison-card-previous { border-color: rgba(0,102,214,0.16); background: #eef7ff; }
+    body.tournament-rpl .form-group-latest, body.tournament-rpl .comparison-card-latest { border-color: rgba(0,102,214,0.34); background: #dcefff; }
+    body.tournament-rpl .form-group-latest .form-group-label { color: #0066d6; }
+    body.tournament-rpl .form-divider { background: rgba(0,102,214,0.38); }
+    body.tournament-rcup .form-group-previous, body.tournament-rcup .comparison-card-previous { border-color: rgba(232,0,36,0.28); background: rgba(232,0,36,0.10); }
+    body.tournament-rcup .form-group-latest, body.tournament-rcup .comparison-card-latest { border-color: #E80024; background: rgba(232,0,36,0.20); }
+    body.tournament-rcup .form-group-label { color: rgba(255,255,255,0.68); }
+    body.tournament-rcup .form-group-latest .form-group-label, body.tournament-rcup .comparison-card-latest .comparison-value { color: #E80024; }
+    body.tournament-rcup .form-divider { background: rgba(232,0,36,0.65); }
+    body.tournament-wc2026 .form-group-previous, body.tournament-wc2026 .comparison-card-previous { border-color: rgba(31,231,255,0.16); background: rgba(1,12,118,0.38); }
+    body.tournament-wc2026 .form-group-latest, body.tournament-wc2026 .comparison-card-latest { border-color: rgba(216,255,34,0.48); background: rgba(31,231,255,0.14); }
+    body.tournament-wc2026 .form-group-label { color: rgba(255,255,255,0.68); }
+    body.tournament-wc2026 .form-group-latest .form-group-label, body.tournament-wc2026 .comparison-card-latest .comparison-value { color: #d8ff22; }
+    body.tournament-wc2026 .form-divider { background: rgba(31,231,255,0.58); }
     body.tournament-rpl .profile-stats-screen { gap: 12px; }
     body.tournament-rpl .profile-stats-hero, body.tournament-rpl .profile-stats-card { padding: 15px; }
     body.tournament-rpl .profile-stats-hero { padding: 17px 15px; }
@@ -96,18 +121,24 @@
     <section class="profile-stats-card">
         <h2 class="profile-stats-title-small">Форма: последние прогнозы</h2>
         {% if stats.recent_points %}
-        <div class="form-points" aria-label="От более старого к более новому">
-            {% for points in stats.recent_points %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}
-        </div>
-        <p class="form-caption">Порядок: от более старого к более новому.</p>
         {% if stats.comparison %}
+        <div class="form-groups" aria-label="От более старого к более новому">
+            <div class="form-group form-group-previous"><div class="form-points form-points-group">{% for points in stats.recent_points[:5] %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}</div><div class="form-group-label">Предыдущие 5</div></div>
+            <span class="form-divider" aria-hidden="true"></span>
+            <div class="form-group form-group-latest"><div class="form-points form-points-group">{% for points in stats.recent_points[5:] %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}</div><div class="form-group-label">Последние 5</div></div>
+        </div>
+        <p class="form-caption">Слева — более старые, справа — более новые.</p>
         <div class="comparison-grid">
-            <div class="profile-stats-metric"><div class="profile-stats-label">Последние 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.latest_five }}</div></div>
-            <div class="profile-stats-metric"><div class="profile-stats-label">5 прогнозов перед ними</div><div class="comparison-value">{{ stats.comparison.previous_five }}</div></div>
+            <div class="profile-stats-metric comparison-card-previous"><div class="profile-stats-label">Предыдущие 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.previous_five }}</div></div>
+            <div class="profile-stats-metric comparison-card-latest"><div class="profile-stats-label">Последние 5 прогнозов</div><div class="comparison-value">{{ stats.comparison.latest_five }}</div></div>
         </div>
         <div class="comparison-delta">{% if stats.comparison.difference > 0 %}+{% endif %}{{ stats.comparison.difference }} очков</div>
         <p class="form-caption">Сравнение двух последних отрезков по 5 прогнозов.</p>
         {% else %}
+        <div class="form-points" aria-label="От более старого к более новому">
+            {% for points in stats.recent_points %}<span class="form-point{% if points >= 7 %} form-point-good{% elif points == 0 %} form-point-zero{% endif %}">{{ points }}</span>{% endfor %}
+        </div>
+        <p class="form-caption">Порядок: от более старого к более новому.</p>
         <p class="form-caption">Сравнение появится после 10 завершённых прогнозов.</p>
         {% endif %}
         {% else %}<div class="profile-stats-empty">Пока нет завершённых прогнозов.</div>{% endif %}
