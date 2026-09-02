@@ -413,7 +413,14 @@ WHERE m.id = %s
                    m.match_category
             FROM matches m
             LEFT JOIN tournaments t ON t.id = m.tournament_id
-            WHERE (m.kickoff_time >= %s OR m.kickoff_time IS NULL)
+            WHERE (
+                m.kickoff_time IS NULL
+                OR COALESCE(m.status, '') <> 'FINISHED'
+                OR m.kickoff_time >= GREATEST(
+                    %s,
+                    CURRENT_TIMESTAMP - INTERVAL '14 days'
+                )
+            )
             AND (%s IS NULL OR m.tournament_id = %s OR m.tournament_id IS NULL)
             ORDER BY m.kickoff_time NULLS LAST
         """, (start, tid, tid))
