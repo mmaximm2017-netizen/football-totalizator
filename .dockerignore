@@ -15,7 +15,8 @@ venv/
 env/
 tests/
 docs/
-scripts/
+scripts/*
+!scripts/sync_once.py
 build/
 dist/
 *.egg-info/
