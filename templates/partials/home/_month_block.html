@@ -1,5 +1,5 @@
 <div class="month-block">
-    <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}')">
+    <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}', '{{ month.key }}')">
         <div class="month-left">
             <span id="arrow-month-{{ month_idx }}" class="month-arrow" {% if month_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
             <span class="month-title">{{ month.label }}</span>
@@ -9,6 +9,7 @@
     </div>
 
     <div id="month-content-{{ month_idx }}" class="month-content" style="display: {% if month_is_open %}block{% else %}none{% endif %};">
+        {% if month_is_open %}
         {% for day in month.days %}
         {% set day_idx = loop.index %}
         {% set day_is_open = day.key == open_day %}
@@ -16,5 +17,6 @@
         {% include 'partials/home/_day_block.html' %}
 
         {% endfor %}
+        {% endif %}
     </div>
 </div>

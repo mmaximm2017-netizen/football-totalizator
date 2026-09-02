@@ -208,6 +208,7 @@ def index():
 
         league = request.args.get('league', 'all')
         requested_tid = request.args.get('tid', type=int)
+        requested_month = (request.args.get('month') or '').strip()
         all_tournaments = get_all_tournaments(cur=cur)
         active_tournaments = [t for t in all_tournaments if t.get("is_active")]
         if request.method == 'GET' and requested_tid is None:
@@ -686,6 +687,25 @@ WHERE m.id = %s
                 'count': sum(d['count'] for d in months[mk])
             })
 
+        available_month_keys = set(months.keys())
+        default_open_month = open_day[:7] if open_day else None
+        if default_open_month not in available_month_keys:
+            default_open_month = grouped_months[-1]['key'] if grouped_months else None
+
+        open_month = (
+            requested_month
+            if requested_month in available_month_keys
+            else default_open_month
+        )
+
+        if open_month and (not open_day or not open_day.startswith(open_month)):
+            month_days = months.get(open_month, [])
+            open_day = next(
+                (d['key'] for d in month_days if d['key'] == today),
+                month_days[0]['key'] if month_days else None,
+            )
+            initial_match_id = None
+
     except Exception:
         if request.method == 'POST' and is_ajax_request():
             logger.exception(
@@ -717,6 +737,7 @@ WHERE m.id = %s
         "index.html",
         months=grouped_months,
         open_day=open_day,
+        open_month=open_month,
         initial_match_id=initial_match_id,
         get_flag=get_flag,
         get_club_logo=get_club_logo,
