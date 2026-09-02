@@ -7287,3 +7287,39 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         -webkit-mask-image: none;
         mask-image: none;
     }
+
+
+/* =========================================================
+   RPL scroll performance hardening
+   Keep the broadcast look while removing the most expensive
+   continuously-repainted GPU effects during vertical scrolling.
+   ========================================================= */
+body.tournament-rpl {
+    background-attachment: scroll !important;
+}
+
+body.tournament-rpl .home-screen::before,
+body.tournament-rpl .home-screen::after {
+    content: none !important;
+    display: none !important;
+}
+
+body.tournament-rpl .month-header-v2,
+body.tournament-rpl .day-header-v2,
+body.tournament-rpl .match-card-v2,
+body.tournament-rpl .match-card-v2.match-card--rpl,
+body.tournament-rpl .match-card-v2--rpl,
+body.tournament-rpl .match-card-v2--rpl .score-stepper {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+body.tournament-rpl .match-card-v2--rpl .tournament-logo,
+body.tournament-rpl .match-card-v2.match-card-v2--rpl .team-logo-v2 img,
+body.tournament-rpl .match-card-v2.match-card-v2--rpl .team-logo-v2 .flag-icon {
+    filter: none !important;
+}
+
+body.tournament-rpl .match-card-v2--rpl {
+    will-change: auto !important;
+}
