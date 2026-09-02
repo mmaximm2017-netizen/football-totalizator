@@ -6,7 +6,7 @@
 {% block content %}
 
 <script>
-    function toggleMonth(monthId) {
+    function toggleMonth(monthId, monthKey) {
         var content = document.getElementById('month-content-' + monthId);
         var arrow = document.getElementById('arrow-month-' + monthId);
 
@@ -15,6 +15,13 @@
         var isClosed = content.style.display === 'none' || content.style.display === '';
 
         if (isClosed) {
+            if (!content.querySelector('.day-block')) {
+                var targetUrl = new URL(window.location.href);
+                targetUrl.searchParams.set('month', monthKey);
+                window.location.assign(targetUrl.toString());
+                return;
+            }
+
             content.style.display = 'block';
             arrow.style.transform = 'rotate(90deg)';
 
@@ -123,7 +130,7 @@
 
 {% for month in months %}
 {% set month_idx = loop.index %}
-{% set month_is_open = month.days | selectattr('key', 'equalto', open_day) | list | length > 0 %}
+{% set month_is_open = month.key == open_month %}
 
 {% include 'partials/home/_month_block.html' %}
 
