@@ -4,6 +4,8 @@ import hmac
 import json
 import os
 import secrets
+import threading
+import time
 from urllib.parse import urlsplit
 from flask import Flask, g, session, request, abort, jsonify, make_response
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -21,6 +23,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CSRF_SESSION_KEY = "csrf_token"
+HEALTH_DB_CACHE_TTL_SECONDS = 5.0
+_HEALTH_DB_CACHE_LOCK = threading.Lock()
+_HEALTH_DB_CACHE = {"expires_at": 0.0, "result": None, "status": 500}
 DIAGNOSTICS_MAX_BODY_BYTES = 4096
 DIAGNOSTICS_STRING_FIELDS = {
     "event", "pathname", "readyState", "visibilityState", "splashClass",
@@ -336,54 +341,68 @@ def create_app():
 
     @app.get("/health/db")
     def health_db():
-        result = {
-            "db": "fail",
-            "active_tournament": "fail",
-            "ranking": "fail",
-            "single_active": "fail",
-        }
-        http_status = 500
+        now = time.monotonic()
+        cached_result = _HEALTH_DB_CACHE["result"]
+        if cached_result is not None and now < _HEALTH_DB_CACHE["expires_at"]:
+            return jsonify(cached_result), _HEALTH_DB_CACHE["status"]
 
-        try:
-            conn = get_db()
-            cur = conn.cursor()
+        with _HEALTH_DB_CACHE_LOCK:
+            now = time.monotonic()
+            cached_result = _HEALTH_DB_CACHE["result"]
+            if cached_result is not None and now < _HEALTH_DB_CACHE["expires_at"]:
+                return jsonify(cached_result), _HEALTH_DB_CACHE["status"]
+
+            result = {
+                "db": "fail",
+                "active_tournament": "fail",
+                "ranking": "fail",
+                "single_active": "fail",
+            }
+            http_status = 500
+
             try:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-                result["db"] = "ok"
-            finally:
-                close_db(conn, cur)
-            active_tid = get_active_tournament_id()
-            if active_tid:
-                result["active_tournament"] = "ok"
+                conn = get_db()
+                cur = conn.cursor()
+                try:
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+                    result["db"] = "ok"
+                finally:
+                    close_db(conn, cur)
+                active_tid = get_active_tournament_id()
+                if active_tid:
+                    result["active_tournament"] = "ok"
 
-                ranking = get_tournament_ranking(active_tid)
-                if isinstance(ranking, list):
-                    result["ranking"] = "ok"
+                    ranking = get_tournament_ranking(active_tid)
+                    if isinstance(ranking, list):
+                        result["ranking"] = "ok"
 
-            single = ensure_single_active_tournament()
-            if single.get("ok"):
-                result["single_active"] = "ok"
-            else:
-                result["single_active"] = f"warn:{single.get('active_count')}"
-        except Exception:
-            logger.exception("health_db_check_failed")
+                single = ensure_single_active_tournament()
+                if single.get("ok"):
+                    result["single_active"] = "ok"
+                else:
+                    result["single_active"] = f"warn:{single.get('active_count')}"
+            except Exception:
+                logger.exception("health_db_check_failed")
 
-        if (
-            result["db"] == "ok"
-            and result["active_tournament"] == "ok"
-            and result["ranking"] == "ok"
-            and str(result["single_active"]).startswith("ok")
-        ):
-            http_status = 200
-        elif (
-            result["db"] == "ok"
-            and result["active_tournament"] == "ok"
-            and result["ranking"] == "ok"
-        ):
-            http_status = 200
+            if (
+                result["db"] == "ok"
+                and result["active_tournament"] == "ok"
+                and result["ranking"] == "ok"
+                and str(result["single_active"]).startswith("ok")
+            ):
+                http_status = 200
+            elif (
+                result["db"] == "ok"
+                and result["active_tournament"] == "ok"
+                and result["ranking"] == "ok"
+            ):
+                http_status = 200
 
-        return jsonify(result), http_status
+            _HEALTH_DB_CACHE["result"] = result
+            _HEALTH_DB_CACHE["status"] = http_status
+            _HEALTH_DB_CACHE["expires_at"] = time.monotonic() + HEALTH_DB_CACHE_TTL_SECONDS
+            return jsonify(result), http_status
 
     logger.info("[STARTUP] create_app done")
     return app
