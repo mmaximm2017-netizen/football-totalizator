@@ -336,12 +336,17 @@ def ranking(kind):
         cur = conn.cursor()
         cur.execute("SELECT id, name FROM tournaments WHERE name = %s ORDER BY id DESC LIMIT 1", (names[kind],))
         tournament = cur.fetchone()
+        if not tournament:
+            return {"ok": True, "tournament": None, "ranking": []}
+        table = get_tournament_ranking(tournament[0], cur=cur)
+        return {
+            "ok": True,
+            "tournament": {"id": tournament[0], "name": tournament[1]},
+            "ranking": table,
+        }
     finally:
         if conn is not None:
             close_db(conn, cur)
-    if not tournament:
-        return {"ok": True, "tournament": None, "ranking": []}
-    return {"ok": True, "tournament": {"id": tournament[0], "name": tournament[1]}, "ranking": get_tournament_ranking(tournament[0])}
 
 
 def calendar():
