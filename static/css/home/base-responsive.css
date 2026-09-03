@@ -1,0 +1,231 @@
+    .empty-home {
+        text-align: center;
+        padding: 42px 20px;
+        border-radius: 26px;
+
+        background:
+            linear-gradient(160deg, rgba(255,255,255,0.90), rgba(232,246,255,0.78));
+
+        border: 1px solid rgba(255,255,255,0.62);
+
+        box-shadow:
+            0 14px 34px rgba(0,78,140,0.14),
+            inset 0 0 0 1px rgba(255,255,255,0.38);
+    }
+
+    @media (max-width: 430px) {
+        .bets-compact-match {
+            --bets-team-logo-size: clamp(44px, 12.3vw, 50px);
+            grid-template-columns: var(--bets-team-logo-size) minmax(0, 1fr) minmax(18px, max-content) minmax(0, 1fr) var(--bets-team-logo-size);
+            gap: 7px;
+            min-height: 78px;
+            padding: 11px 9px;
+        }
+
+        .bets-compact-team-icon { width: var(--bets-team-logo-size); height: var(--bets-team-logo-size); min-width: var(--bets-team-logo-size); border-radius: 13px; }
+        .bets-compact-team-icon img,
+        .bets-compact-team-icon .flag-icon { width: clamp(36px, 10.25vw, 40px) !important; height: clamp(36px, 10.25vw, 40px) !important; max-width: 40px; max-height: 40px; }
+        .bets-compact-team-name { font-size: 16px; line-height: 1.08; }
+        .bets-compact-vs { min-width: 18px; font-size: 17px; line-height: 1; }
+
+        .match-topline {
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .league-row {
+            gap: 6px;
+        }
+
+        .tournament-logo {
+            width: 16px;
+            height: 16px;
+        }
+
+        .deadline-timer {
+            min-height: 24px;
+            padding: 4px 9px;
+            font-size: 10px;
+        }
+
+        .deadline-helper {
+            font-size: 9px;
+        }
+
+        .topline-right {
+            gap: 5px;
+        }
+
+        .month-title {
+            font-size: 19px;
+        }
+
+        .month-count {
+            font-size: 12px;
+        }
+
+        .match-card-v2 {
+            padding: 13px;
+            border-radius: 22px;
+        }
+
+        .teams-center {
+            grid-template-columns: minmax(0, 1fr) 114px minmax(0, 1fr);
+            gap: 8px;
+            margin: 10px 0 10px;
+        }
+
+        .match-card-v2:not(.finished) .teams-center {
+            padding: 9px 10px 12px;
+            border-radius: 16px;
+        }
+
+        .team-logo-v2 {
+            width: 92px;
+            height: 92px;
+            border-radius: 21px;
+        }
+
+        .team-logo-v2 img {
+            width: 70px !important;
+            height: 70px !important;
+        }
+
+        .team-name-v2 {
+            font-size: 14px;
+            max-width: 118px;
+        }
+
+        .match-card-v2:not(.finished) .team-v2 {
+            grid-template-rows: auto minmax(32px, auto);
+            gap: 7px;
+            padding: 4px 5px 5px;
+            border-radius: 0;
+        }
+
+        .match-card-v2:not(.finished) .team-name-v2 {
+            height: 2.4em;
+            min-height: 2.4em;
+            max-height: 2.4em;
+            width: min(100%, 118px);
+            max-width: 118px;
+            font-size: 13px;
+        }
+
+        .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 {
+            width: 92px;
+            height: 92px;
+            border-radius: 16px;
+        }
+
+        .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 img,
+        .match-card-v2:not(.finished) .teams-center > .team-v2 > .team-logo-v2 .flag-icon {
+            width: 70px !important;
+            height: 70px !important;
+        }
+
+        .vs-badge {
+            width: 58px;
+            height: 44px;
+            font-size: 19px;
+        }
+
+        .final-score {
+            width: 62px;
+            height: 46px;
+            font-size: 20px;
+        }
+
+        .match-card-v2.finished .final-score {
+            width: 70px;
+            height: 50px;
+            font-size: 23px;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.18),
+                0 5px 12px rgba(43,75,103,0.16);
+        }
+
+        .match-card-v2.finished .team-logo-v2 {
+            width: 72px;
+            height: 72px;
+        }
+
+        .match-card-v2.finished .team-logo-v2 img,
+        .match-card-v2.finished .team-logo-v2 .flag-icon {
+            width: 53px !important;
+            height: 53px !important;
+        }
+
+        .match-card-v2.finished .points-v2 {
+            padding: 6px 11px;
+            font-size: 13px;
+        }
+
+        .match-card-v2.finished .my-prediction-v2 {
+            font-size: 12px;
+            gap: 7px;
+        }
+
+        .match-card-v2.finished .my-prediction-v2 .prediction-label-finished,
+        .match-card-v2.finished .my-prediction-v2 .prediction-score-finished {
+            font-size: 12px;
+        }
+
+        .prediction-box {
+            margin-top: 7px;
+            padding: 7px 8px;
+        }
+
+        .prediction-title {
+            margin-bottom: 6px;
+        }
+
+        .score-input-row {
+            gap: 7px;
+        }
+
+        .score-input-v2 {
+            width: 44px !important;
+            height: 36px;
+            font-size: 18px !important;
+        }
+
+        .score-stepper {
+            grid-template-columns: 1fr;
+            grid-template-rows: 26px 36px 26px;
+            width: 46px;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .stepper-btn {
+            width: 100%;
+            height: 28px;
+            font-size: 14px;
+        }
+
+        .save-btn-v2 {
+            width: 68%;
+            min-width: 150px;
+            height: 40px;
+            margin-top: 7px;
+        }
+
+        .disabled-btn-v2 {
+            width: 68%;
+            min-width: 150px;
+            height: 40px;
+        }
+
+        .score-divider {
+            font-size: 20px;
+            padding-bottom: 0;
+        }
+
+        .match-bottomline {
+            margin-top: 9px;
+            row-gap: 7px;
+        }
+    }
+
