@@ -75,6 +75,19 @@ wait_for_health() {
     return 1
 }
 
+verify_running_image() {
+    local expected_image="$1"
+    local running_image
+
+    running_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+    if [[ "$running_image" != "$expected_image" ]]; then
+        echo "VERSION CHECK FAILED: expected $expected_image but running $running_image" >&2
+        return 1
+    fi
+
+    echo "VERSION CHECK OK: $running_image"
+}
+
 rollback() {
     local rollback_ok=1
 
@@ -93,6 +106,11 @@ rollback() {
 
     if (( rollback_ok )) && ! wait_for_health; then
         echo "Rollback health check failed." >&2
+        rollback_ok=0
+    fi
+
+    if (( rollback_ok )) && ! verify_running_image "$CURRENT_IMAGE_REFERENCE"; then
+        echo "Rollback version check failed." >&2
         rollback_ok=0
     fi
 
@@ -190,6 +208,7 @@ docker compose pull app
 docker compose up -d --force-recreate app
 
 wait_for_health
+verify_running_image "$TARGET_IMAGE"
 
 docker inspect football-totalizator-app-1 --format '{{.Config.Image}}'
 echo "SUCCESS: deployed $TARGET_IMAGE"
