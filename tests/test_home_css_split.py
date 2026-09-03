@@ -22,6 +22,7 @@ HOME_CSS_FILES = [
     "static/css/home/components/bets-sheet-rpl.css",
     "static/css/home/final-overrides-finished.css",
     "static/css/home/rpl-performance.css",
+]
 
 
 def test_home_css_split_preserves_full_source_length_and_order():
