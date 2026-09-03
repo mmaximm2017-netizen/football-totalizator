@@ -57,6 +57,12 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pytest
 
+      - name: Apply migrations to fresh database
+        run: python scripts/run_migrations.py
+
+      - name: Bootstrap seed data
+        run: python -m app.init_db
+
       - name: Verify application import
         run: python -c "from app import create_app; app=create_app(); print('APP_IMPORT_OK')"
 
