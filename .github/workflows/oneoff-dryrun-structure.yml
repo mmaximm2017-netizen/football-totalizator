@@ -22,62 +22,40 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             set -Eeuo pipefail
-            echo '=== eligible-ish matches ==='
-            docker exec -i football-totalizator-app-1 python - <<'PY'
-            from app.db import get_db, close_db
-            from datetime import datetime, timezone, timedelta
-            conn = get_db(); cur = conn.cursor()
-            try:
-                cur.execute("""
-                    SELECT m.id, m.tournament_id, m.league, COALESCE(m.match_category,''),
-                           m.home_team, m.away_team, m.kickoff_time, m.status,
-                           m.home_score, m.away_score
-                    FROM matches m
-                    WHERE m.status IN ('SCHEDULED','TIMED','LIVE')
-                      AND m.home_score IS NULL AND m.away_score IS NULL
-                      AND (
-                        (m.tournament_id = 5 AND m.league = 'rpl' AND COALESCE(m.match_category,'rpl') IN ('rpl','national_team'))
-                        OR m.tournament_id = 6
-                      )
-                    ORDER BY m.kickoff_time
-                    LIMIT 30
-                """)
-                now = datetime.now(timezone.utc)
-                for row in cur.fetchall():
-                    kickoff = row[6]
-                    age = None if kickoff is None else (now-kickoff).total_seconds()/60
-                    print(row[:6], kickoff, row[7:], 'minutes_since_kickoff=', None if age is None else round(age,1))
-            finally:
-                close_db(conn, cur)
-            PY
-
             ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
             for pair in \
+              'livesport_rpl|https://www.livesport.ru/football/rfpl/calendar/' \
+              'livesport_cup|https://www.livesport.ru/football/rucup/calendar/' \
               'sports_rpl|https://www.sports.ru/football/tournament/rfpl/calendar/' \
-              'sports_cup|https://www.sports.ru/football/tournament/russian-cup/calendar/' \
               'sports_russia|https://www.sports.ru/football/team/russia/calendar/2026/' \
               'matchtv_rpl|https://matchtv.ru/football/rpl/calendar/2026-27'; do
               name="${pair%%|*}"; url="${pair#*|}"
               echo "=== $name ==="
               tmp="$(mktemp)"
-              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" "$url"
-              python3 - "$tmp" <<'PY'
+              set +e
+              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
+              status=$?
+              set -e
+              echo "curl_exit=$status"
+              if [[ -s "$tmp" ]]; then
+                python3 - "$tmp" <<'PY'
             import re, sys
             from html import unescape
             p=sys.argv[1]
             text=open(p,encoding='utf-8',errors='replace').read()
-            print('bytes=',len(text))
+            print('contains_ok_marker=', bool(re.search(r'>\s*Ок\s*<|\bОк\b', text)))
             classes=sorted(set(re.findall(r'class=["\']([^"\']+)["\']',text,re.I)))
             interesting=[c for c in classes if any(k in c.lower() for k in ('match','score','team','event','calendar','game'))]
-            print('classes=', interesting[:80])
+            print('classes=', interesting[:60])
             plain=re.sub(r'(?is)<script.*?</script>|<style.*?</style>',' ',text)
             plain=re.sub(r'(?s)<[^>]+>',' ',plain)
             plain=re.sub(r'\s+',' ',unescape(plain))
-            for needle in ('Зенит','Краснодар','Россия','ЦСКА','Динамо'):
+            for needle in ('Акрон 2:2 ЦСКА','Акрон','Россия','Зенит'):
                 pos=plain.find(needle)
                 if pos>=0:
-                    print('snippet',needle,plain[max(0,pos-300):pos+900])
+                    print('snippet',needle,plain[max(0,pos-180):pos+700])
                     break
             PY
+              fi
               rm -f "$tmp"
             done
