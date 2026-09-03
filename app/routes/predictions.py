@@ -7,7 +7,7 @@ from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_tournament_state_flags,
 )
-from app.services.tournament_service import get_all_tournaments, get_tournament_by_id
+from app.services.tournament_service import get_all_tournaments
 from app.utils import (
     MSK,
     RU_MONTHS_GENITIVE,
@@ -109,15 +109,17 @@ def match_predictions(match_id):
             }
             for r in cur.fetchall()
         ]
+        tournaments = get_all_tournaments(cur=cur)
+        active_tournaments = [t for t in tournaments if t.get("is_active")]
+        tournament_state = get_tournament_state_flags(tournaments)
+        selected_tournament = next(
+            (item for item in tournaments if item.get("id") == tournament_id),
+            None,
+        )
+        current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
     finally:
         close_db(conn, cur)
-
-    tournaments = get_all_tournaments()
-    active_tournaments = [t for t in tournaments if t.get("is_active")]
-    tournament_state = get_tournament_state_flags(tournaments)
-    selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
-    current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
     return render_template(
         'match_predictions.html',
@@ -193,11 +195,14 @@ def my_predictions():
             for r in cur.fetchall()
         ]
 
+        selected_tournament = next(
+            (item for item in tournaments if item.get("id") == tournament_id),
+            None,
+        )
+        current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
+
     finally:
         close_db(conn, cur)
-
-    selected_tournament = get_tournament_by_id(tournament_id) if tournament_id else None
-    current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
 
     return render_template(
         'my_predictions.html',
