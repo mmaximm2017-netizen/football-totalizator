@@ -19,7 +19,7 @@ def debug_match():
     match_id = request.form.get("match_id", type=int)
 
     if not match_id:
-        flash("���� �� ������", "error")
+        flash("Матч не указан", "error")
         return redirect(url_for("admin.admin"))
 
     conn = get_db()
@@ -40,7 +40,7 @@ def debug_match():
         match = cur.fetchone()
 
         if not match:
-            return "���� �� ������", 404
+            return "Матч не найден", 404
 
         summary = recalc_match_points(match_id, conn=conn, cur=cur)
         updated = summary.get("updated", 0)
@@ -68,18 +68,18 @@ def debug_match():
 
         result = f"""
         <h3>
-            ���� #{match[0]}:
-            ���� {match[1]}:{match[2]}
-            (��������� {updated} �������)
+            Матч #{match[0]}:
+            счёт {match[1]}:{match[2]}
+            (пересчитано {updated} прогнозов)
         </h3>
         """
 
         result += """
         <table border='1'>
             <tr>
-                <th>�����</th>
-                <th>�������</th>
-                <th>����</th>
+                <th>Игрок</th>
+                <th>Прогноз</th>
+                <th>Очки</th>
             </tr>
         """
 
@@ -94,7 +94,7 @@ def debug_match():
             </tr>
             """
 
-        result += "}</table>"
+        result += "</table>"
 
         return result
 
@@ -139,7 +139,7 @@ def recalc_all():
 
     except Exception as e:
         conn.rollback()
-        flash(f"������ ���������: {e}", "error")
+        flash(f"Ошибка пересчёта: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -194,13 +194,13 @@ def admin_translate():
         conn.commit()
 
         flash(
-            f"���������� {updated} ������",
+            f"Обновлено матчей: {updated}",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������ ��������: {e}", "error")
+        flash(f"Ошибка перевода: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -215,7 +215,7 @@ def admin_new_tournament():
     start_date = request.form.get("start_date")
 
     if not name:
-        flash("������� �������� �������", "error")
+        flash("Укажите название турнира", "error")
         return redirect(url_for("admin.admin_tournaments"))
 
     conn = get_db()
@@ -234,7 +234,7 @@ def admin_new_tournament():
         existing = cur.fetchone()
 
         if existing:
-            flash("������ � ����� ��������� ��� ����������", "error")
+            flash("Турнир с таким названием уже существует", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
         cur.execute(
@@ -255,13 +255,13 @@ def admin_new_tournament():
         conn.commit()
 
         flash(
-            f"������ �{name}� ������",
+            f"Турнир «{name}» создан",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������ �������� �������: {e}", "error")
+        flash(f"Ошибка создания турнира: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -333,7 +333,7 @@ def delete_tournament():
     tid = request.form.get("tid", type=int)
 
     if not tid:
-        flash("������ �� ������", "error")
+        flash("Турнир не указан", "error")
         return redirect(url_for("admin.admin_tournaments"))
 
     conn = get_db()
@@ -352,11 +352,11 @@ def delete_tournament():
         row = cur.fetchone()
 
         if not row:
-            flash("������ �� ������", "error")
+            flash("Турнир не указан", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
         if row[0] == 1:
-            flash("������ ������� �������� ������", "error")
+            flash("Нельзя удалить активный турнир", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
         cur.execute(
@@ -377,11 +377,11 @@ def delete_tournament():
 
         conn.commit()
 
-        flash(f"������ #{tid} �����", "success")
+        flash(f"Турнир #{tid} удалён", "success")
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     finally:
         close_db(conn, cur)

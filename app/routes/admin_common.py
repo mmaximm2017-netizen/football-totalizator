@@ -22,7 +22,7 @@ def admin_required(f):
             user = cur.fetchone()
 
             if not user or user[0] != 1 or user[1] == 1:
-                flash("������ ��������", "error")
+                flash("Доступ запрещён", "error")
                 return redirect(url_for("main.index"))
 
         finally:

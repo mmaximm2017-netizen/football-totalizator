@@ -1176,7 +1176,7 @@ def handle_add_match(conn, cur):
         existing = cur.fetchone()
 
         if existing:
-            flash("����� ���� ��� ����������", "error")
+            flash("Такой матч уже существует", "error")
             return admin_context_redirect()
 
         if not tournament_id:
@@ -1224,13 +1224,13 @@ def handle_add_match(conn, cur):
         conn.commit()
 
         flash(
-            f"���� {home} � {away} ��������",
+            f"Матч {home} — {away} добавлен",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     return admin_context_redirect()
 
@@ -1244,7 +1244,7 @@ def handle_set_result(conn, cur):
     )
 
     if home_score is None:
-        flash("������������ ����", "error")
+        flash("Некорректный счёт", "error")
         return admin_context_redirect()
 
     try:
@@ -1268,7 +1268,7 @@ def handle_set_result(conn, cur):
         )
 
         if cur.rowcount == 0:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return admin_context_redirect()
 
         recalc_match_points(match_id, conn=conn, cur=cur)
@@ -1276,13 +1276,13 @@ def handle_set_result(conn, cur):
         conn.commit()
 
         flash(
-            "��������� �����, ���� �����������",
+            "Результат сохранён, очки пересчитаны",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     return admin_context_redirect()
 
@@ -1294,7 +1294,7 @@ def force_finish():
     h, a = validate_score(request.form.get("home_score"), request.form.get("away_score"))
 
     if match_id is None or h is None or a is None:
-        flash("������������ ������ �����", "error")
+        flash("Некорректные данные матча", "error")
         return admin_context_redirect()
 
     conn = get_db()
@@ -1304,7 +1304,7 @@ def force_finish():
         tournament_id, match_found = get_match_tournament_id(cur, match_id)
 
         if not match_found:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return admin_context_redirect()
 
         if not tournament_id:
@@ -1340,13 +1340,13 @@ def force_finish():
         conn.commit()
 
         flash(
-            f"���� #{match_id} ��������: {h}:{a}",
+            f"Матч #{match_id} завершён: {h}:{a}",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1365,7 +1365,7 @@ def admin_fix_result():
     )
 
     if home_score is None:
-        flash("������������ ����", "error")
+        flash("Некорректный счёт", "error")
         return admin_context_redirect()
 
     conn = get_db()
@@ -1375,7 +1375,7 @@ def admin_fix_result():
         tournament_id, match_found = get_match_tournament_id(cur, match_id)
 
         if not match_found:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return admin_context_redirect()
 
         if not tournament_id:
@@ -1410,13 +1410,13 @@ def admin_fix_result():
         conn.commit()
 
         flash(
-            f"��������� �������: {home_score}:{away_score}",
+            f"Результат исправлен: {home_score}:{away_score}",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1437,7 +1437,7 @@ def admin_edit_match():
     submitted_status = normalize_manual_match_status(request.form.get("status"), None)
 
     if not match_id or not home_team or not away_team or not match_date or not match_time:
-        flash("��������� ��� ����", "error")
+        flash("Заполните все поля", "error")
         return admin_context_redirect()
 
     conn = get_db()
@@ -1462,7 +1462,7 @@ def admin_edit_match():
         row = cur.fetchone()
 
         if not row:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return admin_context_redirect()
 
         status = row[0]
@@ -1484,7 +1484,7 @@ def admin_edit_match():
             flash(str(e), "error")
             return admin_context_redirect()
         except Exception:
-            flash("������������ ���� ��� �����", "error")
+            flash("Некорректные дата или время", "error")
             return admin_context_redirect()
 
         playoff_stage = None
@@ -1523,7 +1523,7 @@ def admin_edit_match():
                 ),
             )
 
-            flash("��� FINISHED ����� ��������� kickoff/deadline ��������� ��� ������������", "error")
+            flash("Для FINISHED нельзя менять дату или дедлайн без корректного результата", "error")
         else:
             cur.execute(
                 f"""
@@ -1554,19 +1554,19 @@ def admin_edit_match():
                 recalc_match_points(match_id, tournament_id=tournament_id, conn=conn, cur=cur)
 
         if cur.rowcount == 0:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return admin_context_redirect()
 
         conn.commit()
 
         flash(
-            f"���� #{match_id} �������",
+            f"Матч #{match_id} обновлён",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������: {e}", "error")
+        flash(f"Ошибка: {e}", "error")
 
     finally:
         close_db(conn, cur)
@@ -1581,7 +1581,7 @@ def admin_delete_match():
     redirect_target = url_for("admin.admin")
 
     if not match_id:
-        flash("�� ������ match_id", "error")
+        flash("Не указан match_id", "error")
         return redirect(redirect_target)
 
     conn = get_db()
@@ -1609,19 +1609,19 @@ def admin_delete_match():
         )
 
         if cur.rowcount == 0:
-            flash("���� �� ������", "error")
+            flash("Матч не найден", "error")
             return redirect(redirect_target)
 
         conn.commit()
 
         flash(
-            f"���� #{match_id} �����",
+            f"Матч #{match_id} удалён",
             "success",
         )
 
     except Exception as e:
         conn.rollback()
-        flash(f"������ ��������: {e}", "error")
+        flash(f"Ошибка удаления: {e}", "error")
 
     finally:
         close_db(conn, cur)
