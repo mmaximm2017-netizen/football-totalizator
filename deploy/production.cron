@@ -4,5 +4,6 @@
 0 5 * * * cd /opt/football-totalizator && /bin/bash scripts/run_morning_digest.sh
 */5 * * * * cd /opt/football-totalizator && TOTISH_DEADLINE_PUSH_LOG="$HOME/.local/state/totish/deadline-push.log" TOTISH_DEADLINE_PUSH_LOCK="$HOME/.local/state/totish/deadline-push.lock" /bin/bash scripts/run_deadline_pushes.sh
 */5 * * * * cd /opt/football-totalizator && TOTISH_MATCH_RESULT_PUSH_LOG="$HOME/.local/state/totish/match-result-push.log" TOTISH_MATCH_RESULT_PUSH_LOCK="$HOME/.local/state/totish/match-result-push.lock" /bin/bash scripts/run_match_result_pushes.sh
+*/5 * * * * cd /opt/football-totalizator && TOTISH_AUTO_RESULTS_LOG="$HOME/.local/state/totish/auto-results.log" TOTISH_AUTO_RESULTS_LOCK="$HOME/.local/state/totish/auto-results.lock" /bin/bash scripts/run_auto_results.sh
 30 3 * * * cd /opt/football-totalizator && /bin/bash scripts/run_database_backup.sh >> $HOME/.local/state/totish/database-backup.log 2>&1
 15 4 * * 1 cd /opt/football-totalizator && /bin/bash scripts/verify_database_backup_restore.sh >> $HOME/.local/state/totish/database-restore-verify.log 2>&1
