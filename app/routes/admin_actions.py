@@ -177,7 +177,7 @@ def dispatch_admin_action(action, conn, cur):
     handler = ACTION_HANDLERS.get(action)
 
     if not handler:
-        flash("����������� ��������", "error")
+        flash("Неизвестное действие", "error")
         return redirect(url_for("admin.admin"))
 
     return handler(conn, cur)

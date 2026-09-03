@@ -1,4 +1,4 @@
-﻿# app/routes/predictions.py
+# app/routes/predictions.py
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -73,7 +73,7 @@ def match_predictions(match_id):
             flash("Турнир для матча не определён", "error")
             return redirect(url_for('main.index'))
 
-        # ������ �����: ������� ������� � deadline
+        # Прогнозы открываются для просмотра только после дедлайна.
         deadline_passed = not is_before_deadline({
             "deadline": m[4]
         })
