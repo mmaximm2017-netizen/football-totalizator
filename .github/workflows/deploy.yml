@@ -59,5 +59,52 @@ jobs:
           port: ${{ secrets.PROD_SSH_PORT }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
+            set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
+
+            previous_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+
             ./scripts/deploy_production.sh ${{ steps.image.outputs.reference }}
+
+            current_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+            expected_image="${{ steps.image.outputs.reference }}"
+            if [[ "$current_image" != "$expected_image" ]]; then
+              echo "POST_DEPLOY_CLEANUP_SKIPPED: running image does not match expected image" >&2
+              exit 1
+            fi
+
+            rollback_holder="totish-rollback-image"
+            docker rm -f "$rollback_holder" >/dev/null 2>&1 || true
+
+            if [[ "$previous_image" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]; then
+              if docker create --name "$rollback_holder" --entrypoint /bin/true "$previous_image" >/dev/null; then
+                echo "ROLLBACK_IMAGE_RETAINED: $previous_image"
+              else
+                echo "POST_DEPLOY_CLEANUP_SKIPPED: failed to retain previous image" >&2
+                exit 0
+              fi
+            else
+              echo "POST_DEPLOY_CLEANUP_SKIPPED: previous image reference is not a valid TOTISH digest" >&2
+              exit 0
+            fi
+
+            repo="ghcr.io/mmaximm2017-netizen/football-totalizator"
+            mapfile -t image_ids < <(
+              docker image ls --no-trunc --format '{{.Repository}} {{.ID}}' |
+              awk -v repo="$repo" '$1 == repo {print $2}' |
+              sort -u
+            )
+
+            removed=0
+            for image_id in "${image_ids[@]}"; do
+              [[ -n "$image_id" ]] || continue
+              if docker ps -aq --filter "ancestor=$image_id" | grep -q .; then
+                continue
+              fi
+              if docker image rm -f "$image_id" >/dev/null 2>&1; then
+                removed=$((removed + 1))
+              fi
+            done
+
+            docker builder prune --all --force >/dev/null
+            echo "POST_DEPLOY_CLEANUP_OK: removed_unused_totish_images=$removed"
