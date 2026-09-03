@@ -3,6 +3,12 @@ from markupsafe import escape
 
 from app.db import close_db, get_db
 from app.routes.admin_common import admin_required
+from app.services.admin_tournament_mutation_service import (
+    create_tournament,
+    delete_archived_tournament,
+    set_tournament_active,
+    translate_match_names,
+)
 from app.services.scoring_recalculation_service import (
     recalc_match_points,
     recalc_tournament_points,
@@ -154,42 +160,7 @@ def admin_translate():
     cur = conn.cursor()
 
     try:
-        cur.execute(
-            """
-            SELECT id,
-                   home_team,
-                   away_team
-            FROM matches
-            """
-        )
-
-        matches = cur.fetchall()
-
-        updated = 0
-
-        for m in matches:
-            new_home = translate_name(m[1])
-            new_away = translate_name(m[2])
-
-            if (
-                new_home != m[1]
-                or new_away != m[2]
-            ):
-                cur.execute(
-                    """
-                    UPDATE matches
-                    SET home_team = %s,
-                        away_team = %s
-                    WHERE id = %s
-                    """,
-                    (
-                        new_home,
-                        new_away,
-                        m[0],
-                    ),
-                )
-
-                updated += 1
+        updated = translate_match_names(cur, translate_name)
 
         conn.commit()
 
@@ -222,35 +193,12 @@ def admin_new_tournament():
     cur = conn.cursor()
 
     try:
-        cur.execute(
-            """
-            SELECT id
-            FROM tournaments
-            WHERE LOWER(name) = LOWER(%s)
-            """,
-            (name,),
-        )
+        created = create_tournament(cur, name, start_date)
 
-        existing = cur.fetchone()
-
-        if existing:
+        if not created:
             flash("Турнир с таким названием уже существует", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
-        cur.execute(
-            """
-            INSERT INTO tournaments (
-                name,
-                is_active,
-                start_date
-            )
-            VALUES (%s, 1, %s)
-            """,
-            (
-                name,
-                start_date,
-            ),
-        )
 
         conn.commit()
 
@@ -274,16 +222,9 @@ def handle_archive_tournament(tid):
     cur = conn.cursor()
 
     try:
-        cur.execute(
-            """
-            UPDATE tournaments
-            SET is_active = 0
-            WHERE id = %s
-            """,
-            (tid,),
-        )
+        updated = set_tournament_active(cur, tid, False)
 
-        if cur.rowcount == 0:
+        if not updated:
             flash("Турнир не найден", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
@@ -303,16 +244,9 @@ def handle_activate_tournament(tid):
     cur = conn.cursor()
 
     try:
-        cur.execute(
-            """
-            UPDATE tournaments
-            SET is_active = 1
-            WHERE id = %s
-            """,
-            (tid,),
-        )
+        updated = set_tournament_active(cur, tid, True)
 
-        if cur.rowcount == 0:
+        if not updated:
             flash("Турнир не найден", "error")
             return redirect(url_for("admin.admin_tournaments"))
 
@@ -340,40 +274,16 @@ def delete_tournament():
     cur = conn.cursor()
 
     try:
-        cur.execute(
-            """
-            SELECT is_active
-            FROM tournaments
-            WHERE id = %s
-            """,
-            (tid,),
-        )
-
-        row = cur.fetchone()
-
-        if not row:
+        delete_status = delete_archived_tournament(cur, tid)
+        if delete_status == "missing":
             flash("Турнир не указан", "error")
             return redirect(url_for("admin.admin_tournaments"))
-
-        if row[0] == 1:
+        if delete_status == "active":
             flash("Нельзя удалить активный турнир", "error")
             return redirect(url_for("admin.admin_tournaments"))
-
-        cur.execute(
-            "SELECT 1 FROM predictions WHERE tournament_id = %s LIMIT 1",
-            (tid,),
-        )
-        if cur.fetchone():
+        if delete_status == "has_predictions":
             flash("Нельзя удалить турнир: существуют связанные прогнозы", "error")
             return redirect(url_for("admin.admin_tournaments"))
-
-        cur.execute(
-            """
-            DELETE FROM tournaments
-            WHERE id = %s
-            """,
-            (tid,),
-        )
 
         conn.commit()
 

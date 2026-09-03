@@ -14,6 +14,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.config import INVITE_CODE
 from app.db import close_db, get_db
+from app.services.auth_user_service import create_user, get_auth_user, upgrade_user_password_hash
 from app.services.login_rate_limit_service import (
     clear_login_failures,
     is_login_blocked,
@@ -48,15 +49,7 @@ def login():
                 flash("Слишком много неудачных попыток. Попробуйте позже.", "error")
                 return render_template('login.html'), 429
 
-            cur.execute(
-                """
-                SELECT id, password, COALESCE(is_deleted, 0)
-                FROM users
-                WHERE username = %s
-                """,
-                (username,),
-            )
-            user = cur.fetchone()
+            user = get_auth_user(cur, username)
 
             if not user:
                 record_login_failure(cur, remote_addr, username)
@@ -80,14 +73,7 @@ def login():
                 password_ok = stored_password == password
                 if password_ok:
                     new_hash = generate_password_hash(password)
-                    cur.execute(
-                        """
-                        UPDATE users
-                        SET password = %s
-                        WHERE id = %s
-                        """,
-                        (new_hash, user_id),
-                    )
+                    upgrade_user_password_hash(cur, user_id, new_hash)
 
             if not password_ok:
                 record_login_failure(cur, remote_addr, username)
@@ -139,13 +125,7 @@ def register():
         conn = get_db()
         cur = conn.cursor()
         try:
-            cur.execute(
-                """
-                INSERT INTO users (username, password)
-                VALUES (%s, %s)
-                """,
-                (username, password_hash),
-            )
+            create_user(cur, username, password_hash)
             conn.commit()
 
             flash("Регистрация успешна, теперь войдите", "success")

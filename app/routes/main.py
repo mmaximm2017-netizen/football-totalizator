@@ -20,6 +20,7 @@ from flask import (
 from app.config import START_DATE
 from app.db import close_db, get_db
 from app.services.home_match_view_service import apply_home_match_card_state
+from app.services.prediction_write_service import save_prediction_before_deadline
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_session_start_tournament_id,
@@ -337,39 +338,17 @@ WHERE m.id = %s
                 flash("Время для изменения прогноза истекло", "error")
                 return redirect(url_for('main.index'))
 
-            cur.execute("""
-                INSERT INTO predictions
-                    (user_id, match_id, tournament_id, home_goals, away_goals)
-                SELECT %s, %s, %s, %s, %s
-                WHERE (
-                    SELECT CURRENT_TIMESTAMP < m.deadline
-                    FROM matches m
-                    WHERE m.id = %s
-                )
-                ON CONFLICT (user_id, match_id, tournament_id)
-                DO UPDATE SET
-                    home_goals = EXCLUDED.home_goals,
-                    away_goals = EXCLUDED.away_goals
-                WHERE (
-                    SELECT CURRENT_TIMESTAMP < m.deadline
-                    FROM matches m
-                    WHERE m.id = %s
-                )
-                RETURNING 1
-            """, (
+            saved = save_prediction_before_deadline(
+                cur,
                 session['user_id'],
                 match_id,
                 match_tid,
                 h,
                 a,
-                match_id,
-                match_id,
-            ))
-
-            inserted_row = cur.fetchone()
+            )
             conn.commit()
 
-            if not inserted_row:
+            if not saved:
                 msg = (
                     "Время для изменения прогноза истекло "
                     "(проверка БД: дедлайн наступил до записи)"

@@ -8,6 +8,12 @@ from app.routes.admin_matches import (
     handle_set_result,
 )
 from app.routes.admin_sync import handle_manual_sync_update
+from app.services.admin_title_service import (
+    award_title,
+    get_title_target_admin_flag,
+    remove_title,
+    replace_title,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -59,19 +65,11 @@ def _validate_title_user(cur, user_id):
         flash("Выберите пользователя", "error")
         return False
 
-    cur.execute(
-        """
-        SELECT is_admin
-        FROM users
-        WHERE id = %s
-        """,
-        (user_id,),
-    )
-    row = cur.fetchone()
-    if not row:
+    is_admin = get_title_target_admin_flag(cur, user_id)
+    if is_admin is None:
         flash("Пользователь не найден", "error")
         return False
-    if row[0] == 1:
+    if is_admin == 1:
         flash("Нельзя назначать титулы администраторам", "error")
         return False
     return True
@@ -84,16 +82,9 @@ def handle_award_title(conn, cur):
         return _admin_redirect()
 
     try:
-        cur.execute(
-            """
-            INSERT INTO user_titles (user_id, title, awarded_by)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (user_id, title) DO NOTHING
-            """,
-            (user_id, title, session.get("user_id")),
-        )
+        created = award_title(cur, user_id, title, session.get("user_id"))
 
-        if cur.rowcount == 0:
+        if not created:
             conn.rollback()
             flash("У пользователя уже есть этот титул", "error")
             return _admin_redirect()
@@ -117,19 +108,14 @@ def handle_replace_title(conn, cur):
         return _admin_redirect()
 
     try:
-        cur.execute(
-            "DELETE FROM user_titles WHERE user_id = %s AND title = %s",
-            (user_id, old_title),
+        replaced = replace_title(
+            cur, user_id, old_title, title, session.get("user_id")
         )
-        if cur.rowcount == 0:
+        if not replaced:
             conn.rollback()
             flash("Титул для замены не найден", "error")
             return _admin_redirect()
 
-        cur.execute(
-            "INSERT INTO user_titles (user_id, title, awarded_by) VALUES (%s, %s, %s)",
-            (user_id, title, session.get("user_id")),
-        )
         conn.commit()
         flash("Титул успешно заменён", "success")
     except Exception:
@@ -146,11 +132,8 @@ def handle_remove_title(conn, cur):
         return _admin_redirect()
 
     try:
-        cur.execute(
-            "DELETE FROM user_titles WHERE user_id = %s AND title = %s",
-            (user_id, title),
-        )
-        if cur.rowcount == 0:
+        removed = remove_title(cur, user_id, title)
+        if not removed:
             conn.rollback()
             flash("Титул не найден", "error")
             return _admin_redirect()
