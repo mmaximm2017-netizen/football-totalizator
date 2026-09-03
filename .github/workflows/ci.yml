@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_USER: totish_ci
           POSTGRES_PASSWORD: totish_ci
@@ -27,7 +27,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U totish_ci -d totish_ci"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
