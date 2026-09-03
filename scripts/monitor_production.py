@@ -59,6 +59,10 @@ def alert(key, details):
             "🚨 ТОТИШ: сайт недоступен из интернета",
             "ТОТИШ не открывается через nginx/TLS.",
         ),
+        "control_plane:": (
+            "🚨 ТОТИШ: служебные файлы VPS не совпадают с версией сайта",
+            "Служебные production-файлы на VPS рассинхронизированы с запущенной версией ТОТИШа.",
+        ),
     }
 
     title = "🚨 ТОТИШ: обнаружена техническая проблема"
@@ -239,6 +243,63 @@ def check_db_health():
     )
     return False
 
+def check_control_plane_release():
+    marker = ROOT / ".totish-managed-release"
+
+    try:
+        managed_release = marker.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        alert(
+            "control_plane:marker_missing",
+            "Что именно произошло:\n"
+            "Не удалось прочитать отметку версии служебных файлов production.\n\n"
+            f"Причина: {type(exc).__name__}: {exc}",
+        )
+        return False
+
+    result = run([
+        "docker",
+        "inspect",
+        "--format",
+        "{{range .Config.Env}}{{println .}}{{end}}",
+        "football-totalizator-app-1",
+    ])
+
+    if result.returncode != 0:
+        alert(
+            "control_plane:image_release_unknown",
+            "Что именно произошло:\n"
+            "Не удалось определить commit запущенного Docker-образа.",
+        )
+        return False
+
+    image_release = ""
+    for line in result.stdout.splitlines():
+        if line.startswith("TOTISH_RELEASE="):
+            image_release = line.split("=", 1)[1].strip()
+            break
+
+    if not image_release:
+        alert(
+            "control_plane:image_release_missing",
+            "Что именно произошло:\n"
+            "Запущенный Docker-образ не сообщает свой commit.",
+        )
+        return False
+
+    if managed_release != image_release:
+        alert(
+            "control_plane:release_mismatch",
+            "Что именно произошло:\n"
+            "Версия служебных файлов VPS не совпадает с версией приложения.\n\n"
+            f"Файлы VPS: {managed_release}\n"
+            f"Приложение: {image_release}",
+        )
+        return False
+
+    return True
+
+
 def check_public_health():
     try:
         health = fetch_json("https://totish.ru/health")
@@ -298,6 +359,9 @@ def main():
         ok = False
 
     if not check_db_health():
+        ok = False
+
+    if not check_control_plane_release():
         ok = False
 
     if not check_public_health():
