@@ -13,7 +13,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Inspect Sportbox national source on VPS
+      - name: Compare Sportbox match-center state on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -23,23 +23,25 @@ jobs:
           script: |
             set -Eeuo pipefail
             ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
-            for pair in \
-              'calendar|https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team' \
-              'detail|https://news.sportbox.ru/Vidy_sporta/Futbol/stats/turnir_23863/game_1380956536'; do
-              name="${pair%%|*}"; url="${pair#*|}"
+            for id in 1380956536 1380969525; do
+              echo "=== game $id ==="
               tmp="$(mktemp)"
-              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
-              echo "=== $name ==="
+              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" "https://news.sportbox.ru/stats/game_json/$id"
               python3 - "$tmp" <<'PY'
-            import re,sys
-            text=open(sys.argv[1],encoding='utf-8',errors='replace').read()
-            for marker in ('finished','finish','ended','completed','final','Матч заверш','Матч окончен','Игра заверш','90′','90\'','status','game_status','game-status','3 : 0','-:-'):
-                print(marker, text.casefold().count(marker.casefold()))
-            for needle in ('Россия — Иран','Россия - Иран','1380956536','3 : 0','90′'):
-                pos=text.find(needle)
-                if pos>=0:
-                    print('RAW',needle,re.sub(r'\s+',' ',text[max(0,pos-1600):pos+2600])[:4200])
-                    break
+            import json,sys,re
+            raw=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+            print('bytes=',len(raw),'prefix=',raw[:300].replace('\n',' '))
+            try:
+                data=json.loads(raw)
+            except Exception as e:
+                print('json_error',e)
+            else:
+                print('type=',type(data).__name__)
+                if isinstance(data,dict):
+                    print('keys=',sorted(data)[:100])
+                    for k,v in data.items():
+                        if any(x in k.casefold() for x in ('status','state','live','score','time','finish','end')):
+                            print(k,repr(v)[:1000])
             PY
               rm -f "$tmp"
             done
