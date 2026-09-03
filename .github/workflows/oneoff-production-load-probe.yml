@@ -1,0 +1,151 @@
+name: One-off production load probe
+
+on:
+  push:
+    branches:
+      - audit/load-test-production
+
+permissions:
+  contents: read
+
+jobs:
+  load-probe:
+    name: Bounded production load probe
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+
+    steps:
+      - name: Run bounded authenticated probe on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+
+            echo '=== RELEASE ==='
+            docker exec football-totalizator-app-1 printenv TOTISH_RELEASE
+            echo '=== CONTAINER BEFORE ==='
+            docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.PIDs}}' football-totalizator-app-1
+
+            auth_data="$(docker exec -i football-totalizator-app-1 python - <<'PY'
+            from wsgi import app
+            from app.db import get_db, close_db
+
+            conn = get_db()
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT id FROM users WHERE COALESCE(is_deleted, 0) = 0 ORDER BY is_admin DESC, id LIMIT 1")
+                user_id = cur.fetchone()[0]
+                cur.execute("SELECT id FROM tournaments WHERE is_active = TRUE ORDER BY id LIMIT 1")
+                tournament_id = cur.fetchone()[0]
+            finally:
+                close_db(conn, cur)
+
+            serializer = app.session_interface.get_signing_serializer(app)
+            cookie = serializer.dumps({
+                'user_id': user_id,
+                'selected_tournament_id': tournament_id,
+                'tournament_selection_initialized': True,
+                '_permanent': True,
+            })
+            print(f"{user_id}|{tournament_id}|{cookie}")
+            PY
+            )"
+
+            IFS='|' read -r synthetic_user_id tournament_id session_cookie <<< "$auth_data"
+            test -n "$session_cookie"
+            echo "Synthetic read-only session: user_id=$synthetic_user_id tournament_id=$tournament_id"
+
+            cat > /tmp/totish_load_probe.py <<'PY'
+            import concurrent.futures
+            import math
+            import os
+            import statistics
+            import time
+            import urllib.error
+            import urllib.request
+
+            BASE = 'http://127.0.0.1:8000'
+            COOKIE = os.environ['TOTISH_PROBE_COOKIE']
+            TID = os.environ['TOTISH_PROBE_TID']
+            STAGES = [1, 4, 8, 16, 32, 64]
+            P95_STOP_SECONDS = 5.0
+
+            paths = [
+                f'/?tid={TID}', f'/?tid={TID}', f'/?tid={TID}', f'/?tid={TID}', f'/?tid={TID}',
+                f'/table?tid={TID}', f'/table?tid={TID}', f'/table?tid={TID}',
+                f'/profile?tid={TID}', f'/profile?tid={TID}',
+            ]
+
+            def percentile(values, q):
+                ordered = sorted(values)
+                if not ordered:
+                    return 0.0
+                index = max(0, min(len(ordered) - 1, math.ceil(q * len(ordered)) - 1))
+                return ordered[index]
+
+            def request_once(index):
+                path = paths[index % len(paths)]
+                req = urllib.request.Request(
+                    BASE + path,
+                    headers={
+                        'Cookie': f'session={COOKIE}',
+                        'User-Agent': 'TOTISH-bounded-load-probe/1.0',
+                        'Accept': 'text/html,application/xhtml+xml',
+                    },
+                )
+                started = time.perf_counter()
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as response:
+                        response.read()
+                        status = response.status
+                    error = None
+                except Exception as exc:
+                    status = getattr(exc, 'code', 0) or 0
+                    error = f'{type(exc).__name__}: {exc}'
+                return path, status, time.perf_counter() - started, error
+
+            print('=== LOAD PROBE ===')
+            print('mix=50% home, 30% table, 20% profile; read-only GET requests')
+            for concurrency in STAGES:
+                total = max(40, concurrency * 4)
+                started = time.perf_counter()
+                with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+                    results = list(pool.map(request_once, range(total)))
+                wall = time.perf_counter() - started
+                latencies = [item[2] for item in results]
+                errors = [item for item in results if item[1] != 200 or item[3]]
+                p50 = percentile(latencies, 0.50)
+                p95 = percentile(latencies, 0.95)
+                maximum = max(latencies)
+                rps = total / wall if wall else 0.0
+                print(
+                    f'STAGE concurrency={concurrency} requests={total} '
+                    f'ok={total-len(errors)} errors={len(errors)} rps={rps:.2f} '
+                    f'p50={p50:.3f}s p95={p95:.3f}s max={maximum:.3f}s wall={wall:.3f}s'
+                )
+                if errors:
+                    for sample in errors[:5]:
+                        print('ERROR_SAMPLE', sample)
+                    print('STOP: HTTP/error threshold exceeded')
+                    break
+                if p95 > P95_STOP_SECONDS:
+                    print(f'STOP: p95 {p95:.3f}s exceeded {P95_STOP_SECONDS:.1f}s safety threshold')
+                    break
+            PY
+
+            export TOTISH_PROBE_COOKIE="$session_cookie"
+            export TOTISH_PROBE_TID="$tournament_id"
+            python3 /tmp/totish_load_probe.py
+            rm -f /tmp/totish_load_probe.py
+
+            echo '=== HEALTH AFTER ==='
+            curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8000/health
+            echo
+            echo '=== CONTAINER AFTER ==='
+            docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.PIDs}}' football-totalizator-app-1
