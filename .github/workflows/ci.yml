@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build --progress=plain -t totish-ci .
+        run: docker build --progress=plain --build-arg TOTISH_RELEASE="$GITHUB_SHA" -t totish-ci .
 
   publish:
     name: Publish Docker image
@@ -153,6 +153,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            TOTISH_RELEASE=${{ github.sha }}
           tags: |
             ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.sha_tag }}
             ghcr.io/mmaximm2017-netizen/football-totalizator:${{ steps.image.outputs.short_sha_tag }}
