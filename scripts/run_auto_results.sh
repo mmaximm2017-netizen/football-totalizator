@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Production dry-run cron entry (install separately after verification):
+# Production cron entry:
 # */5 * * * * /opt/football-totalizator/scripts/run_auto_results.sh
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -36,23 +36,22 @@ if [[ "$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)" -gt "$MAX_LOG_BYTES" ]];
 fi
 
 cd "$PROJECT_ROOT"
-printf '%s START auto-result worker mode=dry-run\n' "$(date -Is)" >>"$LOG_FILE"
+printf '%s START auto-result runtime\n' "$(date -Is)" >>"$LOG_FILE"
 set +e
 "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
   "$DOCKER_BIN" compose run --rm -T --interactive=false \
     -e PYTHONPATH=/app \
-    -e AUTO_RESULTS_DRY_RUN=true \
     -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
-    app python scripts/auto_result_worker.py \
+    app python scripts/auto_result_runtime.py \
       --state-file /app/runtime/telegram-outbox/.auto-results-state.json \
       --outbox /app/runtime/telegram-outbox \
     >>"$LOG_FILE" 2>&1
 STATUS=$?
 set -e
-printf '%s FINISH auto-result worker exit_code=%s\n' "$(date -Is)" "$STATUS" >>"$LOG_FILE"
+printf '%s FINISH auto-result runtime exit_code=%s\n' "$(date -Is)" "$STATUS" >>"$LOG_FILE"
 
 python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" >>"$LOG_FILE" 2>&1 || true
 if [[ "$STATUS" -ne 0 ]]; then
-  python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка dry-run автоматической проверки результатов. Код выхода: ${STATUS}. Результаты матчей и очки не изменялись." >/dev/null 2>&1 || true
+  python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка автоматической проверки результатов. Код выхода: ${STATUS}. Проверьте лог; при ошибке записи результат нужно внести вручную." >/dev/null 2>&1 || true
 fi
 exit "$STATUS"
