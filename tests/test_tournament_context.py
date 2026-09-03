@@ -296,7 +296,6 @@ class TournamentRouteSmokeTests(unittest.TestCase):
             patch("app.routes.main.close_db"),
             patch("app.routes.main.get_all_tournaments", return_value=[{"id": 42, "name": "Selected", "is_active": 1}]),
             patch("app.routes.main.get_selected_tournament_id", selected),
-            patch("app.routes.main.get_tournament_by_id", return_value={"id": 42, "name": "Selected"}),
             patch("app.routes.main.render_template", side_effect=fake_render_template),
         ):
             with client.session_transaction() as sess:
