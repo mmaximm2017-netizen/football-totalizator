@@ -16,13 +16,13 @@ concurrency:
 
 jobs:
   load-probe:
-    name: Endpoint load diagnostics
+    name: Mixed load verification
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
 
     steps:
-      - name: Run endpoint diagnostics on VPS
+      - name: Run mixed read-only load verification on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -32,7 +32,6 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
-
             auth_data="$(docker exec -i football-totalizator-app-1 python - <<'PY'
             from wsgi import app
             from app.db import get_db, close_db
@@ -50,47 +49,31 @@ jobs:
             PY
             )"
             IFS='|' read -r uid tid cookie <<< "$auth_data"
-            test -n "$cookie"
-
-            cat > /tmp/totish_endpoint_probe.py <<'PY'
-            import concurrent.futures, math, os, time, urllib.request
-            base = 'http://127.0.0.1:8000'
-            cookie = os.environ['COOKIE']
-            tid = os.environ['TID']
-            endpoints = [('home', f'/?tid={tid}'), ('table', f'/table?tid={tid}'), ('profile', f'/profile?tid={tid}')]
-
-            def pct(values, q):
-                v = sorted(values)
-                return v[max(0, min(len(v)-1, math.ceil(len(v)*q)-1))]
-
-            def hit(path):
-                req = urllib.request.Request(base + path, headers={'Cookie': f'session={cookie}', 'User-Agent': 'TOTISH-endpoint-probe/1.0'})
-                t = time.perf_counter()
-                try:
-                    with urllib.request.urlopen(req, timeout=15) as r:
-                        r.read(); status = r.status
-                    err = None
-                except Exception as exc:
-                    status = getattr(exc, 'code', 0) or 0; err = str(exc)
-                return status, time.perf_counter()-t, err
-
-            print('=== ENDPOINT DIAGNOSTICS ===')
-            for name, path in endpoints:
-                for concurrency in (1, 4):
-                    total = 12
-                    t = time.perf_counter()
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
-                        rows = list(pool.map(lambda _: hit(path), range(total)))
-                    wall = time.perf_counter()-t
-                    lat = [x[1] for x in rows]
-                    errors = [x for x in rows if x[0] != 200 or x[2]]
-                    print(f'ENDPOINT={name} concurrency={concurrency} requests={total} errors={len(errors)} rps={total/wall:.2f} p50={pct(lat,.5):.3f}s p95={pct(lat,.95):.3f}s max={max(lat):.3f}s')
-            PY
-
             export COOKIE="$cookie" TID="$tid"
-            python3 /tmp/totish_endpoint_probe.py
-            rm -f /tmp/totish_endpoint_probe.py
-
+            cat > /tmp/totish_mixed_probe.py <<'PY'
+            import concurrent.futures, math, os, time, urllib.request
+            base='http://127.0.0.1:8000'; cookie=os.environ['COOKIE']; tid=os.environ['TID']
+            paths=[f'/?tid={tid}']*5+[f'/table?tid={tid}']*3+[f'/profile?tid={tid}']*2
+            def pct(v,q):
+                v=sorted(v); return v[max(0,min(len(v)-1,math.ceil(len(v)*q)-1))]
+            def hit(i):
+                path=paths[i%len(paths)]
+                req=urllib.request.Request(base+path,headers={'Cookie':f'session={cookie}','User-Agent':'TOTISH-mixed-probe/1.0'})
+                t=time.perf_counter()
+                try:
+                    with urllib.request.urlopen(req,timeout=15) as r: r.read(); status=r.status
+                    err=None
+                except Exception as exc:
+                    status=getattr(exc,'code',0) or 0; err=str(exc)
+                return status,time.perf_counter()-t,err
+            total=40; concurrency=4; t=time.perf_counter()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+                rows=list(pool.map(hit,range(total)))
+            wall=time.perf_counter()-t; lat=[x[1] for x in rows]; errors=[x for x in rows if x[0]!=200 or x[2]]
+            print(f'MIX concurrency=4 requests={total} errors={len(errors)} rps={total/wall:.2f} p50={pct(lat,.5):.3f}s p95={pct(lat,.95):.3f}s max={max(lat):.3f}s wall={wall:.3f}s')
+            PY
+            python3 /tmp/totish_mixed_probe.py
+            rm -f /tmp/totish_mixed_probe.py
             echo '=== HEALTH AFTER ==='
             curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8000/health
             echo
