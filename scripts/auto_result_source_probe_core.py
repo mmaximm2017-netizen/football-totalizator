@@ -51,24 +51,16 @@ def _fields(record: str) -> dict[str, str]:
 
 
 def parse_flashscore_feed(html: str) -> list[SourceObservation]:
-    """Parse the server-rendered Flashscore feed embedded in tournament HTML.
-
-    Fields used here were verified against real finished RPL matches during the
-    prototype: AD kickoff epoch, AB state, AE/AF home/away, AG/AH score.
-    Only AB=3 is accepted as finished. Unknown states fail closed by omission.
-    """
+    """Parse the server-rendered Flashscore feed embedded in tournament HTML."""
     if "¬" not in html or "÷" not in html or "~AA÷" not in html:
         raise SourceParseError("flashscore embedded match feed not found")
-
     observations = []
     for raw_record in html.split("~AA÷")[1:]:
         record = _fields("AA÷" + raw_record)
         if record.get("AB") != "3":
             continue
-        home = record.get("AE")
-        away = record.get("AF")
-        home_score = record.get("AG")
-        away_score = record.get("AH")
+        home, away = record.get("AE"), record.get("AF")
+        home_score, away_score = record.get("AG"), record.get("AH")
         timestamp = record.get("AD")
         if not all((home, away, home_score, away_score, timestamp)):
             continue
@@ -77,31 +69,40 @@ def parse_flashscore_feed(html: str) -> list[SourceObservation]:
         match_date = datetime.fromtimestamp(
             int(timestamp), tz=ZoneInfo("UTC")
         ).astimezone(ZoneInfo("Europe/Moscow")).date().isoformat()
-        observations.append(
-            SourceObservation(
-                source="flashscore",
-                home_team=unescape(home).strip(),
-                away_team=unescape(away).strip(),
-                match_date=match_date,
-                home_score=int(home_score),
-                away_score=int(away_score),
-                status=STATUS_FINISHED,
-            )
-        )
+        observations.append(SourceObservation(
+            source="flashscore",
+            home_team=unescape(home).strip(),
+            away_team=unescape(away).strip(),
+            match_date=match_date,
+            home_score=int(home_score),
+            away_score=int(away_score),
+            status=STATUS_FINISHED,
+        ))
     return observations
 
 
 class _AncestorParser(HTMLParser):
+    _VOID_TAGS = {
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    }
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.stack: list[tuple[str, set[str]]] = []
 
     def handle_starttag(self, tag, attrs):
-        self.stack.append((tag, set(dict(attrs).get("class", "").split())))
+        if tag not in self._VOID_TAGS:
+            self.stack.append((tag, set(dict(attrs).get("class", "").split())))
+
+    def handle_startendtag(self, tag, attrs):
+        return
 
     def handle_endtag(self, tag):
-        if self.stack:
-            self.stack.pop()
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index][0] == tag:
+                del self.stack[index:]
+                return
 
     def has_ancestor(self, *required):
         wanted = set(required)
@@ -119,9 +120,7 @@ class _RfsCupParser(_AncestorParser):
         classes = set(attrs_dict.get("class", "").split())
         super().handle_starttag(tag, attrs)
         if tag == "div" and "tour-match" in classes:
-            self.current = {
-                "home": [], "away": [], "score": [], "penalty": [], "href": None
-            }
+            self.current = {"home": [], "away": [], "score": [], "penalty": [], "href": None}
         if self.current is not None and tag == "a" and "tour-match__score-block" in classes:
             self.current["href"] = attrs_dict.get("href")
 
@@ -140,20 +139,15 @@ class _RfsCupParser(_AncestorParser):
             return
         if self.has_ancestor("tour-match__penalty"):
             self.current["penalty"].append(text)
-            return
-        if self.has_ancestor("tour-match__score"):
+        elif self.has_ancestor("tour-match__score"):
             self.current["score"].append(text)
-            return
-        if not self.has_ancestor("tour-match__name"):
-            return
-        if self.has_ancestor("tour-match__team", "first"):
+        elif self.has_ancestor("tour-match__name") and self.has_ancestor("tour-match__team", "first"):
             self.current["home"].append(text)
-        elif self.has_ancestor("tour-match__team", "last"):
+        elif self.has_ancestor("tour-match__name") and self.has_ancestor("tour-match__team", "last"):
             self.current["away"].append(text)
 
 
 def parse_rfs_cup_listing(html: str) -> list[dict]:
-    """Return cup candidates; penalty is exposed only so callers can discard it."""
     parser = _RfsCupParser()
     parser.feed(html)
     if not parser.matches:
@@ -162,20 +156,19 @@ def parse_rfs_cup_listing(html: str) -> list[dict]:
     for item in parser.matches:
         home = " ".join(item["home"]).strip()
         away = " ".join(item["away"]).strip()
-        score_text = " ".join(item["score"])
-        score = re.search(r"(\d+)\s*:\s*(\d+)", score_text)
+        score = re.search(r"(\d+)\s*:\s*(\d+)", " ".join(item["score"]))
         if not home or not away or not item["href"]:
             continue
-        result.append(
-            {
-                "home_team": home,
-                "away_team": away,
-                "match_href": item["href"],
-                "home_score": int(score.group(1)) if score else None,
-                "away_score": int(score.group(2)) if score else None,
-                "penalty": " ".join(item["penalty"]).strip() or None,
-            }
-        )
+        result.append({
+            "home_team": home,
+            "away_team": away,
+            "match_href": item["href"],
+            "home_score": int(score.group(1)) if score else None,
+            "away_score": int(score.group(2)) if score else None,
+            "penalty": " ".join(item["penalty"]).strip() or None,
+        })
+    if not result:
+        raise SourceParseError("RFS cup cards found but expected fields were not readable")
     return result
 
 
@@ -190,9 +183,7 @@ class _RfsNationalParser(_AncestorParser):
         classes = set(attrs_dict.get("class", "").split())
         super().handle_starttag(tag, attrs)
         if tag == "div" and "calendar__row" in classes:
-            self.current = {
-                "home": [], "away": [], "date_time": [], "score": [], "href": None
-            }
+            self.current = {"home": [], "away": [], "date_time": [], "score": [], "href": None}
         if self.current is not None:
             onclick = attrs_dict.get("onclick", "")
             match = re.search(r"['\"](/match/\d+)['\"]", onclick)
@@ -234,22 +225,21 @@ def parse_rfs_national_listing(html: str) -> list[dict]:
     for item in parser.matches:
         home = " ".join(item["home"]).strip()
         away = " ".join(item["away"]).strip()
-        date_text = " ".join(item["date_time"])
-        date_match = re.search(r"(\d{2})\.(\d{2})\.(20\d{2})", date_text)
+        date_match = re.search(r"(\d{2})\.(\d{2})\.(20\d{2})", " ".join(item["date_time"]))
         score_numbers = [int(value) for value in re.findall(r"\b\d{1,2}\b", " ".join(item["score"]))]
         if not home or not away or not item["href"] or not date_match:
             continue
         day, month, year = date_match.groups()
-        result.append(
-            {
-                "home_team": home,
-                "away_team": away,
-                "match_date": f"{year}-{month}-{day}",
-                "match_href": item["href"],
-                "home_score": score_numbers[0] if len(score_numbers) >= 2 else None,
-                "away_score": score_numbers[1] if len(score_numbers) >= 2 else None,
-            }
-        )
+        result.append({
+            "home_team": home,
+            "away_team": away,
+            "match_date": f"{year}-{month}-{day}",
+            "match_href": item["href"],
+            "home_score": score_numbers[0] if len(score_numbers) >= 2 else None,
+            "away_score": score_numbers[1] if len(score_numbers) >= 2 else None,
+        })
+    if not result:
+        raise SourceParseError("RFS national rows found but expected fields were not readable")
     return result
 
 
@@ -266,12 +256,7 @@ _RU_MONTHS = {
 }
 
 
-def parse_rfs_finished_detail(
-    html: str,
-    *,
-    regulation_score: tuple[int, int],
-    source: str = "rfs",
-) -> SourceObservation:
+def parse_rfs_finished_detail(html: str, *, regulation_score: tuple[int, int], source: str = "rfs") -> SourceObservation:
     """Confirm RFS final status/date while reusing the listing's regulation score."""
     text = _plain_text(html)
     if "Матч окончен" not in text:
@@ -284,9 +269,7 @@ def parse_rfs_finished_detail(
     if not date_match:
         raise SourceParseError("RFS finished match date not found")
     day, month_name, year = date_match.groups()
-    match_date = datetime(
-        int(year), _RU_MONTHS[month_name.casefold()], int(day)
-    ).date().isoformat()
+    match_date = datetime(int(year), _RU_MONTHS[month_name.casefold()], int(day)).date().isoformat()
     return SourceObservation(
         source=source,
         match_date=match_date,
@@ -301,13 +284,8 @@ def _candidate_keys(primary: str, aliases: tuple[str, ...]) -> set[str]:
 
 
 def find_exact_match(
-    observations: list[SourceObservation],
-    *,
-    home_team: str,
-    away_team: str,
-    match_date: str,
-    home_aliases: tuple[str, ...] = (),
-    away_aliases: tuple[str, ...] = (),
+    observations: list[SourceObservation], *, home_team: str, away_team: str,
+    match_date: str, home_aliases: tuple[str, ...] = (), away_aliases: tuple[str, ...] = (),
 ) -> SourceObservation | None:
     """Strict date + ordered home/away lookup with explicit aliases only."""
     home_keys = _candidate_keys(home_team, home_aliases)
