@@ -1,0 +1,1156 @@
+    /* RPL tournament background: page layer only */
+    body.tournament-rpl {
+        background:
+            radial-gradient(circle at 50% 42%, rgba(43,169,255,0.14), transparent 16%),
+            conic-gradient(from 246deg at 50% 42%,
+                transparent 0deg 12deg,
+                rgba(255,255,255,0.10) 12deg 16deg,
+                transparent 16deg 31deg,
+                rgba(229,39,59,0.12) 31deg 37deg,
+                transparent 37deg 58deg,
+                rgba(43,169,255,0.13) 58deg 66deg,
+                transparent 66deg 91deg,
+                rgba(255,255,255,0.09) 91deg 98deg,
+                transparent 98deg 128deg,
+                rgba(229,39,59,0.10) 128deg 135deg,
+                transparent 135deg 164deg,
+                rgba(43,169,255,0.11) 164deg 173deg,
+                transparent 173deg 211deg,
+                rgba(255,255,255,0.08) 211deg 218deg,
+                transparent 218deg 255deg,
+                rgba(229,39,59,0.09) 255deg 264deg,
+                transparent 264deg 360deg),
+            linear-gradient(180deg, #020b27 0%, #041235 58%, #020817 100%) !important;
+        background-attachment: fixed;
+    }
+
+    body.tournament-rpl .home-screen {
+        position: relative;
+        isolation: isolate;
+    }
+
+    body.tournament-rpl .home-screen::before,
+    body.tournament-rpl .home-screen::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        left: 50%;
+        top: 42%;
+        transform: translate(-50%, -50%);
+    }
+
+    body.tournament-rpl .home-screen::before {
+        width: max(150vw, 1120px);
+        height: max(140vh, 900px);
+        opacity: 0.58;
+        filter: blur(0.5px);
+        background:
+            conic-gradient(from 252deg at 50% 50%,
+                transparent 0deg 7deg,
+                rgba(43,169,255,0.38) 7deg 12deg,
+                transparent 12deg 21deg,
+                rgba(255,255,255,0.34) 21deg 27deg,
+                transparent 27deg 43deg,
+                rgba(229,39,59,0.42) 43deg 50deg,
+                transparent 50deg 67deg,
+                rgba(43,169,255,0.30) 67deg 74deg,
+                transparent 74deg 96deg,
+                rgba(255,255,255,0.28) 96deg 102deg,
+                transparent 102deg 126deg,
+                rgba(229,39,59,0.34) 126deg 132deg,
+                transparent 132deg 156deg,
+                rgba(43,169,255,0.34) 156deg 164deg,
+                transparent 164deg 190deg,
+                rgba(255,255,255,0.30) 190deg 198deg,
+                transparent 198deg 224deg,
+                rgba(229,39,59,0.36) 224deg 232deg,
+                transparent 232deg 257deg,
+                rgba(43,169,255,0.28) 257deg 266deg,
+                transparent 266deg 292deg,
+                rgba(255,255,255,0.26) 292deg 300deg,
+                transparent 300deg 326deg,
+                rgba(229,39,59,0.30) 326deg 334deg,
+                transparent 334deg 360deg),
+            repeating-conic-gradient(from 248deg at 50% 50%,
+                transparent 0deg 5deg,
+                rgba(255,255,255,0.16) 5deg 5.9deg,
+                transparent 5.9deg 10deg,
+                rgba(43,169,255,0.14) 10deg 11.2deg,
+                transparent 11.2deg 16deg,
+                rgba(229,39,59,0.15) 16deg 17.1deg,
+                transparent 17.1deg 22deg);
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
+        mask-image: radial-gradient(circle at 50% 50%, transparent 0 9%, rgba(0,0,0,0.86) 18%, #000 100%);
+    }
+
+    body.tournament-rpl .home-screen::after {
+        width: max(132vw, 980px);
+        height: max(120vh, 760px);
+        opacity: 0.42;
+        filter: blur(0);
+        background:
+            repeating-conic-gradient(from 250deg at 50% 50%,
+                transparent 0deg 3.8deg,
+                rgba(255,255,255,0.22) 3.8deg 4.3deg,
+                transparent 4.3deg 7.2deg,
+                rgba(43,169,255,0.20) 7.2deg 7.8deg,
+                transparent 7.8deg 12deg,
+                rgba(229,39,59,0.22) 12deg 12.7deg,
+                transparent 12.7deg 17deg),
+            repeating-conic-gradient(from 253deg at 50% 50%,
+                transparent 0deg 14deg,
+                rgba(255,255,255,0.32) 14deg 14.7deg,
+                transparent 14.7deg 18deg,
+                rgba(255,255,255,0.18) 18deg 18.6deg,
+                transparent 18.6deg 31deg,
+                rgba(229,39,59,0.30) 31deg 32.2deg,
+                transparent 32.2deg 44deg,
+                rgba(43,169,255,0.28) 44deg 45.2deg,
+                transparent 45.2deg 58deg);
+        -webkit-mask-image:
+            radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
+        mask-image:
+            radial-gradient(circle at 50% 50%, transparent 0 15%, #000 23%, rgba(0,0,0,0.78) 66%, transparent 100%);
+    }
+
+    body.tournament-rpl .month-header-v2 {
+        background: #ffffff !important;
+        color: #d52b1e !important;
+        border: 1px solid rgba(213,43,30,0.42) !important;
+        border-left: 1px solid rgba(213,43,30,0.42) !important;
+        box-shadow:
+            0 8px 18px rgba(213,43,30,0.16),
+            inset 0 1px 0 rgba(255,255,255,0.92) !important;
+        backdrop-filter: blur(18px) saturate(118%);
+        -webkit-backdrop-filter: blur(18px) saturate(118%);
+    }
+
+    body.tournament-rpl .day-header-v2 {
+        background: #d52b1e !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255,255,255,0.28) !important;
+        border-left: 1px solid rgba(255,255,255,0.28) !important;
+        box-shadow:
+            0 10px 24px rgba(213,43,30,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(0,27,77,0.18) !important;
+        backdrop-filter: blur(18px) saturate(118%);
+        -webkit-backdrop-filter: blur(18px) saturate(118%);
+    }
+
+    body.tournament-rpl .month-title,
+    body.tournament-rpl .day-title,
+    body.tournament-rpl .month-count,
+    body.tournament-rpl .day-count,
+    body.tournament-rpl .month-arrow,
+    body.tournament-rpl .day-arrow {
+        color: rgba(255,255,255,0.94) !important;
+    }
+
+    body.tournament-rpl .month-header-v2 .month-title,
+    body.tournament-rpl .month-header-v2 .month-count,
+    body.tournament-rpl .month-header-v2 .month-arrow {
+        color: #d52b1e !important;
+    }
+
+    body.tournament-rpl .day-header-v2.today {
+        background: #d52b1e !important;
+        box-shadow:
+            0 10px 24px rgba(213,43,30,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(0,27,77,0.18) !important;
+    }
+
+    body.tournament-rpl .day-header-v2 .day-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    body.tournament-rpl .day-header-v2 .rpl-day-number {
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 1000;
+        line-height: 1;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.16);
+    }
+
+    body.tournament-rpl .day-header-v2 .rpl-day-month {
+        display: inline;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1.1;
+        box-shadow: none;
+    }
+
+    /* RPL premium matte glass card layer: card only, no inner layout changes */
+    body.tournament-rpl .match-card-v2 {
+        padding: 9px 11px 7px;
+        margin-bottom: 8px;
+        background:
+            linear-gradient(180deg, rgba(24,61,126,0.70) 0%, rgba(12,35,84,0.62) 100%) !important;
+        background-color: rgba(15,40,92,0.64) !important;
+        border: 0 !important;
+        border-left: 0 !important;
+        box-shadow:
+            0 0 0 1px rgba(118,196,255,0.28),
+            0 0 42px rgba(71,169,255,0.28),
+            0 44px 96px rgba(0,0,0,0.62),
+            0 20px 48px rgba(0,0,0,0.42),
+            inset 0 1px 0 rgba(255,255,255,0.32),
+            inset 0 16px 38px rgba(142,209,255,0.10),
+            inset 0 -1px 0 rgba(80,170,255,0.14) !important;
+        backdrop-filter: blur(32px) saturate(145%);
+        -webkit-backdrop-filter: blur(32px) saturate(145%);
+    }
+
+    body.tournament-rpl .match-card-v2.rpl-event-supercup {
+        background:
+            radial-gradient(circle at 86% 0%, rgba(238,210,132,0.26), transparent 30%),
+            linear-gradient(180deg, rgba(34,66,124,0.74) 0%, rgba(14,36,82,0.64) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(238,210,132,0.38),
+            0 0 34px rgba(238,210,132,0.16),
+            0 44px 96px rgba(0,0,0,0.58),
+            inset 0 2px 0 rgba(238,210,132,0.58),
+            inset 0 16px 38px rgba(255,255,255,0.08) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.rpl-event-national {
+        background:
+            linear-gradient(90deg, rgba(255,255,255,0.18) 0 2px, rgba(18,109,255,0.26) 2px 5px, rgba(229,39,59,0.26) 5px 8px, transparent 8px),
+            radial-gradient(circle at 88% 0%, rgba(255,255,255,0.18), transparent 28%),
+            linear-gradient(180deg, rgba(24,61,126,0.72) 0%, rgba(12,35,84,0.62) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.26),
+            0 0 28px rgba(42,168,255,0.18),
+            0 44px 96px rgba(0,0,0,0.58),
+            inset 0 1px 0 rgba(255,255,255,0.30),
+            inset 8px 0 0 rgba(255,255,255,0.10) !important;
+    }
+
+    body.tournament-rpl .rpl-event-badge {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        z-index: 3;
+        display: inline-flex;
+        align-items: center;
+        width: max-content;
+        max-width: calc(100% - 20px);
+        padding: 5px 9px;
+        border-radius: 999px;
+        color: #06122a;
+        font-size: 10px;
+        font-weight: 1000;
+        line-height: 1;
+        letter-spacing: .3px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 6px 14px rgba(0,0,0,0.20);
+    }
+
+    body.tournament-rpl .rpl-event-badge-supercup {
+        background: linear-gradient(135deg, #f2d27c, #c6ced8);
+        border: 1px solid rgba(255,255,255,0.38);
+    }
+
+    body.tournament-rpl .rpl-event-badge-national {
+        background: linear-gradient(135deg, #ffffff, #78b7ff 52%, #ff6b78);
+        border: 1px solid rgba(255,255,255,0.42);
+    }
+
+    body.tournament-rpl .match-card-v2.rpl-event-supercup .match-topline,
+    body.tournament-rpl .match-card-v2.rpl-event-national .match-topline {
+        padding-right: 108px;
+    }
+
+    body.tournament-rpl .match-card-v2 .match-topline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 5px;
+        padding: 0 1px 5px;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0;
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2 .match-meta-v2 {
+        display: contents;
+    }
+
+    body.tournament-rpl .match-card-v2 .league-row {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: center;
+        align-self: center;
+        gap: 2px;
+    }
+
+    body.tournament-rpl .match-card-v2 .tournament-logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        filter: drop-shadow(0 8px 16px rgba(0,0,0,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .tournament-logo {
+        filter:
+            drop-shadow(0 8px 16px rgba(0,0,0,0.34))
+            drop-shadow(0 0 10px rgba(255,215,120,0.24));
+    }
+
+    body.tournament-rpl .match-card-v2 .league-label,
+    body.tournament-rpl .match-card-v2 .match-meta-v2 > .time-label:not(.start-time-label) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    body.tournament-rpl .match-card-v2 .start-time-label {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
+        grid-column: 1;
+        grid-row: 1;
+        color: rgba(255,255,255,0.92);
+        font-size: 0;
+        font-weight: 850;
+        line-height: 1.18;
+        align-self: center;
+        justify-self: start;
+        text-align: left;
+    }
+
+    body.tournament-rpl .match-card-v2 .start-time-label::after {
+        content: attr(data-start-text);
+        display: block;
+        color: rgba(255,255,255,0.92);
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1.18;
+    }
+
+    body.tournament-rpl .match-card-v2 .start-time-label::before {
+        content: "Начало матча";
+        display: block;
+        margin-bottom: 3px;
+        color: rgba(255,255,255,0.62);
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 1.05;
+    }
+
+    body.tournament-rpl .match-card-v2 .topline-right {
+        display: contents;
+    }
+
+    body.tournament-rpl .match-card-v2 .deadline-row {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
+        grid-column: 3;
+        grid-row: 1;
+        align-items: flex-end;
+        justify-self: end;
+        align-self: center;
+        gap: 3px;
+    }
+
+    body.tournament-rpl .match-card-v2 .deadline-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 3px;
+        padding: 0;
+        margin: 0;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        text-align: right;
+    }
+
+    body.tournament-rpl .match-card-v2 .deadline-label {
+        display: block !important;
+        color: rgba(255,255,255,0.70);
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.05;
+        text-transform: none;
+        letter-spacing: 0;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    body.tournament-rpl .match-card-v2 .deadline-helper {
+        display: block !important;
+        color: rgba(255,255,255,0.92);
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1.18;
+        margin: 0;
+    }
+
+    body.tournament-rpl .match-card-v2 .deadline-timer,
+    body.tournament-rpl .match-card-v2 .deadline-cue {
+        display: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .teams-center {
+        grid-template-columns: minmax(0, 1fr) 116px minmax(0, 1fr);
+        margin: 2px 0 1px;
+        padding: 1px 0 0;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .team-v2 {
+        gap: 4px;
+        padding: 2px 3px 3px;
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .team-name-v2 {
+        color: rgba(255,255,255,0.94);
+        background: rgba(255,255,255,0.065) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.08),
+            inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+        backdrop-filter: blur(8px) saturate(108%);
+        -webkit-backdrop-filter: blur(8px) saturate(108%);
+    }
+
+    body.tournament-rpl .match-card-v2:not(.finished) .team-logo-v2 {
+        width: 120px;
+        height: 120px;
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        overflow: visible;
+    }
+
+    body.tournament-rpl .match-card-v2 .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2 .team-logo-v2 .flag-icon {
+        width: 120px !important;
+        height: 120px !important;
+        max-width: none;
+        max-height: none;
+        filter:
+            drop-shadow(0 18px 24px rgba(0,0,0,0.46))
+            drop-shadow(0 0 22px rgba(74,170,255,0.22));
+        transform: translateY(-3px);
+    }
+
+    body.tournament-rpl .match-card-v2 .predict-form-v2 {
+        gap: 3px;
+    }
+
+    body.tournament-rpl .match-card-v2 .score-input-row {
+        gap: 7px;
+    }
+
+    body.tournament-rpl .match-card-v2 .match-bottomline {
+        margin-top: 2px;
+        row-gap: 2px;
+    }
+
+    body.tournament-rpl .match-card-v2 .prediction-box {
+        margin-top: 6px;
+        padding: 7px 9px;
+        background: rgba(255,255,255,0.055) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        backdrop-filter: blur(8px) saturate(108%);
+        -webkit-backdrop-filter: blur(8px) saturate(108%);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper {
+        width: 44px;
+        grid-template-rows: 30px 39px 30px;
+        border-radius: 14px;
+        background: rgba(4,13,37,0.76) !important;
+        border: 0 !important;
+        box-shadow:
+            0 0 0 1px rgba(64,174,255,0.40),
+            0 0 22px rgba(35,144,255,0.34),
+            inset 0 1px 0 rgba(80,190,255,0.20),
+            inset 0 -1px 0 rgba(238,28,54,0.34),
+            0 12px 24px rgba(0,0,0,0.34) !important;
+        backdrop-filter: blur(12px) saturate(116%);
+        -webkit-backdrop-filter: blur(12px) saturate(116%);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn {
+        height: 30px;
+        background: transparent !important;
+        color: #1f90ff;
+        font-size: 20px;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn[data-step="1"] {
+        color: #39b4ff;
+        border-bottom: 1px solid rgba(64,174,255,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .stepper-btn[data-step="-1"] {
+        color: #ff3852;
+        border-top: 1px solid rgba(238,28,54,0.28);
+    }
+
+    body.tournament-rpl .match-card-v2 .score-stepper .score-input-v2,
+    body.tournament-rpl .match-card-v2 .score-input-v2 {
+        height: 39px;
+        background: rgba(0,0,0,0.18) !important;
+        color: #ffffff !important;
+        font-size: 26px !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.05),
+            inset 0 -1px 0 rgba(255,255,255,0.04) !important;
+    }
+
+    body.tournament-rpl .match-card-v2 .save-btn-v2 {
+        width: 40%;
+        min-width: 124px;
+        max-width: 164px;
+        height: 30px;
+        margin-top: 0;
+        background: linear-gradient(135deg, #126dff, #0a4ee8) !important;
+        color: #ffffff;
+        box-shadow:
+            0 16px 32px rgba(18,109,255,0.40),
+            inset 0 1px 0 rgba(255,255,255,0.22),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2 .my-prediction-v2 {
+        color: rgba(255,255,255,0.58);
+        font-size: 12px;
+        line-height: 1.15;
+    }
+
+    body.tournament-rpl .match-card-v2::after {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl {
+        color: #0f2448;
+        background:
+            radial-gradient(circle at 50% -12%, rgba(230,240,255,0.92), transparent 34%),
+            linear-gradient(180deg, #ffffff 0%, #f7fbff 58%, #edf5ff 100%) !important;
+        border: 1px solid rgba(0,57,166,0.12) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.92),
+            0 18px 44px rgba(0,38,98,0.13),
+            0 8px 20px rgba(0,57,166,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.96),
+            inset 0 -1px 0 rgba(0,57,166,0.06) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        border: 1px solid rgba(0,57,166,0.08) !important;
+        box-shadow: inset 3px 0 0 rgba(213,43,30,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .match-topline {
+        padding: 0 1px 7px;
+        box-shadow: inset 0 -1px 0 rgba(0,57,166,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .tournament-logo {
+        background: rgba(255,255,255,0.88);
+        box-shadow:
+            0 0 0 1px rgba(0,57,166,0.08),
+            0 10px 20px rgba(0,57,166,0.12);
+        filter: drop-shadow(0 8px 14px rgba(0,39,106,0.16));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .start-time-label::before,
+    body.tournament-rpl .match-card-v2.match-card--rpl .deadline-label {
+        color: rgba(15,36,72,0.58);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .start-time-label::after,
+    body.tournament-rpl .match-card-v2.match-card--rpl .deadline-helper {
+        color: #0f2448;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .team-name-v2 {
+        color: #10264f;
+        background: rgba(255,255,255,0.84) !important;
+        border: 1px solid rgba(0,57,166,0.10);
+        box-shadow:
+            0 8px 18px rgba(0,57,166,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.90),
+            inset 0 -1px 0 rgba(0,57,166,0.05) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--rpl .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,35,96,0.18))
+            drop-shadow(0 0 14px rgba(0,57,166,0.08));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .center-score,
+    body.tournament-rpl .match-card-v2.match-card--rpl .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--rpl .final-score,
+    body.tournament-rpl .match-card-v2.match-card--rpl .closed-prediction-center {
+        color: #0a2d7a;
+        text-shadow: none;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .center-sub,
+    body.tournament-rpl .match-card-v2.match-card--rpl .closed-prediction-label {
+        color: rgba(15,36,72,0.58);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper {
+        background: rgba(255,255,255,0.92) !important;
+        border: 1px solid rgba(0,57,166,0.10) !important;
+        box-shadow:
+            0 10px 22px rgba(0,57,166,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.96),
+            inset 0 -1px 0 rgba(0,57,166,0.06) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="-1"] {
+        color: #0039A6;
+        border-color: rgba(0,57,166,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-stepper .stepper-btn[data-step="-1"] {
+        color: #D52B1E;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .score-input-v2 {
+        color: #082b74 !important;
+        background: rgba(230,240,255,0.46) !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.74) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .save-btn-v2 {
+        background: linear-gradient(135deg, #0039A6, #002b7f) !important;
+        color: #ffffff;
+        border-radius: 999px;
+        box-shadow:
+            0 14px 28px rgba(0,57,166,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.26),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--rpl .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--rpl .bets-link-v2 {
+        color: rgba(15,36,72,0.72);
+        background: rgba(255,255,255,0.68) !important;
+        border-color: rgba(0,57,166,0.10);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.78),
+            0 8px 18px rgba(0,57,166,0.08) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--rpl.predicted .my-prediction-v2 b,
+    body.tournament-rpl .match-card-v2.match-card--rpl.finished .prediction-score-finished,
+    body.tournament-rpl .match-card-v2.match-card--rpl .points-v2 {
+        color: #0039A6;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        isolation: isolate;
+        color: #fff7df;
+        background:
+            radial-gradient(circle at 50% 46%, rgba(255,218,128,0.13), transparent 30%),
+            radial-gradient(circle at 18% 8%, rgba(255,58,47,0.36), transparent 28%),
+            radial-gradient(circle at 88% 0%, rgba(255,203,93,0.30), transparent 24%),
+            linear-gradient(112deg, rgba(255,45,38,0.22) 0 9%, transparent 9% 17%, rgba(255,45,38,0.14) 17% 23%, transparent 23%),
+            linear-gradient(180deg, rgba(96,11,22,0.96) 0%, rgba(58,6,18,0.96) 54%, rgba(31,4,13,0.98) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,225,142,0.92),
+            0 0 0 3px rgba(138,22,24,0.80),
+            0 0 34px rgba(255,193,74,0.32),
+            0 22px 56px rgba(145,17,24,0.42),
+            0 46px 98px rgba(0,0,0,0.62),
+            inset 0 0 0 1px rgba(255,237,172,0.36),
+            inset 0 2px 0 rgba(255,230,153,0.88),
+            inset 0 -22px 48px rgba(38,0,8,0.58) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background:
+            linear-gradient(90deg, transparent 7%, rgba(255,220,126,0.84) 50%, transparent 93%) top / 100% 3px no-repeat,
+            radial-gradient(ellipse at center, transparent 48%, rgba(10,0,5,0.32) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 172px;
+        height: 172px;
+        transform: translate(-50%, -47%);
+        background: url("/static/clubs/Russian_Super_Cup_Logo.jpeg") center / contain no-repeat;
+        opacity: 0.10;
+        filter: grayscale(1) sepia(1) saturate(1.4) hue-rotate(350deg) brightness(1.45) contrast(1.12);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .match-topline {
+        grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+        align-items: center;
+        margin: 0 0 5px;
+        padding: 0 1px 5px;
+        padding-right: 1px !important;
+        box-shadow: inset 0 -1px 0 rgba(255,215,120,0.26);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .league-row,
+    body.tournament-rpl .match-card-v2.match-card--supercup .start-time-label,
+    body.tournament-rpl .match-card-v2.match-card--supercup .deadline-box,
+    body.tournament-rpl .match-card-v2.match-card--supercup .status-pill-v2 {
+        min-height: 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .league-row {
+        align-items: center;
+        justify-self: center;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .start-time-label {
+        align-items: flex-start;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .deadline-box,
+    body.tournament-rpl .match-card-v2.match-card--supercup .status-pill-v2 {
+        align-items: flex-end;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .rpl-event-badge-supercup {
+        position: static;
+        top: auto;
+        right: auto;
+        align-self: center;
+        justify-content: center;
+        margin: 0 0 6px;
+        padding: 7px 12px;
+        color: #301006;
+        background: linear-gradient(135deg, #fff2b8 0%, #f1c65a 48%, #b67a22 100%);
+        border: 1px solid rgba(255,244,190,0.88);
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.34),
+            0 0 18px rgba(255,203,93,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.70),
+            inset 0 -1px 0 rgba(93,42,4,0.28);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .tournament-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        box-shadow:
+            0 0 0 1px rgba(255,230,153,0.44),
+            0 0 20px rgba(255,203,93,0.30);
+        filter:
+            drop-shadow(0 10px 18px rgba(0,0,0,0.42))
+            drop-shadow(0 0 12px rgba(255,215,120,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--supercup.finished .team-name-v2 {
+        color: #fff7df;
+        background: linear-gradient(180deg, rgba(91,9,20,0.76), rgba(45,4,14,0.72)) !important;
+        border: 1px solid rgba(255,215,120,0.42);
+        box-shadow:
+            0 8px 18px rgba(0,0,0,0.22),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--supercup .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,0,0,0.48))
+            drop-shadow(0 0 20px rgba(255,199,83,0.18));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .center-score,
+    body.tournament-rpl .match-card-v2.match-card--supercup .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--supercup .final-score,
+    body.tournament-rpl .match-card-v2.match-card--supercup .closed-prediction-center {
+        color: #fff1b5;
+        text-shadow: 0 0 16px rgba(255,203,93,0.30);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper {
+        background: rgba(39,3,13,0.86) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,215,120,0.46),
+            0 0 20px rgba(255,193,74,0.20),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 -1px 0 rgba(138,22,24,0.48),
+            0 12px 24px rgba(0,0,0,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-stepper .stepper-btn[data-step="-1"] {
+        color: #f3c65b;
+        border-color: rgba(255,215,120,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .score-input-v2 {
+        color: #fff8df !important;
+        background: rgba(20,0,7,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .save-btn-v2 {
+        background: linear-gradient(135deg, #f7d36a, #b9761e 58%, #7c2517) !important;
+        color: #240b05;
+        box-shadow:
+            0 16px 32px rgba(175,47,25,0.38),
+            0 0 18px rgba(255,203,93,0.26),
+            inset 0 1px 0 rgba(255,255,255,0.42),
+            inset 0 -1px 0 rgba(82,25,5,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .disabled-btn-v2 {
+        color: #f7d36a;
+        background: linear-gradient(180deg, rgba(78,7,19,0.78), rgba(42,3,13,0.82)) !important;
+        border: 1px solid rgba(255,215,120,0.42);
+        box-shadow:
+            0 10px 22px rgba(0,0,0,0.26),
+            inset 0 1px 0 rgba(255,230,153,0.18),
+            inset 0 0 18px rgba(255,203,93,0.10) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--supercup .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--supercup .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--supercup .bets-link-v2 {
+        color: #ffe9a3;
+        background: rgba(47,3,14,0.56) !important;
+        border-color: rgba(255,215,120,0.30);
+        box-shadow:
+            inset 0 1px 0 rgba(255,230,153,0.12),
+            0 8px 18px rgba(0,0,0,0.18) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+        grid-auto-rows: auto;
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 6px;
+        isolation: isolate;
+        color: #ffffff;
+        background:
+            radial-gradient(circle at 20% 5%, rgba(230,240,255,0.72), transparent 24%),
+            radial-gradient(circle at 88% 26%, rgba(0,57,166,0.34), transparent 28%),
+            linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(230,240,255,0.88) 18%, rgba(0,57,166,0.94) 19%, rgba(0,40,124,0.96) 70%, rgba(213,43,30,0.94) 71%, rgba(146,24,19,0.96) 100%) !important;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.70),
+            0 0 0 3px rgba(0,57,166,0.26),
+            0 22px 54px rgba(0,57,166,0.28),
+            0 36px 82px rgba(213,43,30,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.78),
+            inset 0 -18px 42px rgba(121,14,12,0.34) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background:
+            linear-gradient(90deg, #ffffff 0 33.333%, #0039A6 33.333% 66.666%, #D52B1E 66.666% 100%) top / 100% 4px no-repeat,
+            radial-gradient(ellipse at center, transparent 46%, rgba(0,18,63,0.20) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 57%;
+        width: 156px;
+        height: 156px;
+        transform: translate(-50%, -50%);
+        background: url("/static/clubs/Russian_Football_Union_Logo.svg") center / contain no-repeat;
+        opacity: 0.065;
+        filter: grayscale(1) brightness(2.2) contrast(0.85);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .match-topline {
+        display: contents;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .teams-center,
+    body.tournament-rpl .match-card-v2.match-card--russia .predict-form-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .save-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .bets-link-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .match-bottomline,
+    body.tournament-rpl .match-card-v2.match-card--russia .prediction-box {
+        grid-column: 1 / -1;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .rpl-event-badge-national {
+        position: static;
+        grid-column: 1 / -1;
+        grid-row: 1;
+        justify-self: center;
+        align-self: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        max-width: calc(100% - 28px);
+        padding: 6px 14px;
+        border-radius: 999px;
+        color: #00245f;
+        font-size: 10px;
+        font-weight: 1000;
+        line-height: 1;
+        letter-spacing: .55px;
+        background: rgba(255,255,255,0.94);
+        border: 1px solid rgba(0,57,166,0.30);
+        box-shadow:
+            0 8px 18px rgba(0,57,166,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.88),
+            inset 0 0 14px rgba(230,240,255,0.70),
+            inset 0 -1px 0 rgba(0,57,166,0.10);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .rpl-event-badge-national::after {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        height: 12px;
+        flex: 0 0 auto;
+        border-radius: 3px;
+        background: linear-gradient(180deg, #ffffff 0 33.333%, #0039A6 33.333% 66.666%, #D52B1E 66.666% 100%);
+        box-shadow:
+            0 0 0 1px rgba(0,32,92,0.18),
+            0 2px 5px rgba(0,0,0,0.12);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .tournament-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        background: rgba(255,255,255,0.18);
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.42),
+            0 8px 18px rgba(0,57,166,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.26);
+        backdrop-filter: blur(8px) saturate(118%);
+        -webkit-backdrop-filter: blur(8px) saturate(118%);
+        filter:
+            drop-shadow(0 8px 16px rgba(0,0,0,0.30))
+            drop-shadow(0 0 12px rgba(230,240,255,0.34));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .league-row {
+        grid-column: 2;
+        grid-row: 2 / 4;
+        display: grid;
+        grid-template-rows: 36px 38px;
+        place-items: center;
+        justify-self: center;
+        align-self: stretch;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label,
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-row,
+    body.tournament-rpl .match-card-v2.match-card--russia .status-pill-v2 {
+        min-height: 38px;
+        padding: 5px 8px;
+        border-radius: 12px;
+        background: rgba(0,57,166,0.78) !important;
+        border: 1px solid rgba(255,255,255,0.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        align-self: stretch;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label {
+        grid-column: 1;
+        grid-row: 3;
+        justify-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-row,
+    body.tournament-rpl .match-card-v2.match-card--russia .status-pill-v2 {
+        grid-column: 3;
+        grid-row: 3;
+        justify-self: stretch;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-box,
+    body.tournament-rpl .match-card-v2.match-card--russia .status-pill-v2 {
+        min-height: 0;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .league-row::after {
+        content: "";
+        display: block;
+        grid-row: 2;
+        width: 22px;
+        height: 3px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ffffff, #0039A6 52%, #D52B1E);
+        opacity: 0.70;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label::before,
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-label {
+        color: rgba(255,255,255,0.72);
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .start-time-label::after,
+    body.tournament-rpl .match-card-v2.match-card--russia .deadline-helper {
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 850;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia:not(.finished) .team-name-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia.finished .team-name-v2 {
+        color: #ffffff;
+        background: rgba(255,255,255,0.16) !important;
+        border: 1px solid rgba(255,255,255,0.34);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.22),
+            inset 0 -1px 0 rgba(0,0,0,0.10),
+            0 8px 18px rgba(0,32,92,0.18) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .team-logo-v2 img,
+    body.tournament-rpl .match-card-v2.match-card--russia .team-logo-v2 .flag-icon {
+        filter:
+            drop-shadow(0 18px 24px rgba(0,0,0,0.38))
+            drop-shadow(0 0 18px rgba(230,240,255,0.24));
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .center-score,
+    body.tournament-rpl .match-card-v2.match-card--russia .vs-badge,
+    body.tournament-rpl .match-card-v2.match-card--russia .final-score,
+    body.tournament-rpl .match-card-v2.match-card--russia .closed-prediction-center {
+        color: #ffffff;
+        text-shadow: 0 0 14px rgba(230,240,255,0.32);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper {
+        background: rgba(0,30,100,0.88) !important;
+        box-shadow:
+            0 0 0 1px rgba(230,240,255,0.42),
+            0 0 20px rgba(0,57,166,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.20),
+            inset 0 -1px 0 rgba(213,43,30,0.36),
+            0 12px 24px rgba(0,0,0,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn,
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn[data-step="1"],
+    body.tournament-rpl .match-card-v2.match-card--russia .score-stepper .stepper-btn[data-step="-1"] {
+        color: #ffffff;
+        border-color: rgba(230,240,255,0.24);
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .score-input-v2 {
+        color: #ffffff !important;
+        background: rgba(0,18,74,0.30) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .save-btn-v2 {
+        background: linear-gradient(135deg, #0039A6, #002875) !important;
+        color: #ffffff;
+        box-shadow:
+            0 16px 32px rgba(0,57,166,0.36),
+            inset 0 1px 0 rgba(255,255,255,0.28),
+            inset 0 -1px 0 rgba(0,0,0,0.20) !important;
+    }
+
+    body.tournament-rpl .match-card-v2.match-card--russia .disabled-btn-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .prediction-box,
+    body.tournament-rpl .match-card-v2.match-card--russia .my-prediction-v2,
+    body.tournament-rpl .match-card-v2.match-card--russia .bets-link-v2 {
+        color: #ffffff;
+        background: rgba(213,43,30,0.44) !important;
+        border-color: rgba(255,255,255,0.26);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            0 8px 18px rgba(90,10,10,0.16) !important;
+    }
+

@@ -1,0 +1,564 @@
+    /* WC2026 V2 FINAL HOME CARD LAYER */
+    body.tournament-wc2026 {
+        background:
+            radial-gradient(circle at 92% 8%, rgba(255,95,80,0.12) 0 8%, transparent 23%),
+            radial-gradient(circle at 7% 72%, rgba(184,50,255,0.10) 0 11%, transparent 30%),
+            radial-gradient(circle at 88% 40%, rgba(216,255,34,0.09) 0 8%, transparent 24%),
+            radial-gradient(circle at 14% 18%, rgba(31,231,255,0.12), transparent 30%),
+            linear-gradient(165deg, var(--wc26-bg-deep, #02083e) 0%, #0614a8 48%, #000834 100%) !important;
+        background-attachment: fixed;
+    }
+
+    body.tournament-wc2026 .home-screen {
+        position: relative;
+        isolation: isolate;
+        gap: 10px;
+    }
+
+    body.tournament-wc2026 .home-screen::before,
+    body.tournament-wc2026 .home-screen::after {
+        content: "";
+        position: fixed;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.08;
+    }
+
+    body.tournament-wc2026 .home-screen::before {
+        width: min(420px, 82vw);
+        height: min(420px, 82vw);
+        right: -26%;
+        top: 72px;
+        border-radius: 48% 52% 54% 46%;
+        background:
+            radial-gradient(circle at 38% 32%, #ff5f50 0 26%, transparent 26.6%),
+            radial-gradient(circle at 78% 68%, #d8ff22 0 21%, transparent 21.6%),
+            radial-gradient(circle at 19% 82%, #1fe7ff 0 19%, transparent 19.6%);
+    }
+
+    body.tournament-wc2026 .home-screen::after {
+        width: min(380px, 74vw);
+        height: min(380px, 74vw);
+        left: -30%;
+        bottom: 118px;
+        border-radius: 56% 44% 48% 52%;
+        background:
+            radial-gradient(circle at 72% 20%, #b832ff 0 25%, transparent 25.6%),
+            radial-gradient(circle at 26% 62%, #0614c8 0 29%, transparent 29.6%),
+            radial-gradient(circle at 66% 82%, #d8ff22 0 19%, transparent 19.6%);
+    }
+
+    body.tournament-wc2026 .month-header-v2,
+    body.tournament-wc2026 .day-header-v2 {
+        font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
+        letter-spacing: 0;
+        color: #ffffff !important;
+        border: 1px solid rgba(255,255,255,0.20) !important;
+        border-left: 0 !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.12),
+            0 8px 18px rgba(0,5,40,0.16) !important;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        transition:
+            filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            transform var(--wc26-motion-fast, 120ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+            border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    body.tournament-wc2026 .month-header-v2:active,
+    body.tournament-wc2026 .day-header-v2:active {
+        transform: scale(0.992);
+        filter: brightness(0.96);
+    }
+
+    body.tournament-wc2026 .month-header-v2:focus-visible,
+    body.tournament-wc2026 .day-header-v2:focus-visible {
+        outline-color: rgba(216,255,34,0.46);
+    }
+
+    body.tournament-wc2026 .month-header-v2 {
+        min-height: 52px;
+        background:
+            radial-gradient(circle at 12% 4%, rgba(255,255,255,0.18), transparent 34%),
+            linear-gradient(105deg, rgba(6,20,200,0.92) 0%, rgba(1,13,86,0.94) 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-header-v2 {
+        min-height: 50px;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #b900df 0%, var(--wc26-coral, #ff5f50) 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n + 1) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #b900df 0%, #e85a4d 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n + 2) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #124bc9 0%, var(--wc26-cyan, #1fe7ff) 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n + 3) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.12), transparent 58%),
+            linear-gradient(105deg, var(--wc26-lime, #d8ff22) 0%, #21cdb1 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n + 4) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, var(--wc26-purple, #6f2bd1) 0%, #d83bca 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-block:nth-child(5n) .day-header-v2 {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.10), transparent 56%),
+            linear-gradient(105deg, #e56a2f 0%, var(--wc26-magenta, #b832ff) 100%) !important;
+    }
+
+    body.tournament-wc2026 .day-title,
+    body.tournament-wc2026 .day-count,
+    body.tournament-wc2026 .day-arrow,
+    body.tournament-wc2026 .month-title,
+    body.tournament-wc2026 .month-count,
+    body.tournament-wc2026 .month-arrow {
+        color: #ffffff !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        text-shadow: none;
+    }
+
+    body.tournament-wc2026 .month-title { font-size: 20px; }
+    body.tournament-wc2026 .day-title { font-size: 17px; }
+
+    body.tournament-wc2026 .day-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    body.tournament-wc2026 .day-title::before {
+        content: "";
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        border-radius: 5px;
+        background:
+            linear-gradient(#ffffff, #ffffff) 4px 3px / 2px 3px no-repeat,
+            linear-gradient(#ffffff, #ffffff) 10px 3px / 2px 3px no-repeat,
+            linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)) 3px 8px / 10px 1px no-repeat,
+            rgba(255,255,255,0.16);
+        border: 1px solid rgba(255,255,255,0.38);
+    }
+
+    body.tournament-wc2026 .today-pill {
+        background: rgba(6,16,45,0.90);
+        color: var(--wc26-lime, #d8ff22);
+        box-shadow: 0 0 16px rgba(216,255,34,0.18);
+    }
+
+   body.tournament-wc2026 .match-card-v2 {
+    padding: 10px 12px 11px;
+    border-radius: 22px;
+    color: #ffffff !important;
+
+    /* crisper radial accents, closer to table's treatment */
+    background:
+        radial-gradient(circle at 88% 10%, #ff5f50 0 26%, transparent 26.5%),
+        radial-gradient(circle at 12% 8%, #1fe7ff 0 26%, transparent 26.5%),
+        radial-gradient(circle at 82% 96%, #d8ff22 0 24%, transparent 24.5%),
+        linear-gradient(150deg, rgba(0,23,216,0.94), rgba(0,8,84,0.92)) !important;
+
+    background-color: rgba(0,8,84,1) !important;
+    background-blend-mode: normal;
+
+    border: 1px solid rgba(31,231,255,0.24) !important;
+    border-left: 1px solid rgba(31,231,255,0.24) !important;
+
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 25px 40px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(31, 231, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1)),
+        border-color var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+    }
+
+    /* Затемняющий слой для приглушения фона и улучшения читаемости контента */
+    body.tournament-wc2026 .match-card-v2::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            180deg,
+            rgba(0,0,0,0.16) 0%,
+            rgba(0,0,0,0.32) 50%,
+            rgba(0,0,0,0.24) 100%
+        );
+        border-radius: 22px;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* Убедиться, что контент находится над затемняющим слоем */
+    body.tournament-wc2026 .match-card-v2 > * {
+        position: relative;
+        z-index: 2;
+    }
+
+    /* WC2026: preserve readability substrates on tournament cards */
+    body.tournament-wc2026 .match-card-v2:not(.finished) .team-name-v2 {
+        color: rgba(255,255,255,0.94);
+        background: rgba(255,255,255,0.08);
+        padding: 4px 6px;
+        box-sizing: border-box;
+        height: 46px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        border: 0 !important;
+        outline: 0 !important;
+        transform: translateY(-2px);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.10),
+            inset 0 -1px 0 rgba(0,0,0,0.10),
+            0 10px 24px rgba(0,0,0,0.28);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        text-shadow: 0 1px 4px rgba(0,0,0,0.32);
+        transition:
+            transform 0.16s ease,
+            box-shadow 0.16s ease,
+            background 0.16s ease;
+    }
+
+    /* WC2026 playoff evolution layer. Applied only when playoff_stage is set. */
+    body.tournament-wc2026 .match-card-v2.wc-playoff {
+        margin-top: 6px;
+        padding-top: 14px;
+        isolation: isolate;
+    }
+
+    body.tournament-wc2026 .match-card-v2.wc-playoff::before {
+        background:
+            linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.30)),
+            radial-gradient(circle at 50% 0%, rgba(255,255,255,0.16), transparent 48%);
+    }
+
+    body.tournament-wc2026 .match-card-v2.wc-playoff::after {
+        border: 0;
+        box-shadow: none;
+    }
+
+    body.tournament-wc2026 .playoff-stage-ribbon {
+        display: flex;
+        justify-content: center;
+        margin: 0 0 8px;
+        pointer-events: none;
+    }
+
+    body.tournament-wc2026 .playoff-stage-ribbon span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 7px 14px;
+        border-radius: 999px;
+        color: #071329;
+        font-size: 12px;
+        font-weight: 1000;
+        letter-spacing: 1.1px;
+        text-transform: uppercase;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.46),
+            0 10px 22px rgba(0,0,0,0.22);
+    }
+
+    body.tournament-wc2026 .match-card-v2.wc-playoff .match-topline {
+        margin-top: 0;
+        margin-bottom: 2px;
+    }
+
+    body.tournament-wc2026 .match-card-v2.wc-playoff .center-score,
+    body.tournament-wc2026 .match-card-v2.wc-playoff .final-score,
+    body.tournament-wc2026 .match-card-v2.wc-playoff .vs-badge {
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-playoff {
+        color: #f8fbff !important;
+        background:
+            radial-gradient(circle at 18% 0%, rgba(255,255,255,0.18), transparent 28%),
+            linear-gradient(150deg, rgba(16,58,122,0.92), rgba(9,28,71,0.94)) !important;
+        border-color: rgba(134,199,255,0.34) !important;
+        box-shadow:
+            0 16px 32px rgba(0,34,86,0.28),
+            inset 0 1px 0 rgba(255,255,255,0.20) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-playoff .playoff-stage-ribbon span {
+        background: linear-gradient(135deg, #dff4ff, #74c8ff);
+        color: #06234d;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_32 {
+        color: #f8fbff !important;
+        background:
+            radial-gradient(circle at 16% 18%, rgba(0,229,255,0.82), transparent 30%),
+            radial-gradient(circle at 82% 12%, rgba(34,211,238,0.72), transparent 34%),
+            radial-gradient(circle at 58% 106%, rgba(20,184,166,0.68), transparent 42%),
+            radial-gradient(circle at 4% 88%, rgba(45,212,191,0.48), transparent 26%),
+            linear-gradient(122deg, transparent 0 10%, rgba(255,255,255,0.14) 10.5% 11.6%, transparent 12% 28%, rgba(0,229,255,0.34) 28.5% 30%, transparent 30.5% 54%, rgba(34,211,238,0.28) 54.5% 56%, transparent 56.5%),
+            repeating-linear-gradient(137deg, rgba(0,229,255,0.12) 0 1px, transparent 1px 16px),
+            linear-gradient(145deg, #005f73 0%, #007f8f 34%, #036b84 62%, #05375d 100%) !important;
+        border-color: rgba(0,229,255,0.96) !important;
+        box-shadow:
+            0 26px 50px rgba(0,94,119,0.50),
+            0 0 52px rgba(0,229,255,0.46),
+            0 0 0 1px rgba(34,211,238,0.36),
+            inset 0 1px 0 rgba(255,255,255,0.32),
+            inset 0 0 42px rgba(0,229,255,0.26) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_32::after {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border-radius: 17px;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 18%, rgba(255,255,255,0.78) 0 1px, transparent 2px),
+            radial-gradient(circle at 14% 28%, rgba(0,229,255,0.86) 0 2px, transparent 3px),
+            radial-gradient(circle at 92% 24%, rgba(34,211,238,0.84) 0 2px, transparent 3px),
+            radial-gradient(circle at 74% 76%, rgba(20,184,166,0.76) 0 2px, transparent 3px),
+            radial-gradient(circle at 18% 82%, rgba(0,229,255,0.58) 0 1px, transparent 2px),
+            linear-gradient(126deg, transparent 0 22%, rgba(255,255,255,0.12) 22.5% 23.5%, transparent 24% 72%, rgba(0,229,255,0.20) 72.5% 74%, transparent 74.5%),
+            repeating-linear-gradient(132deg, rgba(0,229,255,0.18) 0 1px, transparent 1px 16px),
+            linear-gradient(135deg, rgba(0,229,255,0.34), transparent 20% 78%, rgba(20,184,166,0.32));
+        border: 1px solid rgba(0,229,255,0.38);
+        box-shadow: inset 0 0 36px rgba(34,211,238,0.18);
+        z-index: 1;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_32 .playoff-stage-ribbon span {
+        background: linear-gradient(135deg, #22D3EE, #00E5FF 52%, #14B8A6);
+        color: #03172f;
+        box-shadow: 0 0 36px rgba(0,229,255,0.58), inset 0 1px 0 rgba(255,255,255,0.64);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_16 {
+        background:
+            repeating-linear-gradient(135deg, rgba(56,189,248,0.16) 0 2px, transparent 2px 12px),
+            linear-gradient(118deg, transparent 0 18%, rgba(14,165,233,0.22) 18.5% 19.5%, transparent 20% 42%, rgba(37,99,235,0.22) 42.5% 43.5%, transparent 44%),
+            radial-gradient(circle at 88% 10%, rgba(56,189,248,0.44), transparent 26%),
+            linear-gradient(145deg, rgba(4,37,115,0.98), rgba(2,13,66,0.98)) !important;
+        border-color: rgba(56,189,248,0.72) !important;
+        box-shadow:
+            0 26px 48px rgba(0,13,80,0.52),
+            0 0 30px rgba(14,165,233,0.26),
+            0 0 0 1px rgba(56,189,248,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.18) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_16 .playoff-stage-ribbon span {
+        min-height: 31px;
+        padding-inline: 16px;
+        background: linear-gradient(135deg, #38BDF8, #0EA5E9 54%, #2563EB);
+        color: #04102c;
+        box-shadow: 0 0 30px rgba(56,189,248,0.38), inset 0 1px 0 rgba(255,255,255,0.50);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_16 .vs-badge,
+    body.tournament-wc2026 .match-card-v2.playoff-stage-round_16 .final-score {
+        box-shadow: 0 0 18px rgba(31,231,255,0.18);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-quarter_final {
+        background:
+            conic-gradient(from 230deg at 50% 0%, transparent 0deg 28deg, rgba(250,204,21,0.20) 30deg 38deg, transparent 40deg 92deg, rgba(245,158,11,0.16) 94deg 104deg, transparent 106deg),
+            linear-gradient(45deg, transparent 0 9%, rgba(250,204,21,0.20) 9.5% 10.5%, transparent 11%),
+            radial-gradient(circle at 50% 0%, rgba(250,204,21,0.34), transparent 34%),
+            linear-gradient(145deg, rgba(12,25,70,0.98), rgba(7,9,28,0.98)) !important;
+        border: 1px solid rgba(250,204,21,0.78) !important;
+        box-shadow:
+            0 32px 58px rgba(0,6,48,0.62),
+            0 0 40px rgba(250,204,21,0.30),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            inset 0 0 32px rgba(245,158,11,0.15) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-quarter_final::after {
+        content: "";
+        position: absolute;
+        inset: 9px;
+        border-radius: 17px;
+        pointer-events: none;
+        border: 1px solid rgba(250,204,21,0.28);
+        box-shadow: inset 0 0 0 1px rgba(217,119,6,0.18);
+        z-index: 1;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-quarter_final .playoff-stage-ribbon span {
+        min-height: 34px;
+        padding-inline: 18px;
+        background: linear-gradient(135deg, #FACC15, #F59E0B 62%, #D97706);
+        color: #06102d;
+        box-shadow: 0 0 30px rgba(250,204,21,0.36), inset 0 1px 0 rgba(255,255,255,0.58);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-quarter_final .team-logo-v2 {
+        transform: scale(1.04);
+        filter: drop-shadow(0 8px 16px rgba(216,180,90,0.18));
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-semi_final {
+        padding-top: 15px;
+        transform: translateY(-6px);
+        background:
+            radial-gradient(circle at 50% -10%, rgba(168,85,247,0.40), transparent 36%),
+            radial-gradient(circle at 12% 100%, rgba(250,204,21,0.22), transparent 28%),
+            radial-gradient(circle at 88% 72%, rgba(124,58,237,0.30), transparent 30%),
+            linear-gradient(150deg, rgba(32,16,92,0.98), rgba(6,7,36,0.98)) !important;
+        border: 1px solid rgba(168,85,247,0.76) !important;
+        box-shadow:
+            0 38px 68px rgba(0,0,0,0.66),
+            0 0 46px rgba(168,85,247,0.30),
+            0 0 28px rgba(250,204,21,0.16),
+            0 0 0 1px rgba(250,204,21,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.18) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-semi_final .playoff-stage-ribbon span {
+        min-height: 38px;
+        padding-inline: 22px;
+        background: linear-gradient(135deg, #FACC15, #A855F7 54%, #7C3AED);
+        color: #050d2a;
+        font-size: 13px;
+        box-shadow: 0 0 34px rgba(168,85,247,0.42), 0 0 18px rgba(250,204,21,0.26), inset 0 1px 0 rgba(255,255,255,0.58);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-semi_final .vs-badge,
+    body.tournament-wc2026 .match-card-v2.playoff-stage-semi_final .final-score {
+        transform: scale(1.08);
+        box-shadow: 0 0 28px rgba(168,85,247,0.28);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-third_place {
+        background:
+            radial-gradient(circle at 90% 10%, rgba(249,115,22,0.32), transparent 28%),
+            radial-gradient(circle at 12% 86%, rgba(180,83,9,0.24), transparent 30%),
+            linear-gradient(145deg, rgba(89,44,19,0.98), rgba(24,15,12,0.98)) !important;
+        border: 1px solid rgba(205,127,50,0.78) !important;
+        box-shadow:
+            0 30px 56px rgba(54,22,10,0.56),
+            0 0 36px rgba(249,115,22,0.24),
+            inset 0 1px 0 rgba(255,220,180,0.22) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-third_place .playoff-stage-ribbon span {
+        min-height: 36px;
+        padding-inline: 18px;
+        background: linear-gradient(135deg, #F97316, #CD7F32 58%, #B45309);
+        color: #fff7ee;
+        text-shadow: 0 1px 5px rgba(0,0,0,0.26);
+        box-shadow: 0 0 28px rgba(249,115,22,0.28), inset 0 1px 0 rgba(255,255,255,0.34);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-final {
+        padding-top: 17px;
+        transform: translateY(-8px);
+        background:
+            radial-gradient(circle at 50% 12%, rgba(255,247,214,0.36), transparent 18%),
+            radial-gradient(circle at 90% 8%, rgba(255,215,0,0.36), transparent 24%),
+            radial-gradient(circle at 14% 80%, rgba(250,204,21,0.18), transparent 30%),
+            linear-gradient(135deg, rgba(255,255,255,0.14), transparent 18% 82%, rgba(255,215,0,0.20)),
+            linear-gradient(150deg, #030303, #111827 48%, #FFF7D6 190%) !important;
+        border: 1px solid rgba(255,215,0,0.94) !important;
+        box-shadow:
+            0 46px 86px rgba(0,0,0,0.76),
+            0 0 62px rgba(255,215,0,0.38),
+            0 0 0 1px rgba(255,255,255,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.34),
+            inset 0 0 46px rgba(250,204,21,0.18) !important;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-final::after {
+        content: "";
+        position: absolute;
+        inset: 18% 18% auto;
+        height: 58%;
+        background:
+            radial-gradient(circle at 12% 18%, rgba(255,215,0,0.80) 0 2px, transparent 3px),
+            radial-gradient(circle at 88% 26%, rgba(255,247,214,0.72) 0 2px, transparent 3px),
+            radial-gradient(circle at 76% 78%, rgba(250,204,21,0.68) 0 2px, transparent 3px),
+            url('/static/clubs/WorldCup.png') center / contain no-repeat;
+        opacity: 0.16;
+        filter: grayscale(1) brightness(1.6) sepia(0.25);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-final .playoff-stage-ribbon span {
+        min-height: 42px;
+        padding: 9px 28px;
+        background: linear-gradient(135deg, #FFF7D6, #FFD700 35%, #FACC15 70%, #ffffff);
+        color: #050505;
+        font-size: 14px;
+        letter-spacing: 1.8px;
+        box-shadow: 0 0 46px rgba(255,215,0,0.52), inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-final .center-score::before {
+        content: "🏆";
+        display: block;
+        margin-bottom: 2px;
+        font-size: 22px;
+        line-height: 1;
+        filter: drop-shadow(0 0 10px rgba(255,232,139,0.44));
+    }
+
+    body.tournament-wc2026 .match-card-v2.wc-playoff:hover {
+        transform: translateY(-7px);
+        filter: saturate(1.05);
+    }
+
+    body.tournament-wc2026 .match-card-v2.playoff-stage-final:hover {
+        transform: translateY(-10px);
+    }
+
+    @media (max-width: 430px) {
+        body.tournament-wc2026 .match-card-v2.wc-playoff {
+            padding-top: 10px;
+        }
+
+        body.tournament-wc2026 .playoff-stage-ribbon span {
+            min-height: 27px;
+            padding: 6px 12px;
+            font-size: 10px;
+            letter-spacing: .75px;
+        }
+
+        body.tournament-wc2026 .match-card-v2.playoff-stage-semi_final .playoff-stage-ribbon span,
+        body.tournament-wc2026 .match-card-v2.playoff-stage-final .playoff-stage-ribbon span {
+            min-height: 32px;
+            padding-inline: 16px;
+            font-size: 11px;
+        }
+
+    }
+
