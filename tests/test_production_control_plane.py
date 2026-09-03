@@ -60,3 +60,35 @@ def test_deploy_verifies_bundle_release_matches_image_release():
     assert 'expected_release_sha="${{ steps.image.outputs.release_sha }}"' in workflow
     assert 'if [[ "$release_sha" != "$expected_release_sha" ]]; then' in workflow
     assert "image release does not match CI release" in workflow
+
+
+
+def test_deploy_bundles_and_verifies_complete_static_tree():
+    workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert 'tar -czf production-control-plane.tar.gz -T "$manifest" static' in workflow
+    assert 'cp -a "$release_source/static/." static/' in workflow
+    assert 'cmp -s "$release_static_file" "$relative"' in workflow
+    assert 'echo "STATIC SYNC OK: files=$static_files"' in workflow
+
+
+def test_static_sync_has_exact_rollback_backup():
+    workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert 'cp -a static "$control_backup/static"' in workflow
+    assert 'rm -rf static' in workflow
+    assert 'mv "$control_backup/static" static' in workflow
+
+
+def test_home_template_css_files_exist_in_repository():
+    import re
+
+    template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+    css_files = re.findall(
+        r"url_for\('static',\s*filename='([^']+\.css)'",
+        template,
+    )
+
+    assert css_files
+    missing = [path for path in css_files if not (ROOT / "static" / path).is_file()]
+    assert missing == []
