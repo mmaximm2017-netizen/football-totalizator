@@ -13,7 +13,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Inspect Sports national detail on VPS
+      - name: Inspect Sportbox national source on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -22,16 +22,24 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             set -Eeuo pipefail
-            tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
-            curl -4 -L --silent --show-error --compressed --max-time 20 -A 'Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)' -o "$tmp" 'https://www.sports.ru/football/match/russia-vs-trinidad-tobago/'
-            python3 - "$tmp" <<'PY'
+            ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
+            for pair in \
+              'calendar|https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team' \
+              'detail|https://news.sportbox.ru/Vidy_sporta/Futbol/stats/turnir_23863/game_1380956536'; do
+              name="${pair%%|*}"; url="${pair#*|}"
+              tmp="$(mktemp)"
+              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
+              echo "=== $name ==="
+              python3 - "$tmp" <<'PY'
             import re,sys
             text=open(sys.argv[1],encoding='utf-8',errors='replace').read()
-            for marker in ('Окончен','Матч окончен','90\'','90+','FINISHED','EventCompleted','eventStatus','score','3 : 0','3:0'):
+            for marker in ('finished','finish','ended','completed','final','Матч заверш','Матч окончен','Игра заверш','90′','90\'','status','game_status','game-status','3 : 0','-:-'):
                 print(marker, text.casefold().count(marker.casefold()))
-            for needle in ('90\'','3&nbsp;:&nbsp;0','3 : 0','3:0','eventStatus'):
+            for needle in ('Россия — Иран','Россия - Иран','1380956536','3 : 0','90′'):
                 pos=text.find(needle)
                 if pos>=0:
-                    print('RAW',needle,re.sub(r'\s+',' ',text[max(0,pos-1200):pos+2200])[:3400])
+                    print('RAW',needle,re.sub(r'\s+',' ',text[max(0,pos-1600):pos+2600])[:4200])
                     break
             PY
+              rm -f "$tmp"
+            done
