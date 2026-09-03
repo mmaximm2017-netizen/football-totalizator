@@ -1,6 +1,8 @@
 import json
+import os
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from app import create_app
 
@@ -21,6 +23,18 @@ class PwaSecurityTests(unittest.TestCase):
             self.assertTrue(response.content_type.startswith("application/javascript"))
             self.assertEqual(response.headers["Service-Worker-Allowed"], "/")
             self.assertEqual(response.headers["Cache-Control"], "no-cache, no-store, must-revalidate")
+        finally:
+            response.close()
+
+    def test_root_service_worker_uses_release_scoped_cache_name(self):
+        with patch.dict(os.environ, {"TOTISH_RELEASE": "release/abc 123"}):
+            with self.app.test_client() as client:
+                response = client.get("/service-worker.js")
+
+        try:
+            worker = response.get_data(as_text=True)
+            self.assertIn("const CACHE_NAME = `${CACHE_PREFIX}releaseabc123`;", worker)
+            self.assertNotIn("__TOTISH_RELEASE__", worker)
         finally:
             response.close()
 
@@ -154,7 +168,7 @@ class PwaSecurityTests(unittest.TestCase):
         worker = (ROOT / "static" / "service-worker.js").read_text(encoding="utf-8")
         badge = ROOT / "static" / "notification-badge.png"
 
-        self.assertIn("const CACHE_NAME = `${CACHE_PREFIX}v8`;", worker)
+        self.assertIn("const CACHE_NAME = `${CACHE_PREFIX}__TOTISH_RELEASE__`;", worker)
         self.assertIn("icon: '/static/icon-192-new.png'", worker)
         self.assertIn("badge: '/static/notification-badge.png?v=20260815-circular'", worker)
         self.assertNotIn("badge: '/static/icon-192-new.png'", worker)
