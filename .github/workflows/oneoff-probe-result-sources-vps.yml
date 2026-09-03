@@ -1,0 +1,60 @@
+name: One-off result source probe VPS
+
+on:
+  push:
+    branches:
+      - prototype/auto-result-sources
+    paths:
+      - .source-vps-probe-trigger
+
+concurrency:
+  group: auto-result-source-vps-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Probe public result pages from VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            python3 - <<'PY'
+            import re
+            import urllib.request
+
+            urls = {
+                "flashscore_results": "https://www.flashscorekz.com/football/russia/premier-league/results/",
+                "rpl_matches": "https://premierliga.ru/matches/",
+                "rfs_cup": "https://www.rfs.ru/cup/tournament/matches?TournamentMatchesFilter%5Bdate%5D=all",
+                "rfs_national": "https://www.rfs.ru/natteamfriendlies/calendar",
+            }
+            headers = {
+                "User-Agent": "Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)",
+                "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.7",
+            }
+            for name, url in urls.items():
+                print(f"=== {name} ===")
+                try:
+                    req = urllib.request.Request(url, headers=headers)
+                    with urllib.request.urlopen(req, timeout=20) as r:
+                        raw = r.read(2_000_000)
+                        text = raw.decode(r.headers.get_content_charset() or "utf-8", errors="replace")
+                        title = re.search(r"<title[^>]*>(.*?)</title>", text, re.I | re.S)
+                        print("status=", r.status)
+                        print("final_url=", r.geturl())
+                        print("bytes=", len(raw))
+                        print("title=", re.sub(r"\s+", " ", title.group(1)).strip()[:200] if title else "")
+                        print("captcha=", "Вы не робот?" in text or "showcaptcha" in r.geturl())
+                        print("finished_marker=", "Заверш" in text or "Матч окончен" in text)
+                        print("team_markers=", {x: x in text for x in ("Акрон", "ЦСКА", "Динамо", "Россия")})
+                except Exception as exc:
+                    print("ERROR", type(exc).__name__, str(exc))
+            PY
