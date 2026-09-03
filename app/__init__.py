@@ -103,6 +103,15 @@ def ensure_csrf_token():
     return token
 
 
+def service_worker_release_key():
+    raw_release = os.getenv("TOTISH_RELEASE", "development")
+    safe_release = "".join(
+        char for char in raw_release
+        if char.isalnum() or char in {"-", "_", "."}
+    )[:64]
+    return safe_release or "development"
+
+
 def create_app():
     logger.info("[STARTUP] create_app start")
     app = Flask(
@@ -163,7 +172,14 @@ def create_app():
 
     @app.get("/service-worker.js")
     def service_worker():
-        response = make_response(app.send_static_file("service-worker.js"))
+        worker_path = os.path.join(app.static_folder, "service-worker.js")
+        with open(worker_path, encoding="utf-8") as source:
+            worker_script = source.read()
+        worker_script = worker_script.replace(
+            "__TOTISH_RELEASE__",
+            service_worker_release_key(),
+        )
+        response = make_response(worker_script)
         response.headers["Content-Type"] = "application/javascript"
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Service-Worker-Allowed"] = "/"
