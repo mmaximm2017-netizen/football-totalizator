@@ -214,12 +214,12 @@ def profile():
             (uid,),
         )
         titles = [{'title': r[0], 'awarded_at': r[1]} for r in cur.fetchall()]
+        ranking = get_tournament_ranking(tournament_id, cur=cur)
     finally:
         close_db(conn, cur)
 
     tournaments = all_tournaments
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
-    ranking = get_tournament_ranking(tournament_id)
     user_row = next((row for row in ranking if str(row.get("user_id")) == str(uid)), None)
     current_place = user_row["place"] if user_row else None
     position_metric = build_profile_position_metric(ranking, uid)
@@ -276,39 +276,36 @@ def profile_stats():
         flash("Сессия не найдена", "error")
         return redirect(url_for('auth.login'))
 
-    all_tournaments = get_all_tournaments()
-    active_tournaments = [t for t in all_tournaments if t.get("is_active")]
-    tournament_state = get_tournament_state_flags(all_tournaments)
-    tournament_id = get_selected_tournament_id(request.args.get('tid', type=int))
-    if not tournament_id:
-        flash("Активный турнир не найден", "error")
-        return redirect(url_for('table.table'))
-
-    selected_tournament = get_tournament_by_id(tournament_id)
-    ranking = get_tournament_ranking(tournament_id)
-    user_row = next((row for row in ranking if str(row.get("user_id")) == str(uid)), None)
-
-    conn = cur = None
+    conn = get_db()
+    cur = conn.cursor()
     try:
-        conn = get_db()
-        cur = conn.cursor()
+        all_tournaments = get_all_tournaments(cur=cur)
+        active_tournaments = [t for t in all_tournaments if t.get("is_active")]
+        tournament_state = get_tournament_state_flags(all_tournaments)
+        tournament_id = get_selected_tournament_id(request.args.get('tid', type=int), cur=cur)
+        if not tournament_id:
+            flash("Активный турнир не найден", "error")
+            return redirect(url_for('table.table'))
+
+        selected_tournament = get_tournament_by_id(tournament_id, cur=cur)
+        ranking = get_tournament_ranking(tournament_id, cur=cur)
+        user_row = next((row for row in ranking if str(row.get("user_id")) == str(uid)), None)
+
         cur.execute(
             "SELECT username FROM users WHERE id = %s AND COALESCE(is_deleted, 0) = 0",
             (uid,),
         )
         row = cur.fetchone()
-    finally:
-        if conn is not None:
-            close_db(conn, cur)
-    if not row:
-        flash("Пользователь не найден", "error")
-        return redirect(url_for('auth.login'))
+        if not row:
+            flash("Пользователь не найден", "error")
+            return redirect(url_for('auth.login'))
 
-    try:
-        stats = get_profile_stats(uid, tournament_id)
+        stats = get_profile_stats(uid, tournament_id, cur=cur)
     except ProfileStatsIntegrityError:
         flash("Статистика временно недоступна: обнаружены некорректные данные очков", "error")
         return redirect(url_for('profile.profile', tid=tournament_id))
+    finally:
+        close_db(conn, cur)
 
     return render_template(
         'profile_stats.html',

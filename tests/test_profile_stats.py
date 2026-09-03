@@ -57,6 +57,20 @@ def test_stats_are_scoped_to_selected_user_and_tournament(monkeypatch):
     assert [params for _, params in cursor.calls] == [(7, 42), (42,), (7, 42)]
 
 
+def test_profile_stats_reuses_provided_cursor_without_opening_database(monkeypatch):
+    cursor = service_with(monkeypatch, [11, 0], [0, 11])
+    monkeypatch.setattr(
+        stats_service,
+        "get_db",
+        lambda: (_ for _ in ()).throw(AssertionError("unexpected get_db")),
+    )
+
+    result = stats_service.get_profile_stats(7, 42, cur=cursor)
+
+    assert result["submitted_count"] == 2
+    assert len(cursor.calls) == 3
+
+
 def test_zero_points_are_a_real_bucket_and_missing_predictions_are_not(monkeypatch):
     service_with(monkeypatch, [0])
 
