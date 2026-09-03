@@ -80,7 +80,10 @@ jobs:
       - name: Install Ruff
         run: python -m pip install ruff
 
-      - name: Run Ruff checks
+      - name: Block critical Python errors
+        run: ruff check . --select E9,F63,F7,F82
+
+      - name: Report remaining Ruff findings
         run: ruff check . || true
 
   security:
@@ -101,7 +104,7 @@ jobs:
         run: python -m pip install pip-audit
 
       - name: Audit known dependency vulnerabilities
-        run: pip-audit -r requirements.txt || true
+        run: pip-audit -r requirements.txt
 
   docker:
     name: Build Docker image
