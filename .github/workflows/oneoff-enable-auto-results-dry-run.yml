@@ -56,8 +56,6 @@ jobs:
                     out.append(f'{key}={value}')
             path.write_text('\n'.join(out).rstrip()+'\n',encoding='utf-8')
             PY
-            chmod 600 .env
-            chmod +x scripts/run_auto_results.sh
 
             cron_line='*/5 * * * * /bin/bash /opt/football-totalizator/scripts/run_auto_results.sh'
             current="$(crontab -l 2>/dev/null || true)"
