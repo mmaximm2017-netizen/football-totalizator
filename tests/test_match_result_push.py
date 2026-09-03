@@ -225,7 +225,7 @@ class MatchResultPushTests(unittest.TestCase):
         self.assertIn("sent_at < %s", source)
 
     def test_correction_does_not_create_second_event(self):
-        source = inspect.getsource(scoring_recalculation_service._enqueue_result_event)
+        source = inspect.getsource(scoring_recalculation_service._enqueue_result_events)
         self.assertIn("DO NOTHING", source)
 
 
