@@ -5,7 +5,33 @@ import pytest
 from app.services import db_migration_service as migrations
 
 
-def test_baseline_schema_migration_is_non_destructive():
+def test_discover_migrations_orders_versions_and_hashes_content(tmp_path):
+    (tmp_path / "0002_second.sql").write_text("SELECT 2;\n", encoding="utf-8")
+    (tmp_path / "0001_first.sql").write_text("SELECT 1;\n", encoding="utf-8")
+
+    found = migrations.discover_migrations(tmp_path)
+
+    assert [item.version for item in found] == [1, 2]
+    assert [item.filename for item in found] == ["0001_first.sql", "0002_second.sql"]
+    assert all(len(item.checksum) == 64 for item in found)
+
+
+def test_discover_migrations_rejects_invalid_filename(tmp_path):
+    (tmp_path / "migration.sql").write_text("SELECT 1;", encoding="utf-8")
+
+    with pytest.raises(migrations.MigrationError, match="Invalid migration filename"):
+        migrations.discover_migrations(tmp_path)
+
+
+def test_discover_migrations_rejects_duplicate_version(tmp_path):
+    (tmp_path / "0001_first.sql").write_text("SELECT 1;", encoding="utf-8")
+    (tmp_path / "0001_second.sql").write_text("SELECT 2;", encoding="utf-8")
+
+    with pytest.raises(migrations.MigrationError, match="Duplicate migration version"):
+        migrations.discover_migrations(tmp_path)
+
+
+def test_repository_starts_with_non_destructive_baseline():
     root = Path(__file__).resolve().parents[1]
     baseline = (root / "migrations" / "0001_baseline_current_schema.sql").read_text(
         encoding="utf-8"
@@ -53,4 +79,5 @@ def test_rollback_safety_allows_additive_migration(tmp_path):
         encoding="utf-8",
     )
     found = migrations.discover_migrations(tmp_path)
+
     migrations.validate_rollback_safe_migrations(found)
