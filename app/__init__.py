@@ -256,6 +256,9 @@ def create_app():
             source="flask_db",
             method=request.method,
             path=request.path,
+            user_id=session.get("user_id"),
+            request_id=request.headers.get("X-Request-ID"),
+            match_id=(request.view_args or {}).get("match_id"),
         )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"ok": False, "message": str(e)}), 503
@@ -273,6 +276,9 @@ def create_app():
             source="flask_500",
             method=request.method,
             path=request.path,
+            user_id=session.get("user_id"),
+            request_id=request.headers.get("X-Request-ID"),
+            match_id=(request.view_args or {}).get("match_id"),
         )
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
