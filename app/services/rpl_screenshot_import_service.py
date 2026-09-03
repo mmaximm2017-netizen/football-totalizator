@@ -7,7 +7,7 @@ from app.services.screenshot_match_import_service import (
     MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS,
     ImageValidationError, ImportConfig, _valid_time,
     _candidate_team as _generic_candidate_team, _spatial_parse_ocr,
-    _flat_parse_ocr, make_generic_draft,
+    _flat_parse_ocr, make_generic_draft, resolve_match_date,  # noqa: F401 - compatibility export for tests/callers
     generic_draft_is_valid, parse_ocr, save_validated_upload as _generic_save_validated_upload,
 )
 from app.services.local_tesseract_service import extract_text_from_image
