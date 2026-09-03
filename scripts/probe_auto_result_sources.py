@@ -12,11 +12,11 @@ from pathlib import Path
 
 import requests
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
-from app.services.auto_result_source_probe import (  # noqa: E402
+from auto_result_source_probe_core import (  # noqa: E402
     SourceParseError,
     parse_flashscore_feed,
     parse_rfs_cup_listing,
