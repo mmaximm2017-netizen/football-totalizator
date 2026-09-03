@@ -5,19 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-HOME_CSS_FILES = [
-    ROOT / "static" / "css" / "home" / "base.css",
-    ROOT / "static" / "css" / "home" / "wc2026.css",
-    ROOT / "static" / "css" / "home" / "rpl-base.css",
-    ROOT / "static" / "css" / "home" / "match-cards-v2.css",
-    ROOT / "static" / "css" / "home" / "final-overrides.css",
-    ROOT / "static" / "css" / "home" / "rpl-performance.css",
-]
-
-
-def read_home_css():
-    return "".join(path.read_text(encoding="utf-8") for path in HOME_CSS_FILES)
-
 
 class BetsSheetUiTests(unittest.TestCase):
     def test_sheet_renders_shared_themable_structure(self):
@@ -28,7 +15,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("data-bets-sheet-content", partial)
 
     def test_mobile_sheet_accounts_for_bottom_nav_safe_area_and_last_row(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("@media (max-width: 640px)", css)
         self.assertIn("box-sizing: border-box", css)
@@ -110,7 +97,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("matchLine.className = 'bets-compact-match predictions-sheet__teams';\n        matchLine.appendChild", template)
 
     def test_rpl_and_russian_cup_have_scoped_sheet_modifiers(self):
-        home_css = read_home_css()
+        home_css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         cup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
         self.assertIn("body.tournament-rpl .bets-sheet", home_css)
         self.assertIn("body.tournament-rpl .bets-compact-team-icon", home_css)
@@ -118,7 +105,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("body.tournament-rcup .bets-compact-team-icon", cup_css)
 
     def test_mobile_sheet_has_bounded_logo_and_team_layout(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         self.assertIn("grid-template-columns: var(--bets-team-logo-size) minmax(0, 1fr) minmax(18px, max-content) minmax(0, 1fr) var(--bets-team-logo-size)", css)
         self.assertIn("--bets-team-logo-size: clamp(44px, 12.3vw, 50px)", css)
         self.assertNotIn("grid-template-columns: 30px minmax(0, 1fr) 20px minmax(0, 1fr) 30px", css)
@@ -138,7 +125,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("overflow-wrap: break-word", css)
 
     def test_team_geometry_preserves_tournament_colors_and_player_rows(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         cup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn("body.tournament-rpl .bets-compact-team-name { color: #fff; }", css)
@@ -165,7 +152,7 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_points_use_semantic_categories_and_shared_large_geometry(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         match_template = (ROOT / "templates" / "match_predictions.html").read_text(encoding="utf-8")
         for category in (
             "points-exact-major", "points-exact", "points-difference", "points-near",
@@ -198,7 +185,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn(".bets-compact-score {", css)
 
     def test_five_and_three_point_categories_are_visually_distinct(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         near_start = css.index(".bets-compact-points.points-near")
         outcome_start = css.index(".bets-compact-points.points-outcome")
         near_css = css[near_start:outcome_start]
@@ -215,14 +202,14 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_unfinished_rows_keep_no_points_layout_and_order(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         self.assertIn("if (!isFinished) {\n                item.classList.add('no-points');", template)
         self.assertIn("if (isFinished) {\n                pointsNode = document.createElement('div');", template)
         self.assertIn(".bets-compact-row.no-points", css)
         self.assertNotIn(".bets-compact-row.leader-", css)
 
     def test_finished_match_card_visuals_are_scoped_to_finished_modifier(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
         self.assertIn("card_state = 'finished'", template)
         self.assertIn("rpl_class = 'match-card--rpl' if match.is_rpl_category and not is_rcup_match", template)
@@ -240,7 +227,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn(".match-card-v2:not(.finished) .final-score", css)
 
     def test_rpl_team_stack_resets_legacy_name_geometry(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         layer = css[css.rindex("/* Standard RPL matches use a compact broadcast-panel treatment."):]
         stack_selector = "body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-v2"
         name_selector = "body.tournament-rpl .match-card-v2.match-card-v2--rpl:not(.finished) .team-name-v2"
@@ -269,7 +256,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn("content: none", layer)
 
     def test_rpl_finished_layer_wins_late_theme_logo_rules(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
         layer_start = css.rindex("/* Authoritative RPL completed-card layer")
         layer = css[layer_start:]
@@ -289,12 +276,10 @@ class BetsSheetUiTests(unittest.TestCase):
 
     def test_home_css_has_stable_cache_busting_version(self):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-        for path in HOME_CSS_FILES:
-            relative = path.relative_to(ROOT / "static").as_posix()
-            self.assertIn(f"filename='{relative}', v='home-split-20260903'", template)
+        self.assertIn("home.css', v='android-bets-sheet-20260822'", template)
 
     def test_rpl_finished_background_is_dark_and_disables_light_overlays(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         marker = "/* Authoritative RPL completed-card layer"
         layer = css[css.rindex(marker):]
         normalized = re.sub(r"\s+", " ", layer)
@@ -311,7 +296,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertLess(generic_start, css.rindex(selector))
 
     def test_rpl_finished_text_colors_are_scoped_and_contrast_aware(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         marker = "/* Completed RPL text contrast: colors only"
         layer = css[css.rindex(marker):]
         selector = "body.tournament-rpl .match-card-v2.match-card--rpl.finished"
@@ -331,7 +316,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("body.tournament-rcup", layer)
 
     def test_bets_link_keeps_existing_markup_and_sheet_behavior(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         finished = (ROOT / "templates" / "partials" / "home" / "_match_finished.html").read_text(encoding="utf-8")
         active = (ROOT / "templates" / "partials" / "home" / "_match_active.html").read_text(encoding="utf-8")
         self.assertIn('class="bets-link-v2"', finished)
@@ -340,7 +325,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertIn('data-bets-sheet', active)
 
     def test_rpl_closed_finished_bets_link_is_compact_and_theme_scoped(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         marker = "/* RPL closed/completed CTA:"
         layer = css[css.rindex(marker):]
         self.assertIn("body.tournament-rpl .match-card-v2.finished .bets-link-v2", layer)
@@ -361,7 +346,7 @@ class BetsSheetUiTests(unittest.TestCase):
         self.assertNotIn("flex: 1", layer)
 
     def test_rpl_closed_status_is_a_compact_red_scoped_badge(self):
-        css = read_home_css()
+        css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         marker = "/* RPL closed status:"
         layer = css[css.rindex(marker):]
         selector = "body.tournament-rpl .match-card-v2.match-card--rpl.closed .status-closed"

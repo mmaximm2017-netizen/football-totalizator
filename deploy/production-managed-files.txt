@@ -12,3 +12,4 @@ scripts/run_migrations.py
 scripts/sync_once.py
 deploy/production.cron
 deploy/production-managed-files.txt
+static/css/home.css
