@@ -14,6 +14,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.config import INVITE_CODE
 from app.db import close_db, get_db
+from app.services.login_rate_limit_service import (
+    clear_login_failures,
+    is_login_blocked,
+    record_login_failure,
+)
 from app.services.tournament_context_service import (
     get_session_start_tournament_id,
     select_default_tournament_by_unfinished_match,
@@ -34,6 +39,11 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
+        remote_addr = request.remote_addr
+
+        if is_login_blocked(remote_addr, username):
+            flash("Слишком много неудачных попыток. Попробуйте позже.", "error")
+            return render_template('login.html'), 429
 
         conn = get_db()
         cur = conn.cursor()
@@ -49,6 +59,7 @@ def login():
             user = cur.fetchone()
 
             if not user:
+                record_login_failure(remote_addr, username)
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
@@ -57,7 +68,8 @@ def login():
             is_deleted = user[2]
 
             if is_deleted == 1:
-                flash("Аккаунт деактивирован. Обратитесь к администратору.", "error")
+                record_login_failure(remote_addr, username)
+                flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
             if is_password_hash(stored_password):
@@ -77,8 +89,11 @@ def login():
                     conn.commit()
 
             if not password_ok:
+                record_login_failure(remote_addr, username)
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
+
+            clear_login_failures(remote_addr, username)
 
             selected_tournament_id = select_default_tournament_by_unfinished_match(cur)
             if selected_tournament_id is None:
