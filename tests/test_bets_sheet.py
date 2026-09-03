@@ -24,6 +24,7 @@ HOME_CSS_FILES = [
     ROOT / "static" / "css" / "home" / "components" / "bets-sheet-rpl.css",
     ROOT / "static" / "css" / "home" / "final-overrides-finished.css",
     ROOT / "static" / "css" / "home" / "rpl-performance.css",
+]
 
 
 def read_home_css():
