@@ -1,3 +1,4 @@
+import logging
 import unicodedata
 
 from flask import flash, redirect, request, session, url_for
@@ -8,6 +9,8 @@ from app.routes.admin_matches import (
 )
 from app.routes.admin_sync import handle_manual_sync_update
 
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_TITLES = (
     "Обладатель Кубка Матч-Премьер",
@@ -98,9 +101,10 @@ def handle_award_title(conn, cur):
         conn.commit()
         flash("Титул успешно выдан", "success")
 
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        flash(f"Ошибка выдачи титула: {e}", "error")
+        logger.exception("admin_title_award_failed user_id=%s", user_id)
+        flash("Не удалось выдать титул. Ошибка записана в журнал.", "error")
 
     return _admin_redirect()
 
@@ -128,9 +132,10 @@ def handle_replace_title(conn, cur):
         )
         conn.commit()
         flash("Титул успешно заменён", "success")
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        flash(f"Ошибка замены титула: {e}", "error")
+        logger.exception("admin_title_replace_failed user_id=%s", user_id)
+        flash("Не удалось заменить титул. Ошибка записана в журнал.", "error")
     return _admin_redirect()
 
 
@@ -151,9 +156,10 @@ def handle_remove_title(conn, cur):
             return _admin_redirect()
         conn.commit()
         flash("Титул удалён", "success")
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        flash(f"Ошибка удаления титула: {e}", "error")
+        logger.exception("admin_title_remove_failed user_id=%s", user_id)
+        flash("Не удалось удалить титул. Ошибка записана в журнал.", "error")
     return _admin_redirect()
 
 
