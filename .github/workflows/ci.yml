@@ -83,6 +83,9 @@ jobs:
       - name: Block critical Python errors
         run: ruff check . --select E9,F63,F7,F82
 
+      - name: Block unused runtime code
+        run: ruff check app scripts --select F401,F841,F541
+
       - name: Report remaining Ruff findings
         run: ruff check . || true
 
