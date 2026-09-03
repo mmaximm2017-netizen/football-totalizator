@@ -88,8 +88,3 @@ CREATE INDEX IF NOT EXISTS idx_predictions_match_tournament ON predictions(match
 CREATE INDEX IF NOT EXISTS idx_user_titles_user ON user_titles(user_id);
 CREATE INDEX IF NOT EXISTS idx_sync_runs_started ON sync_runs(started_at);
 CREATE INDEX IF NOT EXISTS idx_sync_runs_status ON sync_runs(status);
-
--- The old deployment model allowed this unique index to exist. Multi-tournament
--- operation requires more than one active tournament, so keep the already-adopted
--- cleanup in the versioned schema path.
-DROP INDEX IF EXISTS idx_tournaments_single_active;
