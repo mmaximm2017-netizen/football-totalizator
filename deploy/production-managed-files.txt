@@ -1,0 +1,14 @@
+docker-compose.yml
+scripts/deploy_production.sh
+scripts/run_deadline_pushes.sh
+scripts/run_match_result_pushes.sh
+scripts/run_morning_digest.sh
+scripts/send_deadline_pushes.py
+scripts/send_match_result_pushes.py
+scripts/send_morning_digest.py
+scripts/host_telegram_notifier.py
+scripts/monitor_production.py
+scripts/run_migrations.py
+scripts/sync_once.py
+deploy/production.cron
+deploy/production-managed-files.txt
