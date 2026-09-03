@@ -32,9 +32,11 @@ jobs:
             set -Eeuo pipefail
             probe_dir="$(mktemp -d)"
             trap 'rm -rf "$probe_dir"' EXIT
+            chmod 755 "$probe_dir"
             base='https://raw.githubusercontent.com/mmaximm2017-netizen/football-totalizator/prototype/auto-result-sources/scripts'
             curl -fsSL "$base/auto_result_sources.py" -o "$probe_dir/auto_result_sources.py"
             curl -fsSL "$base/auto_result_worker.py" -o "$probe_dir/auto_result_worker.py"
+            chmod 644 "$probe_dir"/*.py
             cd /opt/football-totalizator
             if [[ -z "${TOTISH_IMAGE:-}" ]]; then
               TOTISH_IMAGE="$(docker inspect --format='{{.Config.Image}}' football-totalizator-app-1)"
@@ -70,18 +72,15 @@ jobs:
             candidates = rfs_cup_candidates(rfs_html)
             cand = find_rfs_candidate(candidates, home='Локомотив', away='ЦСКА')
             assert cand and cand['score'] == (1,1), cand
-            detail = fetch_text(absolute_url('https://www.rfs.ru', cand['href']))
-            b = parse_rfs_finished_detail(detail, score=cand['score'])
+            b = parse_rfs_finished_detail(fetch_text(absolute_url('https://www.rfs.ru', cand['href'])), score=cand['score'])
             assert b.status == STATUS_FINISHED and b.match_date == '2026-08-04', b
             print('CUP_OK', a, b)
 
             sb_html = fetch_text('https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team')
-            sb_candidates = sportbox_national_candidates(sb_html)
-            cand = find_sportbox_candidate(sb_candidates, home='Россия', away='Тринидад и Тобаго', match_date='2026-06-09')
-            assert cand, sb_candidates
+            cand = find_sportbox_candidate(sportbox_national_candidates(sb_html), home='Россия', away='Тринидад и Тобаго', match_date='2026-06-09')
+            assert cand
             a = parse_sportbox_game_json(fetch_text(f"https://news.sportbox.ru/stats/game_json/{cand['game_id']}"), match_date='2026-06-09')
-            rfs_html = fetch_text('https://www.rfs.ru/natteamfriendlies/calendar')
-            candidates = rfs_national_candidates(rfs_html)
+            candidates = rfs_national_candidates(fetch_text('https://www.rfs.ru/natteamfriendlies/calendar'))
             cand2 = find_rfs_candidate(candidates, home='Россия', away='Тринидад и Тобаго', match_date='2026-06-09')
             assert cand2 and cand2['score'] == (3,0), cand2
             b = parse_rfs_finished_detail(fetch_text(absolute_url('https://www.rfs.ru', cand2['href'])), score=cand2['score'])
