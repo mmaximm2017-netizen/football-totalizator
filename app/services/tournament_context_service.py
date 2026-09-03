@@ -1,6 +1,5 @@
 from app.db import close_db, get_db
 from app.services.tournament_service import (
-    get_active_tournament,
     get_active_tournament_id,
     get_tournament_by_id,
 )
@@ -108,10 +107,7 @@ def select_default_tournament_by_unfinished_match(cur, now=None):
 
 
 def get_nearest_upcoming_tournament_id(cur=None):
-    """
-    Historical default used by the main page and table:
-    choose the tournament with the nearest upcoming match.
-    """
+    """Choose the active tournament with the nearest upcoming match."""
     conn = None
     if cur is None:
         conn = get_db()
@@ -124,10 +120,7 @@ def get_nearest_upcoming_tournament_id(cur=None):
 
 
 def get_first_active_tournament_id(cur=None):
-    """
-    Historical fallback used by duplicated route helpers:
-    first active tournament by id ASC.
-    """
+    """Return the first explicitly active tournament by id."""
     conn = None
     if cur is None:
         conn = get_db()
@@ -150,10 +143,7 @@ def get_first_active_tournament_id(cur=None):
 
 
 def get_latest_tournament_id(cur=None):
-    """
-    Last-resort table fallback when no current/active tournament exists.
-    Mirrors the table page ordering.
-    """
+    """Return the latest tournament as the final user-facing fallback."""
     conn = None
     if cur is None:
         conn = get_db()
@@ -175,15 +165,7 @@ def get_latest_tournament_id(cur=None):
 
 
 def get_current_tournament_id():
-    """
-    Central current-tournament choice for main match context.
-
-    Order intentionally preserves existing product behavior:
-    1) tournament with nearest upcoming match
-    2) first explicit active tournament
-    3) runtime active tournament from tournament_service
-       (latest start_date <= today, then latest active)
-    """
+    """Compatibility current-context lookup for non-route callers."""
     return (
         get_nearest_upcoming_tournament_id()
         or get_first_active_tournament_id()
@@ -197,11 +179,13 @@ def get_current_tournament():
 
 
 def get_selected_tournament_id(requested_tid, cur=None):
-    """
-    Unified selected tournament state for user-facing pages.
+    """Canonical tournament selection for all user-facing routes.
 
-    The explicit ?tid= query param is the primary state. If it is missing
-    or points to a missing tournament, use the shared fallback order.
+    Order:
+    1) explicit existing ``?tid=``;
+    2) active tournament with the nearest upcoming match;
+    3) first explicitly active tournament;
+    4) latest tournament in history.
     """
     if requested_tid and get_tournament_by_id(requested_tid, cur=cur):
         return requested_tid
@@ -223,43 +207,3 @@ def get_tournament_state_flags(tournaments):
         "has_active_tournament": has_active_tournament,
         "is_offseason": has_any_tournament and not has_active_tournament,
     }
-
-
-def get_requested_or_current_tournament_id(requested_id):
-    return requested_id or get_current_tournament_id()
-
-
-def get_table_tournament_id(requested_id):
-    """
-    Table keeps its old final fallback: if there are tournaments but no
-    current/active tournament, show the latest listed tournament.
-    """
-    return (
-        requested_id
-        or get_nearest_upcoming_tournament_id()
-        or get_first_active_tournament_id()
-        or get_latest_tournament_id()
-    )
-
-
-def get_profile_tournament_id(requested_id, active_tournaments=None):
-    """
-    Profile used to prefer the first active tournament from get_all_tournaments().
-    Keep that behavior before falling back to tournament_service current active.
-    """
-    if requested_id:
-        return requested_id
-
-    active_tournaments = active_tournaments or []
-    if active_tournaments:
-        return active_tournaments[0].get("id")
-
-    return get_active_tournament_id()
-
-
-def get_active_context_tournament_id():
-    """
-    Active/current context for pages that historically used get_active_tournament_id().
-    """
-    tournament = get_active_tournament()
-    return tournament["id"] if tournament else None
