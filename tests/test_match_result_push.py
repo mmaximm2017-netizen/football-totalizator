@@ -206,12 +206,17 @@ class MatchResultPushTests(unittest.TestCase):
 
     def test_scoring_outbox_is_created_after_points_update(self):
         source = inspect.getsource(scoring_recalculation_service.recalc_match_points)
-        self.assertLess(source.index("SET points = %s"), source.index("_enqueue_result_event"))
+        self.assertLess(source.index("_update_prediction_points"), source.index("_enqueue_result_events"))
 
     def test_outbox_event_is_unique_per_user_match(self):
-        source = inspect.getsource(scoring_recalculation_service._enqueue_result_event)
+        source = inspect.getsource(scoring_recalculation_service._enqueue_result_events)
         self.assertIn("ON CONFLICT (user_id, event_type, event_key)", source)
         self.assertIn("'ready'", source)
+
+    def test_result_outbox_is_batched_per_match(self):
+        source = inspect.getsource(scoring_recalculation_service._enqueue_result_events)
+        self.assertIn("unnest(%s::integer[])", source)
+        self.assertNotIn("for user_id in", source)
 
     def test_bootstrap_script_suppresses_historical_events(self):
         source = (ROOT / "scripts" / "bootstrap_match_result_pushes.py").read_text(encoding="utf-8")
