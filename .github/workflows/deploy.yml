@@ -238,9 +238,9 @@ jobs:
               echo "STATIC SYNC FAILED: release bundle has no static directory" >&2
               sync_ok=0
             else
-              cp -a static "$control_backup/static"
+              cp -R static "$control_backup/static"
               mkdir -p static
-              if ! cp -a "$release_source/static/." static/; then
+              if ! cp -R "$release_source/static/." static/; then
                 echo "STATIC SYNC FAILED: could not copy release static files" >&2
                 sync_ok=0
               fi
