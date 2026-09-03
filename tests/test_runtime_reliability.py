@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from app import db
 from app.services import login_rate_limit_service as login_guard
 
 
