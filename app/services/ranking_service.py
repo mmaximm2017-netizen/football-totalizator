@@ -99,22 +99,6 @@ def update_outsider_status(annotated):
 
     return annotated
 
-    try:
-        outsider_gap = int(annotated[-2].get("points") or 0) - int(annotated[-1].get("points") or 0)
-    except (TypeError, ValueError):
-        return annotated
-
-    if outsider_gap >= 40:
-        annotated[-1]["outsider_status"] = "absolute"
-    elif outsider_gap >= 30:
-        annotated[-1]["outsider_status"] = "dominant"
-    elif outsider_gap >= 20:
-        annotated[-1]["outsider_status"] = "confident"
-    elif outsider_gap >= 0:
-        annotated[-1]["outsider_status"] = "outsider"
-
-    return annotated
-
 
 def _fetch_ranking(cur, tournament_id, tournament_is_active, exclude_match_id=None):
     cur.execute(
