@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - audit/load-test-production
+    paths:
+      - .load-probe-trigger
 
 permissions:
   contents: read
+
+concurrency:
+  group: totish-oneoff-production-load-probe
+  cancel-in-progress: true
 
 jobs:
   load-probe:
