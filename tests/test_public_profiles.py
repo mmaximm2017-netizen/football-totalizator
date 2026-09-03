@@ -116,15 +116,20 @@ def test_public_profile_stats_reuses_stats_service_for_requested_user(app):
 
 
 def test_public_history_query_is_finished_only_and_scoped(app):
-    user_cursor = Cursor(one_rows=[(2, "Другой")], all_rows=[[]])
-    history_cursor = Cursor(all_rows=[[(8, datetime(2026, 8, 31, 15, tzinfo=timezone.utc), "ЦСКА", "Зенит", 2, 1, 1, 0, 5)]])
+    cursor = Cursor(
+        one_rows=[(2, "Другой")],
+        all_rows=[
+            [],
+            [(8, datetime(2026, 8, 31, 15, tzinfo=timezone.utc), "ЦСКА", "Зенит", 2, 1, 1, 0, 5)],
+        ],
+    )
     captured = {}
 
     def render(_template, **context):
         captured.update(context)
         return "history"
 
-    with patched_client(app, Mock(side_effect=[Connection(user_cursor), Connection(history_cursor)]), render) as client:
+    with patched_client(app, lambda: Connection(cursor), render) as client:
         with client.session_transaction() as session:
             session["user_id"] = 1
         response = client.get("/profile/2/predictions?tid=42")
@@ -132,10 +137,9 @@ def test_public_history_query_is_finished_only_and_scoped(app):
     assert response.status_code == 200
     assert captured["is_public_history"] is True
     assert captured["finished"][0]["id"] == 8
-    assert len(history_cursor.calls) == 1
-    query, params = history_cursor.calls[0]
-    assert "m.status = 'FINISHED'" in query
-    assert "deadline" not in query.lower()
+    history_query, params = cursor.calls[-1]
+    assert "m.status = 'FINISHED'" in history_query
+    assert "deadline" not in history_query.lower()
     assert params == (2, 42)
 
 
