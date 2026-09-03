@@ -42,3 +42,21 @@ def test_production_cron_does_not_embed_secrets():
     ]
     for value in forbidden:
         assert value not in cron
+
+
+def test_deploy_does_not_fetch_release_from_github_on_vps():
+    workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert "git fetch --quiet origin" not in workflow
+    assert 'git show "$release_sha:' not in workflow
+    assert "Copy production control bundle to VPS" in workflow
+    assert "production-control-plane.tar.gz" in workflow
+    assert "actions/checkout@v4" in workflow
+
+
+def test_deploy_verifies_bundle_release_matches_image_release():
+    workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+    assert 'expected_release_sha="${{ steps.image.outputs.release_sha }}"' in workflow
+    assert 'if [[ "$release_sha" != "$expected_release_sha" ]]; then' in workflow
+    assert "image release does not match CI release" in workflow

@@ -12,6 +12,10 @@ on:
         description: Full GHCR image reference with sha256 digest
         required: true
         type: string
+      release_sha:
+        description: Exact 40-character Git commit used to build the image
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -38,18 +42,56 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      - name: Select immutable image reference
+      - name: Select immutable image reference and release
         id: image
         env:
           MANUAL_IMAGE_REFERENCE: ${{ inputs.image_reference }}
+          MANUAL_RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             image_reference="$MANUAL_IMAGE_REFERENCE"
+            release_sha="$MANUAL_RELEASE_SHA"
           else
             image_reference="$(<image-reference/image-reference.txt)"
+            release_sha="${{ github.event.workflow_run.head_sha }}"
           fi
+
           [[ "$image_reference" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]
+          [[ "$release_sha" =~ ^[0-9a-f]{40}$ ]]
+
           echo "reference=$image_reference" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.image.outputs.release_sha }}
+
+      - name: Build production control bundle
+        run: |
+          set -Eeuo pipefail
+          manifest="deploy/production-managed-files.txt"
+
+          while IFS= read -r path; do
+            [[ -n "$path" ]] || continue
+            [[ "$path" == \#* ]] && continue
+            [[ -f "$path" ]] || {
+              echo "BUNDLE FAILED: missing managed file $path" >&2
+              exit 1
+            }
+          done < "$manifest"
+
+          tar -czf production-control-plane.tar.gz -T "$manifest"
+
+      - name: Copy production control bundle to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          source: production-control-plane.tar.gz
+          target: ${{ secrets.PROD_DEPLOY_PATH }}/.deploy-incoming/${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Deploy immutable image on VPS
         uses: appleboy/ssh-action@v1.2.0
@@ -105,6 +147,7 @@ jobs:
             echo "PRE-DEPLOY: pulling target image"
             docker pull "$expected_image" >/dev/null
 
+            expected_release_sha="${{ steps.image.outputs.release_sha }}"
             release_sha="$(
               docker image inspect "$expected_image" --format '{{range .Config.Env}}{{println .}}{{end}}' |
               sed -n 's/^TOTISH_RELEASE=//p' |
@@ -114,17 +157,27 @@ jobs:
               echo "DEPLOY REFUSED: target image does not contain a valid TOTISH_RELEASE" >&2
               exit 1
             fi
+            if [[ "$release_sha" != "$expected_release_sha" ]]; then
+              echo "DEPLOY REFUSED: image release does not match CI release" >&2
+              exit 1
+            fi
             echo "TARGET RELEASE: $release_sha"
 
-            git fetch --quiet origin "$release_sha"
+            incoming_archive="${{ secrets.PROD_DEPLOY_PATH }}/.deploy-incoming/${{ github.run_id }}-${{ github.run_attempt }}/production-control-plane.tar.gz"
+            [[ -f "$incoming_archive" ]] || {
+              echo "DEPLOY REFUSED: production control bundle is missing" >&2
+              exit 1
+            }
+            release_source="$(mktemp -d)"
+            tar -xzf "$incoming_archive" -C "$release_source"
 
             bootstrap_backup="$(mktemp -d)"
             cp docker-compose.yml "$bootstrap_backup/docker-compose.yml"
             cp scripts/deploy_production.sh "$bootstrap_backup/deploy_production.sh"
 
-            git show "$release_sha:docker-compose.yml" > docker-compose.yml.tmp
+            cp "$release_source/docker-compose.yml" docker-compose.yml.tmp
             mv docker-compose.yml.tmp docker-compose.yml
-            git show "$release_sha:scripts/deploy_production.sh" > scripts/deploy_production.sh.tmp
+            cp "$release_source/scripts/deploy_production.sh" scripts/deploy_production.sh.tmp
             chmod 755 scripts/deploy_production.sh.tmp
             mv scripts/deploy_production.sh.tmp scripts/deploy_production.sh
 
@@ -175,7 +228,7 @@ jobs:
             fi
 
             echo "CONTROL PLANE SYNC: installing production-managed files from $release_sha"
-            manifest="$(git show "$release_sha:deploy/production-managed-files.txt")"
+            manifest="$(cat "$release_source/deploy/production-managed-files.txt")"
             control_backup="$(mktemp -d)"
             crontab -l > "$control_backup/crontab" 2>/dev/null || true
 
@@ -191,11 +244,12 @@ jobs:
                 cp "$path" "$control_backup/files/$path"
               fi
 
-              if ! git show "$release_sha:$path" > "$path.tmp"; then
+              if [[ ! -f "$release_source/$path" ]]; then
                 sync_ok=0
                 rm -f "$path.tmp"
                 break
               fi
+              cp "$release_source/$path" "$path.tmp"
 
               case "$path" in
                 scripts/*.sh|scripts/*.py)
@@ -249,6 +303,7 @@ jobs:
             mv .totish-managed-release.tmp .totish-managed-release
             chmod 644 .totish-managed-release
             echo "CONTROL PLANE SYNC OK: $release_sha"
+            rm -rf "$release_source" "$(dirname "$incoming_archive")"
 
             rollback_holder="totish-rollback-image"
             docker rm -f "$rollback_holder" >/dev/null 2>&1 || true
