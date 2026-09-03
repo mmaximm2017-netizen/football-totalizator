@@ -13,7 +13,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Inspect completion markers on VPS
+      - name: Inspect Sports Russia markers on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -22,24 +22,16 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             set -Eeuo pipefail
-            ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
-            for pair in \
-              'sports|https://www.sports.ru/football/tournament/rfpl/calendar/' \
-              'matchtv|https://matchtv.ru/football/rpl/calendar/2026-27'; do
-              name="${pair%%|*}"; url="${pair#*|}"
-              tmp="$(mktemp)"
-              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" "$url"
-              echo "=== $name markers ==="
-              python3 - "$tmp" <<'PY'
-            import re, sys
+            tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
+            curl -4 -L --silent --show-error --compressed --max-time 20 -A 'Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)' -o "$tmp" 'https://www.sports.ru/football/team/russia/calendar/2026/'
+            python3 - "$tmp" <<'PY'
+            import re,sys
             text=open(sys.argv[1],encoding='utf-8',errors='replace').read()
-            for marker in ('calendar-status__moment','calendar-card__status','view-type-disabled','future-time','Окончен','Заверш','Матч завершен','Матч окончен'):
+            for marker in ('Окончен','Матч окончен','score-green','score-gray','data-match-status','matches-table','scores'):
                 print(marker, text.casefold().count(marker.casefold()))
-            for marker in ('calendar-status__moment','view-type-disabled'):
-                pos=text.find(marker)
+            for needle in ('Никарагуа','Мали','Тринидад'):
+                pos=text.find(needle)
                 if pos>=0:
-                    snippet=re.sub(r'\s+',' ',text[max(0,pos-900):pos+1800])
-                    print('RAW',marker,snippet[:2700])
+                    print('RAW',needle,re.sub(r'\s+',' ',text[max(0,pos-1400):pos+2200])[:3600])
+                    break
             PY
-              rm -f "$tmp"
-            done
