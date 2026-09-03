@@ -12,6 +12,7 @@ from app.services.web_push_service import (
     _NoRedirectSession,
     delivery_error_status,
     normalize_endpoint,
+    send_push,
     upsert_subscription,
     validate_endpoint_target,
 )
@@ -191,6 +192,16 @@ class WebPushTests(unittest.TestCase):
             result = session.post("https://push.example/sub", timeout=10, data=b"x")
         self.assertEqual(result, "response")
         self.assertFalse(post.call_args.kwargs["allow_redirects"])
+
+    def test_send_push_rechecks_stored_endpoint_before_network_io(self):
+        subscription = {
+            "endpoint": "https://127.0.0.1/push",
+            "keys": {"p256dh": "p", "auth": "a"},
+        }
+        with patch("app.services.web_push_service.WEB_PUSH_VAPID_PRIVATE_KEY", "private"), \
+             patch("app.services.web_push_service.WEB_PUSH_VAPID_SUBJECT", "mailto:test@example.com"):
+            with self.assertRaises(UnsafePushEndpointError):
+                send_push(subscription, {"title": "ТОТИШ"})
 
     def test_subscribe_uses_session_user_and_accepts_device_metadata(self):
         cursor = Cursor()
