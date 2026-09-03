@@ -44,13 +44,13 @@ jobs:
             fi
             echo '=== current production dry-run ==='
             docker compose run --rm -T --interactive=false \
-              -e AUTO_RESULTS_ENABLED=true -e AUTO_RESULTS_DRY_RUN=true \
+              -e PYTHONPATH=/app -e AUTO_RESULTS_ENABLED=true -e AUTO_RESULTS_DRY_RUN=true \
               -v "$probe_dir:/probe:ro" \
               app python /probe/auto_result_worker.py --state-file /tmp/auto-results-test-state.json --no-notify
 
             echo '=== historical source assertions from production IP ==='
             docker compose run --rm -T --interactive=false \
-              -v "$probe_dir:/probe:ro" \
+              -e PYTHONPATH=/app -v "$probe_dir:/probe:ro" \
               app python - <<'PY'
             import sys
             sys.path.insert(0, '/probe')
@@ -65,19 +65,16 @@ jobs:
             assert (b.home_score, b.away_score) == (2,2), b
             print('RPL_OK', a, b)
 
-            live_cup = fetch_text('https://www.livesport.ru/football/rucup/calendar/')
-            a = find_livesport_result(live_cup, home='Локомотив', away='ЦСКА', match_date='2026-08-04')
+            a = find_livesport_result(fetch_text('https://www.livesport.ru/football/rucup/calendar/'), home='Локомотив', away='ЦСКА', match_date='2026-08-04')
             assert a.status == STATUS_FINISHED and (a.home_score,a.away_score)==(1,1), a
-            rfs_html = fetch_text('https://www.rfs.ru/cup/tournament/matches?TournamentMatchesFilter%5Bdate%5D=all')
-            candidates = rfs_cup_candidates(rfs_html)
+            candidates = rfs_cup_candidates(fetch_text('https://www.rfs.ru/cup/tournament/matches?TournamentMatchesFilter%5Bdate%5D=all'))
             cand = find_rfs_candidate(candidates, home='Локомотив', away='ЦСКА')
             assert cand and cand['score'] == (1,1), cand
             b = parse_rfs_finished_detail(fetch_text(absolute_url('https://www.rfs.ru', cand['href'])), score=cand['score'])
             assert b.status == STATUS_FINISHED and b.match_date == '2026-08-04', b
             print('CUP_OK', a, b)
 
-            sb_html = fetch_text('https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team')
-            cand = find_sportbox_candidate(sportbox_national_candidates(sb_html), home='Россия', away='Тринидад и Тобаго', match_date='2026-06-09')
+            cand = find_sportbox_candidate(sportbox_national_candidates(fetch_text('https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team')), home='Россия', away='Тринидад и Тобаго', match_date='2026-06-09')
             assert cand
             a = parse_sportbox_game_json(fetch_text(f"https://news.sportbox.ru/stats/game_json/{cand['game_id']}"), match_date='2026-06-09')
             candidates = rfs_national_candidates(fetch_text('https://www.rfs.ru/natteamfriendlies/calendar'))
