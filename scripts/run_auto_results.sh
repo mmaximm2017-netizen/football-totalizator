@@ -40,6 +40,7 @@ printf '%s START auto-result worker mode=dry-run\n' "$(date -Is)" >>"$LOG_FILE"
 set +e
 "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
   "$DOCKER_BIN" compose run --rm -T --interactive=false \
+    -e PYTHONPATH=/app \
     -e AUTO_RESULTS_DRY_RUN=true \
     -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
     app python scripts/auto_result_worker.py \
@@ -50,9 +51,7 @@ STATUS=$?
 set -e
 printf '%s FINISH auto-result worker exit_code=%s\n' "$(date -Is)" "$STATUS" >>"$LOG_FILE"
 
-# Deliver only messages queued by the worker; notifier owns Telegram credentials.
 python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" >>"$LOG_FILE" 2>&1 || true
-
 if [[ "$STATUS" -ne 0 ]]; then
   python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка dry-run автоматической проверки результатов. Код выхода: ${STATUS}. Результаты матчей и очки не изменялись." >/dev/null 2>&1 || true
 fi
