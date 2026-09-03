@@ -189,6 +189,32 @@ class RankingMovementTests(unittest.TestCase):
         self.assertEqual(result[1]["movement"], "down")
         self.assertNotIn("previous_place", result[0])
 
+    def test_ranking_reuses_provided_cursor_without_opening_database(self):
+        class Cursor:
+            def __init__(self):
+                self.one_rows = iter([(1,), None])
+                self.queries = []
+
+            def execute(self, query, params):
+                self.queries.append((query, params))
+
+            def fetchone(self):
+                return next(self.one_rows)
+
+            def fetchall(self):
+                return []
+
+        cur = Cursor()
+        original_get_db = ranking.get_db
+        ranking.get_db = lambda: (_ for _ in ()).throw(AssertionError("unexpected get_db"))
+        try:
+            result = ranking.get_tournament_ranking(7, cur=cur)
+        finally:
+            ranking.get_db = original_get_db
+
+        self.assertEqual(result, [])
+        self.assertEqual(len(cur.queries), 3)
+
     def leader_status_for_gap(self, gap):
         ranking_rows = [row(1, 1, 100), row(2, 2, 100 - gap)]
 
