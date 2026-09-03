@@ -5,22 +5,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 HOME_CSS_FILES = [
     "static/css/home/base.css",
-    "static/css/home/components/bets-sheet-base.css",
-    "static/css/home/base-responsive.css",
     "static/css/home/wc2026.css",
     "static/css/home/rpl-base.css",
     "static/css/home/match-cards-v2.css",
-    "static/css/home/components/bets-sheet-teams.css",
-    "static/css/home/match-cards-v2-controls.css",
-    "static/css/home/components/skeleton.css",
-    "static/css/home/match-cards-v2-wc-state.css",
-    "static/css/home/components/bets-sheet-wc2026.css",
-    "static/css/home/match-cards-v2-responsive.css",
     "static/css/home/final-overrides.css",
-    "static/css/home/components/bets-sheet-mobile.css",
-    "static/css/home/final-overrides-rpl.css",
-    "static/css/home/components/bets-sheet-rpl.css",
-    "static/css/home/final-overrides-finished.css",
     "static/css/home/rpl-performance.css",
 ]
 
