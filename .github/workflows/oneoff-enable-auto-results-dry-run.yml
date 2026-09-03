@@ -13,7 +13,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Enable and verify production dry-run
+      - name: Final production dry-run verification
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -23,6 +23,19 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd /opt/football-totalizator
+
+            # Remove only the temporary pre-managed cron line from the failed activation attempt.
+            temp_line='*/5 * * * * /bin/bash /opt/football-totalizator/scripts/run_auto_results.sh'
+            crontab -l 2>/dev/null | grep -Fvx "$temp_line" | crontab -
+
+            echo '=== runtime files ==='
+            test -f scripts/run_auto_results.sh
+            test -f scripts/auto_result_worker.py
+            test -f scripts/auto_result_sources.py
+            grep '^AUTO_RESULTS_ENABLED=true$' .env
+            grep '^AUTO_RESULTS_DRY_RUN=true$' .env
+            test "$(crontab -l | grep -c 'run_auto_results.sh')" -eq 1
+            crontab -l | grep 'run_auto_results.sh'
 
             echo '=== before ==='
             docker exec -i football-totalizator-app-1 python - <<'PY'
@@ -35,41 +48,11 @@ jobs:
                 close_db(conn,cur)
             PY
 
-            python3 - <<'PY'
-            from pathlib import Path
-            path=Path('.env')
-            text=path.read_text(encoding='utf-8') if path.exists() else ''
-            lines=text.splitlines()
-            wanted={'AUTO_RESULTS_ENABLED':'true','AUTO_RESULTS_DRY_RUN':'true'}
-            seen=set(); out=[]
-            for line in lines:
-                stripped=line.strip()
-                if '=' in stripped and not stripped.startswith('#'):
-                    key=stripped.split('=',1)[0].strip()
-                    if key in wanted:
-                        if key not in seen:
-                            out.append(f'{key}={wanted[key]}'); seen.add(key)
-                        continue
-                out.append(line)
-            for key,value in wanted.items():
-                if key not in seen:
-                    out.append(f'{key}={value}')
-            path.write_text('\n'.join(out).rstrip()+'\n',encoding='utf-8')
-            PY
-
-            cron_line='*/5 * * * * /bin/bash /opt/football-totalizator/scripts/run_auto_results.sh'
-            current="$(crontab -l 2>/dev/null || true)"
-            if ! printf '%s\n' "$current" | grep -Fqx "$cron_line"; then
-              { printf '%s\n' "$current"; printf '%s\n' "$cron_line"; } | sed '/^[[:space:]]*$/d' | crontab -
-            fi
-
-            echo '=== configured ==='
-            grep '^AUTO_RESULTS_' .env
-            crontab -l | grep -F 'run_auto_results.sh'
-
-            echo '=== manual dry-run invocation ==='
+            echo '=== manual dry-run ==='
+            TOTISH_AUTO_RESULTS_LOG="$HOME/.local/state/totish/auto-results.log" \
+            TOTISH_AUTO_RESULTS_LOCK="$HOME/.local/state/totish/auto-results.lock" \
             /bin/bash scripts/run_auto_results.sh
-            tail -n 20 /var/log/totish-auto-results.log || true
+            tail -n 20 "$HOME/.local/state/totish/auto-results.log"
 
             echo '=== after ==='
             docker exec -i football-totalizator-app-1 python - <<'PY'
