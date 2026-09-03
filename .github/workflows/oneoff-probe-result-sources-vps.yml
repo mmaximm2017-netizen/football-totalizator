@@ -17,7 +17,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Probe Flashscore from VPS and app container
+      - name: Probe Flashscore mobile from VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -26,34 +26,33 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             set -Eeuo pipefail
-            url='https://www.flashscorekz.com/football/russia/premier-league/results/'
             ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
-            tmp="$(mktemp)"
-            trap 'rm -f "$tmp"' EXIT
-
-            echo '=== host curl ==='
-            set +e
-            curl -L --silent --show-error --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
-            curl_status=$?
-            set -e
-            echo "curl_exit=$curl_status"
-            if [[ -s "$tmp" ]]; then
-              grep -q 'Акрон' "$tmp" && echo 'akron=true' || echo 'akron=false'
-              grep -q 'Заверш' "$tmp" && echo 'finished=true' || echo 'finished=false'
-            fi
+            for url in 'https://m.flashscorekz.com/' 'https://m.flashscorekz.com/?d=-1'; do
+              echo "=== host curl $url ==="
+              tmp="$(mktemp)"
+              set +e
+              curl -4 -L --silent --show-error --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
+              status=$?
+              set -e
+              echo "curl_exit=$status"
+              if [[ -s "$tmp" ]]; then
+                grep -q 'Футбол' "$tmp" && echo 'football=true' || echo 'football=false'
+                grep -q 'РОССИЯ' "$tmp" && echo 'russia=true' || echo 'russia=false'
+                grep -q 'Завершенные' "$tmp" && echo 'finished_filter=true' || echo 'finished_filter=false'
+              fi
+              rm -f "$tmp"
+            done
 
             echo '=== app container requests ==='
-            docker exec football-totalizator-app-1 python - <<'PY'
+            docker exec -i football-totalizator-app-1 python - <<'PY'
             import requests
-            url = 'https://www.flashscorekz.com/football/russia/premier-league/results/'
             headers = {'User-Agent': 'Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)', 'Accept-Language': 'ru-RU,ru;q=0.9'}
-            try:
-                r = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
-                print('status=', r.status_code)
-                print('bytes=', len(r.content))
-                print('final=', r.url)
-                print('akron=', 'Акрон' in r.text)
-                print('finished=', 'Заверш' in r.text)
-            except Exception as exc:
-                print('ERROR', type(exc).__name__, str(exc))
+            for url in ('https://m.flashscorekz.com/', 'https://m.flashscorekz.com/?d=-1'):
+                print('url=', url)
+                try:
+                    r = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
+                    print('status=', r.status_code, 'bytes=', len(r.content), 'final=', r.url)
+                    print('football=', 'Футбол' in r.text, 'russia=', 'РОССИЯ' in r.text, 'finished_filter=', 'Завершенные' in r.text)
+                except Exception as exc:
+                    print('ERROR', type(exc).__name__, str(exc))
             PY
