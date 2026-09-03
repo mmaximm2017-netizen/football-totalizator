@@ -1,0 +1,32 @@
+name: One-off home match state wiring
+
+on:
+  push:
+    branches:
+      - refactor/home-match-card-state
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/home-match-card-state
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Wire Python card state into home template
+        run: python scripts/oneoff_home_match_state.py
+      - name: Commit runtime wiring
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/routes/main.py templates/partials/home/_day_block.html
+          git commit -m "Use Python view model for home card state"
+          git push origin HEAD:refactor/home-match-card-state
