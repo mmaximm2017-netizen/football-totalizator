@@ -55,7 +55,16 @@ def _should_send(fingerprint, now=None):
             _recent_errors.pop(key, None)
     return True
 
-def _build_message(exc, *, source, method=None, path=None):
+def _build_message(
+    exc,
+    *,
+    source,
+    method=None,
+    path=None,
+    user_id=None,
+    request_id=None,
+    match_id=None,
+):
     trace = "".join(
         traceback.format_exception(type(exc), exc, exc.__traceback__)
     ).strip()
@@ -89,7 +98,18 @@ def _build_message(exc, *, source, method=None, path=None):
         explanation,
         "",
         f"Время: {now}",
+        f"Версия: {_redact(os.getenv('TOTISH_RELEASE', 'unknown'))}",
     ]
+
+    context_lines = []
+    if user_id is not None:
+        context_lines.append(f"Пользователь: {user_id}")
+    if match_id is not None:
+        context_lines.append(f"Матч: {match_id}")
+    if request_id:
+        context_lines.append(f"Запрос: {_redact(request_id)}")
+    if context_lines:
+        lines.extend(("", *context_lines))
 
     if method or path:
         lines.extend((
@@ -164,13 +184,42 @@ def _safe_send(message):
     except Exception:
         logger.exception("telegram_error_notification_failed")
 
-def notify_exception(exc, *, source="flask", method=None, path=None):
+def notify_exception(
+    exc,
+    *,
+    source="flask",
+    method=None,
+    path=None,
+    user_id=None,
+    request_id=None,
+    match_id=None,
+):
     if not telegram_monitor_configured():
         return False
     fingerprint = _fingerprint(exc, source, method, path)
     if not _should_send(fingerprint):
         return False
-    message = _build_message(exc, source=source, method=method, path=path)
+    release = os.getenv("TOTISH_RELEASE", "unknown")
+    logger.error(
+        "totish_exception source=%s method=%s path=%s user_id=%s match_id=%s request_id=%s release=%s exception=%s",
+        _redact(source),
+        _redact(method or "-"),
+        _redact(path or "-"),
+        user_id if user_id is not None else "-",
+        match_id if match_id is not None else "-",
+        _redact(request_id or "-"),
+        _redact(release),
+        _redact(exc),
+    )
+    message = _build_message(
+        exc,
+        source=source,
+        method=method,
+        path=path,
+        user_id=user_id,
+        request_id=request_id,
+        match_id=match_id,
+    )
     thread = threading.Thread(target=_safe_send, args=(message,), daemon=True)
     thread.start()
     return True
