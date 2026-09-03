@@ -63,6 +63,10 @@ def alert(key, details):
             "🚨 ТОТИШ: служебные файлы VPS не совпадают с версией сайта",
             "Служебные production-файлы на VPS рассинхронизированы с запущенной версией ТОТИШа.",
         ),
+        "backup:": (
+            "🚨 ТОТИШ: проблема с резервной копией базы",
+            "Ежедневная резервная копия базы отсутствует или слишком старая.",
+        ),
     }
 
     title = "🚨 ТОТИШ: обнаружена техническая проблема"
@@ -243,6 +247,58 @@ def check_db_health():
     )
     return False
 
+def check_database_backup():
+    backup_dir = STATE_DIR / "backups"
+
+    # The directory is created by the backup job itself. Before the first
+    # scheduled run after rollout, do not emit a false alert.
+    if not backup_dir.exists():
+        return True
+
+    backups = sorted(backup_dir.glob("totish-daily-*.dump"), reverse=True)
+    if not backups:
+        alert(
+            "backup:missing",
+            "Что именно произошло:\n"
+            "Каталог резервных копий уже существует, но ежедневного дампа базы в нём нет.",
+        )
+        return False
+
+    latest = backups[0]
+    try:
+        age_seconds = max(0, int(time.time() - latest.stat().st_mtime))
+    except OSError as exc:
+        alert(
+            "backup:unreadable",
+            "Что именно произошло:\n"
+            "Не удалось проверить дату последней резервной копии базы.\n\n"
+            f"Причина: {type(exc).__name__}: {exc}",
+        )
+        return False
+
+    max_age_seconds = 36 * 60 * 60
+    if age_seconds > max_age_seconds:
+        age_hours = age_seconds // 3600
+        alert(
+            "backup:stale",
+            "Что именно произошло:\n"
+            "Последняя ежедневная резервная копия базы слишком старая.\n\n"
+            f"Возраст копии: {age_hours} ч. Допустимо: не более 36 ч.",
+        )
+        return False
+
+    checksum = latest.with_name(latest.name + ".sha256")
+    if not checksum.is_file():
+        alert(
+            "backup:checksum_missing",
+            "Что именно произошло:\n"
+            "У последней резервной копии базы отсутствует файл контрольной суммы.",
+        )
+        return False
+
+    return True
+
+
 def check_control_plane_release():
     marker = ROOT / ".totish-managed-release"
 
@@ -362,6 +418,9 @@ def main():
         ok = False
 
     if not check_control_plane_release():
+        ok = False
+
+    if not check_database_backup():
         ok = False
 
     if not check_public_health():

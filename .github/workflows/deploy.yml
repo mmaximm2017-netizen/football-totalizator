@@ -299,7 +299,7 @@ jobs:
                   /^# END TOTISH MANAGED$/ { skip=0; next }
                   skip { next }
                   /\/opt\/football-totalizator/ &&
-                  /(host_telegram_notifier\.py|monitor_production\.py|run_morning_digest\.sh|run_deadline_pushes\.sh|run_match_result_pushes\.sh)/ { next }
+                  /(host_telegram_notifier\.py|monitor_production\.py|run_morning_digest\.sh|run_deadline_pushes\.sh|run_match_result_pushes\.sh|run_database_backup\.sh|verify_database_backup_restore\.sh)/ { next }
                   { print }
                 ' > "$cron_tmp" || true
 
