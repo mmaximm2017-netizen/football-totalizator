@@ -81,7 +81,7 @@ jobs:
             }
           done < "$manifest"
 
-          tar -czf production-control-plane.tar.gz -T "$manifest"
+          tar -czf production-control-plane.tar.gz -T "$manifest" static
 
       - name: Copy production control bundle to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -233,6 +233,34 @@ jobs:
             crontab -l > "$control_backup/crontab" 2>/dev/null || true
 
             sync_ok=1
+
+            if [[ ! -d "$release_source/static" ]]; then
+              echo "STATIC SYNC FAILED: release bundle has no static directory" >&2
+              sync_ok=0
+            else
+              cp -a static "$control_backup/static"
+              mkdir -p static
+              if ! cp -a "$release_source/static/." static/; then
+                echo "STATIC SYNC FAILED: could not copy release static files" >&2
+                sync_ok=0
+              fi
+            fi
+
+            if (( sync_ok )); then
+              static_files=0
+              while IFS= read -r release_static_file; do
+                relative="${release_static_file#"$release_source/"}"
+                static_files=$((static_files + 1))
+                if [[ ! -f "$relative" ]] || ! cmp -s "$release_static_file" "$relative"; then
+                  echo "STATIC SYNC FAILED: mismatch at $relative" >&2
+                  sync_ok=0
+                  break
+                fi
+              done < <(find "$release_source/static" -type f -print)
+              if (( sync_ok )); then
+                echo "STATIC SYNC OK: files=$static_files"
+              fi
+            fi
             while IFS= read -r path; do
               [[ -n "$path" ]] || continue
               [[ "$path" == \#* ]] && continue
@@ -286,6 +314,10 @@ jobs:
 
             if (( ! sync_ok )); then
               echo "CONTROL PLANE SYNC FAILED: restoring previous host files" >&2
+              if [[ -d "$control_backup/static" ]]; then
+                rm -rf static
+                mv "$control_backup/static" static
+              fi
               if [[ -d "$control_backup/files" ]]; then
                 while IFS= read -r backup_path; do
                   relative="${backup_path#"$control_backup/files/"}"
