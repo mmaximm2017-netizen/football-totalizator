@@ -1,6 +1,7 @@
 # app/__init__.py
 import logging
 import hmac
+import ipaddress
 import json
 import os
 import secrets
@@ -345,8 +346,17 @@ def create_app():
     def health():
         return jsonify({"status": "ok"})
 
+    def db_health_request_is_internal():
+        try:
+            address = ipaddress.ip_address(request.remote_addr or "")
+        except ValueError:
+            return False
+        return address.is_loopback or address.is_private
+
     @app.get("/health/db")
     def health_db():
+        if not db_health_request_is_internal():
+            abort(404)
         now = time.monotonic()
         cached_result = _HEALTH_DB_CACHE["result"]
         if cached_result is not None and now < _HEALTH_DB_CACHE["expires_at"]:
