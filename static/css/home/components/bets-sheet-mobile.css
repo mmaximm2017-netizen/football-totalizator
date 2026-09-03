@@ -1,0 +1,35 @@
+    @media (max-width: 640px) {
+        .bets-sheet {
+            box-sizing: border-box;
+            bottom: var(
+                --bets-sheet-bottom-clearance,
+                calc(12px + 64px + max(2px, env(safe-area-inset-bottom)) + 8px)
+            );
+            max-height: min(
+                72vh,
+                calc(100vh - var(--bets-sheet-bottom-clearance, 86px) - 16px)
+            );
+            max-height: min(
+                72dvh,
+                calc(100dvh - var(--bets-sheet-bottom-clearance, 86px) - 16px)
+            );
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        }
+
+        body.tournament-wc2026 .bets-sheet {
+            max-height: min(76vh, calc(100vh - 84px - max(2px, env(safe-area-inset-bottom))));
+            max-height: min(76dvh, calc(100dvh - 84px - max(2px, env(safe-area-inset-bottom))));
+            padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        }
+
+        .bets-sheet-content {
+            min-height: 0;
+            padding-bottom: calc(18px + env(safe-area-inset-bottom));
+            scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        }
+
+        .bets-compact-list {
+            padding-bottom: 10px;
+        }
+    }
+
