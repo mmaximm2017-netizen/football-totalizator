@@ -71,7 +71,7 @@ def normalize_endpoint(value):
     return endpoint
 
 
-def validate_endpoint_target(endpoint, *, resolver=socket.getaddrinfo):
+def validate_endpoint_target(endpoint, *, resolver=None):
     """Reject Web Push targets that resolve to non-public network addresses."""
     normalized = normalize_endpoint(endpoint)
     parsed = urlsplit(normalized)
@@ -91,6 +91,8 @@ def validate_endpoint_target(endpoint, *, resolver=socket.getaddrinfo):
         return normalized
 
     port = parsed.port or 443
+    if resolver is None:
+        resolver = socket.getaddrinfo
     try:
         results = resolver(hostname, port, type=socket.SOCK_STREAM)
     except (OSError, socket.gaierror) as exc:
