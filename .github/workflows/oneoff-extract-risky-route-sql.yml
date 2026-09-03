@@ -1,0 +1,32 @@
+name: One-off extract risky route SQL
+
+on:
+  push:
+    branches:
+      - refactor/risky-route-sql
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/risky-route-sql
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract risky route SQL
+        run: python scripts/oneoff_extract_risky_route_sql.py
+      - name: Commit extraction
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/routes/main.py app/routes/auth.py app/routes/admin_actions.py app/routes/admin_tournaments.py
+          git commit -m "Move risky route SQL into services"
+          git push origin HEAD:refactor/risky-route-sql
