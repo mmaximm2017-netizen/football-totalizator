@@ -9,16 +9,40 @@ logger = logging.getLogger(__name__)
 RESULT_EVENT_TYPE = "match_result"
 
 
-def _enqueue_result_event(cur, user_id, match_id):
-    """Create the result-push outbox row only after points were calculated."""
+def _update_prediction_points(cur, match_id, tournament_id, scored_predictions):
+    """Update all prediction scores for one match in a single statement."""
+    if not scored_predictions:
+        return
+
+    user_ids = [item[0] for item in scored_predictions]
+    points = [item[1] for item in scored_predictions]
+    cur.execute(
+        """
+        UPDATE predictions AS p
+        SET points = batch.points
+        FROM unnest(%s::integer[], %s::integer[]) AS batch(user_id, points)
+        WHERE p.user_id = batch.user_id
+          AND p.match_id = %s
+          AND p.tournament_id = %s
+        """,
+        (user_ids, points, match_id, tournament_id),
+    )
+
+
+def _enqueue_result_events(cur, user_ids, match_id):
+    """Create all result-push outbox rows for one match in a single statement."""
+    if not user_ids:
+        return
+
     cur.execute(
         """
         INSERT INTO push_delivery_log
             (user_id, match_id, event_type, event_key, status, sent_at, updated_at)
-        VALUES (%s, %s, %s, %s, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        SELECT batch.user_id, %s, %s, %s, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        FROM unnest(%s::integer[]) AS batch(user_id)
         ON CONFLICT (user_id, event_type, event_key) DO NOTHING
         """,
-        (user_id, match_id, RESULT_EVENT_TYPE, f"match:{match_id}"),
+        (match_id, RESULT_EVENT_TYPE, f"match:{match_id}", user_ids),
     )
 
 
@@ -94,32 +118,23 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
             (match_id, match[4]),
         )
 
-        updated = 0
-        for p in cur.fetchall():
-            pts = calculate_points(
-                match[2],
-                match[3],
-                p[1],
-                p[2],
-            )
-
-            cur.execute(
-                """
-                UPDATE predictions
-                SET points = %s
-                WHERE user_id = %s
-                  AND match_id = %s
-                  AND tournament_id = %s
-                """,
-                (
-                    pts,
-                    p[0],
-                    match_id,
-                    p[3],
+        predictions = cur.fetchall()
+        scored_predictions = [
+            (
+                p[0],
+                calculate_points(
+                    match[2],
+                    match[3],
+                    p[1],
+                    p[2],
                 ),
             )
-            _enqueue_result_event(cur, p[0], match_id)
-            updated += 1
+            for p in predictions
+        ]
+
+        _update_prediction_points(cur, match_id, match[4], scored_predictions)
+        _enqueue_result_events(cur, [p[0] for p in predictions], match_id)
+        updated = len(scored_predictions)
 
         if owns_connection:
             conn.commit()
