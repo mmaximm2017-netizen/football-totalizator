@@ -2,11 +2,14 @@ docker-compose.yml
 scripts/deploy_production.sh
 scripts/run_deadline_pushes.sh
 scripts/run_match_result_pushes.sh
+scripts/run_auto_results.sh
 scripts/run_morning_digest.sh
 scripts/run_database_backup.sh
 scripts/verify_database_backup_restore.sh
 scripts/send_deadline_pushes.py
 scripts/send_match_result_pushes.py
+scripts/auto_result_sources.py
+scripts/auto_result_worker.py
 scripts/send_morning_digest.py
 scripts/host_telegram_notifier.py
 scripts/monitor_production.py
