@@ -35,3 +35,18 @@ the existing production schema as the starting point for versioned history.
 
 Automatic execution during production deployment is deliberately handled as a
 separate deployment-safety change.
+
+
+## Rollback safety
+
+Production migrations must remain compatible with the previous application image
+so a failed deployment can be rolled back safely.
+
+The migration runner rejects operations that can make the previous application
+incompatible, including dropping tables/columns/constraints, truncating or
+deleting data, renaming table structure, changing column types, and adding
+`SET NOT NULL`.
+
+Use additive changes first (new nullable columns, new tables, new indexes).
+Destructive cleanup must be done later, after the older application version is
+no longer a rollback target.
