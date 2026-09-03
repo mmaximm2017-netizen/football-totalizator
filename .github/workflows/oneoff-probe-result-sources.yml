@@ -1,0 +1,65 @@
+name: One-off result source probe
+
+on:
+  push:
+    branches:
+      - prototype/auto-result-sources
+    paths:
+      - .source-probe-trigger
+
+concurrency:
+  group: auto-result-source-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public result pages
+        run: |
+          python - <<'PY'
+          import re
+          import urllib.request
+          import urllib.error
+
+          urls = {
+              "flashscore_results": "https://www.flashscorekz.com/football/russia/premier-league/results/",
+              "flashscore_match": "https://www.flashscorekz.com/match/football/akron-togliatti-6qPFRkGT/cska-moscow-l0r24CuE/summary/stats/?mid=l0GtjGrh",
+              "rpl_matches": "https://premierliga.ru/matches/",
+              "rfs_cup": "https://www.rfs.ru/cup/tournament/matches?TournamentMatchesFilter%5Bdate%5D=all",
+              "rfs_national": "https://www.rfs.ru/natteamfriendlies/calendar",
+          }
+          headers = {
+              "User-Agent": "Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)",
+              "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.7",
+          }
+          markers = [
+              "Заверш", "Матч окончен", "Не удалось загрузить данные",
+              "Акрон", "ЦСКА", "Динамо", "Амкар", "Россия",
+              "__NEXT_DATA__", "/api/", "matches", "score",
+          ]
+          for name, url in urls.items():
+              print(f"\n=== {name} ===")
+              try:
+                  req = urllib.request.Request(url, headers=headers)
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      raw = r.read(2_000_000)
+                      text = raw.decode(r.headers.get_content_charset() or "utf-8", errors="replace")
+                      print("status=", r.status)
+                      print("final_url=", r.geturl())
+                      print("content_type=", r.headers.get("Content-Type"))
+                      print("bytes=", len(raw))
+                      title = re.search(r"<title[^>]*>(.*?)</title>", text, re.I | re.S)
+                      print("title=", re.sub(r"\s+", " ", title.group(1)).strip()[:300] if title else "")
+                      for marker in markers:
+                          print(f"marker[{marker}]={marker.casefold() in text.casefold()}")
+                      # Print only URL-like endpoint hints, not page content.
+                      hints = sorted(set(re.findall(r'https?://[^\"\'<> ]+|/[A-Za-z0-9_.~!$&()*+,;=:@%/?-]*(?:api|match|game|score)[A-Za-z0-9_.~!$&()*+,;=:@%/?-]*', text, re.I)))
+                      print("endpoint_hints_count=", len(hints))
+                      for hint in hints[:40]:
+                          print("hint=", hint[:500])
+              except Exception as exc:
+                  print("ERROR", type(exc).__name__, str(exc))
+          PY
