@@ -7,12 +7,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 HOME_CSS_FILES = [
     ROOT / "static" / "css" / "home" / "base.css",
+    ROOT / "static" / "css" / "home" / "components" / "bets-sheet-base.css",
+    ROOT / "static" / "css" / "home" / "base-responsive.css",
     ROOT / "static" / "css" / "home" / "wc2026.css",
     ROOT / "static" / "css" / "home" / "rpl-base.css",
     ROOT / "static" / "css" / "home" / "match-cards-v2.css",
+    ROOT / "static" / "css" / "home" / "components" / "bets-sheet-teams.css",
+    ROOT / "static" / "css" / "home" / "match-cards-v2-controls.css",
+    ROOT / "static" / "css" / "home" / "components" / "skeleton.css",
+    ROOT / "static" / "css" / "home" / "match-cards-v2-wc-state.css",
+    ROOT / "static" / "css" / "home" / "components" / "bets-sheet-wc2026.css",
+    ROOT / "static" / "css" / "home" / "match-cards-v2-responsive.css",
     ROOT / "static" / "css" / "home" / "final-overrides.css",
+    ROOT / "static" / "css" / "home" / "components" / "bets-sheet-mobile.css",
+    ROOT / "static" / "css" / "home" / "final-overrides-rpl.css",
+    ROOT / "static" / "css" / "home" / "components" / "bets-sheet-rpl.css",
+    ROOT / "static" / "css" / "home" / "final-overrides-finished.css",
     ROOT / "static" / "css" / "home" / "rpl-performance.css",
-]
 
 
 def read_home_css():
@@ -291,7 +302,7 @@ class BetsSheetUiTests(unittest.TestCase):
         template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
         for path in HOME_CSS_FILES:
             relative = path.relative_to(ROOT / "static").as_posix()
-            self.assertIn(f"filename='{relative}', v='home-split-20260903'", template)
+            self.assertIn(f"filename='{relative}', v='home-components-20260903'", template)
 
     def test_rpl_finished_background_is_dark_and_disables_light_overlays(self):
         css = read_home_css()
