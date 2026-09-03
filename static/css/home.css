@@ -1,3 +1,9 @@
+/* =========================================================
+   TOTISH HOME CSS — STRUCTURE MAP
+   IMPORTANT: sections below are ordered by cascade history.
+   Do not move blocks between sections without visual checks.
+   ========================================================= */
+
     :root {
         --flag-size: 88px;
         --radius-pill: var(--radius-round);
@@ -1340,6 +1346,11 @@
         outline-color: rgba(0,119,200,0.42);
     }
 
+    /* =====================================================
+       COMPONENT: BETS SHEET — BASE LAYER
+       Shared bottom sheet, compact rows and basic RPL colors.
+       ===================================================== */
+
     .bets-sheet-close:focus-visible {
         outline: 2px solid rgba(0,119,200,0.48);
         outline-offset: 2px;
@@ -1920,6 +1931,11 @@
         }
     }
 
+    /* =====================================================
+       THEME: WORLD CUP 2026 — PRIMARY HOME LAYER
+       Tournament background, headers, cards and playoff stages.
+       ===================================================== */
+
     /* WC2026 V2 FINAL HOME CARD LAYER */
     body.tournament-wc2026 {
         background:
@@ -2483,6 +2499,11 @@
         }
 
     }
+
+    /* =====================================================
+       THEME: RPL — BASE LAYER
+       Page background and the first RPL card treatment.
+       ===================================================== */
 
     /* RPL tournament background: page layer only */
     body.tournament-rpl {
@@ -3639,6 +3660,11 @@
             inset 0 1px 0 rgba(255,255,255,0.16),
             0 8px 18px rgba(90,10,10,0.16) !important;
     }
+
+    /* =====================================================
+       COMPONENT: MATCH CARD V2 — SHARED LAYOUT SYSTEM
+       Shared geometry plus tournament-specific card variants.
+       ===================================================== */
 
     /* Match Card Layout System V2: one layout, theme tokens per match category. */
     body.tournament-rpl .match-card-v2:is(.match-card--rpl, .match-card--supercup, .match-card--russia) {
@@ -5089,6 +5115,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             0 10px 20px rgba(0,0,0,0.30);
     }
 
+    /* =====================================================
+       COMPONENT: SKELETON LOADER
+       Loading placeholders only.
+       ===================================================== */
+
     /* SKELETON SCREEN STYLES */
     @keyframes pulse {
         0%, 100% {
@@ -5381,6 +5412,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         font-family: var(--wc26-display, 'IBM Plex Sans Condensed', 'Inter', sans-serif);
         font-weight: 700 !important;
     }
+
+    /* =====================================================
+       COMPONENT: BETS SHEET — WORLD CUP 2026 THEME
+       Late WC-specific visual overrides for the shared sheet.
+       ===================================================== */
 
     body.tournament-wc2026 .bets-sheet-overlay {
         background:
@@ -6130,6 +6166,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
     }
 
+    /* =====================================================
+       FINAL OVERRIDES — SHARED RPL / RUSSIAN CUP METRICS
+       Late cascade layer. Order here is intentional.
+       ===================================================== */
+
     /* Shared RPL card metrics for the Russian Cup card. */
     :is(body.tournament-rpl, body.tournament-rcup) .match-card-v2 {
         padding: 9px 11px 7px;
@@ -6416,6 +6457,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         align-items: center;
         justify-content: center;
     }
+
+    /* =====================================================
+       STATE: RPL FINISHED / CLOSED — AUTHORITATIVE LAYER
+       Must remain after earlier theme and responsive rules.
+       ===================================================== */
 
     /* Authoritative RPL completed-card layer: keep it after the theme/mobile layers. */
     body.tournament-rpl .match-card-v2.match-card--rpl.finished {
@@ -7006,6 +7052,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         mask-image: none;
     }
 
+    /* =====================================================
+       COMPONENT: BETS SHEET — RPL FINAL THEME
+       Final RPL appearance for the predictions sheet.
+       ===================================================== */
+
     /* RPL predictions sheet: light broadcast panel over the blue tournament UI. */
     body.tournament-rpl .bets-sheet-overlay {
         background: rgba(0,27,77,0.38);
@@ -7288,6 +7339,11 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         mask-image: none;
     }
 
+
+/* =========================================================
+   PERFORMANCE: RPL SCROLL HARDENING
+   Must stay at the end so expensive effects remain disabled.
+   ========================================================= */
 
 /* =========================================================
    RPL scroll performance hardening
