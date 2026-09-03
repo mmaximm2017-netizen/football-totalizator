@@ -17,47 +17,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect public result page structure
-        run: |
-          python - <<'PY'
-          import re
-          import urllib.request
-
-          urls = {
-              "flashscore": "https://www.flashscorekz.com/football/russia/premier-league/results/",
-              "rfs_cup": "https://www.rfs.ru/cup/tournament/matches?TournamentMatchesFilter%5Bdate%5D=all",
-              "rfs_national": "https://www.rfs.ru/natteamfriendlies/calendar",
-          }
-          headers = {
-              "User-Agent": "Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)",
-              "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.7",
-          }
-          class_patterns = [
-              "event__match", "event__participant", "event__score", "event__time",
-              "match-card", "match__", "score", "team", "calendar",
-          ]
-          needles = {
-              "flashscore": ["Акрон", "ЦСКА", "Заверш"],
-              "rfs_cup": ["Амкар", "Динамо"],
-              "rfs_national": ["Россия", "Никарагуа"],
-          }
-          for name, url in urls.items():
-              print(f"\n=== {name} ===")
-              req = urllib.request.Request(url, headers=headers)
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  text = r.read(2_000_000).decode(r.headers.get_content_charset() or "utf-8", errors="replace")
-              for pattern in class_patterns:
-                  print(f"count[{pattern}]={text.casefold().count(pattern.casefold())}")
-              classes = sorted(set(re.findall(r'class=[\"\']([^\"\']+)[\"\']', text, re.I)))
-              interesting = [c for c in classes if any(p in c.casefold() for p in ("event", "match", "score", "team", "calendar"))]
-              print("interesting_classes_count=", len(interesting))
-              for value in interesting[:100]:
-                  print("class=", value[:300])
-              for needle in needles[name]:
-                  pos = text.find(needle)
-                  print(f"needle[{needle}]_pos={pos}")
-                  if pos >= 0:
-                      snippet = text[max(0, pos-900):pos+1400]
-                      snippet = re.sub(r"\s+", " ", snippet)
-                      print("snippet=", snippet[:2300])
-          PY
+      - name: Install test dependencies
+        run: pip install -r requirements.txt
+      - name: Test pure source parsers
+        run: pytest -q tests/test_auto_result_source_probe.py
+      - name: Run read-only live probe
+        run: python scripts/probe_auto_result_sources.py
