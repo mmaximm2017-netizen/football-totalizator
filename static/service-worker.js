@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'totish-static-';
-const CACHE_NAME = `${CACHE_PREFIX}v8`;
+const CACHE_NAME = `${CACHE_PREFIX}__TOTISH_RELEASE__`;
 const LEGACY_CACHE_NAMES = new Set([
     'totish-cache-v5',
 ]);
