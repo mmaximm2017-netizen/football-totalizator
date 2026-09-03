@@ -4,10 +4,10 @@ import os
 
 from app.services.rpl_team_catalog import RPL_TEAM_ALIASES, match_rpl_team, normalize_team_text
 from app.services.screenshot_match_import_service import (
-    MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS, ALLOWED_FORMATS, ALLOWED_MIME_TYPES,
-    DRAFT_TTL_SECONDS, ImageValidationError, ImportConfig, _valid_time,
-    _candidate_team as _generic_candidate_team, _exact_team_spans, _match_from_parts, _spatial_parse_ocr,
-    _flat_parse_ocr, resolve_match_date, make_generic_draft,
+    MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS,
+    ImageValidationError, ImportConfig, _valid_time,
+    _candidate_team as _generic_candidate_team, _spatial_parse_ocr,
+    _flat_parse_ocr, make_generic_draft, resolve_match_date,  # noqa: F401 - compatibility export for tests/callers
     generic_draft_is_valid, parse_ocr, save_validated_upload as _generic_save_validated_upload,
 )
 from app.services.local_tesseract_service import extract_text_from_image

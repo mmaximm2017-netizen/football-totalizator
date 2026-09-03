@@ -3,7 +3,6 @@
 Names are project-confirmed canonical values; aliases are only variants already
 present in team_data/logo data or existing shared team mappings.
 """
-from app.models.team_data import CLUB_LOGOS, TEAM_NAMES
 from app.services.rpl_team_catalog import normalize_team_text
 
 RUSSIAN_CUP_TEAM_ALIASES = {

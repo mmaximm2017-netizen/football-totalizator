@@ -4,7 +4,7 @@ from app.services.russian_cup_team_catalog import (
 )
 from app.services.screenshot_match_import_service import (
     ImportConfig, ImageValidationError, make_generic_draft, parse_ocr,
-    save_validated_upload, generic_draft_is_valid,
+    save_validated_upload,
 )
 import os
 

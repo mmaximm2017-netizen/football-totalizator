@@ -109,7 +109,7 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
             }
 
         cur.execute(
-            f"""
+            """
             SELECT user_id, home_goals, away_goals, tournament_id
             FROM predictions
             WHERE match_id = %s

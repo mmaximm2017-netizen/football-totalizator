@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -38,7 +37,6 @@ from app.services.screenshot_match_import_service import generic_draft_is_valid
 from app.services.russian_cup_team_catalog import match_russian_cup_team
 from app.models.scoring import has_valid_finished_score
 from app.services.wc_playoff_service import (
-    determine_effective_playoff_stage,
     is_wc2026_playoff_match,
     normalize_playoff_stage,
 )
@@ -734,7 +732,6 @@ def admin_russian_cup_import_screenshot():
 
 
 def _mark_russian_cup_preview_duplicates(cur, draft, tournament_id):
-    from app.services.rpl_screenshot_import_service import _valid_time
     from app.services.manual_match_creation_service import build_manual_deadline_utc
     seen = set()
     for match in draft["matches"]:
@@ -980,7 +977,6 @@ def admin_russian_cup_edit_form(match_id):
 @admin_required
 def admin_russian_cup_result():
     match_id = request.form.get("match_id", type=int)
-    return_to = request.form.get("return_to")
     conn = get_db()
     cur = conn.cursor()
     try:

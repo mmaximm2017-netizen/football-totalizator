@@ -60,7 +60,7 @@ def subscribe():
     conn = get_db()
     cur = conn.cursor()
     try:
-        subscription = upsert_subscription(
+        upsert_subscription(
             cur,
             session["user_id"],
             payload,

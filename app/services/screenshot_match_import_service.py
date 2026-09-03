@@ -9,7 +9,6 @@ import warnings
 
 from PIL import Image, UnidentifiedImageError
 
-from app.services.local_tesseract_service import extract_text_from_image
 from app.services.rpl_team_catalog import normalize_team_text
 
 
