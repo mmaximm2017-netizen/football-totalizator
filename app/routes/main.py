@@ -27,7 +27,6 @@ from app.services.tournament_context_service import (
 )
 from app.services.tournament_service import (
     get_all_tournaments,
-    get_tournament_by_id,
 )
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
@@ -725,7 +724,10 @@ WHERE m.id = %s
     tournaments = all_tournaments
     active_tournaments = [t for t in tournaments if t.get("is_active")]
     tournament_state = get_tournament_state_flags(tournaments)
-    selected_tournament = get_tournament_by_id(tid) if tid else None
+    selected_tournament = next(
+        (item for item in tournaments if item.get("id") == tid),
+        None,
+    )
     current_tournament_name = selected_tournament["name"] if selected_tournament else "Турнир"
     current_tournament_slug = normalize_tournament_slug(current_tournament_name)
     russian_cup_header_stage = next(

@@ -373,21 +373,22 @@ def create_app():
                     cur.execute("SELECT 1")
                     cur.fetchone()
                     result["db"] = "ok"
+
+                    active_tid = get_active_tournament_id(cur=cur)
+                    if active_tid:
+                        result["active_tournament"] = "ok"
+
+                        ranking = get_tournament_ranking(active_tid, cur=cur)
+                        if isinstance(ranking, list):
+                            result["ranking"] = "ok"
+
+                    single = ensure_single_active_tournament(cur=cur)
+                    if single.get("ok"):
+                        result["single_active"] = "ok"
+                    else:
+                        result["single_active"] = f"warn:{single.get('active_count')}"
                 finally:
                     close_db(conn, cur)
-                active_tid = get_active_tournament_id()
-                if active_tid:
-                    result["active_tournament"] = "ok"
-
-                    ranking = get_tournament_ranking(active_tid)
-                    if isinstance(ranking, list):
-                        result["ranking"] = "ok"
-
-                single = ensure_single_active_tournament()
-                if single.get("ok"):
-                    result["single_active"] = "ok"
-                else:
-                    result["single_active"] = f"warn:{single.get('active_count')}"
             except Exception:
                 logger.exception("health_db_check_failed")
 

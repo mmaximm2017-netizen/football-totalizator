@@ -374,7 +374,6 @@ class RussianCupUiTests(unittest.TestCase):
                 patch("app.routes.main.close_db"),
                 patch("app.routes.main.get_all_tournaments", return_value=tournaments),
                 patch("app.routes.main.get_selected_tournament_id", return_value=5),
-                patch("app.routes.main.get_tournament_by_id", return_value={"id": 5, "name": "Кубок России"}),
             ):
                 home = client.get("/?tid=5")
 
@@ -398,7 +397,6 @@ class RussianCupUiTests(unittest.TestCase):
                 patch("app.routes.predictions.close_db"),
                 patch("app.routes.predictions.get_all_tournaments", return_value=tournaments),
                 patch("app.routes.predictions.get_selected_tournament_id", return_value=5),
-                patch("app.routes.predictions.get_tournament_by_id", return_value={"id": 5, "name": "Кубок России"}),
             ):
                 my_predictions = client.get("/my-predictions?tid=5")
 

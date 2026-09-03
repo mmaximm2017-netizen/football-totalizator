@@ -52,7 +52,6 @@ def request_context(app, path, rows):
         patch("app.routes.predictions.close_db"),
         patch("app.routes.predictions.get_all_tournaments", return_value=[{"id": 42, "name": "РПЛ", "is_active": 1}]),
         patch("app.routes.predictions.get_selected_tournament_id", return_value=42),
-        patch("app.routes.predictions.get_tournament_by_id", return_value={"id": 42, "name": "РПЛ"}),
         patch("app.routes.predictions.render_template", side_effect=render),
     ):
         with client.session_transaction() as session:

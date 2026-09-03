@@ -1052,7 +1052,7 @@ def test_ranking_service_is_reused_without_writes():
     with patch.object(service, "get_db", return_value=conn), patch.object(service, "close_db"), patch.object(service, "get_tournament_ranking", return_value=[{"place": 1, "username": "Игрок", "points": 10}]) as ranking:
         payload = service.ranking("rpl")
 
-    ranking.assert_called_once_with(5)
+    ranking.assert_called_once_with(5, cur=cursor)
     assert payload["ranking"][0]["points"] == 10
     assert all(not any(keyword in query.upper() for keyword in ("INSERT", "UPDATE", "DELETE")) for query, _ in cursor.queries)
 
