@@ -62,29 +62,91 @@ jobs:
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
 
+            expected_image="${{ steps.image.outputs.reference }}"
             previous_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
 
-            ./scripts/deploy_production.sh ${{ steps.image.outputs.reference }}
+            if [[ ! "$previous_image" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]; then
+              echo "DEPLOY REFUSED: current image is not a rollback-safe immutable reference" >&2
+              exit 1
+            fi
+
+            verify_health() {
+              local attempt
+              for attempt in {1..30}; do
+                if curl --fail --silent --show-error --max-time 5 \
+                  http://127.0.0.1:8000/health | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+                  return 0
+                fi
+                sleep 2
+              done
+              return 1
+            }
+
+            restore_previous() {
+              echo "WORKFLOW ROLLBACK: restoring $previous_image" >&2
+              export TOTISH_IMAGE="$previous_image"
+              docker compose pull app
+              docker compose up -d --force-recreate app
+
+              running_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+              if [[ "$running_image" != "$previous_image" ]]; then
+                echo "WORKFLOW ROLLBACK FAILED: wrong image is running" >&2
+                return 1
+              fi
+
+              if ! verify_health; then
+                echo "WORKFLOW ROLLBACK FAILED: previous version is unhealthy" >&2
+                return 1
+              fi
+
+              echo "WORKFLOW ROLLBACK OK: $previous_image"
+            }
+
+            echo "PRE-DEPLOY: pulling target image"
+            export TOTISH_IMAGE="$expected_image"
+            docker compose pull app
+
+            echo "PRE-DEPLOY: applying versioned database migrations"
+            docker compose run --rm --no-deps --entrypoint python app scripts/run_migrations.py
+
+            set +e
+            ./scripts/deploy_production.sh "$expected_image"
+            deploy_status=$?
+            set -e
+
+            if (( deploy_status != 0 )); then
+              running_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}' 2>/dev/null || true)"
+              if [[ "$running_image" != "$previous_image" ]] || ! verify_health; then
+                restore_previous || {
+                  echo "DEPLOY FAILED AND AUTOMATIC ROLLBACK FAILED" >&2
+                  exit 1
+                }
+              else
+                echo "ROLLBACK VERIFIED: previous version is running and healthy"
+              fi
+              exit "$deploy_status"
+            fi
 
             current_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
-            expected_image="${{ steps.image.outputs.reference }}"
             if [[ "$current_image" != "$expected_image" ]]; then
-              echo "POST_DEPLOY_CLEANUP_SKIPPED: running image does not match expected image" >&2
+              echo "DEPLOY VERIFICATION FAILED: expected image is not running" >&2
+              restore_previous || true
+              exit 1
+            fi
+
+            if ! verify_health; then
+              echo "DEPLOY VERIFICATION FAILED: new version is unhealthy" >&2
+              restore_previous || true
               exit 1
             fi
 
             rollback_holder="totish-rollback-image"
             docker rm -f "$rollback_holder" >/dev/null 2>&1 || true
 
-            if [[ "$previous_image" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]; then
-              if docker create --name "$rollback_holder" --entrypoint /bin/true "$previous_image" >/dev/null; then
-                echo "ROLLBACK_IMAGE_RETAINED: $previous_image"
-              else
-                echo "POST_DEPLOY_CLEANUP_SKIPPED: failed to retain previous image" >&2
-                exit 0
-              fi
+            if docker create --name "$rollback_holder" --entrypoint /bin/true "$previous_image" >/dev/null; then
+              echo "ROLLBACK_IMAGE_RETAINED: $previous_image"
             else
-              echo "POST_DEPLOY_CLEANUP_SKIPPED: previous image reference is not a valid TOTISH digest" >&2
+              echo "POST_DEPLOY_CLEANUP_SKIPPED: failed to retain previous image" >&2
               exit 0
             fi
 
