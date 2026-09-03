@@ -1,0 +1,32 @@
+name: One-off update card state tests
+
+on:
+  push:
+    branches:
+      - refactor/home-match-card-state
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/home-match-card-state
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Update test assertions
+        run: python scripts/oneoff_update_card_state_tests.py
+      - name: Commit test update
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/test_bets_sheet.py
+          git commit -m "Update card state contract tests"
+          git push origin HEAD:refactor/home-match-card-state
