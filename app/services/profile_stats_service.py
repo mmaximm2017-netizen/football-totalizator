@@ -42,12 +42,13 @@ def _quality_ranks(rows, user_id):
     return rankings
 
 
-def get_profile_stats(user_id, tournament_id):
+def get_profile_stats(user_id, tournament_id, cur=None):
     """Return bounded finished-prediction stats for one user and tournament."""
-    conn = cur = None
-    try:
+    conn = None
+    if cur is None:
         conn = get_db()
         cur = conn.cursor()
+    try:
         cur.execute(
             """
             SELECT
