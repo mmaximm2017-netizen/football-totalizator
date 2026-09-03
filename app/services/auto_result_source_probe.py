@@ -1,7 +1,7 @@
 """Read-only prototype parsers for future automatic result ingestion.
 
 This module deliberately has no database access and no match-finalization logic.
-It only turns public source HTML into normalized match observations so source
+It only turns public source HTML into normalized observations so source
 feasibility can be tested without any production mutation path.
 """
 
@@ -17,7 +17,6 @@ from app.services.rpl_team_catalog import normalize_team_text
 
 STATUS_FINISHED = "finished"
 STATUS_NOT_FOUND = "not_found"
-STATUS_SOURCE_ERROR = "source_error"
 
 
 @dataclass(frozen=True)
@@ -49,9 +48,9 @@ def _fields(record: str) -> dict[str, str]:
 def parse_flashscore_feed(html: str) -> list[SourceObservation]:
     """Parse the server-rendered Flashscore feed embedded in tournament HTML.
 
-    Field meaning is intentionally limited to values verified by the prototype:
-    AD = kickoff epoch, AB = match state, AE/AF = home/away, AG/AH = final score.
-    Only AB=3 is accepted as finished; all other states are ignored.
+    Fields used here were verified against real finished RPL matches during the
+    prototype: AD kickoff epoch, AB state, AE/AF home/away, AG/AH score.
+    Only AB=3 is accepted as finished. Unknown states fail closed by omission.
     """
     if "¬" not in html or "÷" not in html or "~AA÷" not in html:
         raise SourceParseError("flashscore embedded match feed not found")
@@ -87,17 +86,33 @@ def parse_flashscore_feed(html: str) -> list[SourceObservation]:
     return observations
 
 
-class _RfsCupParser(HTMLParser):
+class _AncestorParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.stack: list[tuple[str, set[str]]] = []
+
+    def handle_starttag(self, tag, attrs):
+        self.stack.append((tag, set(dict(attrs).get("class", "").split())))
+
+    def handle_endtag(self, tag):
+        if self.stack:
+            self.stack.pop()
+
+    def has_ancestor(self, *required):
+        wanted = set(required)
+        return any(wanted.issubset(classes) for _, classes in self.stack)
+
+
+class _RfsCupParser(_AncestorParser):
+    def __init__(self):
+        super().__init__()
         self.current = None
         self.matches = []
 
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
         classes = set(attrs_dict.get("class", "").split())
-        self.stack.append((tag, classes))
+        super().handle_starttag(tag, attrs)
         if tag == "div" and "tour-match" in classes:
             self.current = {
                 "home": [], "away": [], "score": [], "penalty": [], "href": None
@@ -106,12 +121,11 @@ class _RfsCupParser(HTMLParser):
             self.current["href"] = attrs_dict.get("href")
 
     def handle_endtag(self, tag):
-        if not self.stack:
-            return
-        ended_tag, ended_classes = self.stack.pop()
-        if ended_tag == "div" and "tour-match" in ended_classes and self.current is not None:
+        ended = self.stack[-1] if self.stack else (None, set())
+        if ended[0] == "div" and "tour-match" in ended[1] and self.current is not None:
             self.matches.append(self.current)
             self.current = None
+        super().handle_endtag(tag)
 
     def handle_data(self, data):
         if self.current is None:
@@ -119,22 +133,22 @@ class _RfsCupParser(HTMLParser):
         text = data.strip()
         if not text:
             return
-        ancestors = [classes for _, classes in self.stack]
-        if any("tour-match__penalty" in classes for classes in ancestors):
+        if self.has_ancestor("tour-match__penalty"):
             self.current["penalty"].append(text)
             return
-        if any("tour-match__score" in classes for classes in ancestors):
+        if self.has_ancestor("tour-match__score"):
             self.current["score"].append(text)
             return
-        if not any("tour-match__name" in classes for classes in ancestors):
+        if not self.has_ancestor("tour-match__name"):
             return
-        if any("first" in classes and "tour-match__team" in classes for classes in ancestors):
+        if self.has_ancestor("tour-match__team", "first"):
             self.current["home"].append(text)
-        elif any("last" in classes and "tour-match__team" in classes for classes in ancestors):
+        elif self.has_ancestor("tour-match__team", "last"):
             self.current["away"].append(text)
 
 
 def parse_rfs_cup_listing(html: str) -> list[dict]:
+    """Return cup candidates; penalty is exposed only so callers can discard it."""
     parser = _RfsCupParser()
     parser.feed(html)
     if not parser.matches:
@@ -154,8 +168,81 @@ def parse_rfs_cup_listing(html: str) -> list[dict]:
                 "match_href": item["href"],
                 "home_score": int(score.group(1)) if score else None,
                 "away_score": int(score.group(2)) if score else None,
-                # Penalty is exposed only to prove it can be discarded explicitly.
                 "penalty": " ".join(item["penalty"]).strip() or None,
+            }
+        )
+    return result
+
+
+class _RfsNationalParser(_AncestorParser):
+    def __init__(self):
+        super().__init__()
+        self.current = None
+        self.matches = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs_dict = dict(attrs)
+        classes = set(attrs_dict.get("class", "").split())
+        super().handle_starttag(tag, attrs)
+        if tag == "div" and "calendar__row" in classes:
+            self.current = {
+                "home": [], "away": [], "date_time": [], "score": [], "href": None
+            }
+        if self.current is not None:
+            onclick = attrs_dict.get("onclick", "")
+            match = re.search(r"['\"](/match/\d+)['\"]", onclick)
+            if match:
+                self.current["href"] = match.group(1)
+            href = attrs_dict.get("href", "")
+            if re.fullmatch(r"/match/\d+", href):
+                self.current["href"] = href
+
+    def handle_endtag(self, tag):
+        ended = self.stack[-1] if self.stack else (None, set())
+        if ended[0] == "div" and "calendar__row" in ended[1] and self.current is not None:
+            self.matches.append(self.current)
+            self.current = None
+        super().handle_endtag(tag)
+
+    def handle_data(self, data):
+        if self.current is None:
+            return
+        text = data.strip()
+        if not text:
+            return
+        if self.has_ancestor("calendar__row-team", "team1") and self.has_ancestor("title"):
+            self.current["home"].append(text)
+        elif self.has_ancestor("calendar__row-team", "team2") and self.has_ancestor("title"):
+            self.current["away"].append(text)
+        elif self.has_ancestor("calendar__row-first"):
+            self.current["date_time"].append(text)
+        elif self.has_ancestor("score-item"):
+            self.current["score"].append(text)
+
+
+def parse_rfs_national_listing(html: str) -> list[dict]:
+    parser = _RfsNationalParser()
+    parser.feed(html)
+    if not parser.matches:
+        raise SourceParseError("RFS national-team calendar rows not found")
+    result = []
+    for item in parser.matches:
+        home = " ".join(item["home"]).strip()
+        away = " ".join(item["away"]).strip()
+        date_text = " ".join(item["date_time"])
+        date_match = re.search(r"(\d{2})\.(\d{2})\.(20\d{2})", date_text)
+        score_numbers = [int(value) for value in re.findall(r"\b\d{1,2}\b", " ".join(item["score"]))]
+        if not home or not away or not item["href"] or not date_match:
+            continue
+        day, month, year = date_match.groups()
+        result.append(
+            {
+                "home_team": home,
+                "away_team": away,
+                "match_date": f"{year}-{month}-{day}",
+                "match_href": item["href"],
+                "home_score": score_numbers[0] if len(score_numbers) >= 2 else None,
+                "away_score": score_numbers[1] if len(score_numbers) >= 2 else None,
             }
         )
     return result
@@ -174,12 +261,20 @@ _RU_MONTHS = {
 }
 
 
-def parse_rfs_finished_detail(html: str, *, source: str = "rfs") -> SourceObservation:
-    """Parse an RFS match detail after a candidate match URL has been identified."""
+def parse_rfs_finished_detail(
+    html: str,
+    *,
+    regulation_score: tuple[int, int],
+    source: str = "rfs",
+) -> SourceObservation:
+    """Confirm RFS final status/date while reusing the listing's regulation score.
+
+    This avoids accidentally treating a kickoff time or penalty shootout as the
+    score. The listing and detail page are both from the same RFS source.
+    """
     text = _plain_text(html)
     if "Матч окончен" not in text:
         return SourceObservation(source=source, status=STATUS_NOT_FOUND, detail="not finished")
-
     date_match = re.search(
         r"\b(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(20\d{2})\b",
         text,
@@ -188,35 +283,40 @@ def parse_rfs_finished_detail(html: str, *, source: str = "rfs") -> SourceObserv
     if not date_match:
         raise SourceParseError("RFS finished match date not found")
     day, month_name, year = date_match.groups()
-    match_date = datetime(int(year), _RU_MONTHS[month_name.casefold()], int(day)).date().isoformat()
-
-    # RFS detail pages render the regulation-time score separately. This parser
-    # intentionally takes the first conventional score and never consumes a
-    # later penalty shootout value.
-    score_match = re.search(r"(?<!\d)(\d{1,2})\s*:\s*(\d{1,2})(?!\d)", text)
-    if not score_match:
-        raise SourceParseError("RFS finished match score not found")
+    match_date = datetime(
+        int(year), _RU_MONTHS[month_name.casefold()], int(day)
+    ).date().isoformat()
     return SourceObservation(
         source=source,
         match_date=match_date,
-        home_score=int(score_match.group(1)),
-        away_score=int(score_match.group(2)),
+        home_score=int(regulation_score[0]),
+        away_score=int(regulation_score[1]),
         status=STATUS_FINISHED,
     )
 
 
+def _candidate_keys(primary: str, aliases: tuple[str, ...]) -> set[str]:
+    return {normalize_team_text(value) for value in (primary, *aliases)}
+
+
 def find_exact_match(
-    observations: list[SourceObservation], *, home_team: str, away_team: str, match_date: str
+    observations: list[SourceObservation],
+    *,
+    home_team: str,
+    away_team: str,
+    match_date: str,
+    home_aliases: tuple[str, ...] = (),
+    away_aliases: tuple[str, ...] = (),
 ) -> SourceObservation | None:
-    """Strict date + ordered home/away lookup; no fuzzy matching."""
-    home_key = normalize_team_text(home_team)
-    away_key = normalize_team_text(away_team)
+    """Strict date + ordered home/away lookup with explicit aliases only."""
+    home_keys = _candidate_keys(home_team, home_aliases)
+    away_keys = _candidate_keys(away_team, away_aliases)
     for item in observations:
         if item.match_date != match_date:
             continue
-        if normalize_team_text(item.home_team) != home_key:
+        if normalize_team_text(item.home_team) not in home_keys:
             continue
-        if normalize_team_text(item.away_team) != away_key:
+        if normalize_team_text(item.away_team) not in away_keys:
             continue
         return item
     return None
