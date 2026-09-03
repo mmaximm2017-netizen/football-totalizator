@@ -10,6 +10,7 @@ scripts/send_deadline_pushes.py
 scripts/send_match_result_pushes.py
 scripts/auto_result_sources.py
 scripts/auto_result_worker.py
+scripts/auto_result_runtime.py
 scripts/send_morning_digest.py
 scripts/host_telegram_notifier.py
 scripts/monitor_production.py
