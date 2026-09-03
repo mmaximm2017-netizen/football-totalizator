@@ -1,0 +1,85 @@
+name: One-off enable auto-results dry-run
+
+on:
+  push:
+    branches:
+      - ops/enable-auto-result-dry-run
+    paths:
+      - .activate-auto-results-trigger
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Enable and verify production dry-run
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd /opt/football-totalizator
+
+            echo '=== before ==='
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            from app.db import get_db, close_db
+            conn=get_db(); cur=conn.cursor()
+            try:
+                cur.execute("SELECT id, status, home_score, away_score FROM matches WHERE id=401")
+                print('MATCH401_BEFORE', cur.fetchone())
+            finally:
+                close_db(conn,cur)
+            PY
+
+            python3 - <<'PY'
+            from pathlib import Path
+            path=Path('.env')
+            text=path.read_text(encoding='utf-8') if path.exists() else ''
+            lines=text.splitlines()
+            wanted={'AUTO_RESULTS_ENABLED':'true','AUTO_RESULTS_DRY_RUN':'true'}
+            seen=set(); out=[]
+            for line in lines:
+                stripped=line.strip()
+                if '=' in stripped and not stripped.startswith('#'):
+                    key=stripped.split('=',1)[0].strip()
+                    if key in wanted:
+                        if key not in seen:
+                            out.append(f'{key}={wanted[key]}'); seen.add(key)
+                        continue
+                out.append(line)
+            for key,value in wanted.items():
+                if key not in seen:
+                    out.append(f'{key}={value}')
+            path.write_text('\n'.join(out).rstrip()+'\n',encoding='utf-8')
+            PY
+            chmod 600 .env
+            chmod +x scripts/run_auto_results.sh
+
+            cron_line='*/5 * * * * /bin/bash /opt/football-totalizator/scripts/run_auto_results.sh'
+            current="$(crontab -l 2>/dev/null || true)"
+            if ! printf '%s\n' "$current" | grep -Fqx "$cron_line"; then
+              { printf '%s\n' "$current"; printf '%s\n' "$cron_line"; } | sed '/^[[:space:]]*$/d' | crontab -
+            fi
+
+            echo '=== configured ==='
+            grep '^AUTO_RESULTS_' .env
+            crontab -l | grep -F 'run_auto_results.sh'
+
+            echo '=== manual dry-run invocation ==='
+            /bin/bash scripts/run_auto_results.sh
+            tail -n 20 /var/log/totish-auto-results.log || true
+
+            echo '=== after ==='
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            from app.db import get_db, close_db
+            conn=get_db(); cur=conn.cursor()
+            try:
+                cur.execute("SELECT id, status, home_score, away_score FROM matches WHERE id=401")
+                print('MATCH401_AFTER', cur.fetchone())
+            finally:
+                close_db(conn,cur)
+            PY
