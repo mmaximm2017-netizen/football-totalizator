@@ -17,6 +17,7 @@ tests/
 docs/
 scripts/*
 !scripts/sync_once.py
+!scripts/run_migrations.py
 build/
 dist/
 *.egg-info/
