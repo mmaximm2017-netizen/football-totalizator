@@ -81,6 +81,15 @@ def validate_endpoint_target(endpoint, *, resolver=socket.getaddrinfo):
     if hostname == "localhost" or hostname.endswith(".localhost"):
         raise UnsafePushEndpointError("endpoint host is not public")
 
+    try:
+        literal_ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        literal_ip = None
+    if literal_ip is not None:
+        if not literal_ip.is_global:
+            raise UnsafePushEndpointError("endpoint host is not public")
+        return normalized
+
     port = parsed.port or 443
     try:
         results = resolver(hostname, port, type=socket.SOCK_STREAM)
