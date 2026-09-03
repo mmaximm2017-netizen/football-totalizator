@@ -27,7 +27,6 @@ from app.services.tournament_context_service import (
 )
 from app.services.tournament_service import (
     get_all_tournaments,
-    get_tournament_by_id,
 )
 from app.services.wc_playoff_service import (
     determine_effective_playoff_stage,
