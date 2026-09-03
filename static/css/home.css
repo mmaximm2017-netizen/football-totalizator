@@ -5168,15 +5168,23 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         width: 80px;
         height: 18px;
         border-radius: 6px;
-        background: #c0c0c0;
         flex-shrink: 0;
-        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-header .skeleton-text {
         flex: 1;
         height: 18px;
         border-radius: 6px;
+    }
+
+    .skeleton-header .skeleton-icon,
+    .skeleton-flag,
+    .skeleton-input,
+    .skeleton-divider,
+    .skeleton-text,
+    .skeleton-button {
+        background: #c0c0c0;
+        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-teams {
@@ -5191,9 +5199,7 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         width: 88px;
         height: 88px;
         border-radius: 50%;
-        background: #c0c0c0;
         margin: 0 auto;
-        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-score-container {
@@ -5208,32 +5214,24 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         width: 48px;
         height: 36px;
         border-radius: 8px;
-        background: #c0c0c0;
-        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-divider {
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: #c0c0c0;
-        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-text {
         height: 12px;
         border-radius: 6px;
-        background: #c0c0c0;
-        animation: pulse 1.5s ease-in-out infinite;
     }
 
     .skeleton-button {
         width: 100%;
         height: 44px;
         border-radius: 18px;
-        background: #c0c0c0;
         margin-top: 10px;
-        animation: pulse 1.5s ease-in-out infinite;
     }
     
 
