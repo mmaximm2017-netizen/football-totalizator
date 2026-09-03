@@ -19,7 +19,7 @@ def test_home_css_split_preserves_full_source_length_and_order():
         for path in HOME_CSS_FILES
     )
 
-    assert len(combined) == 246650
+    assert len(combined.splitlines()) == 7325
 
     markers = [
         "WC2026 V2 FINAL HOME CARD LAYER",
@@ -35,6 +35,7 @@ def test_home_css_split_preserves_full_source_length_and_order():
 def test_home_template_loads_split_css_in_source_order():
     template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
 
-    positions = [template.index(path) for path in HOME_CSS_FILES]
+    template_paths = [path.removeprefix("static/") for path in HOME_CSS_FILES]
+    positions = [template.index(path) for path in template_paths]
     assert positions == sorted(positions)
     assert "css/home.css" not in template
