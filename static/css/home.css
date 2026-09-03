@@ -5253,11 +5253,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             filter var(--wc26-motion-normal, 170ms) var(--wc26-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
     }
 
-    body.tournament-wc2026 .match-card-v2 .bets-link-v2:active {
-        transform: scale(0.982);
-        filter: brightness(0.96);
-    }
-
     body.tournament-wc2026 .match-card-v2 .bets-link-v2 {
         display: inline-flex;
         align-items: center;
