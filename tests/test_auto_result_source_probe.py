@@ -1,4 +1,4 @@
-from app.services.auto_result_source_probe import (
+from scripts.auto_result_source_probe_core import (
     STATUS_FINISHED,
     STATUS_NOT_FOUND,
     SourceParseError,
