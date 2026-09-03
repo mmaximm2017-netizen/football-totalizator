@@ -8,9 +8,12 @@ from app.routes.push import push_bp
 from app.services.web_push_service import (
     SubscriptionOwnershipError,
     SubscriptionValidationError,
-    normalize_endpoint,
+    UnsafePushEndpointError,
+    _NoRedirectSession,
     delivery_error_status,
+    normalize_endpoint,
     upsert_subscription,
+    validate_endpoint_target,
 )
 
 
@@ -79,6 +82,13 @@ class DeliveryCursor(Cursor):
 
 class WebPushTests(unittest.TestCase):
     def setUp(self):
+        self.dns_patch = patch(
+            "app.services.web_push_service.socket.getaddrinfo",
+            return_value=[(2, 1, 6, "", ("1.1.1.1", 443))],
+        )
+        self.dns_patch.start()
+        self.addCleanup(self.dns_patch.stop)
+
         self.app = Flask(__name__)
         self.app.secret_key = "test"
         self.app.register_blueprint(push_bp)
@@ -131,6 +141,56 @@ class WebPushTests(unittest.TestCase):
             normalize_endpoint("javascript:alert(1)")
         with self.assertRaises(SubscriptionValidationError):
             upsert_subscription(Cursor(), 7, {"endpoint": "https://push.example/sub"})
+
+    def test_push_endpoint_rejects_localhost_and_private_literal_addresses(self):
+        blocked = [
+            "https://localhost/push",
+            "https://sub.localhost/push",
+            "https://127.0.0.1/push",
+            "https://10.0.0.1/push",
+            "https://172.16.0.1/push",
+            "https://192.168.1.1/push",
+            "https://169.254.169.254/latest/meta-data",
+            "https://[::1]/push",
+            "https://[fc00::1]/push",
+            "https://[fe80::1]/push",
+        ]
+        for endpoint in blocked:
+            with self.subTest(endpoint=endpoint):
+                with self.assertRaises(UnsafePushEndpointError):
+                    validate_endpoint_target(endpoint)
+
+    def test_push_endpoint_rejects_hostname_resolving_to_non_public_address(self):
+        with patch(
+            "app.services.web_push_service.socket.getaddrinfo",
+            return_value=[(2, 1, 6, "", ("192.168.50.10", 443))],
+        ):
+            with self.assertRaises(UnsafePushEndpointError):
+                validate_endpoint_target("https://push.example/sub")
+
+    def test_push_endpoint_rejects_mixed_public_and_private_dns_answers(self):
+        with patch(
+            "app.services.web_push_service.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("1.1.1.1", 443)),
+                (2, 1, 6, "", ("10.0.0.8", 443)),
+            ],
+        ):
+            with self.assertRaises(UnsafePushEndpointError):
+                validate_endpoint_target("https://push.example/sub")
+
+    def test_push_endpoint_accepts_public_dns_target(self):
+        self.assertEqual(
+            validate_endpoint_target("https://push.example/sub"),
+            "https://push.example/sub",
+        )
+
+    def test_push_delivery_session_does_not_follow_redirects(self):
+        session = _NoRedirectSession()
+        with patch.object(session._session, "post", return_value="response") as post:
+            result = session.post("https://push.example/sub", timeout=10, data=b"x")
+        self.assertEqual(result, "response")
+        self.assertFalse(post.call_args.kwargs["allow_redirects"])
 
     def test_subscribe_uses_session_user_and_accepts_device_metadata(self):
         cursor = Cursor()
