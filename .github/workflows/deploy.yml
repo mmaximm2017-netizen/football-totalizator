@@ -260,23 +260,10 @@ jobs:
               exit 0
             fi
 
-            repo="ghcr.io/mmaximm2017-netizen/football-totalizator"
-            mapfile -t image_ids < <(
-              docker image ls --no-trunc --format '{{.Repository}} {{.ID}}' |
-              awk -v repo="$repo" '$1 == repo {print $2}' |
-              sort -u
-            )
-
-            removed=0
-            for image_id in "${image_ids[@]}"; do
-              [[ -n "$image_id" ]] || continue
-              if docker ps -aq --filter "ancestor=$image_id" | grep -q .; then
-                continue
-              fi
-              if docker image rm -f "$image_id" >/dev/null 2>&1; then
-                removed=$((removed + 1))
-              fi
-            done
+            before_images="$(docker image ls -q | sort -u | wc -l)"
+            docker image prune --all --force >/dev/null
+            after_images="$(docker image ls -q | sort -u | wc -l)"
+            removed=$((before_images - after_images))
 
             docker builder prune --all --force >/dev/null
-            echo "POST_DEPLOY_CLEANUP_OK: removed_unused_totish_images=$removed"
+            echo "POST_DEPLOY_CLEANUP_OK: removed_unused_images=$removed"
