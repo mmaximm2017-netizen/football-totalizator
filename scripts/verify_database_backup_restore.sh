@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_DIR="\${TOTISH_STATE_DIR:-$HOME/.local/state/totish}"
-BACKUP_DIR="\${TOTISH_DB_BACKUP_DIR:-$STATE_DIR/backups}"
-LOCK_FILE="\${TOTISH_DB_RESTORE_VERIFY_LOCK:-$STATE_DIR/database-restore-verify.lock}"
-POSTGRES_IMAGE="\${TOTISH_DB_BACKUP_IMAGE:-postgres:17}"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STATE_DIR="${TOTISH_STATE_DIR:-$HOME/.local/state/totish}"
+BACKUP_DIR="${TOTISH_DB_BACKUP_DIR:-$STATE_DIR/backups}"
+LOCK_FILE="${TOTISH_DB_RESTORE_VERIFY_LOCK:-$STATE_DIR/database-restore-verify.lock}"
+POSTGRES_IMAGE="${TOTISH_DB_BACKUP_IMAGE:-postgres:17}"
 
 for tool in docker flock sha256sum find sort head; do
     command -v "$tool" >/dev/null 2>&1 || {

@@ -76,3 +76,12 @@ def test_monitor_checks_backup_freshness_without_exposing_dump_contents():
     assert '"backup:stale"' in source
     assert '"backup:checksum_missing"' in source
     assert "check_database_backup()" in source
+
+
+def test_backup_shell_variables_are_not_literal_escaped_text():
+    for relative in (
+        "scripts/run_database_backup.sh",
+        "scripts/verify_database_backup_restore.sh",
+    ):
+        source = (ROOT / relative).read_text(encoding="utf-8")
+        assert r"\${" not in source
