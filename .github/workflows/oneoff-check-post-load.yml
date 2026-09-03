@@ -1,0 +1,58 @@
+name: One-off post-load check
+
+on:
+  push:
+    branches:
+      - audit/check-post-load
+    paths:
+      - .post-load-trigger
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Read production state and logs
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            echo '=== NOW UTC ==='
+            date -u
+            echo '=== PUBLIC HEALTH ==='
+            curl -sS -o /tmp/public-health -w 'code=%{http_code} total=%{time_total}s\n' --max-time 10 https://totish.ru/health || true
+            cat /tmp/public-health 2>/dev/null || true
+            echo
+            echo '=== LOCAL HEALTH ==='
+            curl -sS -o /tmp/local-health -w 'code=%{http_code} total=%{time_total}s\n' --max-time 10 http://127.0.0.1:8000/health || true
+            cat /tmp/local-health 2>/dev/null || true
+            echo
+            echo '=== CONTAINER ==='
+            docker inspect football-totalizator-app-1 --format 'status={{.State.Status}} running={{.State.Running}} restarting={{.State.Restarting}} restart_count={{.RestartCount}} started={{.State.StartedAt}} image={{.Config.Image}}'
+            echo '=== APP LOGS AROUND LOAD ==='
+            docker logs --since '2026-09-03T13:20:45Z' --until '2026-09-03T13:22:00Z' football-totalizator-app-1 2>&1 | tail -n 200 || true
+            echo '=== NGINX ERROR AROUND LOAD ==='
+            if [ -f /var/log/nginx/error.log ]; then grep '2026/09/03 13:21' /var/log/nginx/error.log | tail -n 100 || true; fi
+            echo '=== NGINX ACCESS AROUND LOAD ==='
+            if [ -f /var/log/nginx/access.log ]; then grep '03/Sep/2026:13:21' /var/log/nginx/access.log | tail -n 100 || true; fi
+            echo '=== NGINX JOURNAL AROUND LOAD ==='
+            journalctl -u nginx --since '2026-09-03 13:20:45 UTC' --until '2026-09-03 13:22:00 UTC' --no-pager -n 100 2>/dev/null || true
+            echo '=== CRONTAB ==='
+            crontab -l 2>/dev/null || true
+            echo '=== MONITOR LOG CANDIDATES ==='
+            find "$HOME/.local/state/totish" /var/log "${PWD}/runtime" -maxdepth 3 -type f \( -iname '*monitor*' -o -iname '*cron*' \) -print 2>/dev/null | head -n 50 || true
+            echo '=== RECENT MONITOR OUTPUT ==='
+            for f in "$HOME/.local/state/totish/production-monitor.log" "$PWD/runtime/production-monitor.log" "$PWD/runtime/monitor.log"; do
+              if [ -f "$f" ]; then echo "--- $f"; tail -n 100 "$f"; fi
+            done
+            echo '=== DEDUPE STATE ==='
+            cat "$HOME/.local/state/totish/production-monitor-dedupe.json" 2>/dev/null || true
