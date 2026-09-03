@@ -174,6 +174,16 @@ class DbInitializationTests(unittest.TestCase):
         self.assertNotIn("UPDATE MATCHES", source)
         self.assertNotIn("UPDATE USERS", source)
 
+    def test_init_db_does_not_modify_schema_or_backfill_existing_rows(self):
+        source = inspect.getsource(db.init_db).upper()
+
+        self.assertNotIn("CREATE TABLE", source)
+        self.assertNotIn("ALTER TABLE", source)
+        self.assertNotIn("CREATE INDEX", source)
+        self.assertNotIn("DROP INDEX", source)
+        self.assertNotIn("UPDATE MATCHES", source)
+        self.assertNotIn("UPDATE USERS", source)
+
     def test_dead_connection_is_replaced_and_close_db_returns_connection(self):
         dead = Connection(closed=True)
         replacement = Connection()
