@@ -354,6 +354,12 @@ def _validate_analytics_sql(sql):
 
     lowered = body.lower()
 
+    # Quoted SQL identifiers can bypass simple schema-name checks, e.g.
+    # "public"."users". The analytics endpoint does not need quoted
+    # identifiers, so reject them before PostgreSQL sees the query.
+    if '"' in body:
+        raise ValueError("quoted_identifiers_not_allowed")
+
     # The database role will ultimately have SELECT only on gpt_safe views.
     # These checks additionally stop obvious attempts to reach metadata or
     # explicitly-qualified non-safe schemas before PostgreSQL sees the query.

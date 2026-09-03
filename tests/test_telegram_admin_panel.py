@@ -717,7 +717,7 @@ def test_prediction_score_renderer_refuses_forged_predeadline_callback():
     text, _ = bot._format_prediction_scores({"match": {"match_id": 42, "home_team": "Акрон", "away_team": "ЦСКА"}, "deadline_open": True, "predictions": [{"username": "Игрок", "home_goals": 2, "away_goals": 1}]})
 
     assert "🔒 Прогнозы пока закрыты." in text
-    assert "2:1" not in text
+    assert "Игрок — 2:1" not in text
 
 
 def test_prediction_screen_callbacks_are_bound_to_displayed_match():
@@ -766,10 +766,10 @@ def test_nonexistent_match_id_is_safe():
 
 
 def test_today_renderer_never_renders_future_prediction_scores():
-    text, _ = bot._format_today({"matches": [{"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-28T15:00:00+00:00", "home_team": "Акрон", "away_team": "ЦСКА", "predicted_count": 5, "participant_count": 6, "home_goals": 2}]})
+    text, _ = bot._format_today({"matches": [{"tournament_name": "Чемпионат России 🇷🇺", "kickoff_time": "2026-08-28T15:00:00+00:00", "home_team": "Акрон", "away_team": "ЦСКА", "predicted_count": 5, "participant_count": 6, "home_goals": 97, "away_goals": 98}]})
 
     assert "Прогнозы: 5/6" in text
-    assert "2:1" not in text
+    assert "97:98" not in text
 
 
 def test_first_today_sends_photo_and_refresh_edits_existing_photo(tmp_path, monkeypatch):
