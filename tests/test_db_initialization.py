@@ -2,6 +2,8 @@ import inspect
 import unittest
 from unittest.mock import Mock, patch
 
+from werkzeug.security import check_password_hash
+
 from app import db
 
 
@@ -122,6 +124,12 @@ class DbInitializationTests(unittest.TestCase):
         db.seed_russian_cup_tournament(cur)
 
         self.assertEqual(tournaments, [{"name": db.RUSSIAN_CUP_TOURNAMENT_NAME, "is_active": 1}])
+
+    def test_bootstrap_admin_password_is_hashed_before_storage(self):
+        password_hash = db.build_bootstrap_admin_password_hash()
+
+        self.assertNotEqual(password_hash, db.ADMIN_PASSWORD)
+        self.assertTrue(check_password_hash(password_hash, db.ADMIN_PASSWORD))
 
     def test_init_db_runs_russian_cup_seed_only_through_controlled_initialization(self):
         conn = Mock()
