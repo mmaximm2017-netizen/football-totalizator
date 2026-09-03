@@ -70,7 +70,7 @@ replace_all(ROOT / "app/routes/admin_matches.py", {
 match_service = ROOT / "app/services/match_service.py"
 text = match_service.read_text(encoding="utf-8-sig")
 pattern = re.compile(
-    r'def get_tournament_id_by_name\(cur, name\):\n.*?\n    return None\n(?=def should_update\(\):)',
+    r'def get_tournament_id_by_name\(cur, name\):\n.*?(?=def should_update\(\):)',
     re.S,
 )
 replacement = '''def get_tournament_id_by_name(cur, name):\n    cur.execute(\n        "SELECT id FROM tournaments WHERE name = %s ORDER BY id DESC LIMIT 1",\n        (name,),\n    )\n    row = cur.fetchone()\n    return row[0] if row else None\n\n'''
