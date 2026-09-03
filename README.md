@@ -12,7 +12,7 @@ What this command does:
 - Updates matches from external sources.
 - Recalculates points after match updates.
 - Does not run automatically on web app startup.
-- Can be run manually or scheduled later with Render Cron.
+- Can be run manually when an administrator intentionally needs a one-off sync.
 
 Quick check after running:
 - In command output/logs you should see `sync done`.
