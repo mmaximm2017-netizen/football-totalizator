@@ -75,8 +75,10 @@ def mark_preview_duplicates(cur, draft, tournament_id):
     from app.services.manual_match_creation_service import build_manual_deadline_utc
     seen = set()
     for match in draft["matches"]:
-        checked = validate_confirmed_fields(match); match.update(checked)
-        if checked["status"] != "ready": continue
+        checked = validate_confirmed_fields(match)
+        match.update(checked)
+        if checked["status"] != "ready":
+            continue
         kickoff, _ = build_manual_deadline_utc(checked["date"], checked["time"])
         key = (checked["home_team"], checked["away_team"], kickoff)
         if key in seen: match.update(status="invalid", reasons=["Дубликат внутри черновика"]); continue
