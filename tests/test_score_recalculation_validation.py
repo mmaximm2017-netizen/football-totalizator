@@ -21,10 +21,10 @@ class Cursor:
             self.match_id = params[0]
         elif "SELECT id" in query and "FROM matches" in query:
             self.mode = "all_matches"
+        elif "UPDATE predictions AS p" in query:
+            self.updates.append(params)
         elif "FROM predictions" in query:
             self.mode = "predictions"
-        elif "UPDATE predictions" in query:
-            self.updates.append(params)
 
     def fetchone(self):
         return self.matches.get(self.match_id)
@@ -69,7 +69,26 @@ class ScoreRecalculationValidationTests(unittest.TestCase):
 
         self.assertEqual(result["updated"], 1)
         calculate.assert_called_once_with(0, 0, 0, 0)
-        self.assertEqual(cur.updates[0][0], 10)
+        self.assertEqual(cur.updates[0][0], [7])
+        self.assertEqual(cur.updates[0][1], [10])
+
+    def test_multiple_predictions_use_one_points_update(self):
+        cur = Cursor(
+            {1: (1, "FINISHED", 2, 1, 5)},
+            predictions=[
+                (7, 2, 1, 5),
+                (8, 1, 1, 5),
+                (9, 0, 2, 5),
+            ],
+        )
+        with patch.object(service, "calculate_points", side_effect=[10, 2, 0]):
+            result = service.recalc_match_points(1, conn=Connection(), cur=cur)
+
+        self.assertEqual(result["updated"], 3)
+        self.assertEqual(len(cur.updates), 1)
+        self.assertEqual(cur.updates[0][0], [7, 8, 9])
+        self.assertEqual(cur.updates[0][1], [10, 2, 0])
+        self.assertEqual(cur.updates[0][2:], (1, 5))
 
     def test_invalid_finished_match_skips_while_valid_match_is_recalculated(self):
         cur = Cursor(
