@@ -57,14 +57,16 @@ def get_tournament_by_id(tournament_id, cur=None):
             close_db(conn, cur)
 
 
-def get_active_tournament():
+def get_active_tournament(cur=None):
     """
     Active tournament resolution for runtime use:
     1) latest by start_date <= today (MSK)
     2) fallback to latest is_active=1
     """
-    conn = get_db()
-    cur = conn.cursor()
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         today = datetime.now(MSK).date().isoformat()
 
@@ -94,29 +96,33 @@ def get_active_tournament():
         )
         return _row_to_tournament(cur.fetchone())
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
-def get_active_tournament_id():
-    t = get_active_tournament()
+def get_active_tournament_id(cur=None):
+    t = get_active_tournament(cur=cur)
     return t["id"] if t else None
 
 
-def count_active_tournaments():
-    conn = get_db()
-    cur = conn.cursor()
+def count_active_tournaments(cur=None):
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
     try:
         cur.execute("SELECT COUNT(*) FROM tournaments WHERE is_active = 1")
         return cur.fetchone()[0] or 0
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
 
 
-def ensure_single_active_tournament():
+def ensure_single_active_tournament(cur=None):
     """
     Read-only safety check. Does not mutate data.
     """
-    active_count = count_active_tournaments()
+    active_count = count_active_tournaments(cur=cur)
     return {
         "ok": active_count <= 1,
         "active_count": active_count,
