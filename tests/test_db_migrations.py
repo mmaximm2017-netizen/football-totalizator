@@ -42,3 +42,36 @@ def test_repository_starts_with_non_destructive_baseline():
     assert "DROP TABLE" not in normalized
     assert "DELETE FROM" not in normalized
     assert "TRUNCATE" not in normalized
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "DROP TABLE users;",
+        "ALTER TABLE matches DROP COLUMN status;",
+        "ALTER TABLE matches RENAME COLUMN status TO old_status;",
+        "ALTER TABLE matches ALTER COLUMN status TYPE VARCHAR(10);",
+        "ALTER TABLE predictions ALTER COLUMN points SET NOT NULL;",
+        "TRUNCATE predictions;",
+        "DELETE FROM predictions;",
+    ],
+)
+def test_rollback_safety_rejects_destructive_migrations(tmp_path, statement):
+    path = tmp_path / "0002_unsafe.sql"
+    path.write_text(statement + "\n", encoding="utf-8")
+    found = migrations.discover_migrations(tmp_path)
+
+    with pytest.raises(migrations.MigrationError, match="not rollback-safe"):
+        migrations.validate_rollback_safe_migrations(found)
+
+
+def test_rollback_safety_allows_additive_migration(tmp_path):
+    path = tmp_path / "0002_add_index.sql"
+    path.write_text(
+        "ALTER TABLE matches ADD COLUMN IF NOT EXISTS note TEXT;\n"
+        "CREATE INDEX IF NOT EXISTS idx_matches_note ON matches(note);\n",
+        encoding="utf-8",
+    )
+    found = migrations.discover_migrations(tmp_path)
+
+    migrations.validate_rollback_safe_migrations(found)
