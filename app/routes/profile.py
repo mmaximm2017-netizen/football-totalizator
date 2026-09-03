@@ -80,11 +80,12 @@ def build_profile_position_metric(ranking, user_id):
     return {"kind": "gap", "label": "До лидера", "points": points, "points_text": format_profile_points(points)}
 
 
-def _public_user(user_id):
-    conn = cur = None
-    try:
+def _public_user(user_id, cur=None):
+    conn = None
+    if cur is None:
         conn = get_db()
         cur = conn.cursor()
+    try:
         cur.execute(
             """
             SELECT id, username
@@ -112,19 +113,30 @@ def _public_user(user_id):
             close_db(conn, cur)
 
 
-def _profile_tournament_context():
-    tournaments = get_all_tournaments()
-    tournament_id = get_selected_tournament_id(request.args.get("tid", type=int))
-    if not tournament_id:
-        abort(404)
-    selected_tournament = get_tournament_by_id(tournament_id)
-    return {
-        "tournaments": tournaments,
-        "active_tournaments": [item for item in tournaments if item.get("is_active")],
-        "tournament_id": tournament_id,
-        "tournament_state": get_tournament_state_flags(tournaments),
-        "tournament_name": selected_tournament["name"] if selected_tournament else "Турнир",
-    }
+def _profile_tournament_context(cur=None):
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
+    try:
+        tournaments = get_all_tournaments(cur=cur)
+        tournament_id = get_selected_tournament_id(
+            request.args.get("tid", type=int),
+            cur=cur,
+        )
+        if not tournament_id:
+            abort(404)
+        selected_tournament = get_tournament_by_id(tournament_id, cur=cur)
+        return {
+            "tournaments": tournaments,
+            "active_tournaments": [item for item in tournaments if item.get("is_active")],
+            "tournament_id": tournament_id,
+            "tournament_state": get_tournament_state_flags(tournaments),
+            "tournament_name": selected_tournament["name"] if selected_tournament else "Турнир",
+        }
+    finally:
+        if conn is not None:
+            close_db(conn, cur)
 
 
 @profile_bp.route('/profile')
@@ -245,11 +257,18 @@ def public_profile(user_id):
     viewer_user_id = session.get("user_id")
     if not viewer_user_id:
         return redirect(url_for("auth.login"))
-    context = _profile_tournament_context()
-    if str(viewer_user_id) == str(user_id):
-        return redirect(url_for("profile.profile", tid=context["tournament_id"]))
-    user = _public_user(user_id)
-    ranking = get_tournament_ranking(context["tournament_id"])
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        context = _profile_tournament_context(cur=cur)
+        if str(viewer_user_id) == str(user_id):
+            return redirect(url_for("profile.profile", tid=context["tournament_id"]))
+        user = _public_user(user_id, cur=cur)
+        ranking = get_tournament_ranking(context["tournament_id"], cur=cur)
+    finally:
+        close_db(conn, cur)
+
     row = next((item for item in ranking if str(item.get("user_id")) == str(user_id)), None)
     return render_template(
         "profile.html",
@@ -327,16 +346,23 @@ def public_profile_stats(user_id):
     viewer_user_id = session.get("user_id")
     if not viewer_user_id:
         return redirect(url_for("auth.login"))
-    context = _profile_tournament_context()
-    if str(viewer_user_id) == str(user_id):
-        return redirect(url_for("profile.profile_stats", tid=context["tournament_id"]))
-    user = _public_user(user_id)
-    ranking = get_tournament_ranking(context["tournament_id"])
-    row = next((item for item in ranking if str(item.get("user_id")) == str(user_id)), None)
+
+    conn = get_db()
+    cur = conn.cursor()
     try:
-        stats = get_profile_stats(user_id, context["tournament_id"])
-    except ProfileStatsIntegrityError:
-        abort(500)
+        context = _profile_tournament_context(cur=cur)
+        if str(viewer_user_id) == str(user_id):
+            return redirect(url_for("profile.profile_stats", tid=context["tournament_id"]))
+        user = _public_user(user_id, cur=cur)
+        ranking = get_tournament_ranking(context["tournament_id"], cur=cur)
+        row = next((item for item in ranking if str(item.get("user_id")) == str(user_id)), None)
+        try:
+            stats = get_profile_stats(user_id, context["tournament_id"], cur=cur)
+        except ProfileStatsIntegrityError:
+            abort(500)
+    finally:
+        close_db(conn, cur)
+
     return render_template(
         "profile_stats.html",
         username=user["username"],
@@ -359,14 +385,14 @@ def public_profile_predictions(user_id):
     viewer_user_id = session.get("user_id")
     if not viewer_user_id:
         return redirect(url_for("auth.login"))
-    context = _profile_tournament_context()
-    if str(viewer_user_id) == str(user_id):
-        return redirect(url_for("predictions.my_predictions", tid=context["tournament_id"]))
-    user = _public_user(user_id)
-    conn = cur = None
+
+    conn = get_db()
+    cur = conn.cursor()
     try:
-        conn = get_db()
-        cur = conn.cursor()
+        context = _profile_tournament_context(cur=cur)
+        if str(viewer_user_id) == str(user_id):
+            return redirect(url_for("predictions.my_predictions", tid=context["tournament_id"]))
+        user = _public_user(user_id, cur=cur)
         # Public history is intentionally finished-only and cannot load live bets.
         cur.execute(
             """
@@ -390,8 +416,7 @@ def public_profile_predictions(user_id):
             for row in cur.fetchall()
         ]
     finally:
-        if conn is not None:
-            close_db(conn, cur)
+        close_db(conn, cur)
     return render_template(
         "my_predictions.html",
         finished=finished,
