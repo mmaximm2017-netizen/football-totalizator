@@ -13,6 +13,20 @@ MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATION_RE = re.compile(r"^(?P<version>\d{4,})_(?P<name>[a-z0-9_]+)\.sql$")
 MIGRATION_LOCK_KEY = 847_202_609
 
+UNSAFE_MIGRATION_PATTERNS = {
+    "DROP TABLE": re.compile(r"\bDROP\s+TABLE\b", re.IGNORECASE),
+    "DROP COLUMN": re.compile(r"\bDROP\s+COLUMN\b", re.IGNORECASE),
+    "DROP CONSTRAINT": re.compile(r"\bDROP\s+CONSTRAINT\b", re.IGNORECASE),
+    "TRUNCATE": re.compile(r"\bTRUNCATE\b", re.IGNORECASE),
+    "DELETE FROM": re.compile(r"\bDELETE\s+FROM\b", re.IGNORECASE),
+    "RENAME": re.compile(r"\bALTER\s+TABLE\b[\s\S]*?\bRENAME\b", re.IGNORECASE),
+    "ALTER COLUMN TYPE": re.compile(
+        r"\bALTER\s+(?:COLUMN\s+)?[a-zA-Z_][a-zA-Z0-9_]*\s+TYPE\b",
+        re.IGNORECASE,
+    ),
+    "SET NOT NULL": re.compile(r"\bSET\s+NOT\s+NULL\b", re.IGNORECASE),
+}
+
 
 class MigrationError(RuntimeError):
     """Raised when migration history is inconsistent or a migration fails."""
@@ -28,6 +42,23 @@ class Migration:
 
 def _checksum(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _sql_without_comments(sql: str) -> str:
+    sql = re.sub(r"/\*[\s\S]*?\*/", " ", sql)
+    return re.sub(r"--[^\n]*", " ", sql)
+
+
+def validate_rollback_safe_migrations(
+    migrations: list[Migration],
+) -> None:
+    for migration in migrations:
+        sql = _sql_without_comments(migration.path.read_text(encoding="utf-8"))
+        for description, pattern in UNSAFE_MIGRATION_PATTERNS.items():
+            if pattern.search(sql):
+                raise MigrationError(
+                    f"Migration {migration.filename} is not rollback-safe: {description}"
+                )
 
 
 def discover_migrations(directory: Path = MIGRATIONS_DIR) -> list[Migration]:
@@ -88,6 +119,7 @@ def _load_history(cur) -> dict[int, tuple[str, str]]:
 
 def run_migrations(directory: Path = MIGRATIONS_DIR) -> dict:
     migrations = discover_migrations(directory)
+    validate_rollback_safe_migrations(migrations)
     conn = get_db()
     cur = conn.cursor()
     applied = []
