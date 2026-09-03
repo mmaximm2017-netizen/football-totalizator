@@ -118,6 +118,8 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         with (
             patch("app.routes.auth.get_db", return_value=conn),
             patch("app.routes.auth.close_db"),
+            patch("app.routes.auth.is_login_blocked", return_value=False),
+            patch("app.routes.auth.clear_login_failures"),
             patch("app.routes.auth.select_default_tournament_by_unfinished_match", return_value=6),
             patch("app.routes.auth.get_session_start_tournament_id", return_value=5) as fallback,
         ):
@@ -147,6 +149,8 @@ class SessionTournamentSelectionTests(unittest.TestCase):
         with (
             patch("app.routes.auth.get_db", return_value=conn),
             patch("app.routes.auth.close_db"),
+            patch("app.routes.auth.is_login_blocked", return_value=False),
+            patch("app.routes.auth.clear_login_failures"),
             patch("app.routes.auth.select_default_tournament_by_unfinished_match", return_value=None),
             patch("app.routes.auth.get_session_start_tournament_id", return_value=5) as fallback,
         ):

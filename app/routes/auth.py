@@ -41,13 +41,13 @@ def login():
         password = request.form.get('password', '')
         remote_addr = request.remote_addr
 
-        if is_login_blocked(remote_addr, username):
-            flash("Слишком много неудачных попыток. Попробуйте позже.", "error")
-            return render_template('login.html'), 429
-
         conn = get_db()
         cur = conn.cursor()
         try:
+            if is_login_blocked(cur, remote_addr, username):
+                flash("Слишком много неудачных попыток. Попробуйте позже.", "error")
+                return render_template('login.html'), 429
+
             cur.execute(
                 """
                 SELECT id, password, COALESCE(is_deleted, 0)
@@ -59,7 +59,8 @@ def login():
             user = cur.fetchone()
 
             if not user:
-                record_login_failure(remote_addr, username)
+                record_login_failure(cur, remote_addr, username)
+                conn.commit()
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
@@ -68,7 +69,8 @@ def login():
             is_deleted = user[2]
 
             if is_deleted == 1:
-                record_login_failure(remote_addr, username)
+                record_login_failure(cur, remote_addr, username)
+                conn.commit()
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
@@ -86,14 +88,15 @@ def login():
                         """,
                         (new_hash, user_id),
                     )
-                    conn.commit()
 
             if not password_ok:
-                record_login_failure(remote_addr, username)
+                record_login_failure(cur, remote_addr, username)
+                conn.commit()
                 flash("Неверное имя или пароль", "error")
                 return render_template('login.html')
 
-            clear_login_failures(remote_addr, username)
+            clear_login_failures(cur, remote_addr, username)
+            conn.commit()
 
             selected_tournament_id = select_default_tournament_by_unfinished_match(cur)
             if selected_tournament_id is None:
