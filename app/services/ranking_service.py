@@ -279,7 +279,7 @@ def _fetch_ranking_with_previous(cur, tournament_id, tournament_is_active, lates
     ]
 
 
-def get_tournament_ranking(tournament_id):
+def get_tournament_ranking(tournament_id, cur=None):
     """
     Canonical ranking logic for leaderboard/profile.
     Tie-break order:
@@ -291,8 +291,10 @@ def get_tournament_ranking(tournament_id):
 
     Place numbering uses SQL RANK(): 1,1,3...
     """
-    conn = get_db()
-    cur = conn.cursor()
+    conn = None
+    if cur is None:
+        conn = get_db()
+        cur = conn.cursor()
 
     try:
         cur.execute(
@@ -327,4 +329,5 @@ def get_tournament_ranking(tournament_id):
 
         return apply_leader_status(apply_rank_movements(current_ranking, previous_ranking))
     finally:
-        close_db(conn, cur)
+        if conn is not None:
+            close_db(conn, cur)
