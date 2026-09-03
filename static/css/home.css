@@ -6024,11 +6024,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             width: 56px !important;
         }
 
-        body.tournament-wc2026 .match-card-v2 .deadline-row {
-            max-width: none;
-            justify-content: flex-start;
-        }
-
         body.tournament-wc2026 .match-card-v2 .deadline-helper {
             font-size: 12px;
         }
@@ -6066,11 +6061,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
             font-size: 10.5px;
         }
 
-        body.tournament-wc2026 .match-card-v2 .deadline-row {
-            max-width: none;
-            justify-content: flex-start;
-        }
-
         body.tournament-wc2026 .match-card-v2 .deadline-label {
             font-size: 0 !important;
         }
@@ -6080,7 +6070,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
 
         body.tournament-wc2026 .match-card-v2 .start-time-label {
-            font-size: 0;
             padding-right: 0;
         }
 
@@ -6111,8 +6100,6 @@ body.tournament-wc2026 .match-card-v2 .deadline-cue {
         }
 
         :is(body.tournament-wc2026, body.tournament-rcup) .match-card-v2 .score-stepper {
-            flex-basis: auto;
-            width: auto;
             min-width: 56px;
             height: auto;
             min-height: 104px;
