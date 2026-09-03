@@ -211,9 +211,10 @@ class BetsSheetUiTests(unittest.TestCase):
     def test_finished_match_card_visuals_are_scoped_to_finished_modifier(self):
         css = (ROOT / "static" / "css" / "home.css").read_text(encoding="utf-8")
         template = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
-        self.assertIn("card_state = 'finished'", template)
+        view_service = (ROOT / "app" / "services" / "home_match_view_service.py").read_text(encoding="utf-8")
+        self.assertIn('card_state = "finished"', view_service)
         self.assertIn("rpl_class = 'match-card--rpl' if match.is_rpl_category and not is_rcup_match", template)
-        self.assertIn("match-card-v2 {{ card_state }}", template)
+        self.assertIn("match-card-v2 {{ match.card_state }}", template)
         self.assertIn(".match-card-v2.finished .team-logo-v2", css)
         self.assertIn("width: 82px", css)
         self.assertIn("height: 82px", css)
@@ -374,10 +375,11 @@ class BetsSheetUiTests(unittest.TestCase):
         rcup_css = (ROOT / "static" / "css" / "tournaments" / "russian-cup.css").read_text(encoding="utf-8")
         layer = rcup_css[rcup_css.rindex("/* User-facing Russian Cup card layer."):]
         layer = layer.split("body.tournament-rcup .admin-russian-cup-page .rc-compact-card--pending", 1)[0]
+        view_service = (ROOT / "app" / "services" / "home_match_view_service.py").read_text(encoding="utf-8")
         self.assertIn("russian_cup_class = 'match-card--russian-cup' if is_rcup_match", home_template)
-        self.assertIn("card_state = 'finished'", home_template)
-        self.assertIn("card_state = 'closed'", home_template)
-        self.assertIn("class=\"match-card {{ russian_cup_class }} match-card-v2 {{ card_state }}", home_template)
+        self.assertIn('card_state = "finished"', view_service)
+        self.assertIn('card_state = "closed"', view_service)
+        self.assertIn("class=\"match-card {{ russian_cup_class }} match-card-v2 {{ match.card_state }}", home_template)
         self.assertIn("russian-cup.css', v='20260814-russian-cup-ui'", base_template)
         self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.finished", layer)
         self.assertIn("body.tournament-rcup .match-card-v2.match-card--russian-cup.closed", layer)

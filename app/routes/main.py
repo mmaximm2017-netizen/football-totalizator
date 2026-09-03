@@ -1,4 +1,4 @@
-﻿# app/routes/main.py
+# app/routes/main.py
 
 import logging
 from collections import defaultdict
@@ -19,6 +19,7 @@ from flask import (
 
 from app.config import START_DATE
 from app.db import close_db, get_db
+from app.services.home_match_view_service import apply_home_match_card_state
 from app.services.tournament_context_service import (
     get_selected_tournament_id,
     get_session_start_tournament_id,
@@ -582,6 +583,7 @@ WHERE m.id = %s
                 m["pred_away"] = ""
                 m["my_points"] = 0
 
+            apply_home_match_card_state(m)
             grouped[day].append(m)
 
         for day_matches in grouped.values():
