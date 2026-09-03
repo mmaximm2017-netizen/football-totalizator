@@ -24,9 +24,7 @@
             <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content {% if day_is_open %}open{% endif %}">
                 {% for match in day.matches %}
 
-                {% set has_prediction = match.pred_home != '' %}
-                {% set card_state = 'active' %}
-                {% set predicted_class = '' %}
+                {% set has_prediction = match.has_prediction %}
                 {% set playoff_stage_class = ('wc-playoff playoff-stage-' ~ match.playoff_stage ~ ' ' ~ (match.playoff_stage_css_class or '')) if match.playoff_stage else '' %}
                 {% set event_class = match.event_css_class or '' %}
                 {% set is_rcup_match = match.is_russian_cup or match.league == 'rcup' or match.tournament_name == 'Кубок России' or match.tournament_slug|default(match.tournament_type|default('')) == 'rcup' %}
@@ -45,19 +43,11 @@
                     'final': 'ФИНАЛ'
                 }.get(match.playoff_stage) %}
 
-                {% if match.finished %}
-                    {% set card_state = 'finished' %}
-                {% elif match.deadline_passed %}
-                    {% set card_state = 'closed' %}
-                {% elif has_prediction %}
-                    {% set predicted_class = 'predicted' %}
-                {% endif %}
-
                 <div
-                    class="match-card {{ russian_cup_class }} match-card-v2 {{ card_state }} {{ predicted_class }} match-status-{{ match.status|lower }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ rpl_v2_class }} {{ supercup_class }} {{ russia_class }}"
+                    class="match-card {{ russian_cup_class }} match-card-v2 {{ match.card_state }} {{ match.predicted_class }} match-status-{{ match.status|lower }} {{ playoff_stage_class }} {{ event_class }} {{ rpl_class }} {{ rpl_v2_class }} {{ supercup_class }} {{ russia_class }}"
                     data-match-id="{{ match.id }}"
-                    data-finished="{% if match.finished %}1{% else %}0{% endif %}"
-                    data-deadline-closed="{% if match.deadline_passed %}1{% else %}0{% endif %}"
+                    data-finished="{{ match.data_finished }}"
+                    data-deadline-closed="{{ match.data_deadline_closed }}"
                     data-league="{{ match.league }}"
                 >
 {% if playoff_stage_title %}
