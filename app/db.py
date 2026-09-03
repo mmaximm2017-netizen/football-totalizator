@@ -5,6 +5,7 @@ import threading
 
 from psycopg2 import InterfaceError, OperationalError
 from psycopg2.pool import PoolError, ThreadedConnectionPool
+from werkzeug.security import generate_password_hash
 
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, DATABASE_URL
 
@@ -24,6 +25,10 @@ class PoolExhausted(Exception):
 db_pool = None
 
 RUSSIAN_CUP_TOURNAMENT_NAME = "Кубок России"
+
+
+def build_bootstrap_admin_password_hash():
+    return generate_password_hash(ADMIN_PASSWORD)
 
 
 def init_pool():
@@ -671,7 +676,7 @@ def init_db():
             cur.execute("""
             INSERT INTO users (username, password, is_admin)
             VALUES (%s, %s, 1)
-            """, (ADMIN_USERNAME, ADMIN_PASSWORD))
+            """, (ADMIN_USERNAME, build_bootstrap_admin_password_hash()))
 
         conn.commit()
 
