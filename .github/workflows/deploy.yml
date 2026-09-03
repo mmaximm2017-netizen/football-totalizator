@@ -103,8 +103,32 @@ jobs:
             }
 
             echo "PRE-DEPLOY: pulling target image"
+            docker pull "$expected_image" >/dev/null
+
+            release_sha="$(
+              docker image inspect "$expected_image" --format '{{range .Config.Env}}{{println .}}{{end}}' |
+              sed -n 's/^TOTISH_RELEASE=//p' |
+              head -n 1
+            )"
+            if [[ ! "$release_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "DEPLOY REFUSED: target image does not contain a valid TOTISH_RELEASE" >&2
+              exit 1
+            fi
+            echo "TARGET RELEASE: $release_sha"
+
+            git fetch --quiet origin "$release_sha"
+
+            bootstrap_backup="$(mktemp -d)"
+            cp docker-compose.yml "$bootstrap_backup/docker-compose.yml"
+            cp scripts/deploy_production.sh "$bootstrap_backup/deploy_production.sh"
+
+            git show "$release_sha:docker-compose.yml" > docker-compose.yml.tmp
+            mv docker-compose.yml.tmp docker-compose.yml
+            git show "$release_sha:scripts/deploy_production.sh" > scripts/deploy_production.sh.tmp
+            chmod 755 scripts/deploy_production.sh.tmp
+            mv scripts/deploy_production.sh.tmp scripts/deploy_production.sh
+
             export TOTISH_IMAGE="$expected_image"
-            docker compose pull app
 
             echo "PRE-DEPLOY: applying versioned database migrations"
             docker compose run --rm --no-deps --entrypoint python app scripts/run_migrations.py
@@ -115,6 +139,10 @@ jobs:
             set -e
 
             if (( deploy_status != 0 )); then
+              cp "$bootstrap_backup/docker-compose.yml" docker-compose.yml
+              cp "$bootstrap_backup/deploy_production.sh" scripts/deploy_production.sh
+              chmod 755 scripts/deploy_production.sh
+
               running_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}' 2>/dev/null || true)"
               if [[ "$running_image" != "$previous_image" ]] || ! verify_health; then
                 restore_previous || {
@@ -129,16 +157,98 @@ jobs:
 
             current_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
             if [[ "$current_image" != "$expected_image" ]]; then
+              cp "$bootstrap_backup/docker-compose.yml" docker-compose.yml
+              cp "$bootstrap_backup/deploy_production.sh" scripts/deploy_production.sh
+              chmod 755 scripts/deploy_production.sh
               echo "DEPLOY VERIFICATION FAILED: expected image is not running" >&2
               restore_previous || true
               exit 1
             fi
 
             if ! verify_health; then
+              cp "$bootstrap_backup/docker-compose.yml" docker-compose.yml
+              cp "$bootstrap_backup/deploy_production.sh" scripts/deploy_production.sh
+              chmod 755 scripts/deploy_production.sh
               echo "DEPLOY VERIFICATION FAILED: new version is unhealthy" >&2
               restore_previous || true
               exit 1
             fi
+
+            echo "CONTROL PLANE SYNC: installing production-managed files from $release_sha"
+            manifest="$(git show "$release_sha:deploy/production-managed-files.txt")"
+            control_backup="$(mktemp -d)"
+            crontab -l > "$control_backup/crontab" 2>/dev/null || true
+
+            sync_ok=1
+            while IFS= read -r path; do
+              [[ -n "$path" ]] || continue
+              [[ "$path" == \#* ]] && continue
+
+              mkdir -p "$(dirname "$path")"
+
+              if [[ -f "$path" ]]; then
+                mkdir -p "$control_backup/files/$(dirname "$path")"
+                cp "$path" "$control_backup/files/$path"
+              fi
+
+              if ! git show "$release_sha:$path" > "$path.tmp"; then
+                sync_ok=0
+                rm -f "$path.tmp"
+                break
+              fi
+
+              case "$path" in
+                scripts/*.sh|scripts/*.py)
+                  chmod 755 "$path.tmp"
+                  ;;
+                *)
+                  chmod 644 "$path.tmp"
+                  ;;
+              esac
+              mv "$path.tmp" "$path"
+            done <<< "$manifest"
+
+            if (( sync_ok )); then
+              cron_tmp="$(mktemp)"
+              crontab -l 2>/dev/null |
+                awk '
+                  BEGIN { skip=0 }
+                  /^# BEGIN TOTISH MANAGED$/ { skip=1; next }
+                  /^# END TOTISH MANAGED$/ { skip=0; next }
+                  skip { next }
+                  /\/opt\/football-totalizator/ &&
+                  /(host_telegram_notifier\.py|monitor_production\.py|run_morning_digest\.sh|run_deadline_pushes\.sh|run_match_result_pushes\.sh)/ { next }
+                  { print }
+                ' > "$cron_tmp" || true
+
+              {
+                cat "$cron_tmp"
+                echo "# BEGIN TOTISH MANAGED"
+                cat deploy/production.cron
+                echo "# END TOTISH MANAGED"
+              } | crontab - || sync_ok=0
+              rm -f "$cron_tmp"
+            fi
+
+            if (( ! sync_ok )); then
+              echo "CONTROL PLANE SYNC FAILED: restoring previous host files" >&2
+              if [[ -d "$control_backup/files" ]]; then
+                while IFS= read -r backup_path; do
+                  relative="${backup_path#"$control_backup/files/"}"
+                  cp "$backup_path" "$relative"
+                done < <(find "$control_backup/files" -type f)
+              fi
+              if [[ -s "$control_backup/crontab" ]]; then
+                crontab "$control_backup/crontab" || true
+              fi
+              restore_previous || true
+              exit 1
+            fi
+
+            printf '%s\n' "$release_sha" > .totish-managed-release.tmp
+            mv .totish-managed-release.tmp .totish-managed-release
+            chmod 644 .totish-managed-release
+            echo "CONTROL PLANE SYNC OK: $release_sha"
 
             rollback_holder="totish-rollback-image"
             docker rm -f "$rollback_holder" >/dev/null 2>&1 || true
