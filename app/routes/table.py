@@ -101,11 +101,10 @@ def table():
         selected_is_active = row[1] if row else False
         selected_start_date = row[2] if row else "—"
         selected_status = next((t['status'] for t in tournaments if t['id'] == tid), 'archive')
+        table_data = get_tournament_ranking(tid, cur=cur)
+        top_scorers = get_tournament_top_scorers(tid, cur=cur)
     finally:
         close_db(conn, cur)
-
-    table_data = get_tournament_ranking(tid)
-    top_scorers = get_tournament_top_scorers(tid)
 
     is_ajax = request.args.get('ajax') == '1'
 
