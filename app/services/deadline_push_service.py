@@ -42,8 +42,18 @@ def select_deadline_candidates(cur, now):
         JOIN users u ON COALESCE(u.is_admin, 0) = 0
                        AND COALESCE(u.is_deleted, 0) = 0
         JOIN push_subscriptions ps ON ps.user_id = u.id AND ps.enabled = TRUE
-        WHERE m.deadline >= %s
-          AND m.deadline <= %s
+        WHERE m.deadline > %s
+          AND (
+              (m.deadline >= %s AND m.deadline <= %s)
+              OR EXISTS (
+                  SELECT 1 FROM push_delivery_log d_retry
+                  WHERE d_retry.user_id = u.id
+                    AND d_retry.event_type = %s
+                    AND d_retry.event_key = 'match:' || m.id::text
+                    AND d_retry.status IN ('failed', 'pending')
+                    AND d_retry.updated_at <= %s
+              )
+          )
           AND UPPER(COALESCE(m.status, 'SCHEDULED')) <> ALL(%s)
           AND NOT EXISTS (
               SELECT 1 FROM predictions p
@@ -66,8 +76,15 @@ def select_deadline_candidates(cur, now):
         ORDER BY m.deadline, m.id, u.id
         """,
         (
-            window_start, window_end, list(EXCLUDED_STATUSES), EVENT_TYPE,
-            stale_claim_cutoff, stale_claim_cutoff,
+            now,
+            window_start,
+            window_end,
+            EVENT_TYPE,
+            stale_claim_cutoff,
+            list(EXCLUDED_STATUSES),
+            EVENT_TYPE,
+            stale_claim_cutoff,
+            stale_claim_cutoff,
         ),
     )
     return [

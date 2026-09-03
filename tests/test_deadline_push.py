@@ -64,8 +64,9 @@ class DeadlinePushTests(unittest.TestCase):
         cursor = Cursor(rows=[])
         service.select_deadline_candidates(cursor, now)
         params = cursor.executed[0][1]
-        self.assertEqual(params[0], now + timedelta(minutes=115))
-        self.assertEqual(params[1], now + timedelta(minutes=120))
+        self.assertEqual(params[0], now)
+        self.assertEqual(params[1], now + timedelta(minutes=115))
+        self.assertEqual(params[2], now + timedelta(minutes=120))
 
     def test_window_has_five_minute_width(self):
         self.assertEqual(service.WINDOW_END_MINUTES - service.WINDOW_MINUTES, 5)
@@ -75,14 +76,14 @@ class DeadlinePushTests(unittest.TestCase):
         cursor = Cursor(rows=[])
         service.select_deadline_candidates(cursor, now)
         params = cursor.executed[0][1]
-        self.assertGreater(now + timedelta(minutes=121), params[1])
+        self.assertGreater(now + timedelta(minutes=121), params[2])
 
     def test_window_excludes_early_match_by_query_bounds(self):
         now = datetime(2026, 8, 15, 10, 0, tzinfo=timezone.utc)
         cursor = Cursor(rows=[])
         service.select_deadline_candidates(cursor, now)
         params = cursor.executed[0][1]
-        self.assertLess(now + timedelta(minutes=114), params[0])
+        self.assertLess(now + timedelta(minutes=114), params[1])
 
     def test_fixed_payload_and_safe_internal_url(self):
         candidate = {"match_id": 123, "home_team": "Зенит", "away_team": "Спартак"}
@@ -122,7 +123,7 @@ class DeadlinePushTests(unittest.TestCase):
         self.assertIn("push_delivery_log", query)
         self.assertIn("UPPER(COALESCE(m.status, 'SCHEDULED'))", query)
         self.assertIn("<> ALL(%s)", query)
-        self.assertIn("FINISHED", params[2])
+        self.assertIn("FINISHED", params[5])
         self.assertIn("is_admin", query)
         self.assertIn("updated_at", query)
         self.assertIn("GROUP BY m.id", query)
@@ -137,9 +138,9 @@ class DeadlinePushTests(unittest.TestCase):
         params = cursor.executed[0][1]
         self.assertIn("UPPER(COALESCE(m.status, 'SCHEDULED'))", query)
         self.assertIn("<> ALL(%s)", query)
-        self.assertIn("CANCELLED", params[2])
-        self.assertIn("LIVE", params[2])
-        self.assertIn("ABANDONED", params[2])
+        self.assertIn("CANCELLED", params[5])
+        self.assertIn("LIVE", params[5])
+        self.assertIn("ABANDONED", params[5])
 
     def test_candidate_query_retries_only_stale_pending_claims(self):
         cursor = Cursor()
@@ -148,6 +149,16 @@ class DeadlinePushTests(unittest.TestCase):
         self.assertIn("d.status = 'sent'", query)
         self.assertIn("d.status = 'pending'", query)
         self.assertIn("d.status = 'failed'", query)
+
+    def test_stale_retry_is_not_limited_to_initial_two_hour_window(self):
+        now = datetime(2026, 8, 15, 10, 0, tzinfo=timezone.utc)
+        cursor = Cursor()
+        service.select_deadline_candidates(cursor, now)
+        query, params = cursor.executed[0]
+        self.assertIn("OR EXISTS", query)
+        self.assertIn("d_retry.status IN ('failed', 'pending')", query)
+        self.assertEqual(params[0], now)
+        self.assertEqual(params[4], now - timedelta(minutes=service.RETRY_AFTER_MINUTES))
 
     def test_duplicate_claim_uses_unique_event_key(self):
         cursor = Cursor(claims=[None, None])
