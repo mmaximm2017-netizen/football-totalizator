@@ -179,8 +179,7 @@ CURRENT_CONTAINER_ID="$(docker compose ps -q --status running app)"
     echo "No running app container found; refusing deployment without a rollback image." >&2
     exit 1
 }
-CURRENT_IMAGE_ID="$(docker inspect --format '{{.Image}}' "$CURRENT_CONTAINER_ID")"
-CURRENT_IMAGE_REFERENCE="$(docker image inspect --format '{{index .RepoDigests 0}}' "$CURRENT_IMAGE_ID")"
+CURRENT_IMAGE_REFERENCE="$(docker inspect --format '{{.Config.Image}}' "$CURRENT_CONTAINER_ID")"
 is_totish_image_digest "$CURRENT_IMAGE_REFERENCE" || {
     echo "Running app image is not a pullable TOTISH GHCR digest; refusing deployment." >&2
     exit 1
