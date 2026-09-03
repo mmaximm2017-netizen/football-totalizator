@@ -1,8 +1,10 @@
 """Server-side Web Push subscription storage and delivery primitives."""
 
 import hashlib
+import ipaddress
 import json
 import logging
+import socket
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -23,6 +25,10 @@ class SubscriptionValidationError(ValueError):
 
 
 class SubscriptionOwnershipError(ValueError):
+    pass
+
+
+class UnsafePushEndpointError(SubscriptionValidationError):
     pass
 
 
@@ -56,7 +62,61 @@ def normalize_endpoint(value):
         raise SubscriptionValidationError("endpoint must use https")
     if parsed.username or parsed.password:
         raise SubscriptionValidationError("endpoint credentials are not allowed")
+    try:
+        parsed_port = parsed.port
+    except ValueError as exc:
+        raise SubscriptionValidationError("endpoint port is invalid") from exc
+    if parsed_port is not None and not (1 <= parsed_port <= 65535):
+        raise SubscriptionValidationError("endpoint port is invalid")
     return endpoint
+
+
+def validate_endpoint_target(endpoint, *, resolver=socket.getaddrinfo):
+    """Reject Web Push targets that resolve to non-public network addresses."""
+    normalized = normalize_endpoint(endpoint)
+    parsed = urlsplit(normalized)
+    hostname = (parsed.hostname or "").rstrip(".").lower()
+    if not hostname:
+        raise UnsafePushEndpointError("endpoint host is invalid")
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        raise UnsafePushEndpointError("endpoint host is not public")
+
+    port = parsed.port or 443
+    try:
+        results = resolver(hostname, port, type=socket.SOCK_STREAM)
+    except (OSError, socket.gaierror) as exc:
+        raise SubscriptionValidationError("endpoint host could not be resolved") from exc
+
+    addresses = set()
+    for result in results:
+        sockaddr = result[4]
+        if sockaddr:
+            addresses.add(sockaddr[0].split("%", 1)[0])
+    if not addresses:
+        raise SubscriptionValidationError("endpoint host could not be resolved")
+
+    for address in addresses:
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError as exc:
+            raise SubscriptionValidationError("endpoint host resolved unexpectedly") from exc
+        if not ip.is_global:
+            raise UnsafePushEndpointError("endpoint host is not public")
+
+    return normalized
+
+
+class _NoRedirectSession:
+    """Small requests-compatible session wrapper that never follows redirects."""
+
+    def __init__(self):
+        import requests
+
+        self._session = requests.Session()
+
+    def post(self, url, **kwargs):
+        kwargs["allow_redirects"] = False
+        return self._session.post(url, **kwargs)
 
 
 def endpoint_fingerprint(endpoint):
@@ -68,7 +128,8 @@ def upsert_subscription(cur, user_id, payload, user_agent=None, device_label=Non
     if not user_id:
         raise SubscriptionValidationError("user is required")
     subscription = validate_subscription_payload(payload)
-    endpoint = subscription["endpoint"]
+    endpoint = validate_endpoint_target(subscription["endpoint"])
+    subscription["endpoint"] = endpoint
 
     cur.execute(
         "SELECT user_id FROM push_subscriptions WHERE endpoint = %s",
@@ -223,17 +284,22 @@ def send_push(subscription, payload, *, ttl=300):
     if not WEB_PUSH_VAPID_PRIVATE_KEY or not WEB_PUSH_VAPID_SUBJECT:
         raise RuntimeError("push_not_configured")
 
+    endpoint = validate_endpoint_target(subscription.get("endpoint"))
+    safe_subscription = dict(subscription)
+    safe_subscription["endpoint"] = endpoint
+
     from pywebpush import WebPushException, webpush
 
     try:
         return webpush(
-            subscription_info=subscription,
+            subscription_info=safe_subscription,
             data=json.dumps(payload, ensure_ascii=False),
             vapid_private_key=WEB_PUSH_VAPID_PRIVATE_KEY,
             vapid_claims={"sub": WEB_PUSH_VAPID_SUBJECT},
             ttl=ttl,
             timeout=10,
+            requests_session=_NoRedirectSession(),
         )
     except WebPushException:
-        logger.warning("web push delivery failed endpoint=%s", endpoint_fingerprint(subscription["endpoint"]))
+        logger.warning("web push delivery failed endpoint=%s", endpoint_fingerprint(endpoint))
         raise
