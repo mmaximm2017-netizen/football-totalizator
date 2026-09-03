@@ -1,6 +1,6 @@
 # Deploy Checklist
 
-Practical pre/post deploy checks for Render.
+Practical pre/post deploy checks for the current GitHub Actions → Docker → VPS production flow.
 
 ## 1) Before push
 
