@@ -47,7 +47,7 @@ def test_repository_starts_with_non_destructive_baseline():
 def test_repository_migrations_are_rollback_safe():
     found = migrations.discover_migrations()
     migrations.validate_rollback_safe_migrations(found)
-    assert [item.version for item in found] == [1, 2, 3]
+    assert [item.version for item in found] == [1, 2, 3, 4]
 
 
 @pytest.mark.parametrize(
