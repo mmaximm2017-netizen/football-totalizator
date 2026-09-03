@@ -157,7 +157,7 @@ def handle_manual_sync_update():
             flash("Обновление не выполнено (статус: {status})".format(
                 status=status or "unknown",
             ), "error")
-    except Exception as e:
+    except Exception:
         logger.exception("Manual sync update failed")
 
         ajax_resp = _ajaxy({"ok": False, "message": "Ошибка синхронизации"}, 500)
