@@ -13,7 +13,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Inspect eligible matches and source HTML on VPS
+      - name: Inspect completion markers on VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -24,38 +24,22 @@ jobs:
             set -Eeuo pipefail
             ua='Mozilla/5.0 (compatible; TOTISH-ReadOnly-Probe/1.0)'
             for pair in \
-              'livesport_rpl|https://www.livesport.ru/football/rfpl/calendar/' \
-              'livesport_cup|https://www.livesport.ru/football/rucup/calendar/' \
-              'sports_rpl|https://www.sports.ru/football/tournament/rfpl/calendar/' \
-              'sports_russia|https://www.sports.ru/football/team/russia/calendar/2026/' \
-              'matchtv_rpl|https://matchtv.ru/football/rpl/calendar/2026-27'; do
+              'sports|https://www.sports.ru/football/tournament/rfpl/calendar/' \
+              'matchtv|https://matchtv.ru/football/rpl/calendar/2026-27'; do
               name="${pair%%|*}"; url="${pair#*|}"
-              echo "=== $name ==="
               tmp="$(mktemp)"
-              set +e
-              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" -w 'http=%{http_code} bytes=%{size_download} final=%{url_effective}\n' "$url"
-              status=$?
-              set -e
-              echo "curl_exit=$status"
-              if [[ -s "$tmp" ]]; then
-                python3 - "$tmp" <<'PY'
+              curl -4 -L --silent --show-error --compressed --max-time 20 -A "$ua" -o "$tmp" "$url"
+              echo "=== $name markers ==="
+              python3 - "$tmp" <<'PY'
             import re, sys
-            from html import unescape
-            p=sys.argv[1]
-            text=open(p,encoding='utf-8',errors='replace').read()
-            print('contains_ok_marker=', bool(re.search(r'>\s*Ок\s*<|\bОк\b', text)))
-            classes=sorted(set(re.findall(r'class=["\']([^"\']+)["\']',text,re.I)))
-            interesting=[c for c in classes if any(k in c.lower() for k in ('match','score','team','event','calendar','game'))]
-            print('classes=', interesting[:60])
-            plain=re.sub(r'(?is)<script.*?</script>|<style.*?</style>',' ',text)
-            plain=re.sub(r'(?s)<[^>]+>',' ',plain)
-            plain=re.sub(r'\s+',' ',unescape(plain))
-            for needle in ('Акрон 2:2 ЦСКА','Акрон','Россия','Зенит'):
-                pos=plain.find(needle)
+            text=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+            for marker in ('calendar-status__moment','calendar-card__status','view-type-disabled','future-time','Окончен','Заверш','Матч завершен','Матч окончен'):
+                print(marker, text.casefold().count(marker.casefold()))
+            for marker in ('calendar-status__moment','view-type-disabled'):
+                pos=text.find(marker)
                 if pos>=0:
-                    print('snippet',needle,plain[max(0,pos-180):pos+700])
-                    break
+                    snippet=re.sub(r'\s+',' ',text[max(0,pos-900):pos+1800])
+                    print('RAW',marker,snippet[:2700])
             PY
-              fi
               rm -f "$tmp"
             done
