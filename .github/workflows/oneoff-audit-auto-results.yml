@@ -1,0 +1,90 @@
+name: One-off audit auto results
+
+on:
+  push:
+    branches:
+      - audit/auto-results-production
+    paths:
+      - .audit-auto-results-trigger
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit production auto-results
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Audit production auto-results
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            export TOTISH_IMAGE="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+            echo '=== FLAGS ==='
+            grep '^AUTO_RESULTS_' .env || true
+            echo '=== CRON ==='
+            crontab -l | grep 'run_auto_results.sh' || true
+            echo '=== STATE ==='
+            cat runtime/telegram-outbox/.auto-results-state.json 2>/dev/null || true
+            echo '=== RECENT LOG ==='
+            tail -n 100 "$HOME/.local/state/totish/auto-results.log" 2>/dev/null || true
+            echo '=== UPCOMING RPL SOURCE PROBE ==='
+            docker compose run --rm -T --interactive=false \
+              -e PYTHONPATH=/app:/app/scripts \
+              -v "$PWD/scripts:/app/scripts:ro" \
+              app python - <<'PY'
+            from datetime import datetime, timezone, timedelta
+            from zoneinfo import ZoneInfo
+            from app.db import get_db, close_db
+            from auto_result_sources import fetch_text, find_livesport_result, find_sports_rpl_result
+            from auto_result_worker import LIVE_RPL, SPORTS_RPL
+
+            now = datetime.now(timezone.utc)
+            msk = ZoneInfo('Europe/Moscow')
+            conn = get_db(); cur = conn.cursor()
+            try:
+                conn.rollback(); conn.set_session(readonly=True, autocommit=False)
+                cur.execute("""
+                    SELECT id, home_team, away_team, kickoff_time, status, home_score, away_score
+                    FROM matches
+                    WHERE tournament_id=5 AND league='rpl'
+                      AND COALESCE(match_category,'rpl')='rpl'
+                      AND kickoff_time >= %s AND kickoff_time < %s
+                    ORDER BY kickoff_time, id
+                """, (now, now + timedelta(days=3)))
+                rows = cur.fetchall()
+                print('MATCHES', rows)
+            finally:
+                conn.rollback(); close_db(conn, cur)
+
+            pages = {}
+            for name, url in [('livesport', LIVE_RPL), ('sports', SPORTS_RPL)]:
+                try:
+                    pages[name] = fetch_text(url)
+                    print(name, 'FETCH_OK', len(pages[name]))
+                except Exception as exc:
+                    print(name, 'FETCH_ERROR', type(exc).__name__, str(exc))
+
+            for row in rows:
+                mid, home, away, kickoff, status, hs, aws = row
+                d = kickoff.astimezone(msk).date().isoformat()
+                print('MATCH', mid, home, away, d, kickoff.isoformat(), status, hs, aws)
+                if 'livesport' in pages:
+                    try:
+                        print('  livesport', find_livesport_result(pages['livesport'], home=home, away=away, match_date=d))
+                    except Exception as exc:
+                        print('  livesport ERROR', type(exc).__name__, str(exc))
+                if 'sports' in pages:
+                    try:
+                        print('  sports', find_sports_rpl_result(pages['sports'], home=home, away=away, match_date=d))
+                    except Exception as exc:
+                        print('  sports ERROR', type(exc).__name__, str(exc))
+            PY
