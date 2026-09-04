@@ -28,16 +28,8 @@ jobs:
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
             export TOTISH_IMAGE="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
-            echo '=== FLAGS ==='
-            grep '^AUTO_RESULTS_' .env || true
-            echo '=== CRON ==='
-            crontab -l | grep 'run_auto_results.sh' || true
-            echo '=== STATE ==='
-            cat runtime/telegram-outbox/.auto-results-state.json 2>/dev/null || true
-            echo '=== RECENT LOG ==='
-            tail -n 100 "$HOME/.local/state/totish/auto-results.log" 2>/dev/null || true
             echo '=== UPCOMING RPL SOURCE PROBE ==='
-            docker compose run --rm -T --interactive=false \
+            docker compose run --rm -T \
               -e PYTHONPATH=/app:/app/scripts \
               -v "$PWD/scripts:/app/scripts:ro" \
               app python - <<'PY'
