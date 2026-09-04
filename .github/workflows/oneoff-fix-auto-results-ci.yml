@@ -1,0 +1,70 @@
+name: One-off fix auto results CI
+
+on:
+  push:
+    branches:
+      - fix/auto-results-hardening
+    paths:
+      - .fix-auto-results-ci-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/auto-results-hardening
+      - name: Apply fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def rep(path, old, new, count=1):
+              p=Path(path); text=p.read_text(encoding='utf-8')
+              if text.count(old) != count:
+                  raise SystemExit(f'{path}: expected {count}, got {text.count(old)} for {old!r}')
+              p.write_text(text.replace(old,new,count), encoding='utf-8')
+
+          rep('scripts/auto_result_worker.py',
+              'FINAL_GRACE_MINUTES = 195\nMOSCOW_TZ = ZoneInfo("Europe/Moscow")',
+              'FINAL_GRACE_MINUTES = 185\nFINAL_NOTICE_LOOKBACK_MINUTES = 195\nMOSCOW_TZ = ZoneInfo("Europe/Moscow")')
+          rep('scripts/auto_result_worker.py',
+              'timedelta(minutes=FINAL_GRACE_MINUTES)',
+              'timedelta(minutes=FINAL_NOTICE_LOOKBACK_MINUTES)')
+          rep('scripts/auto_result_worker.py',
+              '        if phase in {"too_early", "expired"}:\n            continue',
+              '        if phase == "too_early":\n            continue')
+          rep('scripts/auto_result_worker.py',
+              '        if phase == "expired_grace":\n',
+              '        if phase in {"expired_grace", "expired"}:\n')
+
+          rep('scripts/auto_result_runtime.py',
+              '        if phase in {"too_early", "expired"}:\n            continue',
+              '        if phase == "too_early":\n            continue')
+          rep('scripts/auto_result_runtime.py',
+              '        if phase == "expired_grace":\n',
+              '        if phase in {"expired_grace", "expired"}:\n')
+
+          rep('app/services/admin_view_service.py',
+              '                    "result_origin": row[9],\n                    "is_auto_result": row[9] == "auto_result_worker",',
+              '                    "result_origin": row[9] if len(row) > 9 else None,\n                    "is_auto_result": (row[9] if len(row) > 9 else None) == "auto_result_worker",')
+          rep('app/services/admin_view_service.py',
+              '            "result_origin": row[9],\n            "is_auto_result": row[9] == "auto_result_worker",',
+              '            "result_origin": row[9] if len(row) > 9 else None,\n            "is_auto_result": (row[9] if len(row) > 9 else None) == "auto_result_worker",')
+
+          p=Path('tests/test_auto_result_hardening.py'); text=p.read_text(encoding='utf-8')
+          text=text.replace('with pytest.raises(SourceError):\n        worker.observe_match(cache, match)', 'with pytest.raises(worker.SourceError):\n        worker.observe_match(cache, match)')
+          text=text.replace('    assert worker.window_state(kickoff, kickoff + timedelta(minutes=190)) == "expired_grace"\n    assert worker.window_state(kickoff, kickoff + timedelta(minutes=196)) == "expired"', '    assert worker.window_state(kickoff, kickoff + timedelta(minutes=190)) == "expired"\n    assert worker.FINAL_NOTICE_LOOKBACK_MINUTES == 195')
+          p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/auto_result_worker.py scripts/auto_result_runtime.py app/services/admin_view_service.py tests/test_auto_result_hardening.py
+          git diff --cached --check
+          git commit -m "Fix auto-result hardening CI contracts"
+          git push origin HEAD:fix/auto-results-hardening
