@@ -46,7 +46,7 @@ def test_admin_templates_show_auto_marker_and_list_loads_origin():
     root = Path(__file__).resolve().parents[1]
     service_text = (root / "app/services/admin_view_service.py").read_text(encoding="utf-8")
     assert "m.result_origin" in service_text
-    assert '"is_auto_result": row[9] == "auto_result_worker"' in service_text
+    assert '"is_auto_result": (row[9] if len(row) > 9 else None) == "auto_result_worker"' in service_text
     for name in ("admin_russia_2027.html", "admin_russian_cup.html"):
         html = (root / "templates" / name).read_text(encoding="utf-8")
         assert "admin-auto-result-badge" in html
