@@ -49,7 +49,7 @@ def install_db(monkeypatch, row, update_rowcount=1):
 
 
 def test_finalize_auto_result_saves_only_untouched_match(monkeypatch):
-    connection, cursor = install_db(monkeypatch, ("SCHEDULED", None, None, 5, "rpl"))
+    connection, cursor = install_db(monkeypatch, ("SCHEDULED", None, None, 5, "rpl", "Зенит", "ЦСКА", "kickoff", "rpl"))
     recalculated = []
     monkeypatch.setattr(
         service,
@@ -57,7 +57,7 @@ def test_finalize_auto_result_saves_only_untouched_match(monkeypatch):
         lambda match_id, tournament_id, conn, cur: recalculated.append((match_id, tournament_id)),
     )
 
-    outcome = service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl")
+    outcome = service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl", expected_home_team="Зенит", expected_away_team="ЦСКА", expected_kickoff_time="kickoff", expected_match_category="rpl")
 
     assert outcome == "saved"
     assert connection.commits == 1
@@ -70,10 +70,10 @@ def test_finalize_auto_result_saves_only_untouched_match(monkeypatch):
 
 
 def test_finalize_auto_result_never_overwrites_manual_score(monkeypatch):
-    connection, cursor = install_db(monkeypatch, ("FINISHED", 1, 0, 5, "rpl"))
+    connection, cursor = install_db(monkeypatch, ("FINISHED", 1, 0, 5, "rpl", "Зенит", "ЦСКА", "kickoff", "rpl"))
     monkeypatch.setattr(service, "recalc_match_points", lambda *args, **kwargs: pytest.fail("must not recalc"))
 
-    outcome = service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl")
+    outcome = service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl", expected_home_team="Зенит", expected_away_team="ЦСКА", expected_kickoff_time="kickoff", expected_match_category="rpl")
 
     assert outcome == "already_done"
     assert connection.commits == 0
@@ -81,9 +81,9 @@ def test_finalize_auto_result_never_overwrites_manual_score(monkeypatch):
 
 
 def test_finalize_auto_result_rejects_changed_scope(monkeypatch):
-    install_db(monkeypatch, ("SCHEDULED", None, None, 6, "rcup"))
+    install_db(monkeypatch, ("SCHEDULED", None, None, 6, "rcup", "Зенит", "ЦСКА", "kickoff", "rpl"))
     with pytest.raises(service.AutoResultFinalizeError, match="match_scope_changed"):
-        service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl")
+        service.finalize_auto_result(401, 2, 1, tournament_id=5, league="rpl", expected_home_team="Зенит", expected_away_team="ЦСКА", expected_kickoff_time="kickoff", expected_match_category="rpl")
 
 
 def test_auto_result_origin_migration_clears_marker_on_later_manual_change():

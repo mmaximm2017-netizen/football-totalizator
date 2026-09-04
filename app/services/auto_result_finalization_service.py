@@ -19,6 +19,10 @@ def finalize_auto_result(
     *,
     tournament_id: int,
     league: str,
+    expected_home_team: str,
+    expected_away_team: str,
+    expected_kickoff_time,
+    expected_match_category: str,
 ) -> str:
     """Finalize one result only if the match is still untouched by a human.
 
@@ -36,7 +40,8 @@ def finalize_auto_result(
     try:
         cur.execute(
             """
-            SELECT status, home_score, away_score, tournament_id, league
+            SELECT status, home_score, away_score, tournament_id, league,
+                   home_team, away_team, kickoff_time, COALESCE(match_category, '')
             FROM matches
             WHERE id = %s
             FOR UPDATE
@@ -48,10 +53,21 @@ def finalize_auto_result(
             conn.rollback()
             raise AutoResultFinalizeError("match_not_found")
 
-        status, existing_home, existing_away, actual_tournament_id, actual_league = row
+        (
+            status, existing_home, existing_away, actual_tournament_id, actual_league,
+            actual_home_team, actual_away_team, actual_kickoff_time, actual_match_category,
+        ) = row
         if actual_tournament_id != tournament_id or actual_league != league:
             conn.rollback()
             raise AutoResultFinalizeError("match_scope_changed")
+        if (
+            actual_home_team != expected_home_team
+            or actual_away_team != expected_away_team
+            or actual_kickoff_time != expected_kickoff_time
+            or actual_match_category != expected_match_category
+        ):
+            conn.rollback()
+            raise AutoResultFinalizeError("match_identity_changed")
         if status not in ALLOWED_AUTO_STATUSES or existing_home is not None or existing_away is not None:
             conn.rollback()
             return "already_done"

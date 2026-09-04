@@ -62,7 +62,7 @@ def run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
     records = []
     for match in matches:
         phase = dry.window_state(match["kickoff_time"], now)
-        if phase in {"too_early", "expired"}:
+        if phase == "too_early":
             continue
         base = {
             "match_id": match["id"],
@@ -76,7 +76,7 @@ def run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
             base.update({"decision": "blocked", "reason": blocked[str(match["id"])]})
             records.append(base)
             continue
-        if phase == "expired_grace":
+        if phase in {"expired_grace", "expired"}:
             base["decision"] = "window_expired"
             dry._event_once(
                 state,
@@ -125,6 +125,10 @@ def run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                     score[1],
                     tournament_id=match["tournament_id"],
                     league=match["league"],
+                    expected_home_team=match["home_team"],
+                    expected_away_team=match["away_team"],
+                    expected_kickoff_time=match["kickoff_time"],
+                    expected_match_category=match["match_category"],
                 )
                 base["write_outcome"] = outcome
                 if outcome == "saved":
