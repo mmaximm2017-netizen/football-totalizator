@@ -1,0 +1,29 @@
+name: One-off patch auto results hardening
+
+on:
+  push:
+    branches:
+      - fix/auto-results-hardening
+    paths:
+      - .patch-auto-results-hardening-trigger
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/auto-results-hardening
+      - name: Apply hardening patch
+        run: python .github/scripts/patch_auto_results_hardening.py
+      - name: Commit hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/auto_result_worker.py scripts/auto_result_runtime.py scripts/auto_result_sources.py app/services/auto_result_finalization_service.py app/services/admin_view_service.py templates/admin_russia_2027.html templates/admin_russian_cup.html static/css/admin-match-list.css tests/test_auto_result_live_runtime.py tests/test_auto_result_hardening.py
+          git diff --cached --check
+          git commit -m "Harden automatic result processing"
+          git push origin HEAD:fix/auto-results-hardening
