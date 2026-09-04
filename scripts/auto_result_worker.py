@@ -53,7 +53,8 @@ SPORTBOX_JSON = "https://news.sportbox.ru/stats/game_json/{game_id}"
 
 FIRST_CHECK_MINUTES = 120
 WINDOW_END_MINUTES = 180
-FINAL_GRACE_MINUTES = 195
+FINAL_GRACE_MINUTES = 185
+FINAL_NOTICE_LOOKBACK_MINUTES = 195
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
 
 
@@ -334,7 +335,7 @@ def _load_matches(now: datetime) -> list[dict]:
                   )
             ORDER BY kickoff_time, id
             """,
-            (now, now.replace(microsecond=0) - timedelta(minutes=FINAL_GRACE_MINUTES)),
+            (now, now.replace(microsecond=0) - timedelta(minutes=FINAL_NOTICE_LOOKBACK_MINUTES)),
         )
         rows = cur.fetchall()
         result = []
@@ -478,7 +479,7 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
 
     for match in matches:
         phase = window_state(match["kickoff_time"], now)
-        if phase in {"too_early", "expired"}:
+        if phase == "too_early":
             continue
         base = {
             "match_id": match["id"],
@@ -488,7 +489,7 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
             "date": match["match_date"],
             "phase": phase,
         }
-        if phase == "expired_grace":
+        if phase in {"expired_grace", "expired"}:
             base["decision"] = "window_expired"
             _event_once(
                 state,

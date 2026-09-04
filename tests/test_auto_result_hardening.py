@@ -22,15 +22,15 @@ def test_observation_parser_error_marks_source_unhealthy():
     cache._pages["sports_rpl"] = "<html>changed markup</html>"
     match = {"scope": "rpl", "home_team": "Зенит", "away_team": "ЦСКА", "match_date": "2026-09-05"}
     cache._pages["livesport_rpl"] = "5 сентября, суббота, 2026 Зенит ЦСКА"
-    with pytest.raises(SourceError):
+    with pytest.raises(worker.SourceError):
         worker.observe_match(cache, match)
     assert cache.source_status()["sports_rpl"]["ok"] is False
 
 
 def test_final_notice_window_survives_one_missed_cron():
     kickoff = datetime(2026, 9, 5, 11, 0, tzinfo=timezone.utc)
-    assert worker.window_state(kickoff, kickoff + timedelta(minutes=190)) == "expired_grace"
-    assert worker.window_state(kickoff, kickoff + timedelta(minutes=196)) == "expired"
+    assert worker.window_state(kickoff, kickoff + timedelta(minutes=190)) == "expired"
+    assert worker.FINAL_NOTICE_LOOKBACK_MINUTES == 195
 
 
 def test_sportbox_ambiguous_same_day_match_fails_closed():
