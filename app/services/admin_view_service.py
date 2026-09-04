@@ -138,7 +138,8 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters, include_p
             cur.execute(
                 f"""
                 SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
-                       m.status, m.home_score, m.away_score, m.playoff_stage_manual
+                       m.status, m.home_score, m.away_score, m.playoff_stage_manual,
+                       m.result_origin
                 FROM matches m
                 LEFT JOIN tournaments t ON t.id = m.tournament_id
                 WHERE {pending_where}
@@ -153,6 +154,8 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters, include_p
                     "kickoff_time": parse_datetime(row[3]), "deadline": parse_datetime(row[4]),
                     "status": row[5], "home_score": row[6], "away_score": row[7],
                     "stage": row[8] or "", "tournament_id": tournament_id,
+                    "result_origin": row[9],
+                    "is_auto_result": row[9] == "auto_result_worker",
                     "has_result": row[6] is not None and row[7] is not None,
                     "match_date_msk": (parse_datetime(row[3]).astimezone(MSK).strftime("%Y-%m-%d") if parse_datetime(row[3]) else ""),
                     "match_time_msk": (parse_datetime(row[3]).astimezone(MSK).strftime("%H:%M") if parse_datetime(row[3]) else ""),
@@ -179,7 +182,8 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters, include_p
     cur.execute(
         f"""
         SELECT m.id, m.home_team, m.away_team, m.kickoff_time, m.deadline,
-               m.status, m.home_score, m.away_score, m.playoff_stage_manual
+               m.status, m.home_score, m.away_score, m.playoff_stage_manual,
+               m.result_origin
         FROM matches m
         LEFT JOIN tournaments t ON t.id = m.tournament_id
         WHERE {where}
@@ -200,6 +204,8 @@ def prepare_tournament_match_list(cur, tournament_id, league, filters, include_p
             "kickoff_time": kickoff, "deadline": deadline, "status": row[5],
             "home_score": row[6], "away_score": row[7], "stage": row[8] or "",
             "tournament_id": tournament_id,
+            "result_origin": row[9],
+            "is_auto_result": row[9] == "auto_result_worker",
             "has_result": row[6] is not None and row[7] is not None,
             "pending_result": False,
             "match_date_msk": kickoff_msk.strftime("%Y-%m-%d") if kickoff_msk else "",

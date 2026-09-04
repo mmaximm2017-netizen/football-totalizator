@@ -53,7 +53,7 @@ SPORTBOX_JSON = "https://news.sportbox.ru/stats/game_json/{game_id}"
 
 FIRST_CHECK_MINUTES = 120
 WINDOW_END_MINUTES = 180
-FINAL_GRACE_MINUTES = 185
+FINAL_GRACE_MINUTES = 195
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
 
 
@@ -169,6 +169,14 @@ def _fetch_detail(cache: PageCache, source_name: str, url: str) -> str:
         raise
 
 
+def _guard_observation(cache: PageCache, source_name: str, callback):
+    try:
+        return callback()
+    except SourceError as exc:
+        cache.mark_error(source_name, str(exc))
+        raise
+
+
 def _rfs_cup_observation(cache: PageCache, match: dict) -> Observation:
     candidates = rfs_cup_candidates(cache.page("rfs_cup"))
     team_candidates = [
@@ -246,33 +254,55 @@ def observe_match(cache: PageCache, match: dict) -> tuple[Observation, Observati
     scope = match["scope"]
     if scope == "rpl":
         return (
-            find_livesport_result(
-                cache.page("livesport_rpl"),
-                home=match["home_team"],
-                away=match["away_team"],
-                match_date=match["match_date"],
+            _guard_observation(
+                cache,
+                "livesport_rpl",
+                lambda: find_livesport_result(
+                    cache.page("livesport_rpl"),
+                    home=match["home_team"],
+                    away=match["away_team"],
+                    match_date=match["match_date"],
+                ),
             ),
-            find_sports_rpl_result(
-                cache.page("sports_rpl"),
-                home=match["home_team"],
-                away=match["away_team"],
-                match_date=match["match_date"],
+            _guard_observation(
+                cache,
+                "sports_rpl",
+                lambda: find_sports_rpl_result(
+                    cache.page("sports_rpl"),
+                    home=match["home_team"],
+                    away=match["away_team"],
+                    match_date=match["match_date"],
+                ),
             ),
         )
     if scope == "cup":
         return (
-            find_livesport_result(
-                cache.page("livesport_cup"),
-                home=match["home_team"],
-                away=match["away_team"],
-                match_date=match["match_date"],
+            _guard_observation(
+                cache,
+                "livesport_cup",
+                lambda: find_livesport_result(
+                    cache.page("livesport_cup"),
+                    home=match["home_team"],
+                    away=match["away_team"],
+                    match_date=match["match_date"],
+                ),
             ),
-            _rfs_cup_observation(cache, match),
+            _guard_observation(
+                cache, "rfs_cup", lambda: _rfs_cup_observation(cache, match)
+            ),
         )
     if scope == "national":
         return (
-            _sportbox_national_observation(cache, match),
-            _rfs_national_observation(cache, match),
+            _guard_observation(
+                cache,
+                "sportbox_national",
+                lambda: _sportbox_national_observation(cache, match),
+            ),
+            _guard_observation(
+                cache,
+                "rfs_national",
+                lambda: _rfs_national_observation(cache, match),
+            ),
         )
     raise SourceError("unsupported_scope")
 
@@ -424,7 +454,7 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
     cache = PageCache()
     needed = set()
     for match in matches:
-        if window_state(match["kickoff_time"], now) in {"active", "expired_grace"}:
+        if window_state(match["kickoff_time"], now) == "active":
             if match["scope"] == "rpl":
                 needed.update({"livesport_rpl", "sports_rpl"})
             elif match["scope"] == "cup":

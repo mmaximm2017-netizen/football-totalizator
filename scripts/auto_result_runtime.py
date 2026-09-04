@@ -125,6 +125,10 @@ def run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                     score[1],
                     tournament_id=match["tournament_id"],
                     league=match["league"],
+                    expected_home_team=match["home_team"],
+                    expected_away_team=match["away_team"],
+                    expected_kickoff_time=match["kickoff_time"],
+                    expected_match_category=match["match_category"],
                 )
                 base["write_outcome"] = outcome
                 if outcome == "saved":

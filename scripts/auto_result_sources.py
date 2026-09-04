@@ -73,6 +73,12 @@ def _date_pattern(day, month_name, year):
 
 def find_livesport_result(html, *, home, away, match_date, source="livesport"):
     text = plain_text(html); target = date.fromisoformat(match_date)
+    calendar_date = re.compile(
+        rf"\b\d{{1,2}}\s+(?:{MONTH_RE})(?:,\s*[^,]+)?(?:,\s*)?20\d{{2}}\b",
+        re.I,
+    )
+    if not calendar_date.search(text):
+        raise SourceError("livesport_calendar_dates_missing")
     month_name = next(k for k,v in MONTHS.items() if v == target.month)
     hit = _date_pattern(target.day, month_name, target.year).search(text)
     if not hit: return Observation(source, STATUS_NOT_FOUND, detail="date_not_found")
@@ -207,9 +213,16 @@ def sportbox_national_candidates(html):
 
 def find_sportbox_candidate(candidates, *, home, away, match_date):
     target=date.fromisoformat(match_date)
-    for x in candidates:
-        if x["day"]==target.day and x["month"]==target.month and team_matches(x["home"],home) and team_matches(x["away"],away): return x
-    return None
+    matches = [
+        x for x in candidates
+        if x["day"] == target.day
+        and x["month"] == target.month
+        and team_matches(x["home"], home)
+        and team_matches(x["away"], away)
+    ]
+    if len(matches) > 1:
+        raise SourceError("sportbox_candidate_ambiguous")
+    return matches[0] if matches else None
 
 def parse_sportbox_game_json(raw, *, match_date):
     try: data=json.loads(raw)
