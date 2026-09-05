@@ -23,6 +23,9 @@ class Connection:
     def rollback(self):
         self._rolled_back = True
 
+    def set_session(self, **kwargs):
+        self.readonly = kwargs["readonly"]
+
 
 class _ConnectionInfo:
     transaction_status = 0

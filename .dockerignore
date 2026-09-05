@@ -21,3 +21,7 @@ scripts/*
 build/
 dist/
 *.egg-info/
+
+!scripts/auto_result_runtime.py
+!scripts/auto_result_worker.py
+!scripts/auto_result_sources.py

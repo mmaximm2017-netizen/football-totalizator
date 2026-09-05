@@ -14,14 +14,16 @@ class FakeCursor:
         self.update_rowcount = update_rowcount
         self.rowcount = -1
         self.executed = []
+        self.window_query = False
 
     def execute(self, sql, params=()):
         self.executed.append((sql, params))
+        self.window_query = "SELECT clock_timestamp() BETWEEN" in sql
         if "UPDATE matches" in sql:
             self.rowcount = self.update_rowcount
 
     def fetchone(self):
-        return self.row
+        return (True,) if self.window_query else self.row
 
 
 class FakeConnection:

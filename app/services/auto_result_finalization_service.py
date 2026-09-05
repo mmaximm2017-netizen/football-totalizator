@@ -1,6 +1,7 @@
 """Guarded finalization path for automatic match results."""
 
 from app.db import close_db, get_db
+from app.services.auto_result_delivery_service import enqueue, match_identity
 from app.services.scoring_recalculation_service import recalc_match_points
 
 
@@ -38,6 +39,8 @@ def finalize_auto_result(
     conn = get_db()
     cur = conn.cursor()
     try:
+        cur.execute("SET LOCAL lock_timeout = '5s'")
+        cur.execute("SET LOCAL statement_timeout = '15s'")
         cur.execute(
             """
             SELECT status, home_score, away_score, tournament_id, league,
@@ -72,6 +75,10 @@ def finalize_auto_result(
             conn.rollback()
             return "already_done"
 
+        if not _inside_window(cur, actual_kickoff_time):
+            conn.rollback()
+            return "window_expired"
+
         cur.execute(
             """
             UPDATE matches
@@ -105,6 +112,24 @@ def finalize_auto_result(
             conn=conn,
             cur=cur,
         )
+        # Re-check after any scoring/lock delay, before committing the result.
+        if not _inside_window(cur, actual_kickoff_time):
+            conn.rollback()
+            return "window_expired"
+        identity = match_identity({
+            "id": match_id, "tournament_id": tournament_id, "league": league,
+            "home_team": actual_home_team, "away_team": actual_away_team,
+            "kickoff_time": actual_kickoff_time, "match_category": actual_match_category,
+        })
+        enqueue(
+            cur, f"success:{identity}",
+            f"✅ ТОТИШ: {actual_home_team} — {actual_away_team} "
+            f"{home_score}:{away_score}. Результат добавлен автоматически, очки рассчитаны.",
+        )
+        # Notification persistence can also wait on locks; keep the hard bound.
+        if not _inside_window(cur, actual_kickoff_time):
+            conn.rollback()
+            return "window_expired"
         conn.commit()
         return "saved"
     except Exception:
@@ -112,3 +137,12 @@ def finalize_auto_result(
         raise
     finally:
         close_db(conn, cur)
+
+
+def _inside_window(cur, kickoff):
+    # Use PostgreSQL wall time, not transaction-start CURRENT_TIMESTAMP.
+    cur.execute(
+        "SELECT clock_timestamp() BETWEEN %s + interval '120 minutes' "
+        "AND %s + interval '180 minutes'", (kickoff, kickoff),
+    )
+    return bool(cur.fetchone()[0])

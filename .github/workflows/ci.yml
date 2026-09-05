@@ -37,6 +37,7 @@ jobs:
       ADMIN_USERNAME: ci-admin
       ADMIN_PASSWORD: ci-test-admin-password
       DATABASE_URL: postgresql://totish_ci:totish_ci@127.0.0.1:5432/totish_ci
+      AUTO_RESULTS_TEST_DATABASE_URL: postgresql://totish_ci:totish_ci@127.0.0.1:5432/totish_ci
       SECRET_KEY: ci-test-secret-key-not-for-production
       PYTHONUNBUFFERED: "1"
       PYTHONPATH: .
@@ -127,6 +128,10 @@ jobs:
 
       - name: Build Docker image
         run: docker build --progress=plain --build-arg TOTISH_RELEASE="$GITHUB_SHA" -t totish-ci .
+
+      - name: Verify automatic-result runtime is contained in image
+        run: |
+          docker run --rm --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py'); assert all((Path('/app/scripts') / name).is_file() for name in names)"
 
   publish:
     name: Publish Docker image
