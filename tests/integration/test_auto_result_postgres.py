@@ -17,6 +17,7 @@ from app import db
 from app.services import auto_result_delivery_service as delivery
 from app.services import auto_result_finalization_service as finalizer
 from scripts import auto_result_runtime as runtime
+from scripts.migrate_push_delivery_log import DDL as PUSH_DELIVERY_DDL
 
 worker = runtime.dry
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,6 +40,8 @@ def pg(monkeypatch):
         with conn.cursor() as cur:
             for path in sorted((ROOT / "migrations").glob("*.sql")):
                 cur.execute(path.read_text())
+            for statement in PUSH_DELIVERY_DDL:
+                cur.execute(statement)
             cur.execute("INSERT INTO tournaments (id,name) VALUES (5,'RPL'),(6,'Cup')")
             cur.execute("INSERT INTO users (id,username,password) VALUES (1,'audit','unused')")
             cur.execute(
@@ -62,7 +65,7 @@ def sql(query, params=(), *, write=False):
     conn = db.get_db()
     cur = conn.cursor()
     try:
-        cur.execute(query, params)
+        cur.execute(query, params or None)
         rows = cur.fetchall() if cur.description else []
         if write:
             conn.commit()

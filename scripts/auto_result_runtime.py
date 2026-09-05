@@ -81,14 +81,16 @@ def _expired(match):
     delivery.notify_pending(
         match, f"expired:{delivery.match_identity(match)}",
         f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
-        f"Окно автоматизации закрыто без результата. Нужен ручной результат. {reason}",
+        f"Окно автоматизации закрыто. На момент проверки результата нет. "
+        f"Если он ещё не внесён, нужен ручной результат. {reason}",
     )
 
 
 def monitor(now):
     enabled = dry._bool_env("AUTO_RESULTS_ENABLED", False)
-    since = delivery.enabled_since(enabled)
-    if not enabled or dry._bool_env("AUTO_RESULTS_DRY_RUN", True):
+    live_enabled = enabled and not dry._bool_env("AUTO_RESULTS_DRY_RUN", True)
+    since = delivery.enabled_since(live_enabled)
+    if not live_enabled:
         return {"monitor": "disabled_or_dry_run"}
     # Catch missed final-notice runs on recovery. Ignore pre-rollout backlog.
     matches = dry._load_matches(now, lookback_minutes=7 * 24 * 60)
@@ -222,7 +224,7 @@ def main() -> int:
     state_path = Path(args.state_file)
     outbox = None if args.no_notify else Path(args.outbox)
     enabled = dry._bool_env("AUTO_RESULTS_ENABLED", False)
-    delivery.enabled_since(enabled)
+    delivery.enabled_since(enabled and not dry._bool_env("AUTO_RESULTS_DRY_RUN", True))
     now = datetime.now(timezone.utc)
     if args.monitor:
         report = monitor(now)

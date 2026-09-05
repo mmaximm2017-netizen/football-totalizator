@@ -49,7 +49,6 @@ def notify(key, message):
         close_db(conn, cur)
 
 
-
 def notify_pending(match, key, message):
     """Do not request manual input if an admin/worker already saved the match."""
     conn = get_db()
@@ -70,6 +69,7 @@ def notify_pending(match, key, message):
                 conn.commit()
     finally:
         close_db(conn, cur)
+
 
 def record_check(match, now, detail):
     conn = get_db()
@@ -109,8 +109,8 @@ def enabled_since(enabled):
         )
         changed = cur.fetchone()
         if changed:
-            message = ("▶️ ТОТИШ: автоматическая проверка результатов снова включена."
-                       if enabled else "⏸️ ТОТИШ: автоматическая проверка результатов отключена.")
+            message = ("▶️ ТОТИШ: боевая автозапись результатов снова включена."
+                       if enabled else "⏸️ ТОТИШ: боевая автозапись результатов отключена.")
             enqueue(cur, f"enabled:{enabled}:{changed[0].isoformat()}", message)
         cur.execute("SELECT enabled_since FROM auto_result_monitor WHERE id=1")
         row = cur.fetchone()
