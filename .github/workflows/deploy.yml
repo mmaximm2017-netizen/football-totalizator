@@ -108,6 +108,11 @@ jobs:
             # transition, including rollback. deploy_production.sh inherits fd 9.
             exec 9>/tmp/totish-production-deploy.lock
             flock -w 150 9 || { echo "DEPLOY REFUSED: deploy/worker lock busy" >&2; exit 1; }
+            # Drain legacy workers too on the first rollout: their wrapper does
+            # not yet take the deploy lock, but already takes this cron lock.
+            mkdir -p "$HOME/.local/state/totish"
+            exec 8>"$HOME/.local/state/totish/auto-results.lock"
+            flock -w 150 8 || { echo "DEPLOY REFUSED: previous auto-result worker busy" >&2; exit 1; }
 
             expected_image="${{ steps.image.outputs.reference }}"
             previous_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"

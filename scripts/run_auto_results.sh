@@ -11,6 +11,7 @@ LOG_FILE="${TOTISH_AUTO_RESULTS_LOG:-/var/log/totish-auto-results.log}"
 LOCK_FILE="${TOTISH_AUTO_RESULTS_LOCK:-/tmp/totish-auto-results.lock}"
 TIMEOUT_SECONDS="${TOTISH_AUTO_RESULTS_TIMEOUT:-120}"
 MAX_LOG_BYTES=10485760
+if [[ "${1:-}" == "--monitor" ]]; then TIMEOUT_SECONDS=30; fi
 
 for command in docker flock timeout; do
   command -v "$command" >/dev/null 2>&1 || { echo "$command is required" >&2; exit 1; }

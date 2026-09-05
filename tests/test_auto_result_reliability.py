@@ -80,3 +80,14 @@ def test_state_failure_cannot_consume_unsent_event(tmp_path):
     with patch.object(Path,'write_text',side_effect=OSError('unavailable')), pytest.raises(OSError):
         worker._event_once(state,'key','message',tmp_path)
     assert not state['events'].get('key')
+
+
+def test_independent_monitor_reports_timeout(monkeypatch):
+    import subprocess
+
+    from scripts import monitor_production
+    messages=[]
+    monkeypatch.setattr(monitor_production,'run',lambda *a,**k: (_ for _ in ()).throw(subprocess.TimeoutExpired('worker',45)))
+    monkeypatch.setattr(monitor_production,'alert',lambda *a:messages.append(a))
+    assert monitor_production.check_auto_results() is False
+    assert messages[0][0] == 'auto_results:monitor_failed'

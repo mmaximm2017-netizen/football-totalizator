@@ -103,3 +103,9 @@ def test_workflow_lock_covers_managed_marker_and_rollback():
     assert source.index('exec 9>/tmp/totish-production-deploy.lock') < source.index('previous_image=')
     assert source.index('exec 9>/tmp/totish-production-deploy.lock') < source.index('CONTROL PLANE SYNC OK')
     assert 'run_auto_results\\.sh|run_database_backup' in source
+
+
+def test_first_rollout_drains_existing_worker_before_touching_image():
+    source=(ROOT/'.github/workflows/deploy.yml').read_text()
+    assert source.index('flock -w 150 9') < source.index('exec 8>"$HOME/.local/state/totish/auto-results.lock"')
+    assert source.index('flock -w 150 8') < source.index('previous_image=')

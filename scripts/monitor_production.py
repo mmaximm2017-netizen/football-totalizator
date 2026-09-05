@@ -407,7 +407,13 @@ def check_public_health():
 
 def check_auto_results():
     # Independent of the five-minute result cron: can detect its disappearance.
-    result = run(["/bin/bash", "scripts/run_auto_results.sh", "--monitor"], timeout=45)
+    try:
+        result = run(["/bin/bash", "scripts/run_auto_results.sh", "--monitor"], timeout=45)
+    except (OSError, subprocess.TimeoutExpired):
+        alert("auto_results:monitor_failed",
+              "Проверка автоматического ввода результатов не завершилась. "
+              "Проверьте cron/worker; состояние результатов неизвестно.")
+        return False
     if result.returncode != 0:
         alert("auto_results:monitor_failed",
               "Не удалось проверить работу автоматического ввода результатов. "

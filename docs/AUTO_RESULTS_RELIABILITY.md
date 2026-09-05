@@ -32,6 +32,8 @@ All nine audit items were present. Source URLs, scoring and game rules are uncha
   under a row lock before asking for manual intervention.
 - Deploy waits up to 150 seconds for the existing lock. Its nested deploy script
   reuses inherited fd 9, avoiding self-deadlock. Worker acquisition is nonblocking.
+  On first rollout, deploy also drains the existing managed cron worker lock,
+  because the previous wrapper does not yet participate in the deploy lock.
 
 ## Deployment and operation
 
