@@ -16,7 +16,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     steps:
-      - name: Diagnose production auto-results monitor
+      - name: Verify production monitor after PR61
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -26,13 +26,18 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
-            echo '=== UTC ==='
-            date -u -Is
-            echo '=== MONITOR LOG 06:10..06:25 ==='
-            grep -E '2026-09-05T06:(1[0-9]|2[0-5])|auto_results:monitor_failed|MONITOR:' "$HOME/.local/state/totish/production-monitor.log" | tail -n 160 || true
-            echo '=== AUTO RESULT LOG 06:10..06:25 ==='
-            grep -E '2026-09-05T06:(1[0-9]|2[0-5])|START auto-result|FINISH auto-result|monitor|AUTO_RESULTS_' "$HOME/.local/state/totish/auto-results.log" | tail -n 220 || true
-            echo '=== PROCESSES ==='
-            ps -ef | grep -E 'run_auto_results|auto_result_runtime|monitor_production' | grep -v grep || true
-            echo '=== CRON ==='
-            crontab -l | grep -E 'monitor_production|run_auto_results' || true
+            echo '=== RELEASE ==='
+            echo "managed=$(cat .totish-managed-release)"
+            echo "image=$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+            echo "health=$(docker inspect football-totalizator-app-1 --format '{{.State.Running}}|{{.State.Health.Status}}')"
+            echo '=== EXACT CRON-STYLE MONITOR ==='
+            set +e
+            /usr/bin/python3 scripts/monitor_production.py
+            monitor_status=$?
+            set -e
+            echo "monitor_status=$monitor_status"
+            echo '=== AUTO RESULT LOG TAIL ==='
+            tail -n 60 "$HOME/.local/state/totish/auto-results.log" || true
+            echo '=== PRODUCTION MONITOR LOG TAIL ==='
+            tail -n 80 "$HOME/.local/state/totish/production-monitor.log" || true
+            exit "$monitor_status"
