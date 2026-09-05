@@ -301,3 +301,36 @@ os._exit(73 if result == 'saved' else 74)
     assert sql('SELECT points FROM predictions') == [(10,)]
     delivery.flush_notifications(tmp_path)
     assert len(list(tmp_path.glob('*.msg'))) == 1
+
+
+def test_live_processing_survives_non_utf8_state(pg, monkeypatch, tmp_path):
+    consensus(monkeypatch)
+    state = tmp_path / 'state.json'
+    state.write_bytes(b'\xff\xfe{\x00}')
+    runtime.run_live(datetime.now(timezone.utc), state_path=state, outbox=None)
+    assert sql('SELECT status,home_score,away_score FROM matches') == [('FINISHED', 2, 1)]
+    assert sql('SELECT points FROM predictions') == [(10,)]
+    assert len(sql('SELECT event_key FROM auto_result_notifications')) == 1
+    # Normal atomic diagnostic publication replaces the invalid bytes.
+    assert isinstance(worker._load_state(state), dict)
+    with patch.object(finalizer, 'finalize_auto_result', side_effect=AssertionError('duplicate')):
+        runtime.run_live(datetime.now(timezone.utc), state_path=state, outbox=None)
+
+
+@pytest.mark.parametrize('second_status,second_score', [('not_finished', None), ('finished', (0, 0))])
+def test_manual_result_during_lookup_suppresses_observation_notice(pg, monkeypatch, tmp_path, second_status, second_score):
+    monkeypatch.setattr(worker.PageCache, 'load_many', lambda *a: None)
+    def observe(*args):
+        # A real independent transaction commits while the worker is looking up
+        # sources; the live loop still holds its previously loaded candidate.
+        sql("UPDATE matches SET status='FINISHED',home_score=3,away_score=0 WHERE id=401", write=True)
+        first = worker.Observation('first', 'finished', home_score=2, away_score=1)
+        second = worker.Observation('second', second_status,
+                                    home_score=second_score[0] if second_score else None,
+                                    away_score=second_score[1] if second_score else None)
+        return first, second
+    monkeypatch.setattr(worker, 'observe_match', observe)
+    with patch.object(finalizer, 'finalize_auto_result', side_effect=AssertionError('manual overwrite')):
+        runtime.run_live(datetime.now(timezone.utc), state_path=tmp_path / 'state', outbox=None)
+    assert sql('SELECT home_score,away_score FROM matches') == [(3, 0)]
+    assert sql('SELECT event_key FROM auto_result_notifications') == []

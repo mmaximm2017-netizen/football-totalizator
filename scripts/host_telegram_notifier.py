@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -93,6 +94,21 @@ def send_message(message):
 
 
 def drain_outbox():
+    # Independent relay invocations (cron, worker, monitor) share one lock.
+    # Never unlink it: waiters must continue to refer to the same inode.
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with (STATE_DIR / "telegram-relay.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0
+        try:
+            return _drain_outbox_locked()
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _drain_outbox_locked():
     OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
 
     sent = 0

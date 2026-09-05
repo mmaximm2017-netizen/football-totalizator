@@ -187,10 +187,12 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                         if outcome == "window_expired":
                             _expired(match)
                 elif decision["decision"] in {"score_conflict", "one_source_confirmed"}:
-                    delivery.notify(
+                    delivery.notify_pending(
+                        match,
                         f"observation:{delivery.match_identity(match)}:{detail}",
                         f"ℹ️ ТОТИШ: {match['home_team']} — {match['away_team']}. {detail}. "
-                        "Результат не записан; ждём согласованного подтверждения в рабочем окне.",
+                        "На момент проверки результата в БД нет; "
+                        "ждём согласованного подтверждения в рабочем окне.",
                     )
                 records.append(base)
     # Only fetch+parser outcomes may transition source health. Notification or

@@ -27,7 +27,6 @@ from auto_result_sources import (  # noqa: E402
     Observation,
     SourceError,
     STATUS_FINISHED,
-    STATUS_NOT_FINISHED,
     absolute_url,
     fetch_text,
     find_livesport_result,
@@ -37,9 +36,9 @@ from auto_result_sources import (  # noqa: E402
     parse_rfs_detail,
     parse_sportbox_game_json,
     rfs_cup_candidates,
+    rfs_cup_team_matches,
     rfs_national_candidates,
     sportbox_national_candidates,
-    team_matches,
 )
 
 LIVE_RPL = "https://www.livesport.ru/football/rfpl/calendar/"
@@ -190,30 +189,34 @@ def _rfs_cup_observation(cache: PageCache, match: dict) -> Observation:
     team_candidates = [
         item
         for item in candidates
-        if team_matches(item["home"], match["home_team"])
-        and team_matches(item["away"], match["away_team"])
+        if rfs_cup_team_matches(item, "home", match["home_team"])
+        and rfs_cup_team_matches(item, "away", match["away_team"])
     ]
     if not team_candidates:
         return Observation("rfs", "not_found", detail="match_not_found")
 
-    saw_target_unfinished = False
+    target_observations = []
     for candidate in team_candidates:
         detail = _fetch_detail(
             cache,
             "rfs_cup",
             absolute_url(RFS_BASE, candidate["href"]),
         )
-        observation = parse_rfs_detail(detail, score=candidate["score"])
+        observation = parse_rfs_detail(detail, score=candidate["score"], regulation_only=True)
         if observation.match_date != match["match_date"]:
             continue
-        if observation.status == STATUS_FINISHED:
-            return observation
-        saw_target_unfinished = True
+        if candidate.get("regulation_unproven"):
+            raise SourceError("rfs_90_minute_score_unproven")
+        target_observations.append(observation)
+
+    if len(target_observations) > 1:
+        raise SourceError("rfs_cup_candidate_ambiguous")
+    if target_observations:
+        return target_observations[0]
 
     return Observation(
         "rfs",
-        STATUS_NOT_FINISHED if saw_target_unfinished else "not_found",
-        match_date=match["match_date"] if saw_target_unfinished else None,
+        "not_found",
         detail="target_date_not_finished_or_not_found",
     )
 
@@ -293,6 +296,7 @@ def observe_match(cache: PageCache, match: dict) -> tuple[Observation, Observati
                     home=match["home_team"],
                     away=match["away_team"],
                     match_date=match["match_date"],
+                    regulation_only=True,
                 ),
             ),
             _guard_observation(
@@ -374,7 +378,7 @@ def _load_state(path: Path) -> dict:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         return value if isinstance(value, dict) else {}
-    except (FileNotFoundError, OSError, json.JSONDecodeError):
+    except (FileNotFoundError, OSError, UnicodeDecodeError, json.JSONDecodeError):
         return {}
 
 
