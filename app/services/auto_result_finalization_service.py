@@ -116,11 +116,11 @@ def finalize_auto_result(
         if not _inside_window(cur, actual_kickoff_time):
             conn.rollback()
             return "window_expired"
-        identity = match_identity(dict(
-            id=match_id, tournament_id=tournament_id, league=league,
-            home_team=actual_home_team, away_team=actual_away_team,
-            kickoff_time=actual_kickoff_time, match_category=actual_match_category,
-        ))
+        identity = match_identity({
+            "id": match_id, "tournament_id": tournament_id, "league": league,
+            "home_team": actual_home_team, "away_team": actual_away_team,
+            "kickoff_time": actual_kickoff_time, "match_category": actual_match_category,
+        })
         enqueue(
             cur, f"success:{identity}",
             f"✅ ТОТИШ: {actual_home_team} — {actual_away_team} "
