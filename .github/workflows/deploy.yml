@@ -104,6 +104,11 @@ jobs:
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
 
+            # Hold the existing deploy lock through the complete control-plane
+            # transition, including rollback. deploy_production.sh inherits fd 9.
+            exec 9>/tmp/totish-production-deploy.lock
+            flock -w 150 9 || { echo "DEPLOY REFUSED: deploy/worker lock busy" >&2; exit 1; }
+
             expected_image="${{ steps.image.outputs.reference }}"
             previous_image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
 
@@ -299,7 +304,7 @@ jobs:
                   /^# END TOTISH MANAGED$/ { skip=0; next }
                   skip { next }
                   /\/opt\/football-totalizator/ &&
-                  /(host_telegram_notifier\.py|monitor_production\.py|run_morning_digest\.sh|run_deadline_pushes\.sh|run_match_result_pushes\.sh|run_database_backup\.sh|verify_database_backup_restore\.sh)/ { next }
+                  /(host_telegram_notifier\.py|monitor_production\.py|run_morning_digest\.sh|run_deadline_pushes\.sh|run_match_result_pushes\.sh|run_auto_results\.sh|run_database_backup\.sh|verify_database_backup_restore\.sh)/ { next }
                   { print }
                 ' > "$cron_tmp" || true
 

@@ -405,6 +405,17 @@ def check_public_health():
         )
         return False
 
+def check_auto_results():
+    # Independent of the five-minute result cron: can detect its disappearance.
+    result = run(["/bin/bash", "scripts/run_auto_results.sh", "--monitor"], timeout=45)
+    if result.returncode != 0:
+        alert("auto_results:monitor_failed",
+              "Не удалось проверить работу автоматического ввода результатов. "
+              "Проверьте auto-results.log; состояние результатов неизвестно.")
+        return False
+    return True
+
+
 def main():
     ok = True
 
@@ -421,6 +432,9 @@ def main():
         ok = False
 
     if not check_database_backup():
+        ok = False
+
+    if not check_auto_results():
         ok = False
 
     if not check_public_health():

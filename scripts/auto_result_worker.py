@@ -123,6 +123,7 @@ class PageCache:
     def __init__(self):
         self._pages: dict[str, str] = {}
         self._errors: dict[str, str] = {}
+        self._validated: set[str] = set()
 
     def load_many(self, urls: dict[str, str]) -> None:
         def load(item):
@@ -151,7 +152,7 @@ class PageCache:
         return self._pages[name]
 
     def source_status(self) -> dict[str, dict]:
-        names = set(self._pages) | set(self._errors)
+        names = self._validated | set(self._errors)
         return {
             name: (
                 {"ok": False, "error": self._errors[name]}
@@ -172,10 +173,16 @@ def _fetch_detail(cache: PageCache, source_name: str, url: str) -> str:
 
 def _guard_observation(cache: PageCache, source_name: str, callback):
     try:
-        return callback()
+        result = callback()
+        cache._validated.add(source_name)
+        return result
     except SourceError as exc:
         cache.mark_error(source_name, str(exc))
         raise
+    except Exception as exc:
+        error = f"parser_failed:{type(exc).__name__}"
+        cache.mark_error(source_name, error)
+        raise SourceError(error) from exc
 
 
 def _rfs_cup_observation(cache: PageCache, match: dict) -> Observation:
@@ -308,7 +315,7 @@ def observe_match(cache: PageCache, match: dict) -> tuple[Observation, Observati
     raise SourceError("unsupported_scope")
 
 
-def _load_matches(now: datetime) -> list[dict]:
+def _load_matches(now: datetime, *, lookback_minutes=FINAL_NOTICE_LOOKBACK_MINUTES) -> list[dict]:
     # Delayed import keeps unit tests independent of Flask production config.
     from app.db import close_db, get_db
 
@@ -330,12 +337,12 @@ def _load_matches(now: datetime) -> list[dict]:
               AND kickoff_time >= %s
               AND (
                     (tournament_id = 5 AND league = 'rpl'
-                     AND COALESCE(match_category, 'rpl') IN ('rpl', 'national_team'))
+                     AND COALESCE(NULLIF(match_category, ''), 'rpl') IN ('rpl', 'national_team'))
                     OR (tournament_id = 6 AND league = 'rcup')
                   )
             ORDER BY kickoff_time, id
             """,
-            (now, now.replace(microsecond=0) - timedelta(minutes=FINAL_NOTICE_LOOKBACK_MINUTES)),
+            (now, now.replace(microsecond=0) - timedelta(minutes=lookback_minutes)),
         )
         rows = cur.fetchall()
         result = []
@@ -386,15 +393,18 @@ def _queue_message(outbox: Path | None, message: str) -> None:
         return
     outbox.mkdir(parents=True, exist_ok=True)
     target = outbox / f"auto-results-{int(time.time())}-{uuid.uuid4().hex}.msg"
-    target.write_text(message, encoding="utf-8")
+    tmp = target.with_suffix(".tmp")
+    tmp.write_text(message, encoding="utf-8")
+    tmp.replace(target)
 
 
 def _event_once(state: dict, key: str, message: str, outbox: Path | None) -> None:
     sent = state.setdefault("events", {})
     if sent.get(key):
         return
-    sent[key] = int(time.time())
     _queue_message(outbox, message)
+    if outbox is not None:
+        sent[key] = int(time.time())
 
 
 def _update_enabled_state(

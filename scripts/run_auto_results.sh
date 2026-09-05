@@ -17,17 +17,36 @@ for command in docker flock timeout; do
 done
 DOCKER_BIN="$(command -v docker)"; FLOCK_BIN="$(command -v flock)"; TIMEOUT_BIN="$(command -v timeout)"
 
-if [[ -z "${TOTISH_IMAGE:-}" ]]; then
-  TOTISH_IMAGE="$("$DOCKER_BIN" inspect --format='{{.Config.Image}}' football-totalizator-app-1 2>/dev/null || true)"
-  export TOTISH_IMAGE
-fi
-[[ -n "${TOTISH_IMAGE:-}" ]] || { echo "TOTISH_IMAGE is not available" >&2; exit 1; }
+# Shared lock spans verification and worker lifetime. Deployment holds the same
+# lock exclusively across image replacement AND control-plane synchronization.
+DEPLOY_LOCK="${TOTISH_DEPLOY_LOCK_FILE:-/tmp/totish-production-deploy.lock}"
+exec 8>"$DEPLOY_LOCK"
+"$FLOCK_BIN" -sn 8 || { echo "AUTO_RESULTS_SKIPPED: deploy in progress"; exit 0; }
+CONTAINER_ID="$("$DOCKER_BIN" inspect --format='{{.Id}}' football-totalizator-app-1)"
+TOTISH_IMAGE="$("$DOCKER_BIN" inspect --format='{{.Config.Image}}' "$CONTAINER_ID")"
+export TOTISH_IMAGE
+[[ "$TOTISH_IMAGE" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]] || {
+  echo "AUTO_RESULTS_REFUSED: non-immutable image" >&2; exit 1;
+}
+[[ "$("$DOCKER_BIN" inspect --format='{{.State.Running}}|{{.State.Health.Status}}' "$CONTAINER_ID")" == "true|healthy" ]] || {
+  echo "AUTO_RESULTS_REFUSED: unhealthy container" >&2; exit 1;
+}
+release="$("$DOCKER_BIN" image inspect "$TOTISH_IMAGE" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^TOTISH_RELEASE=//p')"
+[[ "$release" =~ ^[0-9a-f]{40}$ && -f "$PROJECT_ROOT/.totish-managed-release" ]] || {
+  echo "AUTO_RESULTS_REFUSED: unknown release" >&2; exit 1;
+}
+[[ "$(cat "$PROJECT_ROOT/.totish-managed-release")" == "$release" ]] || {
+  echo "AUTO_RESULTS_REFUSED: release mismatch" >&2; exit 1;
+}
+[[ "$("$DOCKER_BIN" inspect --format='{{.Image}}' "$CONTAINER_ID")" == "$("$DOCKER_BIN" image inspect --format='{{.Id}}' "$TOTISH_IMAGE")" ]] || {
+  echo "AUTO_RESULTS_REFUSED: image ID mismatch" >&2; exit 1;
+}
 [[ -d "$PROJECT_ROOT" ]] || { echo "Project root does not exist: $PROJECT_ROOT" >&2; exit 1; }
 
 mkdir -p "$(dirname "$LOG_FILE")" "$PROJECT_ROOT/runtime/telegram-outbox"
 touch "$LOG_FILE"; chmod 600 "$LOG_FILE" 2>/dev/null || true
 exec 9>"$LOCK_FILE"
-if ! "$FLOCK_BIN" -n 9; then
+if [[ "${1:-}" != "--monitor" ]] && ! "$FLOCK_BIN" -n 9; then
   printf '%s SKIP overlapping run\n' "$(date -Is)" >>"$LOG_FILE"
   exit 0
 fi
@@ -39,10 +58,9 @@ cd "$PROJECT_ROOT"
 printf '%s START auto-result runtime\n' "$(date -Is)" >>"$LOG_FILE"
 set +e
 "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
-  "$DOCKER_BIN" compose run --rm -T --interactive=false \
+  "$DOCKER_BIN" compose run --rm --no-deps -T --interactive=false \
     -e PYTHONPATH=/app \
-    -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
-    app python scripts/auto_result_runtime.py \
+    app python scripts/auto_result_runtime.py "$@" \
       --state-file /app/runtime/telegram-outbox/.auto-results-state.json \
       --outbox /app/runtime/telegram-outbox \
     >>"$LOG_FILE" 2>&1
@@ -52,6 +70,6 @@ printf '%s FINISH auto-result runtime exit_code=%s\n' "$(date -Is)" "$STATUS" >>
 
 python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" >>"$LOG_FILE" 2>&1 || true
 if [[ "$STATUS" -ne 0 ]]; then
-  python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка автоматической проверки результатов. Код выхода: ${STATUS}. Проверьте лог; при ошибке записи результат нужно внести вручную." >/dev/null 2>&1 || true
+  python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка автоматической проверки результатов. Код выхода: ${STATUS}. Проверьте лог и состояние БД; сохранение могло завершиться до ошибки." >/dev/null 2>&1 || true
 fi
 exit "$STATUS"

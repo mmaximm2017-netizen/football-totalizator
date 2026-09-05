@@ -168,7 +168,10 @@ cd "$PROJECT_ROOT"
 export TOTISH_IMAGE="$TARGET_IMAGE"
 umask 077
 install -d -m 700 "$STATE_DIR"
-exec 9>"$LOCK_FILE"
+# Reuse the workflow's inherited descriptor; standalone deploy acquires its own.
+if [[ "$(readlink /proc/$$/fd/9 2>/dev/null || true)" != "$LOCK_FILE" ]]; then
+    exec 9>"$LOCK_FILE"
+fi
 flock -n 9 || {
     echo "Another production deployment is already running." >&2
     exit 1

@@ -127,15 +127,20 @@ def close_db(conn, cur=None):
 
     if conn is None:
         return
+    discard = bool(conn.closed)
     try:
         if not conn.closed:
             conn.rollback()
+            # Consumer-local read-only mode must never escape through the pool.
+            # The GPT reader uses its own connection mechanism, not this pool.
+            conn.set_session(readonly=False, autocommit=False)
     except Exception:
-        logger.warning("DB rollback failed", exc_info=True)
+        discard = True
+        logger.warning("DB session cleanup failed; discarding connection", exc_info=True)
 
     if db_pool is not None:
         try:
-            db_pool.putconn(conn, close=bool(conn.closed))
+            db_pool.putconn(conn, close=discard)
             return
         except Exception:
             logger.warning("DB pool return failed; closing connection", exc_info=True)
