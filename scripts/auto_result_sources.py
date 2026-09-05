@@ -10,7 +10,7 @@ from html import unescape
 from html.parser import HTMLParser
 import json
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 import requests
 
 STATUS_FINISHED = "finished"
@@ -71,7 +71,7 @@ def _date_pattern(day, month_name, year):
     # LiveSport uses both "28 августа, пятница, 2026" and compact date forms.
     return re.compile(rf"\b{day}\s+{month_name}(?:,\s*[^,]+)?(?:,\s*)?{year}\b", re.I)
 
-def find_livesport_result(html, *, home, away, match_date, source="livesport"):
+def find_livesport_result(html, *, home, away, match_date, source="livesport", regulation_only=False):
     text = plain_text(html); target = date.fromisoformat(match_date)
     calendar_date = re.compile(
         rf"\b\d{{1,2}}\s+(?:{MONTH_RE})(?:,\s*[^,]+)?(?:,\s*)?20\d{{2}}\b",
@@ -82,30 +82,123 @@ def find_livesport_result(html, *, home, away, match_date, source="livesport"):
     month_name = next(k for k,v in MONTHS.items() if v == target.month)
     hit = _date_pattern(target.day, month_name, target.year).search(text)
     if not hit: return Observation(source, STATUS_NOT_FOUND, detail="date_not_found")
-    next_hit = re.search(rf"\b\d{{1,2}}\s+(?:{MONTH_RE})(?:,\s*[^,]+)?(?:,\s*)?{target.year}\b", text[hit.end():], re.I)
+    next_hit = calendar_date.search(text[hit.end():])
     segment = text[hit.end():hit.end()+next_hit.start()] if next_hit else text[hit.end():]
-    for ha in aliases_for(home):
-        for aa in aliases_for(away):
-            m = re.search(r"\bОк(?:\s+(?:пен|д\.в\.))?\s+" + re.escape(ha) + r"\s+(\d{1,2})\s*:\s*(\d{1,2})(?:\s+\d{1,2}\s*:\s*\d{1,2})?\s+" + re.escape(aa) + r"(?:\b|\s)", segment, re.I)
-            if m: return Observation(source, STATUS_FINISHED, ha, aa, match_date, int(m.group(1)), int(m.group(2)))
-    normalized = normalize_team(segment)
-    if any(normalize_team(x) in normalized for x in aliases_for(home)) and any(normalize_team(x) in normalized for x in aliases_for(away)):
-        return Observation(source, STATUS_NOT_FINISHED, detail="match_present_without_final_marker")
+    # Parse complete row fields before comparing names. A word boundary after
+    # "Динамо" is not a team boundary ("Динамо Мх" is a different club).
+    observations = []
+    starts = []
+    for marker in re.finditer(r"(?<!\S)(Ок\b|\d{1,2}:\d{2}(?=\s))", segment, re.I):
+        if starts and marker[1].casefold() != "ок":
+            prefix = segment[starts[-1]:marker.start()].strip()
+            # A score such as 10:11 is not a kickoff. It follows the home
+            # field, or (for a shootout) the regulation score, not an away field.
+            if (re.fullmatch(r"(?:Ок(?:\s+(?:пен|д\.в\.))?|\d{1,2}:\d{2})\s+[^:]+", prefix, re.I)
+                    or re.search(r"\d{1,2}\s*:\s*\d{1,2}$", prefix)):
+                continue
+        starts.append(marker.start())
+    for start, end in zip(starts, starts[1:] + [len(segment)]):
+        row = segment[start:end]
+        row = row.strip()
+        # The calendar appends a tour number / cup group after the away team.
+        row = re.sub(r"\s+(?:\d{1,2}|[A-DА-Г])$", "", row)
+        parsed = re.fullmatch(
+            r"(Ок(?:\s+(?:пен|д\.в\.))?|\d{1,2}:\d{2})\s+"
+            r"(.+?)\s+(\d{1,2}|[–—-])\s*:\s*(\d{1,2}|[–—-])"
+            r"(?:\s+\d{1,2}\s*:\s*\d{1,2})?\s+(.+)", row, re.I,
+        )
+        if not parsed:
+            continue
+        marker, sh, hs, aws, sa = parsed.groups()
+        if not team_matches(sh, home) or not team_matches(sa, away):
+            continue
+        if regulation_only and "д.в." in marker.casefold():
+            raise SourceError("livesport_90_minute_score_unproven")
+        finished = marker.casefold().startswith("ок") and hs.isdigit() and aws.isdigit()
+        observations.append(Observation(
+            source, STATUS_FINISHED if finished else STATUS_NOT_FINISHED,
+            sh, sa, match_date, int(hs) if finished else None, int(aws) if finished else None,
+        ))
+    if len(observations) > 1:
+        raise SourceError("livesport_candidate_ambiguous")
+    if observations:
+        return observations[0]
     return Observation(source, STATUS_NOT_FOUND, detail="match_not_found")
 
+
+class _Tags(HTMLParser):
+    def __init__(self, html):
+        super().__init__(convert_charrefs=True)
+        self.tags = []
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.append((tag, dict(attrs)))
+
+
+def _extra_time_present(html):
+    if re.search(
+        r"\bд\s*\.\s*в\s*\.|дополнительн\w*\s+(?:врем\w*|тайм\w*)|"
+        r"(?:первый|второй)\s+дополнительный|доп\.?\s+врем\w*|"
+        r"extra[ -]?time|овертайм|\b(?:105|120)\s*(?:[′’':+]|мин\b)",
+        plain_text(html), re.I,
+    ):
+        return True
+    return any(str(attrs.get(key, '')).casefold() in {'true', '1', 'yes'}
+               for _, attrs in _Tags(html).tags
+               for key in ('overtime', 'data-overtime', 'data-extra-time'))
+
+
 def find_sports_rpl_result(html, *, home, away, match_date):
-    cards = re.findall(r"(?is)<article\s+class=\"calendar-card\".*?</article>", html)
+    cards = [card for card in re.findall(r"(?is)<article\b[^>]*>.*?</article>", html)
+             if "calendar-card" in _Tags(card).tags[0][1].get("class", "").split()]
     if not cards: raise SourceError("sports_calendar_cards_missing")
+    openings = [attrs for tag, attrs in _Tags(html).tags
+                if tag == "article" and "calendar-card" in attrs.get("class", "").split()]
+    if len(openings) != len(cards):
+        raise SourceError("sports_calendar_card_incomplete")
+    observations = []
     for card in cards:
-        tm = re.search(r'title="Матч\s+([^\"]+?)\s+-\s+([^\"]+?)"', card, re.I)
-        dm = re.search(r'<time[^>]+datetime="(\d{4}-\d{2}-\d{2})T', card, re.I)
-        if not tm or not dm or dm.group(1) != match_date: continue
-        sh, sa = map(unescape, tm.groups())
+        tags = _Tags(card).tags
+        names = {m.groups() for _, attrs in tags
+                 if (m := re.fullmatch(r"Матч\s+(.+?)\s+-\s+(.+)", attrs.get("title", ""), re.I))}
+        if not names:
+            # Current team anchors are an independent structural representation;
+            # attribute order / extra CSS classes do not change their meaning.
+            sides = {side: [] for side in ("home", "away")}
+            for anchor in re.findall(r"(?is)<a\b[^>]*>.*?</a>", card):
+                classes = _Tags(anchor).tags[0][1].get("class", "").split()
+                for side in sides:
+                    if f"calendar-card__{side}" in classes:
+                        sides[side].append(plain_text(anchor))
+            if all(len(values) == 1 and values[0] for values in sides.values()):
+                names.add((sides["home"][0], sides["away"][0]))
+        dates = {attrs["datetime"][:10] for tag, attrs in tags
+                 if tag == "time" and re.match(r"\d{4}-\d{2}-\d{2}T", attrs.get("datetime", ""))}
+        if len(names) != 1 or len(dates) != 1:
+            raise SourceError("sports_calendar_identity_fields_missing_or_ambiguous")
+        md = next(iter(dates))
+        try:
+            date.fromisoformat(md)
+        except ValueError as exc:
+            raise SourceError("sports_calendar_date_invalid") from exc
+        sh, sa = next(iter(names))
+        finished = "Матч окончен" in unescape(card)
+        scores = [plain_text(span) for span in re.findall(r"(?is)<span\b[^>]*>.*?</span>", card)
+                  if "calendar-score__score" in _Tags(span).tags[0][1].get("class", "").split()]
+        if finished and (len(scores) != 2 or not all(re.fullmatch(r"\d{1,2}", s) for s in scores)):
+            raise SourceError("sports_finished_score_missing_or_ambiguous")
+        if md != match_date: continue
         if not team_matches(sh, home) or not team_matches(sa, away): continue
-        if "Матч окончен" not in unescape(card): return Observation("sports", STATUS_NOT_FINISHED, sh, sa, match_date)
-        scores = re.findall(r'class="calendar-score__score"[^>]*>\s*(\d{1,2})\s*<', card, re.I)
-        if len(scores) < 2: raise SourceError("sports_finished_score_missing")
-        return Observation("sports", STATUS_FINISHED, sh, sa, match_date, int(scores[0]), int(scores[1]))
+        observations.append(Observation(
+            "sports", STATUS_FINISHED if finished else STATUS_NOT_FINISHED, sh, sa, md,
+            int(scores[0]) if finished else None, int(scores[1]) if finished else None,
+        ))
+    # Validate the whole page before reporting health or accepting a candidate.
+    if len(observations) > 1:
+        raise SourceError("sports_candidate_ambiguous")
+    if observations:
+        return observations[0]
     return Observation("sports", STATUS_NOT_FOUND, detail="match_not_found")
 
 class AncestorParser(HTMLParser):
@@ -123,8 +216,18 @@ class RfsCupParser(AncestorParser):
     def __init__(self): super().__init__(); self.current=None; self.matches=[]
     def handle_starttag(self,tag,attrs):
         d=dict(attrs); c=set(d.get("class","").split()); super().handle_starttag(tag,attrs)
-        if tag=="div" and "tour-match" in c: self.current={"home":[],"away":[],"score":[],"href":None}
+        if tag=="div" and "tour-match" in c:
+            self.current={"home":[],"away":[],"score":[],"href":None,"home_ids":set(),"away_ids":set(),"markup":[]}
+        if self.current is not None:
+            self.current["markup"].append(self.get_starttag_text())
         if self.current is not None and tag=="a" and "tour-match__score-block" in c: self.current["href"]=d.get("href")
+        if self.current is not None and tag == "a":
+            url = urlsplit(d.get("href", ""))
+            club = re.fullmatch(r"/cup/teams/(\d+)/?", url.path)
+            if club and url.netloc in {"", "www.rfs.ru", "rfs.ru"}:
+                for side, css in (("home", "first"), ("away", "last")):
+                    if self.has("tour-match__team", css):
+                        self.current[f"{side}_ids"].add(club[1])
     def handle_endtag(self,tag):
         ended=self.stack[-1] if self.stack else (None,set())
         if ended[0]=="div" and "tour-match" in ended[1] and self.current is not None: self.matches.append(self.current); self.current=None
@@ -132,6 +235,7 @@ class RfsCupParser(AncestorParser):
     def handle_data(self,data):
         if self.current is None or not data.strip(): return
         t=data.strip()
+        self.current["markup"].append(t)
         if self.has("tour-match__score") and not self.has("tour-match__penalty"): self.current["score"].append(t)
         elif self.has("tour-match__name") and self.has("tour-match__team","first"): self.current["home"].append(t)
         elif self.has("tour-match__name") and self.has("tour-match__team","last"): self.current["away"].append(t)
@@ -142,9 +246,36 @@ def rfs_cup_candidates(html):
     out=[]
     for x in p.matches:
         h,a=" ".join(x["home"]).strip()," ".join(x["away"]).strip(); s=re.search(r"(\d+)\s*:\s*(\d+)"," ".join(x["score"]))
-        if h and a and x["href"]: out.append({"home":h,"away":a,"href":x["href"],"score":(int(s.group(1)),int(s.group(2))) if s else None})
+        if h and a and x["href"]:
+            if any(len(x[f"{side}_ids"]) > 1 for side in ("home", "away")):
+                raise SourceError("rfs_cup_club_identity_ambiguous")
+            out.append({"home":h,"away":a,"href":x["href"],"score":(int(s.group(1)),int(s.group(2))) if s else None,
+                        "home_id":next(iter(x["home_ids"]), None), "away_id":next(iter(x["away_ids"]), None),
+                        "regulation_unproven":_extra_time_present(" ".join(x["markup"]))
+                            or len(re.findall(r"\d+\s*:\s*\d+", " ".join(x["score"]))) > 1})
     if not out: raise SourceError("rfs_cup_fields_missing")
     return out
+
+
+# Verified public RFS club links, scoped ONLY to the cup adapter:
+# https://www.rfs.ru/cup/teams/35   — Динамо, Москва
+# https://www.rfs.ru/cup/teams/3637 — Динамо, Махачкала
+RFS_CUP_DYNAMO_IDS = {"35": "Динамо", "3637": "Динамо Мх"}
+
+
+def rfs_cup_team_matches(candidate, side, expected):
+    name = candidate[side]
+    club_id = candidate.get(f"{side}_id")
+    canonical = RFS_CUP_DYNAMO_IDS.get(club_id)
+    if canonical:
+        if normalize_team(name) != "динамо" and not team_matches(name, canonical):
+            raise SourceError("rfs_cup_club_name_id_conflict")
+        return canonical == expected
+    if normalize_team(name) == "динамо":
+        if expected in RFS_CUP_DYNAMO_IDS.values():
+            raise SourceError("rfs_cup_dynamo_identity_unproven")
+        return False
+    return team_matches(name, expected)
 
 class RfsNationalParser(AncestorParser):
     def __init__(self): super().__init__(); self.current=None; self.matches=[]
@@ -178,11 +309,15 @@ def rfs_national_candidates(html):
     if not out: raise SourceError("rfs_national_fields_missing")
     return out
 
-def parse_rfs_detail(html, *, score=None, source="rfs"):
+def parse_rfs_detail(html, *, score=None, source="rfs", regulation_only=False):
     text=plain_text(html); dm=re.search(rf"\b(\d{{1,2}})\s+({MONTH_RE})\s+(20\d{{2}})\b",text,re.I)
     if not dm: raise SourceError("rfs_match_date_missing")
     day,month_name,year=dm.groups(); md=date(int(year),MONTHS[month_name.casefold()],int(day)).isoformat()
     if "Матч окончен" not in text: return Observation(source,STATUS_NOT_FINISHED,match_date=md)
+    if regulation_only and _extra_time_present(html):
+        # Do not infer 90' from a 120' total or a shootout result. Supporting an
+        # explicit regulation breakdown would require a separate verified field.
+        raise SourceError("rfs_90_minute_score_unproven")
     if score is None: raise SourceError("rfs_finished_score_missing")
     return Observation(source,STATUS_FINISHED,match_date=md,home_score=score[0],away_score=score[1])
 
