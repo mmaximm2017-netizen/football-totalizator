@@ -82,6 +82,14 @@ def test_state_failure_cannot_consume_unsent_event(tmp_path):
     assert not state['events'].get('key')
 
 
+def test_auto_result_wrapper_defaults_to_user_writable_state_dir():
+    wrapper = Path('scripts/run_auto_results.sh').read_text(encoding='utf-8')
+    assert 'STATE_DIR="${TOTISH_AUTO_RESULTS_STATE_DIR:-$HOME/.local/state/totish}"' in wrapper
+    assert 'LOG_FILE="${TOTISH_AUTO_RESULTS_LOG:-$STATE_DIR/auto-results.log}"' in wrapper
+    assert 'LOCK_FILE="${TOTISH_AUTO_RESULTS_LOCK:-$STATE_DIR/auto-results.lock}"' in wrapper
+    assert '/var/log/totish-auto-results.log' not in wrapper
+
+
 def test_independent_monitor_reports_timeout(monkeypatch):
     import subprocess
 
