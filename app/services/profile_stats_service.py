@@ -102,7 +102,10 @@ def get_profile_stats(user_id, tournament_id, cur=None):
                 WHERE p.tournament_id = %s
                   AND m.status = 'FINISHED'
                   AND u.is_admin = 0
-                  AND COALESCE(u.is_deleted, 0) = 0
+                  AND (
+                      NOT EXISTS (SELECT 1 FROM tournaments t WHERE t.id = p.tournament_id AND t.is_active = 1)
+                      OR COALESCE(u.is_deleted, 0) = 0
+                  )
                 GROUP BY p.user_id
                 """,
                 (tournament_id,),

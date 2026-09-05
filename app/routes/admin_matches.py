@@ -573,17 +573,22 @@ def admin_russia_2027_visibility():
     cur = conn.cursor()
     try:
         tournament = get_required_rpl_tournament(cur)
-        new_status = "CANCELLED" if action == "hide" else "SCHEDULED"
         cur.execute(
             """
             UPDATE matches
-            SET status = %s
+            SET status = CASE
+                WHEN %s = 'hide' THEN 'CANCELLED'
+                WHEN home_score BETWEEN 0 AND 99 AND away_score BETWEEN 0 AND 99 THEN 'FINISHED'
+                ELSE 'SCHEDULED'
+            END
             WHERE id = %s
               AND tournament_id = %s
               AND league = 'rpl'
             """,
-            (new_status, match_id, tournament["id"]),
+            (action, match_id, tournament["id"]),
         )
+        if cur.rowcount:
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
         conn.commit()
         flash("Матч скрыт" if action == "hide" else "Матч восстановлен", "success")
     except Exception as e:
@@ -1042,17 +1047,22 @@ def admin_russian_cup_visibility():
     cur = conn.cursor()
     try:
         tournament = get_required_russian_cup_tournament(cur)
-        new_status = "CANCELLED" if action == "hide" else "SCHEDULED"
         cur.execute(
             """
             UPDATE matches
-            SET status = %s
+            SET status = CASE
+                WHEN %s = 'hide' THEN 'CANCELLED'
+                WHEN home_score BETWEEN 0 AND 99 AND away_score BETWEEN 0 AND 99 THEN 'FINISHED'
+                ELSE 'SCHEDULED'
+            END
             WHERE id = %s
               AND tournament_id = %s
               AND league = 'rcup'
             """,
-            (new_status, match_id, tournament["id"]),
+            (action, match_id, tournament["id"]),
         )
+        if cur.rowcount:
+            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
         conn.commit()
         flash("Матч скрыт" if action == "hide" else "Матч восстановлен", "success")
     except Exception as e:
@@ -1117,7 +1127,7 @@ def admin_russian_cup_recalc():
             WHERE tournament_id = %s
               AND league = 'rcup'
               AND status = 'FINISHED'
-            ORDER BY kickoff_time NULLS LAST, id
+            ORDER BY id
             """,
             (tournament["id"],),
         )
@@ -1550,13 +1560,11 @@ def admin_edit_match():
                 ),
             )
 
-            if status == "FINISHED" and submitted_status != "FINISHED" and tournament_id:
-                recalc_match_points(match_id, tournament_id=tournament_id, conn=conn, cur=cur)
-
         if cur.rowcount == 0:
             flash("Матч не найден", "error")
             return admin_context_redirect()
 
+        recalc_match_points(match_id, tournament_id=tournament_id, conn=conn, cur=cur)
         conn.commit()
 
         flash(
