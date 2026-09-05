@@ -259,7 +259,7 @@ class RplManualAdminTests(unittest.TestCase):
         self.assertEqual(conn.rollbacks, 1)
 
     def test_manual_result_is_scoped_to_rpl_and_recalculates(self):
-        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), (10, "SCHEDULED")])
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), (10, "SCHEDULED", None, None)])
         response, conn, recalc = self.post(
             "/admin/russia_2027_edit",
             {
@@ -276,7 +276,7 @@ class RplManualAdminTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(conn.commits, 1)
-        recalc.assert_called_once_with(10, tournament_id=5, conn=conn, cur=cursor)
+        recalc.assert_called_once_with(10, tournament_id=5, conn=conn, cur=cursor, emit_result_event=True)
         update_sql = cursor.executed[-1][0]
         self.assertIn("AND tournament_id = %s", update_sql)
         self.assertIn("AND league = 'rpl'", update_sql)

@@ -35,7 +35,7 @@ from app.services.russian_cup_screenshot_import_service import (
 )
 from app.services.screenshot_match_import_service import generic_draft_is_valid
 from app.services.russian_cup_team_catalog import match_russian_cup_team
-from app.models.scoring import has_valid_finished_score
+from app.models.scoring import FINISHED_STATUSES_SQL, has_valid_finished_score
 from app.services.wc_playoff_service import (
     is_wc2026_playoff_match,
     normalize_playoff_stage,
@@ -447,11 +447,12 @@ def admin_russia_2027_edit():
         tournament = get_required_rpl_tournament(cur)
         cur.execute(
             """
-            SELECT id, status
+            SELECT id, status, home_score, away_score
             FROM matches
             WHERE id = %s
               AND tournament_id = %s
               AND league = 'rpl'
+            FOR UPDATE
             """,
             (match_id, tournament["id"]),
         )
@@ -540,7 +541,13 @@ def admin_russia_2027_edit():
             flash("Матч РПЛ не найден", "error")
             return admin_context_redirect(RPL_ADMIN_REDIRECT)
         if status == "FINISHED":
-            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+            recalc_match_points(
+                match_id, tournament_id=tournament["id"], conn=conn, cur=cur,
+                emit_result_event=not (
+                    has_valid_finished_score(existing[1], home_score, away_score)
+                    and existing[2:4] == (home_score, away_score)
+                ),
+            )
         else:
             cur.execute(
                 """
@@ -569,6 +576,9 @@ def admin_russia_2027_edit():
 def admin_russia_2027_visibility():
     match_id = request.form.get("match_id", type=int)
     action = request.form.get("visibility_action")
+    if action not in {"hide", "restore"}:
+        flash("Некорректное действие с видимостью матча", "error")
+        return admin_context_redirect(RPL_ADMIN_REDIRECT)
     conn = get_db()
     cur = conn.cursor()
     try:
@@ -816,11 +826,12 @@ def admin_russian_cup_edit():
         tournament = get_required_russian_cup_tournament(cur)
         cur.execute(
             """
-            SELECT id, status
+            SELECT id, status, home_score, away_score
             FROM matches
             WHERE id = %s
               AND tournament_id = %s
               AND league = 'rcup'
+            FOR UPDATE
             """,
             (match_id, tournament["id"]),
         )
@@ -903,7 +914,13 @@ def admin_russian_cup_edit():
             ),
         )
         if status == "FINISHED":
-            recalc_match_points(match_id, tournament_id=tournament["id"], conn=conn, cur=cur)
+            recalc_match_points(
+                match_id, tournament_id=tournament["id"], conn=conn, cur=cur,
+                emit_result_event=not (
+                    has_valid_finished_score(existing[1], home_score, away_score)
+                    and existing[2:4] == (home_score, away_score)
+                ),
+            )
         else:
             cur.execute(
                 """
@@ -1043,6 +1060,9 @@ def admin_russian_cup_result():
 def admin_russian_cup_visibility():
     match_id = request.form.get("match_id", type=int)
     action = request.form.get("visibility_action")
+    if action not in {"hide", "restore"}:
+        flash("Некорректное действие с видимостью матча", "error")
+        return admin_context_redirect(RUSSIAN_CUP_ADMIN_REDIRECT)
     conn = get_db()
     cur = conn.cursor()
     try:
@@ -1121,12 +1141,12 @@ def admin_russian_cup_recalc():
     try:
         tournament = get_required_russian_cup_tournament(cur)
         cur.execute(
-            """
+            f"""
             SELECT id
             FROM matches
             WHERE tournament_id = %s
               AND league = 'rcup'
-              AND status = 'FINISHED'
+              AND UPPER(status) IN {FINISHED_STATUSES_SQL}
             ORDER BY id
             """,
             (tournament["id"],),
@@ -1465,6 +1485,7 @@ def admin_edit_match():
             FROM matches m
             LEFT JOIN tournaments t ON t.id = m.tournament_id
             WHERE m.id = %s
+            FOR UPDATE OF m
             """,
             (match_id,),
         )
@@ -1564,7 +1585,10 @@ def admin_edit_match():
             flash("Матч не найден", "error")
             return admin_context_redirect()
 
-        recalc_match_points(match_id, tournament_id=tournament_id, conn=conn, cur=cur)
+        recalc_match_points(
+            match_id, tournament_id=tournament_id, conn=conn, cur=cur,
+            emit_result_event=not has_valid_finished_score(status, home_score, away_score),
+        )
         conn.commit()
 
         flash(

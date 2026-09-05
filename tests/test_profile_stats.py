@@ -231,7 +231,7 @@ def test_quality_rank_excludes_users_without_finished_submissions(monkeypatch):
     assert "p.tournament_id = %s" in ranking_query
     assert "u.is_admin = 0" in ranking_query
     assert "COALESCE(u.is_deleted, 0) = 0" in ranking_query
-    assert "m.status = 'FINISHED'" in ranking_query
+    assert "UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')" in ranking_query
     assert ranking_params == (42,)
 
 

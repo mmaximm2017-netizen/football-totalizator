@@ -1,6 +1,6 @@
 from app.db import close_db, get_db
 
-FINISHED_STATUSES = ("FINISHED", "COMPLETE", "COMPLETED")
+from app.models.scoring import FINISHED_STATUSES
 
 
 def build_top_scorers(rows):

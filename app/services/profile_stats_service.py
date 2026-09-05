@@ -3,6 +3,7 @@
 from fractions import Fraction
 
 from app.db import close_db, get_db
+from app.models.scoring import FINISHED_STATUSES_SQL
 from app.services.top_scorer_service import get_tournament_top_scorers
 
 POINT_BUCKETS = (11, 10, 8, 7, 5, 3, 2, 0)
@@ -50,7 +51,7 @@ def get_profile_stats(user_id, tournament_id, cur=None):
         cur = conn.cursor()
     try:
         cur.execute(
-            """
+            f"""
             SELECT
                 COUNT(*),
                 COALESCE(SUM(p.points), 0),
@@ -74,7 +75,7 @@ def get_profile_stats(user_id, tournament_id, cur=None):
                          AND m.tournament_id = p.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
-              AND m.status = 'FINISHED'
+              AND UPPER(m.status) IN {FINISHED_STATUSES_SQL}
             """,
             (user_id, tournament_id),
         )
@@ -88,7 +89,7 @@ def get_profile_stats(user_id, tournament_id, cur=None):
         quality_ranks = {name: None for name in QUALITY_NAMES}
         if submitted_count:
             cur.execute(
-                """
+                f"""
                 SELECT
                     p.user_id,
                     COUNT(*),
@@ -100,7 +101,7 @@ def get_profile_stats(user_id, tournament_id, cur=None):
                 JOIN matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
                 JOIN users u ON u.id = p.user_id
                 WHERE p.tournament_id = %s
-                  AND m.status = 'FINISHED'
+                  AND UPPER(m.status) IN {FINISHED_STATUSES_SQL}
                   AND u.is_admin = 0
                   AND (
                       NOT EXISTS (SELECT 1 FROM tournaments t WHERE t.id = p.tournament_id AND t.is_active = 1)
@@ -123,14 +124,14 @@ def get_profile_stats(user_id, tournament_id, cur=None):
             )
 
         cur.execute(
-            """
+            f"""
             SELECT p.points
             FROM predictions p
             JOIN matches m ON m.id = p.match_id
                          AND m.tournament_id = p.tournament_id
             WHERE p.user_id = %s
               AND p.tournament_id = %s
-              AND m.status = 'FINISHED'
+              AND UPPER(m.status) IN {FINISHED_STATUSES_SQL}
             ORDER BY m.kickoff_time DESC NULLS LAST, m.id DESC
             LIMIT 10
             """,

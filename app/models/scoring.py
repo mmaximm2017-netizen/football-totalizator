@@ -2,12 +2,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 MAX_MATCH_SCORE = 99
+# Existing ranking/top-scorer/safe-schema semantics, shared by score writers.
+FINISHED_STATUSES = ("FINISHED", "COMPLETE", "COMPLETED")
+FINISHED_STATUSES_SQL = "(" + ", ".join(repr(status) for status in FINISHED_STATUSES) + ")"
 
 
 def has_valid_finished_score(status, home_score, away_score):
     """Return whether a finished match has a complete usable result."""
     return (
-        status == "FINISHED"
+        str(status).upper() in FINISHED_STATUSES
         and all(
             isinstance(score, int)
             and not isinstance(score, bool)
