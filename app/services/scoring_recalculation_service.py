@@ -59,6 +59,8 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
     """
     Recalculate prediction points for one match.
 
+    Lock the match before reading its score; hold it through points and commit.
+    All writers use match -> predictions lock order.
     Optional conn/cur keeps existing admin transactions intact.
     """
     conn, cur, owns_connection = _get_cursor(conn, cur)
@@ -69,6 +71,7 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
             SELECT id, status, home_score, away_score, tournament_id
             FROM matches
             WHERE id = %s
+            FOR UPDATE
             """,
             (match_id,),
         )
@@ -81,7 +84,24 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
                 "found": False,
             }
 
+        if tournament_id is not None and tournament_id != match[4]:
+            return {
+                "match_id": match_id,
+                "tournament_id": tournament_id,
+                "updated": 0,
+                "found": True,
+                "skipped": True,
+                "reason": "match_tournament_mismatch",
+            }
+
         if not has_valid_finished_score(match[1], match[2], match[3]) or match[4] is None:
+            # Invalidate old awards in the same transaction as status changes.
+            cur.execute(
+                "UPDATE predictions SET points = 0 WHERE match_id = %s AND tournament_id = %s",
+                (match_id, match[4]),
+            )
+            if owns_connection:
+                conn.commit()
             logger.warning(
                 "Skipping points recalculation for match_id=%s status=%s home_score=%r away_score=%r: incomplete or invalid finished score",
                 match_id,
@@ -96,16 +116,6 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
                 "found": True,
                 "skipped": True,
                 "reason": "incomplete_or_invalid_finished_score",
-            }
-
-        if tournament_id is not None and tournament_id != match[4]:
-            return {
-                "match_id": match_id,
-                "tournament_id": tournament_id,
-                "updated": 0,
-                "found": True,
-                "skipped": True,
-                "reason": "match_tournament_mismatch",
             }
 
         cur.execute(
