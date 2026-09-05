@@ -69,6 +69,15 @@ def test_livesport_duplicate_candidate_is_ambiguous():
                                      home='Зенит', away='ЦСКА', match_date='2026-09-05')
 
 
+@pytest.mark.parametrize('score,expected', [('1:1 10:11', (1, 1)), ('10:11', (10, 11))])
+def test_livesport_two_digit_score_is_not_a_kickoff(score, expected):
+    html = f'5 сентября, суббота, 2026 Ок пен Зенит {score} ЦСКА C 19:00 Спартак –:– Ростов C'
+    result = sources.find_livesport_result(html, home='Зенит', away='ЦСКА', match_date='2026-09-05', regulation_only=True)
+    assert result.status == 'finished' and (result.home_score, result.away_score) == expected
+    waiting = sources.find_livesport_result(html, home='Спартак', away='Ростов', match_date='2026-09-05')
+    assert waiting.status == 'not_finished'
+
+
 def test_rfs_makhachkala_uses_club_id_and_full_context():
     result = cup_observation(cup_card())
     assert result.status == 'finished' and (result.home_score, result.away_score) == (3, 0)

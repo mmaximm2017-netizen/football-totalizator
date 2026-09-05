@@ -87,7 +87,18 @@ def find_livesport_result(html, *, home, away, match_date, source="livesport", r
     # Parse complete row fields before comparing names. A word boundary after
     # "Динамо" is not a team boundary ("Динамо Мх" is a different club).
     observations = []
-    for row in re.split(r"(?<!\S)(?=Ок\b|\d{1,2}:\d{2}\s)", segment, flags=re.I):
+    starts = []
+    for marker in re.finditer(r"(?<!\S)(Ок\b|\d{1,2}:\d{2}(?=\s))", segment, re.I):
+        if starts and marker[1].casefold() != "ок":
+            prefix = segment[starts[-1]:marker.start()].strip()
+            # A score such as 10:11 is not a kickoff. It follows the home
+            # field, or (for a shootout) the regulation score, not an away field.
+            if (re.fullmatch(r"(?:Ок(?:\s+(?:пен|д\.в\.))?|\d{1,2}:\d{2})\s+[^:]+", prefix, re.I)
+                    or re.search(r"\d{1,2}\s*:\s*\d{1,2}$", prefix)):
+                continue
+        starts.append(marker.start())
+    for start, end in zip(starts, starts[1:] + [len(segment)]):
+        row = segment[start:end]
         row = row.strip()
         # The calendar appends a tour number / cup group after the away team.
         row = re.sub(r"\s+(?:\d{1,2}|[A-DА-Г])$", "", row)
