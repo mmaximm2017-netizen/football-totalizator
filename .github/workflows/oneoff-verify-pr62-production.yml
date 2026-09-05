@@ -1,0 +1,72 @@
+name: One-off verify PR62 production
+
+on:
+  push:
+    branches:
+      - audit/post-pr62-production
+    paths:
+      - .audit-pr62-production-trigger
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Verify production auto-results runtime
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            expected_release="eab66e14d09449314dcdc1481d6bebcb64c0bf01"
+            managed="$(cat .totish-managed-release)"
+            image="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+            health="$(docker inspect football-totalizator-app-1 --format '{{.State.Running}}|{{if .State.Health}}{{.State.Health.Status}}{{end}}')"
+            release="$(docker exec football-totalizator-app-1 /bin/sh -lc 'printf %s "$TOTISH_RELEASE"')"
+            echo "managed=$managed"
+            echo "image=$image"
+            echo "health=$health"
+            echo "container_release=$release"
+            [[ "$managed" == "$expected_release" ]]
+            [[ "$release" == "$expected_release" ]]
+            [[ "$image" =~ ^ghcr\.io/mmaximm2017-netizen/football-totalizator@sha256:[0-9a-f]{64}$ ]]
+            [[ "$health" == "true|healthy" ]]
+
+            echo '--- flags ---'
+            docker exec football-totalizator-app-1 /bin/sh -lc 'printf "AUTO_RESULTS_ENABLED=%s\nAUTO_RESULTS_DRY_RUN=%s\n" "$AUTO_RESULTS_ENABLED" "$AUTO_RESULTS_DRY_RUN"'
+
+            echo '--- cron ---'
+            crontab -l | grep -E 'run_auto_results\.sh|monitor_production\.py|host_telegram_notifier\.py'
+
+            echo '--- monitor ---'
+            /usr/bin/python3 scripts/monitor_production.py
+
+            echo '--- manual worker ---'
+            /bin/bash scripts/run_auto_results.sh
+
+            echo '--- source probe first RPL match ---'
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            from scripts.auto_result_sources import fetch_text, find_livesport_result, find_sports_rpl_result
+            from scripts.auto_result_worker import LIVE_RPL, SPORTS_RPL
+            home='Крылья Советов'; away='Краснодар'; day='2026-09-05'
+            live=fetch_text(LIVE_RPL)
+            sports=fetch_text(SPORTS_RPL)
+            a=find_livesport_result(live, home=home, away=away, match_date=day)
+            b=find_sports_rpl_result(sports, home=home, away=away, match_date=day)
+            print('LIVESPORT', a.status, a.detail, a.source_home, a.source_away)
+            print('SPORTS', b.status, b.detail, b.source_home, b.source_away)
+            assert a.status in {'not_finished','finished'}
+            assert b.status in {'not_finished','finished'}
+            PY
+
+            echo '--- recent auto-results log ---'
+            tail -n 40 "$HOME/.local/state/totish/auto-results.log" || true
+            echo 'VERIFY_OK'
