@@ -61,8 +61,8 @@ jobs:
             sports=fetch_text(SPORTS_RPL)
             a=find_livesport_result(live, home=home, away=away, match_date=day)
             b=find_sports_rpl_result(sports, home=home, away=away, match_date=day)
-            print('LIVESPORT', a.status, a.detail, a.source_home, a.source_away)
-            print('SPORTS', b.status, b.detail, b.source_home, b.source_away)
+            print('LIVESPORT', a.status, a.detail)
+            print('SPORTS', b.status, b.detail)
             assert a.status in {'not_finished','finished'}
             assert b.status in {'not_finished','finished'}
             PY
