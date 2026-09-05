@@ -1,7 +1,7 @@
 from app.db import close_db, get_db
 import logging
 
-from app.models.scoring import calculate_points, has_valid_finished_score
+from app.models.scoring import FINISHED_STATUSES_SQL, calculate_points, has_valid_finished_score
 
 
 logger = logging.getLogger(__name__)
@@ -55,13 +55,14 @@ def _get_cursor(conn=None, cur=None):
     return owned_conn, owned_cur, True
 
 
-def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
+def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None, *, emit_result_event=True):
     """
     Recalculate prediction points for one match.
 
     Lock the match before reading its score; hold it through points and commit.
     All writers use match -> predictions lock order.
     Optional conn/cur keeps existing admin transactions intact.
+    Metadata-only callers can repair points without announcing a new result.
     """
     conn, cur, owns_connection = _get_cursor(conn, cur)
 
@@ -143,7 +144,8 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None):
         ]
 
         _update_prediction_points(cur, match_id, match[4], scored_predictions)
-        _enqueue_result_events(cur, [p[0] for p in predictions], match_id)
+        if emit_result_event:
+            _enqueue_result_events(cur, [p[0] for p in predictions], match_id)
         updated = len(scored_predictions)
 
         if owns_connection:
@@ -172,13 +174,13 @@ def recalc_tournament_points(tournament_id, conn=None, cur=None):
 
     try:
         cur.execute(
-            """
+            f"""
             SELECT DISTINCT m.id
             FROM matches m
             JOIN predictions p
               ON p.match_id = m.id
              AND p.tournament_id = m.tournament_id
-            WHERE m.status = 'FINISHED'
+            WHERE UPPER(m.status) IN {FINISHED_STATUSES_SQL}
               AND p.tournament_id = %s
             ORDER BY m.id
             """,
@@ -225,10 +227,10 @@ def recalc_all_points(conn=None, cur=None):
 
     try:
         cur.execute(
-            """
+            f"""
             SELECT id
             FROM matches
-            WHERE status = 'FINISHED'
+            WHERE UPPER(status) IN {FINISHED_STATUSES_SQL}
             ORDER BY id
             """
         )
