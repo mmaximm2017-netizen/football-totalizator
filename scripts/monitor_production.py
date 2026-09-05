@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+import os
+import re
 import subprocess
 import sys
 import time
@@ -405,21 +407,51 @@ def check_public_health():
         )
         return False
 
+def safe_output(value, limit=600):
+    if isinstance(value, bytes):
+        value = value.decode('utf-8', errors='replace')
+    text = str(value or '')
+    for key, secret in os.environ.items():
+        if secret and re.search(r'TOKEN|PASSWORD|SECRET|DSN|DATABASE_URL|API_KEY', key, re.I):
+            text = text.replace(secret, '[redacted]')
+    text = re.sub(r'\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+', '[URL redacted]', text)
+    text = re.sub(r'(?im)^.*(?:password|passwd|token|secret|dsn|database_url|authorization|api[_-]?key|\bhost\s*=|\bdbname\s*=|\buser\s*=).*$','[sensitive line redacted]',text)
+    text = re.sub(r'(?m)^\s*(?:export\s+)?[A-Z_][A-Z0-9_]*=.*$', '[environment redacted]', text)
+    text = re.sub(r'\b\d{6,}:[A-Za-z0-9_-]{20,}\b', '[token redacted]', text)
+    text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
+    return text if len(text) <= limit else text[:limit//3] + '\n… [truncated] …\n' + text[-(limit-limit//3):]
+
+
+def failure_details(code=None, stdout='', stderr='', *, kind=None):
+    if kind is None:
+        combined = str(stdout) + str(stderr)
+        kind = ('timeout' if code in {124, 137} else 'DB failure'
+                if re.search(r'psycopg|OperationalError|InterfaceError|PostgreSQL', combined, re.I)
+                else 'shell failure' if code in {126, 127} or 'AUTO_RESULTS_REFUSED' in combined
+                else 'unknown failure')
+    return (f'Тип: {kind}; exit_code={code if code is not None else "unknown"}. '
+            'Состояние результата может быть неизвестно.\n'
+            f'stdout: {safe_output(stdout) or "(empty)"}\n'
+            f'stderr: {safe_output(stderr) or "(empty)"}')
+
+
 def check_auto_results():
     # Independent of the five-minute result cron: can detect its disappearance.
     try:
         result = run(["/bin/bash", "scripts/run_auto_results.sh", "--monitor"], timeout=45)
-    except (OSError, subprocess.TimeoutExpired):
-        alert("auto_results:monitor_failed",
-              "Проверка автоматического ввода результатов не завершилась. "
-              "Проверьте cron/worker; состояние результатов неизвестно.")
-        return False
-    if result.returncode != 0:
-        alert("auto_results:monitor_failed",
-              "Не удалось проверить работу автоматического ввода результатов. "
-              "Проверьте auto-results.log; состояние результатов неизвестно.")
-        return False
-    return True
+    except subprocess.TimeoutExpired as exc:
+        details = failure_details(stdout=exc.stdout, stderr=exc.stderr, kind="timeout")
+    except OSError as exc:
+        details = failure_details(stderr=type(exc).__name__, kind="shell failure")
+    except Exception as exc:
+        details = failure_details(stderr=type(exc).__name__, kind="unknown failure")
+    else:
+        if result.returncode == 0:
+            return True
+        details = failure_details(result.returncode, result.stdout, result.stderr)
+    print(f"auto_results:monitor_failed\n{details}")
+    alert("auto_results:monitor_failed", details)
+    return False
 
 
 def main():

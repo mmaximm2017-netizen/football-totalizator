@@ -25,3 +25,5 @@ dist/
 !scripts/auto_result_runtime.py
 !scripts/auto_result_worker.py
 !scripts/auto_result_sources.py
+
+!scripts/auto_result_policy.py

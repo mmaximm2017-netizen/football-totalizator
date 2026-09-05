@@ -47,6 +47,8 @@ class Observation:
 
 class SourceError(RuntimeError): pass
 
+class SourceUnavailable(SourceError): pass
+
 def normalize_team(value):
     value = str(value or "").strip().casefold().replace("ё", "е")
     value = re.sub(r"[‐‑‒–—−-]+", " ", value)
@@ -65,7 +67,7 @@ def fetch_text(url, *, session=requests):
     try:
         r = session.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True); r.raise_for_status(); return r.text
     except requests.RequestException as exc:
-        raise SourceError(f"request_failed:{type(exc).__name__}") from exc
+        raise SourceUnavailable(f"request_failed:{type(exc).__name__}") from exc
 
 def _date_pattern(day, month_name, year):
     # LiveSport uses both "28 августа, пятница, 2026" and compact date forms.
@@ -368,3 +370,74 @@ def parse_sportbox_game_json(raw, *, match_date):
     return Observation("sportbox",STATUS_FINISHED,match_date=match_date,home_score=int(sm.group(1)),away_score=int(sm.group(2)))
 
 def absolute_url(base,href): return urljoin(base,href)
+
+
+def sportbox_rpl_candidate(html, *, home, away, match_date):
+    """Read the RPL calendar only; detail JSON must independently prove identity."""
+    target = date.fromisoformat(match_date).strftime('%d.%m.%Y')
+    candidates = []
+    rows = 0
+    for row in re.findall(r'(?is)<tr\b[^>]*>(.*?)</tr>', html):
+        links = re.findall(r'href=["\'](/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_(\d+)/game_(\d+))["\']', row)
+        if not links:
+            continue
+        rows += 1
+        cells = re.findall(r'(?is)<td\b[^>]*>(.*?)</td>', row)
+        if len(links) != 1 or len(cells) < 3:
+            raise SourceError('sportbox_rpl_calendar_structure')
+        teams = re.findall(r'(?is)<span\b[^>]*>(.*?)</span>', cells[1])
+        if len(teams) != 2 or not all(plain_text(t) for t in teams):
+            raise SourceError('sportbox_rpl_calendar_teams')
+        dates = re.findall(r'\b\d{2}\.\d{2}\.\d{4}\b', plain_text(cells[0]))
+        # Live rows replace the date with the current minute. Their JSON detail
+        # still has to prove the full date; an arbitrary missing date is invalid.
+        if len(dates) > 1 or (not dates and 'LIVE' not in plain_text(cells[0])):
+            raise SourceError('sportbox_rpl_calendar_date')
+        if (team_matches(plain_text(teams[0]), home)
+                and team_matches(plain_text(teams[1]), away)
+                and (not dates or dates[0] == target)):
+            candidates.append({'game_id': links[0][2], 'tournament_id': links[0][1]})
+    if not rows:
+        raise SourceError('sportbox_rpl_calendar_missing')
+    if len(candidates) > 1:
+        raise SourceError('sportbox_rpl_candidate_ambiguous')
+    return candidates[0] if candidates else None
+
+
+def parse_sportbox_rpl_json(raw, *, home, away, match_date, tournament_id):
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise SourceError('sportbox_rpl_invalid_json') from exc
+    if not isinstance(data, dict):
+        raise SourceError('sportbox_rpl_json_structure')
+    head, timeline = data.get('head_html'), data.get('football_timeline_html')
+    if not isinstance(head, str) or not isinstance(timeline, str):
+        raise SourceError('sportbox_rpl_detail_missing')
+    teams = re.findall(r'(?is)<a\b[^>]*class="b-match__team-title"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', head)
+    dates = re.findall(r'(?is)<span\b[^>]*class="match_count_date"[^>]*>(.*?)</span>', head)
+    counts = re.findall(r'(?is)<span\b[^>]*class="b-match__monitor__count"[^>]*>(.*?)</span>', head)
+    left, right = head.find('b-match__side_left'), head.find('b-match__side_right')
+    if (len(teams) != 2 or len(dates) != 1 or len(counts) != 1 or not 0 <= left < right
+            or not all(re.search(rf'/turnir_{re.escape(str(tournament_id))}$', href) for href, _ in teams)):
+        raise SourceError('sportbox_rpl_identity_structure')
+    # Each team must occur on its own side, not merely somewhere in the header.
+    if (teams[0][0] not in head[left:right] or teams[1][0] not in head[right:]
+            or not team_matches(plain_text(teams[0][1]), home)
+            or not team_matches(plain_text(teams[1][1]), away)):
+        raise SourceError('sportbox_rpl_team_mismatch')
+    parsed_date = re.match(r'^(\d{2}\.\d{2}\.\d{4})\b', plain_text(dates[0]))
+    if not parsed_date:
+        raise SourceError('sportbox_rpl_detail_date')
+    if parsed_date[1] != date.fromisoformat(match_date).strftime('%d.%m.%Y'):
+        return Observation('sportbox_rpl', STATUS_NOT_FOUND, detail='date_mismatch')
+    timeline_classes = re.search(r'<div\b[^>]*class="([^"]*)"[^>]*id="match_center_timeline"', timeline)
+    if not timeline_classes or 'b-timeline' not in timeline_classes[1].split() or type(data.get('live')) is not int:
+        raise SourceError('sportbox_rpl_timeline_structure')
+    if 'b-timeline-end' not in timeline_classes[1].split() or data['live'] != 0:
+        return Observation('sportbox_rpl', STATUS_NOT_FINISHED, match_date=match_date)
+    score = re.fullmatch(r'\s*(\d{1,2})\s*:\s*(\d{1,2})\s*', str(data.get('score', '')))
+    header_score = re.fullmatch(r'\s*(\d{1,2})\s*:\s*(\d{1,2})\s*', plain_text(counts[0]))
+    if not score or not header_score or score.groups() != header_score.groups():
+        raise SourceError('sportbox_rpl_score_structure')
+    return Observation('sportbox_rpl', STATUS_FINISHED, home, away, match_date, int(score[1]), int(score[2]))

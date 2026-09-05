@@ -19,9 +19,9 @@ def test_parser_failure_does_not_emit_false_recovery():
         cache = worker.PageCache()
         cache._pages['sports_rpl'] = '<html>broken</html>'
         worker._update_source_health(state, cache.source_status(), None)
-        with pytest.raises(SourceError):
-            worker._guard_observation(cache, 'sports_rpl', lambda cache=cache: worker.find_sports_rpl_result(
+        observation = worker._guard_observation(cache, 'sports_rpl', lambda cache=cache: worker.find_sports_rpl_result(
                 cache.page('sports_rpl'), home='Зенит', away='ЦСКА', match_date='2026-09-05'))
+        assert observation.status == 'parser_error'
         with patch.object(worker, '_queue_message', side_effect=lambda o,m: messages.append(m)):
             worker._update_source_health(state, cache.source_status(), None)
     assert messages == []
@@ -33,13 +33,13 @@ def test_parser_failure_does_not_emit_false_recovery():
     assert len(messages) == 1 and 'восстановился' in messages[0]
 
 
-@pytest.mark.parametrize('elapsed,expected', [(119.999,'too_early'),(120,'active'),(180,'active'),(180.001,'expired_grace')])
+@pytest.mark.parametrize('elapsed,expected', [(119.999,'too_early'),(120,'active'),(180,'active'),(180.001,'active'),(360,'active'),(360.001,'expired_grace')])
 def test_exact_window(elapsed, expected):
     kickoff = datetime(2026,9,5,tzinfo=timezone.utc)
     assert worker.window_state(kickoff, kickoff+timedelta(minutes=elapsed)) == expected
 
 
-def test_worker_started_179_59_cannot_call_finalizer_after_delayed_lookup(monkeypatch, tmp_path):
+def test_worker_started_359_59_cannot_call_finalizer_after_delayed_lookup(monkeypatch, tmp_path):
     kickoff = datetime(2026,9,5,tzinfo=timezone.utc)
     m = {'id':401, 'kickoff_time':kickoff, 'scope':'rpl', 'tournament_id':5,
          'home_team':'Зенит', 'away_team':'ЦСКА', 'league':'rpl', 'match_category':'rpl'}
@@ -50,10 +50,10 @@ def test_worker_started_179_59_cannot_call_finalizer_after_delayed_lookup(monkey
     class Clock:
         @staticmethod
         def now(tz):
-            return kickoff+timedelta(minutes=180,seconds=1)
+            return kickoff+timedelta(minutes=360,seconds=1)
     monkeypatch.setattr(runtime,'datetime',Clock)
     with patch.object(finalizer,'finalize_auto_result') as save, patch.object(runtime,'_expired') as expired:
-        runtime._run_live(kickoff+timedelta(minutes=179,seconds=59),state_path=tmp_path/'state',outbox=None)
+        runtime._run_live(kickoff+timedelta(minutes=359,seconds=59),state_path=tmp_path/'state',outbox=None)
     save.assert_not_called()
     expired.assert_called_once_with(m)
 
@@ -66,7 +66,7 @@ def test_worker_started_179_59_cannot_call_finalizer_after_delayed_lookup(monkey
 def test_final_reason_only_reports_observed_facts(first,second,decision,expected):
     a=Observation('A',first,home_score=1,away_score=0)
     b=Observation('B',second,home_score=2,away_score=0)
-    assert expected in runtime._reason(a,b,{'decision':decision},worker.PageCache())
+    assert expected in runtime._reason((a,b),{'decision':decision})
 
 
 def test_outbox_file_is_only_visible_after_complete_write(tmp_path):
