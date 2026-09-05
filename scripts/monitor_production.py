@@ -12,9 +12,11 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = Path.home() / ".local" / "state" / "totish"
 STATE_FILE = STATE_DIR / "production-monitor-dedupe.json"
+INCIDENT_STATE_FILE = STATE_DIR / "production-monitor-incidents.json"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from host_telegram_notifier import send_message
+from monitor_recovery_state import recover_incident, remember_incident
 
 
 def load_state():
@@ -89,6 +91,7 @@ def alert(key, details):
     )
 
     send_message(message)
+    remember_incident(INCIDENT_STATE_FILE, key)
 
     state[fingerprint] = now
     cutoff = now - 3600
@@ -156,6 +159,7 @@ def check_container():
         )
         return False
 
+    recover_incident(INCIDENT_STATE_FILE, "container", send_message)
     return True
 
 def check_local_health():
@@ -172,6 +176,7 @@ def check_local_health():
             )
             return False
 
+        recover_incident(INCIDENT_STATE_FILE, "health:local", send_message)
         return True
 
     except Exception as exc:
@@ -218,6 +223,7 @@ def check_db_health():
     }
 
     if not bad:
+        recover_incident(INCIDENT_STATE_FILE, "health:db", send_message)
         return True
 
     explanations = {
@@ -253,6 +259,7 @@ def check_database_backup():
     # The directory is created by the backup job itself. Before the first
     # scheduled run after rollout, do not emit a false alert.
     if not backup_dir.exists():
+        recover_incident(INCIDENT_STATE_FILE, "backup", send_message)
         return True
 
     backups = sorted(backup_dir.glob("totish-daily-*.dump"), reverse=True)
@@ -296,6 +303,7 @@ def check_database_backup():
         )
         return False
 
+    recover_incident(INCIDENT_STATE_FILE, "backup", send_message)
     return True
 
 
@@ -353,6 +361,7 @@ def check_control_plane_release():
         )
         return False
 
+    recover_incident(INCIDENT_STATE_FILE, "control_plane", send_message)
     return True
 
 
@@ -370,6 +379,7 @@ def check_public_health():
             )
             return False
 
+        recover_incident(INCIDENT_STATE_FILE, "health:public", send_message)
         return True
 
     except Exception as exc:
