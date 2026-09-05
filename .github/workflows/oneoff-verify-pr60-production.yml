@@ -1,0 +1,44 @@
+name: One-off verify PR60 production
+
+on:
+  push:
+    branches:
+      - audit/post-pr60-production
+    paths:
+      - .audit-pr60-production-trigger
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Verify production auto-results runtime
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            echo '=== RELEASE ==='
+            echo "managed=$(cat .totish-managed-release)"
+            echo "image=$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
+            echo "health=$(docker inspect football-totalizator-app-1 --format '{{.State.Running}}|{{.State.Health.Status}}')"
+            echo '=== AUTO RESULT FLAGS ==='
+            grep -E '^(AUTO_RESULTS_ENABLED|AUTO_RESULTS_DRY_RUN)=' .env || true
+            echo '=== CRON ==='
+            crontab -l | grep -E 'run_auto_results\.sh|monitor_production\.py' || true
+            echo '=== ACTUAL WORKER RUN ==='
+            TOTISH_AUTO_RESULTS_LOG="$HOME/.local/state/totish/auto-results.log" TOTISH_AUTO_RESULTS_LOCK="$HOME/.local/state/totish/auto-results.lock" /bin/bash scripts/run_auto_results.sh
+            echo '=== MONITOR RUN ==='
+            TOTISH_AUTO_RESULTS_LOG="$HOME/.local/state/totish/auto-results.log" TOTISH_AUTO_RESULTS_LOCK="$HOME/.local/state/totish/auto-results.lock" /bin/bash scripts/run_auto_results.sh --monitor
+            echo '=== AUTO RESULT LOG TAIL ==='
+            tail -n 80 "$HOME/.local/state/totish/auto-results.log" || true
+            echo '=== MONITOR LOG TAIL ==='
+            tail -n 40 "$HOME/.local/state/totish/production-monitor.log" || true
