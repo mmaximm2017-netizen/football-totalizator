@@ -203,3 +203,23 @@ def test_monitor_does_not_fetch_football_sources(monkeypatch):
     monkeypatch.setattr(worker,'fetch_text',fetch)
     assert runtime.monitor(datetime.now(timezone.utc))['pending_matches']==0
     fetch.assert_not_called()
+
+
+@pytest.mark.parametrize('gid,identity', [
+    ('1380958247',dict(home='Ростов',away='Факел',match_date='2026-09-05')),
+    ('1380958249',dict(home='Оренбург',away='Акрон',match_date='2026-09-06')),
+])
+def test_real_sportbox_live_and_scheduled_are_healthy_nonvotes(gid,identity):
+    data=json.loads((FIXTURES/f'sportbox_game_{gid}.json').read_text())
+    result=parse(data,**identity)
+    assert result.status=='not_finished'
+    assert result.home_score is None and result.away_score is None
+    assert quorum([obs('A',(2,2)),result])['decision']=='one_source_confirmed'
+
+
+def test_source_outage_notice_does_not_claim_quorum_write_impossible(monkeypatch):
+    messages=[]
+    monkeypatch.setattr(worker,'_queue_message',lambda out,message:messages.append(message))
+    worker._update_source_health({}, {'sports_rpl':{'ok':False}}, None)
+    assert 'невозможна' not in messages[0]
+    assert 'два согласованных подтверждения' in messages[0]

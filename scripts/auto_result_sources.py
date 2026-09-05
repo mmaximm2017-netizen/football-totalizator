@@ -416,7 +416,7 @@ def parse_sportbox_rpl_json(raw, *, home, away, match_date, tournament_id):
         raise SourceError('sportbox_rpl_detail_missing')
     teams = re.findall(r'(?is)<a\b[^>]*class="b-match__team-title"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', head)
     dates = re.findall(r'(?is)<span\b[^>]*class="match_count_date"[^>]*>(.*?)</span>', head)
-    counts = re.findall(r'(?is)<span\b[^>]*class="b-match__monitor__count"[^>]*>(.*?)</span>', head)
+    counts = re.findall(r'(?is)<span\b[^>]*class="b-match__monitor__count(?:\s[^"]*)?"[^>]*>(.*?)</span>', head)
     left, right = head.find('b-match__side_left'), head.find('b-match__side_right')
     if (len(teams) != 2 or len(dates) != 1 or len(counts) != 1 or not 0 <= left < right
             or not all(re.search(rf'/turnir_{re.escape(str(tournament_id))}$', href) for href, _ in teams)):
@@ -431,10 +431,14 @@ def parse_sportbox_rpl_json(raw, *, home, away, match_date, tournament_id):
         raise SourceError('sportbox_rpl_detail_date')
     if parsed_date[1] != date.fromisoformat(match_date).strftime('%d.%m.%Y'):
         return Observation('sportbox_rpl', STATUS_NOT_FOUND, detail='date_mismatch')
+    if (data.get('live') == 0 and plain_text(counts[0]) == '- : -'
+            and re.fullmatch(r'\s*:\s*', str(data.get('score', '')))
+            and timeline.strip() == '<br class="sb_t_cols_clr"/>'):
+        return Observation('sportbox_rpl', STATUS_NOT_FINISHED, match_date=match_date)
     timeline_classes = re.search(r'<div\b[^>]*class="([^"]*)"[^>]*id="match_center_timeline"', timeline)
     if not timeline_classes or 'b-timeline' not in timeline_classes[1].split() or type(data.get('live')) is not int:
         raise SourceError('sportbox_rpl_timeline_structure')
-    if 'b-timeline-end' not in timeline_classes[1].split() or data['live'] != 0:
+    if 'b-timeline-end' not in timeline_classes[1].split() or data['live'] != 0 or 'b-match__monitor__count_status_live' in head:
         return Observation('sportbox_rpl', STATUS_NOT_FINISHED, match_date=match_date)
     score = re.fullmatch(r'\s*(\d{1,2})\s*:\s*(\d{1,2})\s*', str(data.get('score', '')))
     header_score = re.fullmatch(r'\s*(\d{1,2})\s*:\s*(\d{1,2})\s*', plain_text(counts[0]))
