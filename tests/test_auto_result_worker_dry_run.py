@@ -122,7 +122,7 @@ def test_kill_switch_notifies_only_on_real_transitions(monkeypatch, tmp_path):
     assert len(messages) == 2 and "отключена" in messages[-1]
 
 
-def test_window_starts_at_120_and_hard_ends_after_180_with_one_cron_grace():
+def test_window_starts_at_120_and_hard_ends_after_360_with_one_cron_grace():
     kickoff = datetime(2026, 9, 3, 16, 30, tzinfo=timezone.utc)
     assert window_state(
         kickoff, datetime(2026, 9, 3, 18, 29, 59, tzinfo=timezone.utc)
@@ -134,8 +134,8 @@ def test_window_starts_at_120_and_hard_ends_after_180_with_one_cron_grace():
         kickoff, datetime(2026, 9, 3, 19, 30, tzinfo=timezone.utc)
     ) == "active"
     assert window_state(
-        kickoff, datetime(2026, 9, 3, 19, 31, tzinfo=timezone.utc)
+        kickoff, datetime(2026, 9, 3, 22, 31, tzinfo=timezone.utc)
     ) == "expired_grace"
     assert window_state(
-        kickoff, datetime(2026, 9, 3, 19, 36, tzinfo=timezone.utc)
+        kickoff, datetime(2026, 9, 3, 22, 36, tzinfo=timezone.utc)
     ) == "expired"

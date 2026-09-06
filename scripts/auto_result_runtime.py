@@ -18,7 +18,6 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import auto_result_worker as dry
-from auto_result_sources import SourceError
 
 from app.services import auto_result_delivery_service as delivery
 
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 def _source_names(match: dict) -> set[str]:
     if match["scope"] == "rpl":
-        return {"livesport_rpl", "sports_rpl"}
+        return {"livesport_rpl", "sports_rpl", "sportbox_rpl"}
     if match["scope"] == "cup":
         return {"livesport_cup", "rfs_cup"}
     if match["scope"] == "national":
@@ -39,6 +38,7 @@ def _source_urls() -> dict[str, str]:
     return {
         "livesport_rpl": dry.LIVE_RPL,
         "sports_rpl": dry.SPORTS_RPL,
+        "sportbox_rpl": dry.SPORTBOX_RPL,
         "livesport_cup": dry.LIVE_CUP,
         "rfs_cup": dry.RFS_CUP,
         "rfs_national": dry.RFS_NATIONAL,
@@ -46,32 +46,34 @@ def _source_urls() -> dict[str, str]:
     }
 
 
-def _observe(cache: dry.PageCache, match: dict) -> tuple[dict, object, object, dict] | tuple[dict, None, None, dict]:
-    try:
-        first, second = dry.observe_match(cache, match)
-        return match, first, second, dry.decide(first, second)
-    except SourceError as exc:
-        return match, None, None, {"decision": "source_error", "error": str(exc)}
+def _observe(cache, match):
+    observations = dry.observe_match(cache, match)
+    return match, observations, dry.decide(*observations)
 
 
-def _reason(first, second, decision, cache, match=None):
-    if first is None or second is None:
-        failed = [f"{name}: технически недоступен ({value['error']})"
-                  for name, value in cache.source_status().items()
-                  if not value["ok"] and (match is None or name in _source_names(match))]
-        return "; ".join(failed) or "Техническая ошибка проверки; подтверждённых данных нет."
+def _reason(observations, decision):
     parts = []
-    for observation in (first, second):
-        if observation.status == "finished":
-            detail = f"подтвердил {observation.home_score}:{observation.away_score}"
-        elif observation.status == "not_found":
-            detail = "не нашёл матч"
-        else:
-            detail = "не подтвердил завершение матча"
+    labels = {"not_found": "не нашёл матч", "not_finished": "не подтвердил завершение",
+              "source_unavailable": "ошибка загрузки", "parser_error": "ошибка структуры данных"}
+    for observation in observations:
+        detail = (f"подтвердил {observation.home_score}:{observation.away_score}"
+                  if observation.status == "finished" else labels.get(observation.status, "неизвестное состояние"))
         parts.append(f"{observation.source}: {detail}")
-    if decision["decision"] == "score_conflict":
+    if decision["decision"] == "score_conflict" or decision.get("conflict"):
         parts.append("Источники дали разные счета")
     return "; ".join(parts)
+
+
+def _soft_deadline(match, now):
+    if now < match["kickoff_time"] + timedelta(minutes=dry.SOFT_DEADLINE_MINUTES):
+        return
+    previous = delivery.last_check(match)
+    reason = previous[1] if previous else "Сохранённых проверок нет; причина неизвестна."
+    delivery.notify_pending(
+        match, f"delayed:{delivery.match_identity(match)}",
+        f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
+        f"Автоматическое подтверждение задерживается. Проверки продолжаются до +{dry.WINDOW_END_MINUTES} минут. {reason}",
+    )
 
 
 def _expired(match):
@@ -95,7 +97,7 @@ def monitor(now):
     # Catch missed final-notice runs on recovery. Ignore pre-rollout backlog.
     matches = dry._load_matches(now, lookback_minutes=7 * 24 * 60)
     for match in matches:
-        end = match["kickoff_time"] + timedelta(minutes=180)
+        end = match["kickoff_time"] + timedelta(minutes=dry.WINDOW_END_MINUTES)
         if end < since:
             continue
         phase = dry.window_state(match["kickoff_time"], now)
@@ -103,6 +105,7 @@ def monitor(now):
             _expired(match)
         elif (phase == "active"
               and now >= match["kickoff_time"] + timedelta(minutes=132)):
+            _soft_deadline(match, now)
             previous = delivery.last_check(match)
             if previous is None or now - previous[0] > timedelta(minutes=12):
                 delivery.notify_pending(
@@ -129,7 +132,7 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
     cache = dry.PageCache()
     state = dry._load_state(state_path)
     # Old JSON blocks are not authoritative. Every retry uses fresh consensus
-    # and the row-locked finalizer; attempts end strictly at +180 minutes.
+    # and the row-locked finalizer; attempts end at the shared hard deadline.
     state.pop("blocked_matches", None)
     candidates = []
     needed = set()
@@ -150,11 +153,10 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
             futures = [pool.submit(_observe, cache, match) for match in candidates]
             # A slow cup/national detail must not hold back a ready RPL match.
             for future in as_completed(futures):
-                match, first, second, decision = future.result()
+                match, observations, decision = future.result()
                 base = {"match_id": match["id"], **decision}
-                if first is not None and second is not None:
-                    base["sources"] = [asdict(first), asdict(second)]
-                detail = _reason(first, second, decision, cache, match)
+                base["sources"] = [asdict(o) for o in observations]
+                detail = _reason(observations, decision)
                 delivery.record_check(match, datetime.now(timezone.utc), detail)
                 if dry.window_state(match["kickoff_time"], datetime.now(timezone.utc)) != "active":
                     base["decision"] = "window_expired"
@@ -181,7 +183,7 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                             f"save-error:{delivery.match_identity(match)}",
                             f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
                             "Подтверждение сохранения не получено. Следующий запуск "
-                            "перепроверит БД и источники; повторы разрешены только до +180 минут.",
+                            f"перепроверит БД и источники; повторы разрешены только до +{dry.WINDOW_END_MINUTES} минут.",
                         )
                     else:
                         if outcome == "window_expired":
@@ -194,6 +196,17 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                         "На момент проверки результата в БД нет; "
                         "ждём согласованного подтверждения в рабочем окне.",
                     )
+                if decision.get("conflict"):
+                    # Evidence is already durable in record_check, including dissent.
+                    # This notice never claims that the result is absent or saved.
+                    delivery.notify(
+                        f"quorum-conflict:{delivery.match_identity(match)}:{detail}",
+                        f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. {detail}. "
+                        "Два независимых источника согласованы; обнаружено противоречие третьего источника.",
+                    )
+                if (dry.window_state(match["kickoff_time"], datetime.now(timezone.utc)) == "active"
+                        and base.get("write_outcome") not in {"saved", "already_done"}):
+                    _soft_deadline(match, datetime.now(timezone.utc))
                 records.append(base)
     # Only fetch+parser outcomes may transition source health. Notification or
     # JSON failure is never a failed match save and cannot block future writes.

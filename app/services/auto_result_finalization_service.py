@@ -1,6 +1,7 @@
 """Guarded finalization path for automatic match results."""
 
 from app.db import close_db, get_db
+from scripts.auto_result_policy import FIRST_CHECK_MINUTES, HARD_DEADLINE_MINUTES
 from app.services.auto_result_delivery_service import enqueue, match_identity
 from app.services.scoring_recalculation_service import recalc_match_points
 
@@ -142,7 +143,7 @@ def finalize_auto_result(
 def _inside_window(cur, kickoff):
     # Use PostgreSQL wall time, not transaction-start CURRENT_TIMESTAMP.
     cur.execute(
-        "SELECT clock_timestamp() BETWEEN %s + interval '120 minutes' "
-        "AND %s + interval '180 minutes'", (kickoff, kickoff),
+        f"SELECT clock_timestamp() BETWEEN %s + interval '{FIRST_CHECK_MINUTES} minutes' "
+        f"AND %s + interval '{HARD_DEADLINE_MINUTES} minutes'", (kickoff, kickoff),
     )
     return bool(cur.fetchone()[0])

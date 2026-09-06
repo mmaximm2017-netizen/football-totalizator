@@ -1,5 +1,7 @@
 # Automatic results: reliability contract
 
+Historical implementation notes. Current source/quorum/deadline policy: [Auto-results v2](AUTO_RESULTS_V2.md).
+
 Rechecked against main `5381be4287a0f60a3a19a77449b6e5b64049756e` (PR #59).
 All nine audit items were present. Source URLs, scoring and game rules are unchanged.
 

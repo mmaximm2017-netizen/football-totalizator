@@ -109,3 +109,15 @@ def test_first_rollout_drains_existing_worker_before_touching_image():
     source=(ROOT/'.github/workflows/deploy.yml').read_text()
     assert source.index('flock -w 150 9') < source.index('exec 8>"$HOME/.local/state/totish/auto-results.lock"')
     assert source.index('flock -w 150 8') < source.index('previous_image=')
+
+
+def test_monitor_wrapper_preserves_child_exit_and_streams_for_monitor(wrapper):
+    script,env,root=wrapper
+    docker=root/'bin'/'docker'
+    source=docker.read_text().replace("    Path(os.environ['READY']).touch()", "    print('monitor stdout marker'); print('OperationalError: safe marker', file=sys.stderr); sys.exit(17)")
+    docker.write_text(source)
+    result=subprocess.run(['bash',str(script),'--monitor'],env=env,capture_output=True,text=True,timeout=5,check=False)
+    assert result.returncode==17
+    assert 'monitor stdout marker' in result.stdout
+    assert 'OperationalError: safe marker' in result.stderr
+    assert 'exit_code=17' in (root/'log').read_text()

@@ -131,7 +131,7 @@ jobs:
 
       - name: Verify automatic-result runtime is contained in image
         run: |
-          docker run --rm --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py'); assert all((Path('/app/scripts') / name).is_file() for name in names)"
+          docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py','auto_result_policy.py'); assert all((Path('/app/scripts') / name).is_file() for name in names); from scripts.auto_result_runtime import _source_urls; from app.services.auto_result_finalization_service import finalize_auto_result; assert 'sportbox_rpl' in _source_urls()"
 
   publish:
     name: Publish Docker image

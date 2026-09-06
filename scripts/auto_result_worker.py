@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 import json
 import os
@@ -26,7 +26,9 @@ if str(SCRIPTS_DIR) not in sys.path:
 from auto_result_sources import (  # noqa: E402
     Observation,
     SourceError,
-    STATUS_FINISHED,
+    SourceUnavailable,
+    sportbox_rpl_candidate,
+    parse_sportbox_rpl_json,
     absolute_url,
     fetch_text,
     find_livesport_result,
@@ -50,10 +52,13 @@ RFS_NATIONAL = "https://www.rfs.ru/natteamfriendlies/calendar"
 SPORTBOX_NATIONAL = "https://news.sportbox.ru/Vidy_sporta/Futbol/russian_team"
 SPORTBOX_JSON = "https://news.sportbox.ru/stats/game_json/{game_id}"
 
-FIRST_CHECK_MINUTES = 120
-WINDOW_END_MINUTES = 180
-FINAL_GRACE_MINUTES = 185
-FINAL_NOTICE_LOOKBACK_MINUTES = 195
+from auto_result_policy import FIRST_CHECK_MINUTES, HARD_DEADLINE_MINUTES, quorum
+from auto_result_policy import SOFT_DEADLINE_MINUTES as SOFT_DEADLINE_MINUTES
+
+SPORTBOX_RPL = "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/calendar"
+WINDOW_END_MINUTES = HARD_DEADLINE_MINUTES
+FINAL_GRACE_MINUTES = HARD_DEADLINE_MINUTES + 5
+FINAL_NOTICE_LOOKBACK_MINUTES = HARD_DEADLINE_MINUTES + 15
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
 
 
@@ -92,30 +97,8 @@ def window_state(kickoff: datetime, now: datetime) -> str:
     return "expired"
 
 
-def decide(first: Observation, second: Observation) -> dict:
-    if first.status == STATUS_FINISHED and second.status == STATUS_FINISHED:
-        first_score = (first.home_score, first.away_score)
-        second_score = (second.home_score, second.away_score)
-        if first_score == second_score:
-            return {"decision": "would_write", "score": first_score}
-        return {
-            "decision": "score_conflict",
-            "first_score": first_score,
-            "second_score": second_score,
-        }
-    if first.status == STATUS_FINISHED and second.status != STATUS_FINISHED:
-        return {
-            "decision": "one_source_confirmed",
-            "confirmed_source": first.source,
-            "score": (first.home_score, first.away_score),
-        }
-    if second.status == STATUS_FINISHED and first.status != STATUS_FINISHED:
-        return {
-            "decision": "one_source_confirmed",
-            "confirmed_source": second.source,
-            "score": (second.home_score, second.away_score),
-        }
-    return {"decision": "waiting"}
+def decide(*observations: Observation) -> dict:
+    return quorum(observations)
 
 
 class PageCache:
@@ -123,6 +106,7 @@ class PageCache:
         self._pages: dict[str, str] = {}
         self._errors: dict[str, str] = {}
         self._validated: set[str] = set()
+        self._fetch_failed: set[str] = set()
 
     def load_many(self, urls: dict[str, str]) -> None:
         def load(item):
@@ -136,6 +120,7 @@ class PageCache:
             for name, text, error in pool.map(load, urls.items()):
                 if error:
                     self.mark_error(name, error)
+                    self._fetch_failed.add(name)
                 else:
                     self._pages[name] = text
                     self._errors.pop(name, None)
@@ -145,9 +130,10 @@ class PageCache:
 
     def page(self, name: str) -> str:
         if name in self._errors:
-            raise SourceError(self._errors[name])
+            error_type = SourceUnavailable if name in self._fetch_failed else SourceError
+            raise error_type(self._errors[name])
         if name not in self._pages:
-            raise SourceError("source_not_loaded")
+            raise SourceUnavailable("source_not_loaded")
         return self._pages[name]
 
     def source_status(self) -> dict[str, dict]:
@@ -167,21 +153,47 @@ def _fetch_detail(cache: PageCache, source_name: str, url: str) -> str:
         return fetch_text(url)
     except SourceError as exc:
         cache.mark_error(source_name, str(exc))
-        raise
+        cache._fetch_failed.add(source_name)
+        raise SourceUnavailable(str(exc)) from exc
 
 
-def _guard_observation(cache: PageCache, source_name: str, callback):
+def _guard_observation(cache: PageCache, source_name: str, callback, *, track_health=True):
     try:
         result = callback()
-        cache._validated.add(source_name)
-        return result
+        if track_health:
+            cache._validated.add(source_name)
+        return replace(result, source=source_name)
     except SourceError as exc:
-        cache.mark_error(source_name, str(exc))
-        raise
+        status = "source_unavailable" if isinstance(exc, SourceUnavailable) else "parser_error"
+        if track_health:
+            cache.mark_error(source_name, str(exc))
+        return Observation(source_name, status, detail=str(exc))
     except Exception as exc:
         error = f"parser_failed:{type(exc).__name__}"
-        cache.mark_error(source_name, error)
-        raise SourceError(error) from exc
+        if track_health:
+            cache.mark_error(source_name, error)
+        return Observation(source_name, "parser_error", detail=error)
+
+
+def _sportbox_rpl_observation(cache, match):
+    candidate = sportbox_rpl_candidate(
+        cache.page("sportbox_rpl"), home=match["home_team"], away=match["away_team"],
+        match_date=match["match_date"],
+    )
+    if candidate is None:
+        return Observation("sportbox_rpl", "not_found")
+    # The outer guard owns calendar health. Detail errors belong only to this
+    # observation: neither fetch nor parser may poison the shared calendar key.
+    def detail():
+        raw = fetch_text(SPORTBOX_JSON.format(game_id=candidate["game_id"]))
+        return parse_sportbox_rpl_json(
+            raw, home=match["home_team"], away=match["away_team"],
+            match_date=match["match_date"], tournament_id=candidate["tournament_id"],
+        )
+    observation = _guard_observation(cache, "sportbox_rpl", detail, track_health=False)
+    if observation.status in {"source_unavailable", "parser_error"}:
+        observation = replace(observation, detail=f"game_id={candidate['game_id']}: {observation.detail}")
+    return observation
 
 
 def _rfs_cup_observation(cache: PageCache, match: dict) -> Observation:
@@ -261,7 +273,7 @@ def _sportbox_national_observation(cache: PageCache, match: dict) -> Observation
     return parse_sportbox_game_json(raw, match_date=match["match_date"])
 
 
-def observe_match(cache: PageCache, match: dict) -> tuple[Observation, Observation]:
+def observe_match(cache: PageCache, match: dict) -> tuple[Observation, ...]:
     scope = match["scope"]
     if scope == "rpl":
         return (
@@ -285,6 +297,7 @@ def observe_match(cache: PageCache, match: dict) -> tuple[Observation, Observati
                     match_date=match["match_date"],
                 ),
             ),
+            _guard_observation(cache, "sportbox_rpl", lambda: _sportbox_rpl_observation(cache, match)),
         )
     if scope == "cup":
         return (
@@ -440,6 +453,7 @@ def _update_source_health(
     labels = {
         "livesport_rpl": "LiveSport РПЛ",
         "sports_rpl": "Sports.ru РПЛ",
+        "sportbox_rpl": "Sportbox РПЛ (календарь)",
         "livesport_cup": "LiveSport Кубок",
         "rfs_cup": "РФС Кубок",
         "rfs_national": "РФС сборная",
@@ -449,11 +463,17 @@ def _update_source_health(
         current = bool(status["ok"])
         previous = health.get(name)
         if not current and previous is not False:
+            guidance = (
+                "Автозапись всё ещё возможна, если два оставшихся источника "
+                "дадут одинаковый финальный счёт."
+                if name in {"livesport_rpl", "sports_rpl", "sportbox_rpl"}
+                else "Автоматическая запись по затронутым матчам временно заблокирована "
+                "до восстановления второго подтверждения."
+            )
             _queue_message(
                 outbox,
                 f"⚠️ ТОТИШ: источник результатов недоступен — "
-                f"{labels.get(name, name)}. Автоматическая запись по затронутым "
-                "матчам невозможна.",
+                f"{labels.get(name, name)}. {guidance}",
             )
         elif current and previous is False:
             _queue_message(
@@ -471,7 +491,7 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
     for match in matches:
         if window_state(match["kickoff_time"], now) == "active":
             if match["scope"] == "rpl":
-                needed.update({"livesport_rpl", "sports_rpl"})
+                needed.update({"livesport_rpl", "sports_rpl", "sportbox_rpl"})
             elif match["scope"] == "cup":
                 needed.update({"livesport_cup", "rfs_cup"})
             elif match["scope"] == "national":
@@ -480,6 +500,7 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
     urls = {
         "livesport_rpl": LIVE_RPL,
         "sports_rpl": SPORTS_RPL,
+        "sportbox_rpl": SPORTBOX_RPL,
         "livesport_cup": LIVE_CUP,
         "rfs_cup": RFS_CUP,
         "rfs_national": RFS_NATIONAL,
@@ -517,9 +538,9 @@ def run(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
             continue
 
         try:
-            first, second = observe_match(cache, match)
-            decision = decide(first, second)
-            base.update({"sources": [asdict(first), asdict(second)], **decision})
+            observations = observe_match(cache, match)
+            decision = decide(*observations)
+            base.update({"sources": [asdict(o) for o in observations], **decision})
             if decision["decision"] == "would_write":
                 score = decision["score"]
                 _event_once(

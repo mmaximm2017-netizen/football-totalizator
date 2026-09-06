@@ -125,9 +125,9 @@ def test_sports_valid_absent_match_is_healthy():
 def test_sports_partial_degradation_is_unhealthy_without_recovery(bad):
     cache = worker.PageCache()
     state = {'source_health': {'sports_rpl': False}}
-    with pytest.raises(worker.SourceError):
-        worker._guard_observation(cache, 'sports_rpl', lambda: worker.find_sports_rpl_result(
+    observation = worker._guard_observation(cache, 'sports_rpl', lambda: worker.find_sports_rpl_result(
             bad, home='Зенит', away='ЦСКА', match_date='2026-09-05'))
+    assert observation.status == 'parser_error'
     assert not cache.source_status()['sports_rpl']['ok']
     with patch.object(worker, '_queue_message') as notify:
         worker._update_source_health(state, cache.source_status(), None)
@@ -195,8 +195,9 @@ def test_cup_runtime_does_not_consense_different_periods():
     cache._pages['livesport_cup'] = '2 сентября, среда, 2026 Ок Зенит 3:0 Динамо Мх C'
     cache._pages['rfs_cup'] = cup_card()
     with patch.object(runtime.dry, 'fetch_text', return_value='2 сентября 2026 Матч окончен д.в.'):
-        _, first, second, decision = runtime._observe(cache, cup_match())
-    assert first is None and second is None and decision['decision'] == 'source_error'
+        _, observations, decision = runtime._observe(cache, cup_match())
+    assert observations[1].status == 'parser_error'
+    assert decision['decision'] == 'one_source_confirmed'
     assert not cache.source_status()['rfs_cup']['ok']
 
 

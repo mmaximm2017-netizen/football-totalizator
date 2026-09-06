@@ -1,5 +1,7 @@
 # Automatic match results — dry-run phase
 
+Historical implementation notes. Current source/quorum/deadline policy: [Auto-results v2](AUTO_RESULTS_V2.md).
+
 This phase is intentionally read-only.
 
 ## Safety

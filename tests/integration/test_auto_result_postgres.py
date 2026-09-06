@@ -87,9 +87,9 @@ def finalize(m):
 
 
 def consensus(monkeypatch):
-    observation = worker.Observation('test', 'finished', home_score=2, away_score=1)
+    observation = worker.Observation('first', 'finished', home_score=2, away_score=1)
     monkeypatch.setattr(worker.PageCache, 'load_many', lambda *a: None)
-    monkeypatch.setattr(worker, 'observe_match', lambda *a: (observation, observation))
+    monkeypatch.setattr(worker, 'observe_match', lambda *a: (observation, worker.Observation('second', 'finished', home_score=2, away_score=1)))
 
 
 def test_readonly_pool_to_real_for_update_score_and_push(pg):
@@ -144,7 +144,7 @@ def test_manual_result_committed_while_worker_waits(pg):
 
 def test_strict_database_time_rejects_late_finalization(pg):
     m = match()
-    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '181 minutes'", write=True)
+    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '361 minutes'", write=True)
     m['kickoff_time'] = sql('SELECT kickoff_time FROM matches')[0][0]
     assert finalize(m) == 'window_expired'
     assert sql('SELECT home_score FROM matches') == [(None,)]
@@ -211,7 +211,7 @@ def test_missed_window_detected_without_worker_json_and_reason_is_honest(pg, mon
     monkeypatch.setenv('AUTO_RESULTS_ENABLED','true')
     monkeypatch.setenv('AUTO_RESULTS_DRY_RUN','false')
     sql("UPDATE auto_result_monitor SET enabled_since=clock_timestamp()-interval '1 day'", write=True)
-    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '220 minutes'", write=True)
+    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '400 minutes'", write=True)
     runtime.monitor(datetime.now(timezone.utc))
     runtime.monitor(datetime.now(timezone.utc))
     rows = sql('SELECT message FROM auto_result_notifications')
@@ -334,3 +334,79 @@ def test_manual_result_during_lookup_suppresses_observation_notice(pg, monkeypat
         runtime.run_live(datetime.now(timezone.utc), state_path=tmp_path / 'state', outbox=None)
     assert sql('SELECT home_score,away_score FROM matches') == [(3, 0)]
     assert sql('SELECT event_key FROM auto_result_notifications') == []
+
+
+@pytest.mark.parametrize('values,expected', [
+    (((2,2),(2,2),(2,2)), 'saved'),
+    (((2,2),'source_unavailable',(2,2)), 'saved'),
+    (((2,2),'not_found',(2,2)), 'saved'),
+    (('source_unavailable',(2,2),(2,2)), 'saved'),
+    (((2,2),(3,2),'source_unavailable'), 'score_conflict'),
+    (((2,2),(3,2),(2,2)), 'saved'),
+    (((2,2),'parser_error','not_found'), 'one_source_confirmed'),
+])
+def test_v2_quorum_after_old_deadline_real_atomic_score_points_and_diagnostics(pg, monkeypatch, tmp_path, values, expected):
+    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '210 minutes'", write=True)
+    observations = tuple(worker.Observation(name, 'finished', home_score=value[0], away_score=value[1])
+                         if isinstance(value, tuple) else worker.Observation(name, value)
+                         for name, value in zip(('livesport_rpl','sports_rpl','sportbox_rpl'),values))
+    monkeypatch.setattr(worker.PageCache, 'load_many', lambda *a: None)
+    monkeypatch.setattr(worker, 'observe_match', lambda *a: observations)
+    result = runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
+    entry=result['matches'][0]
+    if expected == 'saved':
+        assert entry['write_outcome']=='saved'
+        assert sql('SELECT status,home_score,away_score FROM matches') == [('FINISHED',2,2)]
+        assert sql('SELECT points FROM predictions') == [(2,)]
+        assert sql('SELECT count(*) FROM push_delivery_log') == [(1,)]
+        with patch.object(finalizer,'finalize_auto_result',side_effect=AssertionError('duplicate')):
+            runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
+    else:
+        assert entry['decision']==expected
+        assert sql('SELECT home_score,points FROM matches JOIN predictions ON matches.id=predictions.match_id') == [(None,0)]
+        assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]
+    if values == ((2,2),(3,2),(2,2)):
+        assert 'sports_rpl: подтвердил 3:2' in delivery.last_check({**match_identity_row()})[1]
+        assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'quorum-conflict:%'") == [(1,)]
+
+
+def match_identity_row():
+    row=sql('SELECT id,tournament_id,league,home_team,away_team,kickoff_time,match_category FROM matches')[0]
+    return dict(zip(('id','tournament_id','league','home_team','away_team','kickoff_time','match_category'),row))
+
+
+def test_v2_soft_notice_once_retry_then_hard_notice_with_durable_evidence(pg, monkeypatch, tmp_path):
+    sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '181 minutes'", write=True)
+    monkeypatch.setattr(worker.PageCache,'load_many',lambda *a:None)
+    monkeypatch.setattr(worker,'observe_match',lambda *a:(worker.Observation('livesport_rpl','finished',home_score=2,away_score=2),worker.Observation('sports_rpl','not_found'),worker.Observation('sportbox_rpl','source_unavailable')))
+    for _ in range(2):
+        runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
+    assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'delayed:%'") == [(1,)]
+    m=match()
+    # Keep identity intact, advance only the runtime clock for expiry detection.
+    from datetime import timedelta
+    runtime.run_live(m['kickoff_time']+timedelta(minutes=361),state_path=tmp_path/'state',outbox=None)
+    runtime.run_live(m['kickoff_time']+timedelta(minutes=362),state_path=tmp_path/'state',outbox=None)
+    notices=sql("SELECT message FROM auto_result_notifications WHERE event_key LIKE 'expired:%'")
+    assert len(notices)==1
+    assert 'sports_rpl: не нашёл матч' in notices[0][0] and 'sportbox_rpl: ошибка загрузки' in notices[0][0]
+    assert sql('SELECT home_score,away_score FROM matches') == [(None,None)]
+
+
+def test_v2_database_hard_boundary_rejects_after_scoring_delay(pg, monkeypatch):
+    m=match()
+    original=finalizer._inside_window
+    calls=[]
+    def clock_check(cur,kickoff):
+        calls.append(1)
+        if len(calls)>1:
+            # Real PostgreSQL wall-clock check with an expired kickoff, after
+            # UPDATE/recalc have run in the same real transaction.
+            cur.execute("SELECT clock_timestamp()-interval '361 minutes'")
+            kickoff=cur.fetchone()[0]
+        return original(cur,kickoff)
+    monkeypatch.setattr(finalizer,'_inside_window',clock_check)
+    assert finalize(m)=='window_expired'
+    assert sql('SELECT status,home_score,away_score FROM matches') == [('SCHEDULED',None,None)]
+    assert sql('SELECT points FROM predictions') == [(0,)]
+    assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]

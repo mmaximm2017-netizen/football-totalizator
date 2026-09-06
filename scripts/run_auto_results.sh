@@ -59,19 +59,23 @@ fi
 cd "$PROJECT_ROOT"
 printf '%s START auto-result runtime\n' "$(date -Is)" >>"$LOG_FILE"
 set +e
-"$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
+runtime_command=("$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
   "$DOCKER_BIN" compose run --rm --no-deps -T --interactive=false \
     -e PYTHONPATH=/app \
     app python scripts/auto_result_runtime.py "$@" \
       --state-file /app/runtime/telegram-outbox/.auto-results-state.json \
-      --outbox /app/runtime/telegram-outbox \
-    >>"$LOG_FILE" 2>&1
+      --outbox /app/runtime/telegram-outbox)
+if [[ "${1:-}" == "--monitor" ]]; then
+  "${runtime_command[@]}"
+else
+  "${runtime_command[@]}" >>"$LOG_FILE" 2>&1
+fi
 STATUS=$?
 set -e
 printf '%s FINISH auto-result runtime exit_code=%s\n' "$(date -Is)" "$STATUS" >>"$LOG_FILE"
 
 python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" >>"$LOG_FILE" 2>&1 || true
-if [[ "$STATUS" -ne 0 ]]; then
+if [[ "$STATUS" -ne 0 && "${1:-}" != "--monitor" ]]; then
   python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" --message "🚨 ТОТИШ: ошибка автоматической проверки результатов. Код выхода: ${STATUS}. Проверьте лог и состояние БД; сохранение могло завершиться до ошибки." >/dev/null 2>&1 || true
 fi
 exit "$STATUS"
