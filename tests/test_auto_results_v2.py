@@ -143,9 +143,12 @@ def test_today_incident_retries_after_soft_deadline_then_records_quorum(monkeypa
         monkeypatch.setattr(worker,'_sportbox_rpl_observation',lambda *a:obs('sportbox',(2,2) if elapsed==210 else 'not_found'))
         runtime._run_live(clock[0],state_path=tmp_path/'state',outbox=tmp_path)
         assert bool(saved) == (elapsed==210)
+        if elapsed < 180:
+            assert notices == {}
     assert saved == [(2,2)]
     assert list(notices).count('delayed:incident') == 1
-    assert any('восстановился' in message for message in messages)
+    assert 'Через 180 минут' in notices['delayed:incident']
+    assert messages == []
     assert 'sports_rpl: ошибка загрузки' in checks[-1][1]
     runtime._run_live(clock[0],state_path=tmp_path/'state',outbox=tmp_path)
     assert saved == [(2,2)]
@@ -160,8 +163,19 @@ def test_hard_deadline_never_fetches_or_writes(monkeypatch,tmp_path):
     monkeypatch.setattr(runtime.delivery,'match_identity',lambda m:'hard')
     notice=Mock(); monkeypatch.setattr(runtime.delivery,'notify_pending',notice)
     runtime._run_live(now,state_path=tmp_path/'state',outbox=None)
-    assert 'нужен ручной результат' in notice.call_args.args[2]
-    assert 'B: ошибка загрузки' in notice.call_args.args[2]
+    notice.assert_called_once()
+    assert 'Через 180 минут' in notice.call_args.args[2]
+    assert 'Проверки продолжаются до +360 минут' in notice.call_args.args[2]
+    assert 'нужен ручной результат' not in notice.call_args.args[2]
+
+
+def test_source_health_transitions_are_recorded_without_live_notifications():
+    state={}
+    runtime._record_source_health(state, {
+        'sports_rpl': {'ok': False, 'error': 'request_failed:Timeout'},
+        'sportbox_rpl': {'ok': True},
+    })
+    assert state['source_health'] == {'sports_rpl': False, 'sportbox_rpl': True}
 
 
 def assert_empty(urls):
