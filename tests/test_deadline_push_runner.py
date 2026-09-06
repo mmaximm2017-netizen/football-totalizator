@@ -52,6 +52,13 @@ class DeadlinePushRunnerContractTests(unittest.TestCase):
         self.assertIn("*/5 * * * * /opt/football-totalizator/scripts/run_deadline_pushes.sh", SOURCE)
         self.assertIn("SHELL=/bin/bash", SOURCE)
 
+    def test_recovery_notice_is_paired_with_successful_failure_alert(self):
+        self.assertIn('RECOVERY_MARKER="$STATE_DIR/deadline-worker.failed"', SOURCE)
+        self.assertIn(': >"$RECOVERY_MARKER"', SOURCE)
+        self.assertIn('elif [[ -f "$RECOVERY_MARKER" ]]; then', SOURCE)
+        self.assertIn("✅ ТОТИШ: фоновая задача восстановилась", SOURCE)
+        self.assertIn('rm -f "$RECOVERY_MARKER"', SOURCE)
+
     def test_wrapper_does_not_contain_credentials_or_secret_arguments(self):
         for secret_name in ("WEB_PUSH_VAPID_PRIVATE_KEY", "p256dh", "auth", "--token"):
             self.assertNotIn(secret_name, SOURCE)
