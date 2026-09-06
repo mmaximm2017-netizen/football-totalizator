@@ -22,8 +22,8 @@ from their generic text. The monitor does not fetch football sources.
 Each adapter casts at most one vote. Only explicit finished scores count.
 A unique score with two confirmations is sufficient. Two different scores without
 such a majority cannot write. A 2–1 majority can write, but all three observations
-and the dissent are recorded in PostgreSQL and an operational conflict notice is
-queued. Absence, network failure and parser failure are not score votes.
+and the dissent are recorded in PostgreSQL. Absence, network failure and parser
+failure are not score votes.
 
 The new Sportbox adapter uses the stable RPL calendar, exact predefined aliases,
 home/away order, full calendar date and a second full-date/team/tournament check in
@@ -38,18 +38,32 @@ fetch/parser only. Each game's JSON is fetched and parsed afresh. Detail failure
 are isolated observations (`source_unavailable` / `parser_error`, including game ID
 in their detail), never shared calendar errors. The runtime records the affected
 match's diagnostic; a healthy calendar does not claim every game detail is healthy.
-Outage guidance distinguishes RPL's two remaining possible votes from the blocked
-2-of-2 Cup/national scopes. Health notifications remain transition-only.
+Source health transitions remain recorded in diagnostic state but are intentionally
+silent in live Telegram notifications.
 
-## Timing
+## Timing and Telegram policy
 
-All supported scopes start at +120 minutes. At +180 a pending-result warning is
-persisted once per match identity; retries continue every five minutes. +360 is
-the hard deadline, inclusive. Beyond it there is no automatic write or source retry.
-The final notice includes the last identity-bound PostgreSQL diagnostic, or states
-that no evidence exists. The independent monitor catches missed runs on recovery
-within its existing seven-day lookback. No cron or monitoring can alert while the
-entire VPS is down.
+All supported scopes start at +120 minutes. At +180, if the result still has not
+been written automatically, one concise pending-result warning is persisted once
+per match identity. Retries continue every five minutes. +360 is the hard deadline,
+inclusive. Beyond it there is no automatic write or source retry.
+
+Live match-result Telegram notifications are intentionally limited to two user-facing
+states:
+
+1. success: the finalizer reports that the result was added automatically and points
+   were calculated;
+2. +180 pending: automatic entry has not succeeded yet and retries continue to +360.
+
+Intermediate source outage/recovery, one-source confirmation, parser/not_found
+states, score-conflict diagnostics, stalled-check notices and hard-deadline match
+notices stay in logs/PostgreSQL diagnostic state and are not sent as live Telegram
+match-progress messages. General production-monitor incidents (database/site/
+container/worker technical failures) remain separate operational alerts.
+
+The independent monitor can catch a missed +180 notice after recovery within its
+existing seven-day lookback. No cron or monitoring can alert while the entire VPS
+is down.
 
 Six hours provides 36 additional five-minute retry opportunities beyond the old
 window, without indefinite polling. It also accommodates delayed availability for
@@ -61,8 +75,8 @@ the row lock, after scoring and after notification insertion before commit.
 
 The finalizer only imports the shared timing constants; row locks, identity/manual
 protection, match→predictions order, scoring, result push dedupe and atomic commit
-are unchanged. JSON stores diagnostic health only. Durable checks and notices
-survive its loss. All votes are reobtained on retry; no cached votes authorize writes.
+are unchanged. JSON stores diagnostic health only. Durable checks survive its loss.
+All votes are reobtained on retry; no cached votes authorize writes.
 
 Monitor failures retain exit code, bounded beginning/end of stdout and stderr,
 timeout/shell/DB/unknown classification, and an explicit unknown-result warning.
@@ -76,6 +90,7 @@ immutable image checks and worker locking are unchanged.
 
 Run the complete existing CI, including its disposable PostgreSQL 17 service,
 scoring/concurrency regressions from #63/#64, pip-audit, blocking Ruff and Docker.
-Image verification imports both runtime and finalizer, including the new policy.
-No production database access or deployment is needed. Old hard-bound tests move
-to +360; new tests explicitly prove that +180 no longer stops retries.
+Image verification imports both runtime and finalizer, including the shared policy.
+No production database access or deployment is needed. Tests explicitly prove that
+there are no live match-progress Telegram messages before +180, the +180 notice is
+sent once, retries continue afterward, and the hard deadline still blocks writes.
