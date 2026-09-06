@@ -13,6 +13,8 @@ PROJECT_ROOT="${TOTISH_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 LOG_FILE="${TOTISH_MATCH_RESULT_PUSH_LOG:-/var/log/totish-match-result-push.log}"
 LOCK_FILE="${TOTISH_MATCH_RESULT_PUSH_LOCK:-/tmp/totish-match-result-push.lock}"
 TIMEOUT_SECONDS="${TOTISH_MATCH_RESULT_PUSH_TIMEOUT:-180}"
+STATE_DIR="${TOTISH_STATE_DIR:-$HOME/.local/state/totish}"
+RECOVERY_MARKER="$STATE_DIR/match-result-worker.failed"
 MAX_LOG_BYTES=10485760
 
 usage() {
@@ -55,7 +57,7 @@ if [[ ! -d "$PROJECT_ROOT" ]]; then
     exit 1
 fi
 
-mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$(dirname "$LOG_FILE")" "$STATE_DIR"
 touch "$LOG_FILE"
 chmod 600 "$LOG_FILE" 2>/dev/null || true
 
@@ -72,7 +74,6 @@ if [[ "$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)" -gt "$MAX_LOG_BYTES" ]];
 fi
 
 cd "$PROJECT_ROOT"
-
 
 STARTED_AT="$(date -Is)"
 printf '%s START match-result worker%s\n' "$STARTED_AT" "${1:+ mode=$1}" >>"$LOG_FILE"
@@ -101,7 +102,7 @@ if [[ "$WORKER_STATUS" -ne 0 ]]; then
         HUMAN_REASON="Фоновая задача завершилась с ошибкой и не смогла выполнить работу до конца."
     fi
 
-    python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" \
+    if python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" \
         --message "🚨 ТОТИШ: ошибка фоновой задачи
 
 Что именно произошло:
@@ -116,7 +117,23 @@ ${HUMAN_REASON}
 
 Технические детали:
 match_result_worker / exit_code=${WORKER_STATUS}" \
-        >/dev/null 2>&1 || true
+        >/dev/null 2>&1; then
+        : >"$RECOVERY_MARKER"
+        chmod 600 "$RECOVERY_MARKER" 2>/dev/null || true
+    fi
+elif [[ -f "$RECOVERY_MARKER" ]]; then
+    if python3 "$PROJECT_ROOT/scripts/host_telegram_notifier.py" \
+        --message "✅ ТОТИШ: фоновая задача восстановилась
+
+Обработка уведомлений после завершения матчей снова работает нормально.
+
+Время: ${FINISHED_AT}
+
+Технические детали:
+match_result_worker / recovered" \
+        >/dev/null 2>&1; then
+        rm -f "$RECOVERY_MARKER"
+    fi
 fi
 
 if [[ "$WORKER_STATUS" -eq 124 || "$WORKER_STATUS" -eq 137 ]]; then
