@@ -14,9 +14,42 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = Path.home() / ".local" / "state" / "totish"
 STATE_FILE = STATE_DIR / "production-monitor-dedupe.json"
+RECOVERY_STATE_FILE = STATE_DIR / "production-monitor-recovery.json"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from host_telegram_notifier import send_message
+
+
+RECOVERY_MESSAGES = {
+    "container": (
+        "✅ ТОТИШ: приложение снова работает",
+        "Основной контейнер приложения снова находится в нормальном состоянии.",
+    ),
+    "health_local": (
+        "✅ ТОТИШ: приложение снова отвечает",
+        "Внутренняя проверка приложения на VPS снова проходит успешно.",
+    ),
+    "health_db": (
+        "✅ ТОТИШ: база данных снова доступна",
+        "Проверка базы данных снова проходит успешно.",
+    ),
+    "control_plane": (
+        "✅ ТОТИШ: служебные файлы снова синхронизированы",
+        "Версия служебных production-файлов снова совпадает с версией приложения.",
+    ),
+    "backup": (
+        "✅ ТОТИШ: резервное копирование снова в норме",
+        "Проверка последней резервной копии базы снова проходит успешно.",
+    ),
+    "auto_results": (
+        "✅ ТОТИШ: автоматическая проверка результатов восстановилась",
+        "Монитор автоматического ввода результатов снова завершается успешно.",
+    ),
+    "health_public": (
+        "✅ ТОТИШ: сайт снова доступен",
+        "Публичная проверка totish.ru снова проходит успешно.",
+    ),
+}
 
 
 def load_state():
@@ -32,6 +65,78 @@ def save_state(state):
     tmp = STATE_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
     tmp.replace(STATE_FILE)
+
+
+def load_recovery_state():
+    try:
+        data = json.loads(RECOVERY_STATE_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_recovery_state(state):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = RECOVERY_STATE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
+    tmp.replace(RECOVERY_STATE_FILE)
+
+
+def failure_family(key):
+    if key.startswith("container:"):
+        return "container"
+    if key.startswith("health:local"):
+        return "health_local"
+    if key.startswith("health:db"):
+        return "health_db"
+    if key.startswith("control_plane:"):
+        return "control_plane"
+    if key.startswith("backup:"):
+        return "backup"
+    if key.startswith("auto_results:"):
+        return "auto_results"
+    if key.startswith("health:public"):
+        return "health_public"
+    return None
+
+
+def mark_failure(key):
+    family = failure_family(key)
+    if not family:
+        return
+    state = load_recovery_state()
+    state[family] = {
+        "key": key,
+        "since": int(time.time()),
+    }
+    save_recovery_state(state)
+
+
+def recover(family):
+    state = load_recovery_state()
+    previous = state.get(family)
+    if not isinstance(previous, dict):
+        return False
+
+    message_parts = RECOVERY_MESSAGES.get(family)
+    if not message_parts:
+        return False
+
+    title, human_text = message_parts
+    now_text = datetime.now().astimezone().strftime("%d.%m.%Y %H:%M:%S %Z")
+    previous_key = previous.get("key", "unknown")
+    message = (
+        f"{title}\n\n"
+        f"{human_text}\n\n"
+        f"Время: {now_text}\n\n"
+        "Технические детали:\n"
+        f"production_monitor / recovered_from={previous_key}"
+    )
+    send_message(message)
+    state.pop(family, None)
+    save_recovery_state(state)
+    print(f"RECOVERY SENT: {family}")
+    return True
 
 
 def alert(key, details):
@@ -91,6 +196,7 @@ def alert(key, details):
     )
 
     send_message(message)
+    mark_failure(key)
 
     state[fingerprint] = now
     cutoff = now - 3600
@@ -158,7 +264,9 @@ def check_container():
         )
         return False
 
+    recover("container")
     return True
+
 
 def check_local_health():
     try:
@@ -174,6 +282,7 @@ def check_local_health():
             )
             return False
 
+        recover("health_local")
         return True
 
     except Exception as exc:
@@ -185,6 +294,7 @@ def check_local_health():
             f"Причина: {type(exc).__name__}: {exc}",
         )
         return False
+
 
 def check_db_health():
     health = None
@@ -220,6 +330,7 @@ def check_db_health():
     }
 
     if not bad:
+        recover("health_db")
         return True
 
     explanations = {
@@ -249,11 +360,12 @@ def check_db_health():
     )
     return False
 
+
 def check_database_backup():
     backup_dir = STATE_DIR / "backups"
 
     # The directory is created by the backup job itself. Before the first
-    # scheduled run after rollout, do not emit a false alert.
+    # scheduled run after rollout, do not emit a false alert or recovery.
     if not backup_dir.exists():
         return True
 
@@ -298,6 +410,7 @@ def check_database_backup():
         )
         return False
 
+    recover("backup")
     return True
 
 
@@ -355,6 +468,7 @@ def check_control_plane_release():
         )
         return False
 
+    recover("control_plane")
     return True
 
 
@@ -372,6 +486,7 @@ def check_public_health():
             )
             return False
 
+        recover("health_public")
         return True
 
     except Exception as exc:
@@ -406,6 +521,7 @@ def check_public_health():
             f"Причина: {reason}",
         )
         return False
+
 
 def safe_output(value, limit=600):
     if isinstance(value, bytes):
@@ -447,6 +563,7 @@ def check_auto_results():
         details = failure_details(stderr=type(exc).__name__, kind="unknown failure")
     else:
         if result.returncode == 0:
+            recover("auto_results")
             return True
         details = failure_details(result.returncode, result.stdout, result.stderr)
     print(f"auto_results:monitor_failed\n{details}")
