@@ -157,18 +157,21 @@ def _fetch_detail(cache: PageCache, source_name: str, url: str) -> str:
         raise SourceUnavailable(str(exc)) from exc
 
 
-def _guard_observation(cache: PageCache, source_name: str, callback):
+def _guard_observation(cache: PageCache, source_name: str, callback, *, track_health=True):
     try:
         result = callback()
-        cache._validated.add(source_name)
+        if track_health:
+            cache._validated.add(source_name)
         return replace(result, source=source_name)
     except SourceError as exc:
         status = "source_unavailable" if isinstance(exc, SourceUnavailable) else "parser_error"
-        cache.mark_error(source_name, str(exc))
+        if track_health:
+            cache.mark_error(source_name, str(exc))
         return Observation(source_name, status, detail=str(exc))
     except Exception as exc:
         error = f"parser_failed:{type(exc).__name__}"
-        cache.mark_error(source_name, error)
+        if track_health:
+            cache.mark_error(source_name, error)
         return Observation(source_name, "parser_error", detail=error)
 
 
@@ -179,9 +182,18 @@ def _sportbox_rpl_observation(cache, match):
     )
     if candidate is None:
         return Observation("sportbox_rpl", "not_found")
-    raw = _fetch_detail(cache, "sportbox_rpl", SPORTBOX_JSON.format(game_id=candidate["game_id"]))
-    return parse_sportbox_rpl_json(raw, home=match["home_team"], away=match["away_team"],
-                                  match_date=match["match_date"], tournament_id=candidate["tournament_id"])
+    # The outer guard owns calendar health. Detail errors belong only to this
+    # observation: neither fetch nor parser may poison the shared calendar key.
+    def detail():
+        raw = fetch_text(SPORTBOX_JSON.format(game_id=candidate["game_id"]))
+        return parse_sportbox_rpl_json(
+            raw, home=match["home_team"], away=match["away_team"],
+            match_date=match["match_date"], tournament_id=candidate["tournament_id"],
+        )
+    observation = _guard_observation(cache, "sportbox_rpl", detail, track_health=False)
+    if observation.status in {"source_unavailable", "parser_error"}:
+        observation = replace(observation, detail=f"game_id={candidate['game_id']}: {observation.detail}")
+    return observation
 
 
 def _rfs_cup_observation(cache: PageCache, match: dict) -> Observation:
@@ -441,7 +453,7 @@ def _update_source_health(
     labels = {
         "livesport_rpl": "LiveSport РПЛ",
         "sports_rpl": "Sports.ru РПЛ",
-        "sportbox_rpl": "Sportbox РПЛ",
+        "sportbox_rpl": "Sportbox РПЛ (календарь)",
         "livesport_cup": "LiveSport Кубок",
         "rfs_cup": "РФС Кубок",
         "rfs_national": "РФС сборная",
@@ -451,11 +463,17 @@ def _update_source_health(
         current = bool(status["ok"])
         previous = health.get(name)
         if not current and previous is not False:
+            guidance = (
+                "Автозапись всё ещё возможна, если два оставшихся источника "
+                "дадут одинаковый финальный счёт."
+                if name in {"livesport_rpl", "sports_rpl", "sportbox_rpl"}
+                else "Автоматическая запись по затронутым матчам временно заблокирована "
+                "до восстановления второго подтверждения."
+            )
             _queue_message(
                 outbox,
                 f"⚠️ ТОТИШ: источник результатов недоступен — "
-                f"{labels.get(name, name)}. Для автозаписи по-прежнему нужны "
-                "два согласованных подтверждения других доступных источников.",
+                f"{labels.get(name, name)}. {guidance}",
             )
         elif current and previous is False:
             _queue_message(

@@ -222,4 +222,4 @@ def test_source_outage_notice_does_not_claim_quorum_write_impossible(monkeypatch
     monkeypatch.setattr(worker,'_queue_message',lambda out,message:messages.append(message))
     worker._update_source_health({}, {'sports_rpl':{'ok':False}}, None)
     assert 'невозможна' not in messages[0]
-    assert 'два согласованных подтверждения' in messages[0]
+    assert 'два оставшихся источника' in messages[0]

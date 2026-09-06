@@ -33,6 +33,14 @@ contain captured public responses and provenance, not synthetic claims of uptime
 Two distinct publishers agreeing can still share an erroneous upstream feed;
 independence of their underlying data suppliers cannot be guaranteed.
 
+Sportbox RPL's shared `sportbox_rpl` cache/health key describes the calendar
+fetch/parser only. Each game's JSON is fetched and parsed afresh. Detail failures
+are isolated observations (`source_unavailable` / `parser_error`, including game ID
+in their detail), never shared calendar errors. The runtime records the affected
+match's diagnostic; a healthy calendar does not claim every game detail is healthy.
+Outage guidance distinguishes RPL's two remaining possible votes from the blocked
+2-of-2 Cup/national scopes. Health notifications remain transition-only.
+
 ## Timing
 
 All supported scopes start at +120 minutes. At +180 a pending-result warning is
