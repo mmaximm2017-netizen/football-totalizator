@@ -40,6 +40,13 @@ class MatchResultPushRunnerContractTests(unittest.TestCase):
         self.assertIn("MAX_LOG_BYTES=10485760", SOURCE)
         self.assertIn("tail -c 5242880", SOURCE)
 
+    def test_recovery_notice_is_paired_with_successful_failure_alert(self):
+        self.assertIn('RECOVERY_MARKER="$STATE_DIR/match-result-worker.failed"', SOURCE)
+        self.assertIn(': >"$RECOVERY_MARKER"', SOURCE)
+        self.assertIn('elif [[ -f "$RECOVERY_MARKER" ]]; then', SOURCE)
+        self.assertIn("✅ ТОТИШ: фоновая задача восстановилась", SOURCE)
+        self.assertIn('rm -f "$RECOVERY_MARKER"', SOURCE)
+
     def test_wrapper_has_no_secrets_or_endpoints(self):
         for secret_name in ("WEB_PUSH_VAPID_PRIVATE_KEY", "p256dh", "auth", "--token", "endpoint"):
             self.assertNotIn(secret_name, SOURCE)
