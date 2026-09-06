@@ -207,42 +207,44 @@ def test_two_workers_database_lock(pg):
         assert later
 
 
-def test_missed_window_detected_without_worker_json_and_reason_is_honest(pg, monkeypatch):
+def test_missed_window_emits_only_catchup_soft_notice(pg, monkeypatch):
     monkeypatch.setenv('AUTO_RESULTS_ENABLED','true')
     monkeypatch.setenv('AUTO_RESULTS_DRY_RUN','false')
     sql("UPDATE auto_result_monitor SET enabled_since=clock_timestamp()-interval '1 day'", write=True)
     sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '400 minutes'", write=True)
     runtime.monitor(datetime.now(timezone.utc))
     runtime.monitor(datetime.now(timezone.utc))
-    rows = sql('SELECT message FROM auto_result_notifications')
+    rows = sql('SELECT event_key,message FROM auto_result_notifications')
     assert len(rows) == 1
-    assert 'Нет сохранённых проверок' in rows[0][0]
+    assert rows[0][0].startswith('delayed:')
+    assert 'Через 180 минут' in rows[0][1]
+    assert 'Проверки продолжаются до +360 минут' in rows[0][1]
 
 
-def test_liveness_only_when_matches_need_worker(pg, monkeypatch):
+def test_no_match_progress_notice_before_soft_deadline(pg, monkeypatch):
     monkeypatch.setenv('AUTO_RESULTS_ENABLED','true')
     monkeypatch.setenv('AUTO_RESULTS_DRY_RUN','false')
     sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '140 minutes'", write=True)
     runtime.monitor(datetime.now(timezone.utc))
-    assert len(sql('SELECT * FROM auto_result_notifications')) == 1
-    sql('DELETE FROM auto_result_notifications', write=True)
+    assert sql('SELECT * FROM auto_result_notifications') == []
     sql("UPDATE matches SET status='FINISHED',home_score=0,away_score=0", write=True)
     runtime.monitor(datetime.now(timezone.utc))
     assert sql('SELECT * FROM auto_result_notifications') == []
 
 
-def test_final_reason_uses_durable_identity_bound_evidence(pg, monkeypatch):
+def test_hard_deadline_keeps_durable_evidence_without_extra_notice(pg, monkeypatch):
     monkeypatch.setenv('AUTO_RESULTS_ENABLED','true')
     monkeypatch.setenv('AUTO_RESULTS_DRY_RUN','false')
     m = match()
     delivery.record_check(m, datetime.now(timezone.utc), 'sports: не нашёл матч')
     runtime._expired(m)
-    assert 'sports: не нашёл матч' in sql('SELECT message FROM auto_result_notifications')[0][0]
-    sql('DELETE FROM auto_result_notifications', write=True)
+    assert delivery.last_check(m)[1] == 'sports: не нашёл матч'
+    assert sql('SELECT * FROM auto_result_notifications') == []
     sql("UPDATE matches SET away_team='Ростов'", write=True)
     m = match()
+    assert delivery.last_check(m) is None
     runtime._expired(m)
-    assert 'причина неизвестна' in sql('SELECT message FROM auto_result_notifications')[0][0]
+    assert sql('SELECT * FROM auto_result_notifications') == []
 
 
 def test_final_notice_does_not_request_manual_result_already_saved(pg):
@@ -367,7 +369,7 @@ def test_v2_quorum_after_old_deadline_real_atomic_score_points_and_diagnostics(p
         assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]
     if values == ((2,2),(3,2),(2,2)):
         assert 'sports_rpl: подтвердил 3:2' in delivery.last_check({**match_identity_row()})[1]
-        assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'quorum-conflict:%'") == [(1,)]
+        assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'quorum-conflict:%'") == [(0,)]
 
 
 def match_identity_row():
@@ -375,21 +377,24 @@ def match_identity_row():
     return dict(zip(('id','tournament_id','league','home_team','away_team','kickoff_time','match_category'),row))
 
 
-def test_v2_soft_notice_once_retry_then_hard_notice_with_durable_evidence(pg, monkeypatch, tmp_path):
+def test_v2_soft_notice_once_retry_then_hard_deadline_is_silent(pg, monkeypatch, tmp_path):
     sql("UPDATE matches SET kickoff_time=clock_timestamp()-interval '181 minutes'", write=True)
     monkeypatch.setattr(worker.PageCache,'load_many',lambda *a:None)
     monkeypatch.setattr(worker,'observe_match',lambda *a:(worker.Observation('livesport_rpl','finished',home_score=2,away_score=2),worker.Observation('sports_rpl','not_found'),worker.Observation('sportbox_rpl','source_unavailable')))
     for _ in range(2):
         runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
-    assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'delayed:%'") == [(1,)]
+    rows=sql("SELECT message FROM auto_result_notifications WHERE event_key LIKE 'delayed:%'")
+    assert len(rows)==1
+    assert 'Через 180 минут' in rows[0][0]
     m=match()
+    assert 'sports_rpl: не нашёл матч' in delivery.last_check(m)[1]
+    assert 'sportbox_rpl: ошибка загрузки' in delivery.last_check(m)[1]
     # Keep identity intact, advance only the runtime clock for expiry detection.
     from datetime import timedelta
     runtime.run_live(m['kickoff_time']+timedelta(minutes=361),state_path=tmp_path/'state',outbox=None)
     runtime.run_live(m['kickoff_time']+timedelta(minutes=362),state_path=tmp_path/'state',outbox=None)
-    notices=sql("SELECT message FROM auto_result_notifications WHERE event_key LIKE 'expired:%'")
-    assert len(notices)==1
-    assert 'sports_rpl: не нашёл матч' in notices[0][0] and 'sportbox_rpl: ошибка загрузки' in notices[0][0]
+    assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'expired:%'") == [(0,)]
+    assert sql("SELECT count(*) FROM auto_result_notifications WHERE event_key LIKE 'delayed:%'") == [(1,)]
     assert sql('SELECT home_score,away_score FROM matches') == [(None,None)]
 
 
