@@ -64,27 +64,31 @@ def _reason(observations, decision):
     return "; ".join(parts)
 
 
+def _record_source_health(state: dict, statuses: dict) -> None:
+    """Keep source diagnostics without publishing per-source Telegram chatter."""
+    health = state.setdefault("source_health", {})
+    for name, status in statuses.items():
+        health[name] = bool(status["ok"])
+
+
 def _soft_deadline(match, now):
     if now < match["kickoff_time"] + timedelta(minutes=dry.SOFT_DEADLINE_MINUTES):
         return
-    previous = delivery.last_check(match)
-    reason = previous[1] if previous else "Сохранённых проверок нет; причина неизвестна."
     delivery.notify_pending(
         match, f"delayed:{delivery.match_identity(match)}",
         f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
-        f"Автоматическое подтверждение задерживается. Проверки продолжаются до +{dry.WINDOW_END_MINUTES} минут. {reason}",
+        f"Через {dry.SOFT_DEADLINE_MINUTES} минут после начала матча автоматически "
+        f"ввести результат пока не удалось. Проверки продолжаются до +{dry.WINDOW_END_MINUTES} минут.",
     )
 
 
 def _expired(match):
     previous = delivery.last_check(match)
-    reason = (f"Последняя сохранённая проверка {previous[0].isoformat()}: {previous[1]}"
-              if previous else "Нет сохранённых проверок этой версии матча; причина неизвестна.")
-    delivery.notify_pending(
-        match, f"expired:{delivery.match_identity(match)}",
-        f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
-        f"Окно автоматизации закрыто. На момент проверки результата нет. "
-        f"Если он ещё не внесён, нужен ручной результат. {reason}",
+    reason = previous[1] if previous else "нет сохранённой диагностики"
+    logger.warning(
+        "Auto-result hard deadline reached for match_id=%s: %s",
+        match.get("id"),
+        reason,
     )
 
 
@@ -94,7 +98,7 @@ def monitor(now):
     since = delivery.enabled_since(live_enabled)
     if not live_enabled:
         return {"monitor": "disabled_or_dry_run"}
-    # Catch missed final-notice runs on recovery. Ignore pre-rollout backlog.
+    # Catch missed +180 notices on recovery. Ignore pre-rollout backlog.
     matches = dry._load_matches(now, lookback_minutes=7 * 24 * 60)
     for match in matches:
         end = match["kickoff_time"] + timedelta(minutes=dry.WINDOW_END_MINUTES)
@@ -102,18 +106,10 @@ def monitor(now):
             continue
         phase = dry.window_state(match["kickoff_time"], now)
         if phase in {"expired", "expired_grace"}:
-            _expired(match)
-        elif (phase == "active"
-              and now >= match["kickoff_time"] + timedelta(minutes=132)):
             _soft_deadline(match, now)
-            previous = delivery.last_check(match)
-            if previous is None or now - previous[0] > timedelta(minutes=12):
-                delivery.notify_pending(
-                    match, f"stalled:{delivery.match_identity(match)}",
-                    f"🚨 ТОТИШ: {match['home_team']} — {match['away_team']}. "
-                    "Нет свежей сохранённой проверки автозаписи более 12 минут "
-                    "в рабочем окне. Проверьте cron/worker; результат ещё не подтверждён.",
-                )
+            _expired(match)
+        elif phase == "active":
+            _soft_deadline(match, now)
     return {"monitor": "checked", "pending_matches": len(matches)}
 
 
@@ -142,6 +138,7 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
         if phase == "too_early":
             continue
         if phase != "active":
+            _soft_deadline(match, now)
             _expired(match)
             continue
         candidates.append(match)
@@ -160,6 +157,7 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                 delivery.record_check(match, datetime.now(timezone.utc), detail)
                 if dry.window_state(match["kickoff_time"], datetime.now(timezone.utc)) != "active":
                     base["decision"] = "window_expired"
+                    _soft_deadline(match, datetime.now(timezone.utc))
                     _expired(match)
                 elif decision["decision"] == "would_write":
                     try:
@@ -179,39 +177,26 @@ def _run_live(now: datetime, *, state_path: Path, outbox: Path | None) -> dict:
                         base.update(decision="retry", error_type=type(exc).__name__)
                         detail += f"; сохранение не подтверждено ({type(exc).__name__})"
                         delivery.record_check(match, datetime.now(timezone.utc), detail)
-                        delivery.notify(
-                            f"save-error:{delivery.match_identity(match)}",
-                            f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. "
-                            "Подтверждение сохранения не получено. Следующий запуск "
-                            f"перепроверит БД и источники; повторы разрешены только до +{dry.WINDOW_END_MINUTES} минут.",
-                        )
                     else:
                         if outcome == "window_expired":
+                            _soft_deadline(match, datetime.now(timezone.utc))
                             _expired(match)
-                elif decision["decision"] in {"score_conflict", "one_source_confirmed"}:
-                    delivery.notify_pending(
-                        match,
-                        f"observation:{delivery.match_identity(match)}:{detail}",
-                        f"ℹ️ ТОТИШ: {match['home_team']} — {match['away_team']}. {detail}. "
-                        "На момент проверки результата в БД нет; "
-                        "ждём согласованного подтверждения в рабочем окне.",
-                    )
                 if decision.get("conflict"):
-                    # Evidence is already durable in record_check, including dissent.
-                    # This notice never claims that the result is absent or saved.
-                    delivery.notify(
-                        f"quorum-conflict:{delivery.match_identity(match)}:{detail}",
-                        f"⚠️ ТОТИШ: {match['home_team']} — {match['away_team']}. {detail}. "
-                        "Два независимых источника согласованы; обнаружено противоречие третьего источника.",
+                    # Dissent stays durable in record_check but is intentionally
+                    # silent in Telegram while retries/quorum processing continue.
+                    logger.warning(
+                        "Auto-result quorum dissent for match_id=%s: %s",
+                        match.get("id"),
+                        detail,
                     )
                 if (dry.window_state(match["kickoff_time"], datetime.now(timezone.utc)) == "active"
                         and base.get("write_outcome") not in {"saved", "already_done"}):
                     _soft_deadline(match, datetime.now(timezone.utc))
                 records.append(base)
-    # Only fetch+parser outcomes may transition source health. Notification or
-    # JSON failure is never a failed match save and cannot block future writes.
+    # Keep fetch/parser health in state for diagnostics, but source outage/recovery
+    # transitions are intentionally silent in Telegram.
     try:
-        dry._update_source_health(state, cache.source_status(), outbox)
+        _record_source_health(state, cache.source_status())
         dry._save_state(state_path, state)
     except Exception:
         logger.exception("Auto-result diagnostic file publication failed")
