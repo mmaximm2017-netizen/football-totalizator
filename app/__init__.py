@@ -13,6 +13,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import SECRET_KEY
 from app.db import get_db, close_db, PoolExhausted
+from app.services.product_analytics import enqueue_posthog_event
 from app.services.ranking_service import get_tournament_ranking
 from app.services.tournament_service import (
     ensure_single_active_tournament,
@@ -28,6 +29,21 @@ HEALTH_DB_CACHE_TTL_SECONDS = 5.0
 _HEALTH_DB_CACHE_LOCK = threading.Lock()
 _HEALTH_DB_CACHE = {"expires_at": 0.0, "result": None, "status": 500}
 DIAGNOSTICS_MAX_BODY_BYTES = 4096
+ANALYTICS_MAX_BODY_BYTES = 2048
+ANALYTICS_ALLOWED_EVENTS = {
+    "$pageview",
+    "login",
+    "profile_viewed",
+    "results_viewed",
+    "prediction_submitted",
+}
+ANALYTICS_ALLOWED_SURFACES = {
+    "overview",
+    "stats",
+    "match_predictions",
+    "my_predictions",
+    "public_profile_predictions",
+}
 DIAGNOSTICS_STRING_FIELDS = {
     "event", "pathname", "readyState", "visibilityState", "splashClass",
     "splashDisplay", "splashVisibility", "splashOpacity", "splashPointerEvents",
@@ -101,6 +117,63 @@ def ensure_csrf_token():
         session[CSRF_SESSION_KEY] = token
 
     return token
+
+
+def analytics_distinct_id():
+    user_id = session.get("user_id")
+    if user_id is not None:
+        seed = f"user:{user_id}"
+    else:
+        seed = f"session:{ensure_csrf_token()}"
+
+    return hmac.new(
+        str(SECRET_KEY).encode("utf-8"),
+        seed.encode("utf-8"),
+        "sha256",
+    ).hexdigest()
+
+
+def sanitize_analytics_payload(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    event_name = payload.get("event")
+    properties = payload.get("properties") or {}
+    if event_name not in ANALYTICS_ALLOWED_EVENTS or not isinstance(properties, dict):
+        return None
+
+    if event_name == "$pageview":
+        pathname = properties.get("pathname")
+        if not isinstance(pathname, str) or len(pathname) > 512:
+            return None
+        parsed = urlsplit(pathname)
+        if parsed.scheme or parsed.netloc or not parsed.path.startswith("/"):
+            return None
+        clean_path = parsed.path[:512]
+        return event_name, {
+            "$pathname": clean_path,
+            "$current_url": request.host_url.rstrip("/") + clean_path,
+        }
+
+    if event_name in {"profile_viewed", "results_viewed"}:
+        surface = properties.get("surface")
+        if surface not in ANALYTICS_ALLOWED_SURFACES:
+            return None
+        return event_name, {"surface": surface}
+
+    if event_name == "prediction_submitted":
+        match_id = properties.get("match_id")
+        if isinstance(match_id, bool):
+            return None
+        try:
+            match_id = int(match_id)
+        except (TypeError, ValueError):
+            return None
+        if match_id <= 0:
+            return None
+        return event_name, {"match_id": match_id}
+
+    return event_name, {}
 
 
 def service_worker_release_key():
@@ -203,6 +276,23 @@ def create_app():
             abort(400)
 
         logger.info("ios_client_diagnostics payload=%s", json.dumps(sanitize_diagnostics_payload(payload), sort_keys=True))
+        return "", 204
+
+    @app.post("/__analytics/event")
+    def client_analytics():
+        if not diagnostics_request_is_same_origin():
+            abort(403)
+        if not request.is_json:
+            abort(415)
+        if request.content_length is not None and request.content_length > ANALYTICS_MAX_BODY_BYTES:
+            abort(413)
+
+        sanitized = sanitize_analytics_payload(request.get_json(silent=True))
+        if sanitized is None:
+            abort(400)
+
+        event_name, properties = sanitized
+        enqueue_posthog_event(event_name, analytics_distinct_id(), properties)
         return "", 204
 
     # =====================================================
@@ -313,6 +403,9 @@ def create_app():
         # GPT uses bearer auth only. Never load, mutate, or otherwise process
         # browser-session user state for its strictly read-only API surface.
         if request.path.startswith("/api/gpt/"):
+            return
+
+        if request.path == "/__analytics/event":
             return
 
         if app.config["IOS_DIAGNOSTICS"] and request.path == "/__diagnostics/client":
