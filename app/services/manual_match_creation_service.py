@@ -28,6 +28,7 @@ class ManualMatchCreateData:
     deadline_date: str = ""
     deadline_time: str = ""
     reject_early_auto_deadline: bool = False
+    round_number: int | None = None
 
 
 def build_manual_deadline_utc(
@@ -62,11 +63,24 @@ def build_manual_deadline_utc(
     return kickoff_utc, deadline_msk.astimezone(timezone.utc)
 
 
+def normalize_round_number(value):
+    if value in (None, ""):
+        return None
+    try:
+        round_number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ManualMatchValidationError("Номер тура должен быть целым числом") from exc
+    if round_number < 1:
+        raise ManualMatchValidationError("Номер тура должен быть не меньше 1")
+    return round_number
+
+
 def create_manual_match(cur, data: ManualMatchCreateData):
     home_team = (data.home_team or "").strip()
     away_team = (data.away_team or "").strip()
     match_date = (data.match_date or "").strip()
     match_time = (data.match_time or "").strip()
+    round_number = normalize_round_number(data.round_number)
 
     if not home_team or not away_team or not match_date or not match_time:
         raise ManualMatchValidationError("Заполните команды, дату и время")
@@ -106,9 +120,10 @@ def create_manual_match(cur, data: ManualMatchCreateData):
         """
         INSERT INTO matches (
             api_match_id, home_team, away_team, kickoff_time, deadline,
-            status, league, tournament_id, playoff_stage_manual, match_category
+            status, league, tournament_id, playoff_stage_manual, match_category,
+            round_number
         )
-        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """,
         (
@@ -121,6 +136,7 @@ def create_manual_match(cur, data: ManualMatchCreateData):
             data.tournament_id,
             data.stage,
             data.match_category,
+            round_number,
         ),
     )
     row = cur.fetchone()
