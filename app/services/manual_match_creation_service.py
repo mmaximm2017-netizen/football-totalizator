@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 
@@ -81,81 +81,6 @@ def normalize_round_number(value, stage=""):
     return None
 
 
-def infer_rpl_round_number(cur, tournament_id, kickoff_utc, home_team, away_team):
-    """Infer only the next chronological RPL round, otherwise fail closed.
-
-    Existing matches keep their stored round even when kickoff dates are moved.
-    New imports normally arrive as an eight-match round in chronological order:
-    the first match starts the next round and the remaining seven join it. If
-    the latest round is incomplete but a new match is too far away, or either
-    team is already present in that round, we refuse to guess.
-    """
-    cur.execute(
-        """
-        SELECT round_number,
-               COUNT(*),
-               MIN(kickoff_time),
-               MAX(kickoff_time)
-        FROM matches
-        WHERE tournament_id = %s
-          AND league = 'rpl'
-          AND match_category = 'rpl'
-          AND round_number IS NOT NULL
-        GROUP BY round_number
-        ORDER BY round_number DESC
-        LIMIT 1
-        """,
-        (tournament_id,),
-    )
-    latest = cur.fetchone()
-    if not latest:
-        return 1
-
-    latest_round, match_count, first_kickoff, last_kickoff = latest
-    match_count = int(match_count or 0)
-
-    if match_count > 8:
-        raise ManualMatchValidationError(
-            f"Тур {latest_round} содержит больше 8 матчей; номер нового тура нельзя определить автоматически"
-        )
-
-    if match_count == 8:
-        if last_kickoff is not None and kickoff_utc <= last_kickoff:
-            raise ManualMatchValidationError(
-                "Матч добавляется не после последнего заполненного тура; укажите номер тура явно"
-            )
-        return int(latest_round) + 1
-
-    cur.execute(
-        """
-        SELECT COUNT(*)
-        FROM matches
-        WHERE tournament_id = %s
-          AND league = 'rpl'
-          AND match_category = 'rpl'
-          AND round_number = %s
-          AND (home_team IN (%s, %s) OR away_team IN (%s, %s))
-        """,
-        (tournament_id, latest_round, home_team, away_team, home_team, away_team),
-    )
-    team_conflicts = int((cur.fetchone() or (0,))[0] or 0)
-    if team_conflicts:
-        raise ManualMatchValidationError(
-            f"Команда уже есть в туре {latest_round}; номер тура нельзя определить автоматически"
-        )
-
-    if first_kickoff is not None:
-        lower_bound = first_kickoff - timedelta(days=1)
-        upper_bound = first_kickoff + timedelta(days=7)
-        if not (lower_bound <= kickoff_utc <= upper_bound):
-            raise ManualMatchValidationError(
-                f"Тур {latest_round} ещё содержит только {match_count} матчей, "
-                "а дата нового матча вне его 7-дневного окна; номер тура нельзя угадать"
-            )
-
-    return int(latest_round)
-
-
 def create_manual_match(cur, data: ManualMatchCreateData):
     home_team = (data.home_team or "").strip()
     away_team = (data.away_team or "").strip()
@@ -197,18 +122,6 @@ def create_manual_match(cur, data: ManualMatchCreateData):
         raise DuplicateMatchError("Такой матч уже существует")
 
     round_number = normalize_round_number(data.round_number, data.stage)
-    if (
-        round_number is None
-        and data.league == "rpl"
-        and data.match_category == "rpl"
-    ):
-        round_number = infer_rpl_round_number(
-            cur,
-            data.tournament_id,
-            kickoff_utc,
-            home_team,
-            away_team,
-        )
 
     cur.execute(
         """
