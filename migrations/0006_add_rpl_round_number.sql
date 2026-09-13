@@ -83,6 +83,10 @@ BEGIN
 END
 $$;
 
+-- CI/dev may not have the safe schema yet; production already does.
+CREATE SCHEMA IF NOT EXISTS gpt_safe;
+REVOKE ALL ON SCHEMA gpt_safe FROM PUBLIC;
+
 CREATE OR REPLACE VIEW gpt_safe.matches AS
 SELECT
     m.id AS match_id,
@@ -160,4 +164,11 @@ WHERE u.is_admin = 0
   AND m.deadline IS NOT NULL
   AND m.deadline <= CURRENT_TIMESTAMP;
 
-GRANT SELECT ON gpt_safe.matches, gpt_safe.predictions TO totish_gpt_reader;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'totish_gpt_reader') THEN
+        GRANT USAGE ON SCHEMA gpt_safe TO totish_gpt_reader;
+        GRANT SELECT ON gpt_safe.matches, gpt_safe.predictions TO totish_gpt_reader;
+    END IF;
+END
+$$;
