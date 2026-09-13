@@ -1,4 +1,5 @@
 # app/__init__.py
+import hashlib
 import logging
 import hmac
 import ipaddress
@@ -30,6 +31,7 @@ _HEALTH_DB_CACHE_LOCK = threading.Lock()
 _HEALTH_DB_CACHE = {"expires_at": 0.0, "result": None, "status": 500}
 DIAGNOSTICS_MAX_BODY_BYTES = 4096
 ANALYTICS_MAX_BODY_BYTES = 2048
+ANALYTICS_USER_REF_NAMESPACE = "totish-analytics-user-v1"
 ANALYTICS_ALLOWED_EVENTS = {
     "$pageview",
     "login",
@@ -131,6 +133,20 @@ def analytics_distinct_id():
         seed.encode("utf-8"),
         "sha256",
     ).hexdigest()
+
+
+def analytics_user_ref(user_id):
+    if isinstance(user_id, bool):
+        return None
+    try:
+        normalized_user_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+    if normalized_user_id <= 0:
+        return None
+
+    seed = f"{ANALYTICS_USER_REF_NAMESPACE}:{normalized_user_id}"
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()
 
 
 def sanitize_analytics_payload(payload):
@@ -292,6 +308,9 @@ def create_app():
             abort(400)
 
         event_name, properties = sanitized
+        user_ref = analytics_user_ref(session.get("user_id"))
+        if user_ref is not None:
+            properties["totish_user_ref"] = user_ref
         enqueue_posthog_event(event_name, analytics_distinct_id(), properties)
         return "", 204
 
