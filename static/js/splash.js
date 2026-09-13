@@ -41,29 +41,37 @@
 })();
 
 (function () {
-    const POSTHOG_PROJECT_KEY = 'phc_wsowVHb2m7SUGPrTPCca8Rp9f5PH8tQckdRgNGVoAn5A';
-    const POSTHOG_API_HOST = 'https://us.i.posthog.com';
+    const ANALYTICS_ENDPOINT = '/__analytics/event';
     const LOGIN_MARKER = 'totish_posthog_login_attempt';
 
-    if (!POSTHOG_PROJECT_KEY || window.__totishPosthogInitialized) return;
+    if (window.__totishPosthogInitialized) return;
     window.__totishPosthogInitialized = true;
 
-    // PostHog project keys are public browser-side identifiers. Do not add any
-    // personal data, prediction scores, credentials, or secret tokens here.
-    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split('.');2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement('script')).type='text/javascript',p.crossOrigin='anonymous',p.async=!0,p.src=s.api_host.replace('.i.posthog.com','-assets.i.posthog.com')+'/static/array.js',(r=t.getElementsByTagName('script')[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a='posthog',u.people=u.people||[],u.toString=function(t){var e='posthog';return'posthog'!==a&&(e+='.'+a),t||(e+=' (stub)'),e},u.people.toString=function(){return u.toString(1)+'.people (stub)'},o='init capture register register_once unregister get_distinct_id reset opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing'.split(' '),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-
-    posthog.init(POSTHOG_PROJECT_KEY, {
-        api_host: POSTHOG_API_HOST,
-        person_profiles: 'identified_only',
-        capture_pageview: true,
-        capture_pageleave: true,
-        autocapture: false,
-        disable_session_recording: true
-    });
-
+    // Analytics goes to the same origin first. The Flask server forwards only a
+    // strict allow-list of privacy-safe events/properties to PostHog. Prediction
+    // scores, names, credentials, and other personal data are never submitted.
     function capture(eventName, properties) {
         try {
-            posthog.capture(eventName, properties || {});
+            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = tokenMeta && tokenMeta.content;
+            if (!csrfToken || !window.fetch) return;
+
+            window.fetch(ANALYTICS_ENDPOINT, {
+                method: 'POST',
+                credentials: 'same-origin',
+                keepalive: true,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    event: eventName,
+                    properties: properties || {}
+                })
+            }).catch(function () {
+                // Analytics must never affect the application experience.
+            });
         } catch (error) {
             console.debug('[analytics-skipped]', eventName);
         }
@@ -71,6 +79,7 @@
 
     function trackPageIntent() {
         const path = window.location.pathname;
+        capture('$pageview', { pathname: path });
 
         if (path === '/login') {
             try {
