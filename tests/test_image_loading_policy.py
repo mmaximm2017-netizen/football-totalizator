@@ -23,6 +23,13 @@ class ImageLoadingPolicyTests(unittest.TestCase):
             self.assertIn('decoding="async"', image)
             self.assertIn('fetchpriority="low"', image)
 
+    def test_namibia_and_nigeria_flags_are_available_for_match_cards(self):
+        for team, code in (("Намибия", "na"), ("Нигерия", "ng")):
+            image = get_flag(team)
+            self.assertIn(f'src="/static/flags/{code}.svg"', image)
+            self.assertIn(f'alt="{team}"', image)
+            self.assertTrue((ROOT / "static" / "flags" / f"{code}.svg").is_file())
+
     def test_match_tournament_and_cup_logos_are_lazy(self):
         league = (ROOT / "templates" / "partials" / "home" / "_match_league.html").read_text(encoding="utf-8")
         day_block = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
