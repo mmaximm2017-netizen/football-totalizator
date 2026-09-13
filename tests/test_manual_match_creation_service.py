@@ -31,6 +31,7 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
             "match_date": "2026-08-16",
             "match_time": "14:30",
             "reject_early_auto_deadline": True,
+            "round_number": 4,
         }
         values.update(overrides)
         return ManualMatchCreateData(**values)
@@ -47,11 +48,25 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
         self.assertIn("league = %s", duplicate_sql)
         self.assertEqual(duplicate_params[:4], (5, "rpl", "Зенит", "Динамо"))
         self.assertIn("INSERT INTO matches", insert_sql)
+        self.assertIn("round_number", insert_sql)
         self.assertEqual(insert_params[0:2], ("Зенит", "Динамо"))
         self.assertEqual(insert_params[2].tzinfo, timezone.utc)
         self.assertEqual(insert_params[2].strftime("%Y-%m-%d %H:%M"), "2026-08-16 11:30")
         self.assertEqual(insert_params[3].strftime("%Y-%m-%d %H:%M"), "2026-08-16 08:00")
         self.assertEqual(insert_params[5:8], ("rpl", 5, ""))
+        self.assertEqual(insert_params[-1], 4)
+
+    def test_stage_can_supply_round_number_without_separate_field(self):
+        cursor = Cursor([None, (43,)])
+
+        create_manual_match(cursor, self.make_data(round_number=None, stage="Тур 12"))
+
+        self.assertEqual(cursor.executed[-1][1][-1], 12)
+
+    def test_rejects_invalid_explicit_round_number(self):
+        cursor = Cursor([None])
+        with self.assertRaisesRegex(ManualMatchValidationError, "не меньше 1"):
+            create_manual_match(cursor, self.make_data(round_number=0))
 
     def test_duplicate_stops_before_insert(self):
         cursor = Cursor([(9,)])
@@ -76,7 +91,7 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
             create_manual_match(cursor, self.make_data(match_time="11:00"))
 
     def test_manual_deadline_has_priority(self):
-        cursor = Cursor([None, (43,)])
+        cursor = Cursor([None, (44,)])
         create_manual_match(cursor, self.make_data(
             match_time="11:00",
             deadline_date="2026-08-15",

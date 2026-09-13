@@ -1,9 +1,11 @@
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 
 MSK = ZoneInfo("Europe/Moscow")
+ROUND_RE = re.compile(r"(?:тур|round)\s*(\d+)", re.IGNORECASE)
 
 
 class ManualMatchValidationError(ValueError):
@@ -28,6 +30,7 @@ class ManualMatchCreateData:
     deadline_date: str = ""
     deadline_time: str = ""
     reject_early_auto_deadline: bool = False
+    round_number: int | None = None
 
 
 def build_manual_deadline_utc(
@@ -60,6 +63,22 @@ def build_manual_deadline_utc(
             )
 
     return kickoff_utc, deadline_msk.astimezone(timezone.utc)
+
+
+def normalize_round_number(value, stage=""):
+    if value not in (None, ""):
+        try:
+            round_number = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ManualMatchValidationError("Номер тура должен быть целым числом") from exc
+        if round_number < 1:
+            raise ManualMatchValidationError("Номер тура должен быть не меньше 1")
+        return round_number
+
+    match = ROUND_RE.search(str(stage or ""))
+    if match:
+        return int(match.group(1))
+    return None
 
 
 def create_manual_match(cur, data: ManualMatchCreateData):
@@ -102,13 +121,16 @@ def create_manual_match(cur, data: ManualMatchCreateData):
     if cur.fetchone():
         raise DuplicateMatchError("Такой матч уже существует")
 
+    round_number = normalize_round_number(data.round_number, data.stage)
+
     cur.execute(
         """
         INSERT INTO matches (
             api_match_id, home_team, away_team, kickoff_time, deadline,
-            status, league, tournament_id, playoff_stage_manual, match_category
+            status, league, tournament_id, playoff_stage_manual, match_category,
+            round_number
         )
-        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """,
         (
@@ -121,6 +143,7 @@ def create_manual_match(cur, data: ManualMatchCreateData):
             data.tournament_id,
             data.stage,
             data.match_category,
+            round_number,
         ),
     )
     row = cur.fetchone()
