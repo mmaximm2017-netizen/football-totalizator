@@ -83,6 +83,123 @@ BEGIN
 END
 $$;
 
+-- All future insert paths (manual admin, OCR import and agent API) pass through
+-- the same fail-closed assignment rule. Explicit round_number wins. A manual
+-- stage like "Тур 18" is also treated as explicit. Otherwise the first match
+-- after a complete 8-match round starts the next round and subsequent matches
+-- may join it only within a seven-day window and only if neither club is
+-- already present. Suspicious/out-of-order inserts are rejected instead of
+-- silently guessing the round.
+CREATE OR REPLACE FUNCTION public.assign_rpl_round_number()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    stage_match text[];
+    latest_round integer;
+    latest_count integer;
+    latest_first timestamptz;
+    latest_last timestamptz;
+    team_conflicts integer;
+BEGIN
+    IF NEW.round_number IS NOT NULL
+       OR NEW.league IS DISTINCT FROM 'rpl'
+       OR COALESCE(NEW.match_category, 'rpl') <> 'rpl'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    stage_match := regexp_match(
+        COALESCE(NEW.playoff_stage_manual, ''),
+        '(тур|round)[[:space:]]*([0-9]+)',
+        'i'
+    );
+    IF stage_match IS NOT NULL THEN
+        NEW.round_number := stage_match[2]::integer;
+        IF NEW.round_number < 1 THEN
+            RAISE EXCEPTION 'RPL round number must be >= 1';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.kickoff_time IS NULL THEN
+        RAISE EXCEPTION 'RPL round number cannot be inferred without kickoff_time';
+    END IF;
+
+    SELECT round_number,
+           COUNT(*),
+           MIN(kickoff_time),
+           MAX(kickoff_time)
+      INTO latest_round, latest_count, latest_first, latest_last
+      FROM public.matches
+     WHERE tournament_id = NEW.tournament_id
+       AND league = 'rpl'
+       AND match_category = 'rpl'
+       AND round_number IS NOT NULL
+     GROUP BY round_number
+     ORDER BY round_number DESC
+     LIMIT 1;
+
+    IF latest_round IS NULL THEN
+        NEW.round_number := 1;
+        RETURN NEW;
+    END IF;
+
+    IF latest_count > 8 THEN
+        RAISE EXCEPTION
+            'RPL round % already contains % matches; refusing automatic round assignment',
+            latest_round, latest_count;
+    END IF;
+
+    IF latest_count = 8 THEN
+        IF latest_last IS NOT NULL AND NEW.kickoff_time <= latest_last THEN
+            RAISE EXCEPTION
+                'RPL match is not after latest complete round %; supply round_number explicitly',
+                latest_round;
+        END IF;
+        NEW.round_number := latest_round + 1;
+        RETURN NEW;
+    END IF;
+
+    SELECT COUNT(*)
+      INTO team_conflicts
+      FROM public.matches
+     WHERE tournament_id = NEW.tournament_id
+       AND league = 'rpl'
+       AND match_category = 'rpl'
+       AND round_number = latest_round
+       AND (
+            home_team IN (NEW.home_team, NEW.away_team)
+         OR away_team IN (NEW.home_team, NEW.away_team)
+       );
+
+    IF team_conflicts > 0 THEN
+        RAISE EXCEPTION
+            'RPL team already exists in incomplete round %; supply round_number explicitly',
+            latest_round;
+    END IF;
+
+    IF latest_first IS NOT NULL
+       AND (
+            NEW.kickoff_time < latest_first - INTERVAL '1 day'
+         OR NEW.kickoff_time > latest_first + INTERVAL '7 days'
+       )
+    THEN
+        RAISE EXCEPTION
+            'RPL round % is incomplete and new kickoff is outside its 7-day window; supply round_number explicitly',
+            latest_round;
+    END IF;
+
+    NEW.round_number := latest_round;
+    RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER trg_assign_rpl_round_number
+BEFORE INSERT ON public.matches
+FOR EACH ROW
+EXECUTE FUNCTION public.assign_rpl_round_number();
+
 -- CI/dev may not have the safe schema yet; production already does.
 CREATE SCHEMA IF NOT EXISTS gpt_safe;
 REVOKE ALL ON SCHEMA gpt_safe FROM PUBLIC;
