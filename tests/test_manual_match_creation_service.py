@@ -1,5 +1,5 @@
 import unittest
-from datetime import timezone
+from datetime import datetime, timezone
 
 from app.services.manual_match_creation_service import (
     DuplicateMatchError,
@@ -31,6 +31,7 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
             "match_date": "2026-08-16",
             "match_time": "14:30",
             "reject_early_auto_deadline": True,
+            "round_number": 4,
         }
         values.update(overrides)
         return ManualMatchCreateData(**values)
@@ -47,11 +48,13 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
         self.assertIn("league = %s", duplicate_sql)
         self.assertEqual(duplicate_params[:4], (5, "rpl", "Зенит", "Динамо"))
         self.assertIn("INSERT INTO matches", insert_sql)
+        self.assertIn("round_number", insert_sql)
         self.assertEqual(insert_params[0:2], ("Зенит", "Динамо"))
         self.assertEqual(insert_params[2].tzinfo, timezone.utc)
         self.assertEqual(insert_params[2].strftime("%Y-%m-%d %H:%M"), "2026-08-16 11:30")
         self.assertEqual(insert_params[3].strftime("%Y-%m-%d %H:%M"), "2026-08-16 08:00")
         self.assertEqual(insert_params[5:8], ("rpl", 5, ""))
+        self.assertEqual(insert_params[-1], 4)
 
     def test_duplicate_stops_before_insert(self):
         cursor = Cursor([(9,)])
@@ -84,6 +87,82 @@ class ManualMatchCreationServiceTests(unittest.TestCase):
         ))
         insert_params = cursor.executed[1][1]
         self.assertEqual(insert_params[3].strftime("%Y-%m-%d %H:%M"), "2026-08-15 07:00")
+
+    def test_stage_can_supply_explicit_round_number(self):
+        cursor = Cursor([None, (44,)])
+        create_manual_match(cursor, self.make_data(round_number=None, stage="Тур 12"))
+        self.assertEqual(cursor.executed[-1][1][-1], 12)
+
+    def test_starts_next_round_after_complete_latest_round(self):
+        latest_first = datetime(2026, 12, 4, 16, 0, tzinfo=timezone.utc)
+        latest_last = datetime(2026, 12, 6, 18, 0, tzinfo=timezone.utc)
+        cursor = Cursor([
+            None,
+            (17, 8, latest_first, latest_last),
+            (45,),
+        ])
+
+        match_id = create_manual_match(cursor, self.make_data(
+            round_number=None,
+            match_date="2026-12-11",
+            match_time="19:00",
+        ))
+
+        self.assertEqual(match_id, 45)
+        self.assertEqual(cursor.executed[-1][1][-1], 18)
+
+    def test_continues_incomplete_latest_round_for_unique_teams(self):
+        first = datetime(2026, 12, 11, 16, 0, tzinfo=timezone.utc)
+        cursor = Cursor([
+            None,
+            (18, 1, first, first),
+            (0,),
+            (46,),
+        ])
+
+        create_manual_match(cursor, self.make_data(
+            round_number=None,
+            home_team="Спартак",
+            away_team="Рубин",
+            match_date="2026-12-12",
+            match_time="16:30",
+        ))
+
+        self.assertEqual(cursor.executed[-1][1][-1], 18)
+
+    def test_refuses_team_conflict_in_incomplete_round(self):
+        first = datetime(2026, 12, 11, 16, 0, tzinfo=timezone.utc)
+        cursor = Cursor([
+            None,
+            (18, 1, first, first),
+            (1,),
+        ])
+
+        with self.assertRaisesRegex(ManualMatchValidationError, "Команда уже есть"):
+            create_manual_match(cursor, self.make_data(
+                round_number=None,
+                match_date="2026-12-12",
+                match_time="16:30",
+            ))
+
+        self.assertNotIn("INSERT INTO matches", "\n".join(sql for sql, _ in cursor.executed))
+
+    def test_refuses_to_guess_across_large_gap_when_latest_round_incomplete(self):
+        first = datetime(2026, 12, 11, 16, 0, tzinfo=timezone.utc)
+        cursor = Cursor([
+            None,
+            (18, 3, first, first),
+            (0,),
+        ])
+
+        with self.assertRaisesRegex(ManualMatchValidationError, "нельзя угадать"):
+            create_manual_match(cursor, self.make_data(
+                round_number=None,
+                home_team="Спартак",
+                away_team="Рубин",
+                match_date="2026-12-28",
+                match_time="19:00",
+            ))
 
 
 if __name__ == "__main__":
