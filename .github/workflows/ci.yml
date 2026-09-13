@@ -68,7 +68,16 @@ jobs:
         run: python -c "from app import create_app; app=create_app(); print('APP_IMPORT_OK')"
 
       - name: Run test suite
-        run: pytest -q
+        run: pytest -q --junitxml=pytest-results.xml
+
+      - name: Upload pytest report for PR diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-results.xml
+          if-no-files-found: warn
+          retention-days: 1
 
   lint:
     name: Lint with Ruff
