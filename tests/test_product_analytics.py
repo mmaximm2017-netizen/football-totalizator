@@ -13,7 +13,7 @@ def analytics_client():
     headers = {
         "X-CSRF-Token": "analytics-csrf",
         "X-Requested-With": "XMLHttpRequest",
-        "Origin": "https://localhost",
+        "Origin": "http://localhost",
         "Content-Type": "application/json",
     }
     return client, headers
@@ -42,7 +42,7 @@ def test_pageview_is_sanitized_and_queued():
     assert len(distinct_id) == 64
     assert properties == {
         "$pathname": "/profile/123",
-        "$current_url": "https://localhost/profile/123",
+        "$current_url": "http://localhost/profile/123",
     }
 
 
