@@ -96,14 +96,21 @@
             // sessionStorage may be unavailable in hardened/private browsers.
         }
 
-        if (path === '/profile' || path === '/profile/stats') {
-            capture('profile_viewed');
+        if (/^\/profile(?:\/\d+)?(?:\/stats)?$/.test(path)) {
+            capture('profile_viewed', {
+                surface: path.includes('/stats') ? 'stats' : 'overview'
+            });
         }
 
-        if (path === '/my-predictions' || /^\/match\/\d+\/predictions$/.test(path)) {
-            capture('results_viewed', {
-                surface: path === '/my-predictions' ? 'my_predictions' : 'match_predictions'
-            });
+        if (
+            path === '/my-predictions'
+            || /^\/match\/\d+\/predictions$/.test(path)
+            || /^\/profile\/\d+\/predictions$/.test(path)
+        ) {
+            let surface = 'match_predictions';
+            if (path === '/my-predictions') surface = 'my_predictions';
+            if (/^\/profile\/\d+\/predictions$/.test(path)) surface = 'public_profile_predictions';
+            capture('results_viewed', { surface: surface });
         }
     }
 
