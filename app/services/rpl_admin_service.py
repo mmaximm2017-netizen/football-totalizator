@@ -61,7 +61,7 @@ def _group_matches_within_section(matches, reverse_dates=False):
     tours = {}
     dates = {}
     for match in matches:
-        tour = _tour_number(match.get("stage"))
+        tour = match.get("round_number") or _tour_number(match.get("stage"))
         if tour is not None:
             tours.setdefault(tour, []).append(match)
             continue
@@ -175,7 +175,8 @@ def prepare_rpl_admin_data(cur):
                    away_score,
                    playoff_stage_manual,
                    match_category,
-                   league
+                   league,
+                   round_number
             FROM matches
             WHERE tournament_id = %s
               AND league = 'rpl'
@@ -199,6 +200,7 @@ def prepare_rpl_admin_data(cur):
                 "match_category": infer_rpl_match_category(row[1], row[2], row[8], row[9]),
                 "match_category_label": RPL_MATCH_CATEGORY_LABELS.get(infer_rpl_match_category(row[1], row[2], row[8], row[9]), "Чемпионат России"),
                 "league": row[10],
+                "round_number": row[11],
                 "is_hidden": row[5] == "CANCELLED",
                 "match_date_msk": kickoff.astimezone(MSK).strftime("%Y-%m-%d") if kickoff else "",
                 "date_label": format_admin_match_date(kickoff) if kickoff else "Дата не указана",
