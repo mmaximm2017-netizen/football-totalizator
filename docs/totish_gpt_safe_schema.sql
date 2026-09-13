@@ -53,6 +53,8 @@ FROM public.tournaments t;
 --
 -- Match metadata is visible.
 -- Final scores are exposed only for finished matches.
+-- round_number is explicit metadata; analytics must not infer RPL rounds
+-- from dates, weeks, or row counts.
 -- ============================================================
 
 CREATE VIEW gpt_safe.matches AS
@@ -83,7 +85,8 @@ SELECT
     END AS away_score,
 
     m.playoff_stage AS stage,
-    m.league
+    m.league,
+    m.round_number
 
 FROM public.matches m
 
@@ -147,7 +150,8 @@ SELECT
     END AS points,
 
     m.playoff_stage AS stage,
-    m.league
+    m.league,
+    m.round_number
 
 FROM public.predictions p
 
