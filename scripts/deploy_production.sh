@@ -177,12 +177,17 @@ flock -n 9 || {
     exit 1
 }
 
-CURRENT_CONTAINER_ID="$(docker compose ps -q --status running app)"
+CURRENT_CONTAINER_ID="$(docker inspect football-totalizator-app-1 --format '{{.Id}}' 2>/dev/null || true)"
 [[ -n "$CURRENT_CONTAINER_ID" ]] || {
-    echo "No running app container found; refusing deployment without a rollback image." >&2
+    echo "No app container found; refusing deployment without a rollback image." >&2
     exit 1
 }
-CURRENT_IMAGE_REFERENCE="$(docker inspect --format '{{.Config.Image}}' "$CURRENT_CONTAINER_ID")"
+CURRENT_CONTAINER_RUNNING="$(docker inspect football-totalizator-app-1 --format '{{.State.Running}}')"
+[[ "$CURRENT_CONTAINER_RUNNING" == "true" ]] || {
+    echo "App container is not running; refusing deployment without a healthy rollback target." >&2
+    exit 1
+}
+CURRENT_IMAGE_REFERENCE="$(docker inspect football-totalizator-app-1 --format '{{.Config.Image}}')"
 is_totish_image_digest "$CURRENT_IMAGE_REFERENCE" || {
     echo "Running app image is not a pullable TOTISH GHCR digest; refusing deployment." >&2
     exit 1
