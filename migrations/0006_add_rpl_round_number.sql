@@ -5,8 +5,13 @@
 -- intentionally skipped there. Production backfill is fail-closed: the known
 -- 2026/27 calendar must still be exactly 17 complete 8-match groups with all
 -- 16 clubs represented once per group before any round numbers are written.
+--
+-- Core-table references intentionally follow search_path. Integration tests
+-- apply migrations inside isolated schemas; production uses public as its
+-- application schema. The gpt_safe views below remain explicitly bound to
+-- public production tables.
 
-ALTER TABLE public.matches
+ALTER TABLE matches
 ADD COLUMN IF NOT EXISTS round_number integer;
 
 DO $$
@@ -16,7 +21,7 @@ DECLARE
 BEGIN
     SELECT COUNT(*)
       INTO rpl_match_count
-      FROM public.matches
+      FROM matches
      WHERE tournament_id = 5
        AND league = 'rpl'
        AND match_category = 'rpl';
@@ -39,7 +44,7 @@ BEGIN
             away_team,
             ((ROW_NUMBER() OVER (ORDER BY kickoff_time, id) - 1) / 8)::integer + 1
                 AS candidate_round
-        FROM public.matches
+        FROM matches
         WHERE tournament_id = 5
           AND league = 'rpl'
           AND match_category = 'rpl'
@@ -70,12 +75,12 @@ BEGIN
             id,
             ((ROW_NUMBER() OVER (ORDER BY kickoff_time, id) - 1) / 8)::integer + 1
                 AS candidate_round
-        FROM public.matches
+        FROM matches
         WHERE tournament_id = 5
           AND league = 'rpl'
           AND match_category = 'rpl'
     )
-    UPDATE public.matches AS m
+    UPDATE matches AS m
        SET round_number = ranked.candidate_round
       FROM ranked
      WHERE m.id = ranked.id
@@ -131,7 +136,7 @@ BEGIN
            MIN(kickoff_time),
            MAX(kickoff_time)
       INTO latest_round, latest_count, latest_first, latest_last
-      FROM public.matches
+      FROM matches
      WHERE tournament_id = NEW.tournament_id
        AND league = 'rpl'
        AND match_category = 'rpl'
@@ -163,7 +168,7 @@ BEGIN
 
     SELECT COUNT(*)
       INTO team_conflicts
-      FROM public.matches
+      FROM matches
      WHERE tournament_id = NEW.tournament_id
        AND league = 'rpl'
        AND match_category = 'rpl'
@@ -196,7 +201,7 @@ END
 $$;
 
 CREATE TRIGGER trg_assign_rpl_round_number
-BEFORE INSERT ON public.matches
+BEFORE INSERT ON matches
 FOR EACH ROW
 EXECUTE FUNCTION public.assign_rpl_round_number();
 
