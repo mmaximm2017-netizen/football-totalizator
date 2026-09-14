@@ -14,6 +14,9 @@ scripts/auto_result_runtime.py
 scripts/send_morning_digest.py
 scripts/host_telegram_notifier.py
 scripts/monitor_production.py
+scripts/monitor_production_light.py
+scripts/db_activity_gate.py
+scripts/refresh_db_activity_gate.sh
 scripts/run_migrations.py
 scripts/sync_once.py
 deploy/production.cron
