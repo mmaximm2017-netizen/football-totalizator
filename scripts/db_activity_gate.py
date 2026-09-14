@@ -55,7 +55,7 @@ def build_plan() -> dict:
               EXISTS (
                 SELECT 1
                 FROM push_delivery_log d
-                WHERE d.status IN ('ready','pending','failed')
+                WHERE d.status IN ('ready','pending')
                   AND d.event_type IN ('match_result','deadline_2h')
                   AND d.updated_at >= clock_timestamp() - INTERVAL '1 day'
               ) AS delivery_backlog
