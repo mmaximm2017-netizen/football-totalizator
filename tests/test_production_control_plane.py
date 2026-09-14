@@ -1,34 +1,53 @@
+import re
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_all_production_managed_files_exist():
+def _managed_paths():
     manifest = ROOT / "deploy" / "production-managed-files.txt"
-    paths = [
+    return [
         line.strip()
         for line in manifest.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
+
+
+def test_all_production_managed_files_exist():
+    paths = _managed_paths()
 
     assert paths
     missing = [path for path in paths if not (ROOT / path).is_file()]
     assert missing == []
 
 
+def test_all_host_scripts_referenced_by_production_cron_are_managed():
+    cron = (ROOT / "deploy" / "production.cron").read_text(encoding="utf-8")
+    managed = set(_managed_paths())
+    referenced = set(re.findall(r"scripts/[A-Za-z0-9_.-]+\.(?:py|sh)", cron))
+
+    assert referenced
+    assert referenced - managed == set()
+
+
 def test_production_cron_contains_expected_jobs_once():
     cron = (ROOT / "deploy" / "production.cron").read_text(encoding="utf-8")
 
-    expected = [
+    exact_once = [
         "host_telegram_notifier.py",
+        "monitor_production_light.py",
         "monitor_production.py",
+        "refresh_db_activity_gate.sh",
         "run_morning_digest.sh",
         "run_deadline_pushes.sh",
         "run_match_result_pushes.sh",
+        "run_auto_results.sh",
     ]
-    for name in expected:
+    for name in exact_once:
         assert cron.count(name) == 1
+
+    assert cron.count("db_activity_gate.py") == 3
 
 
 def test_production_cron_does_not_embed_secrets():
@@ -62,7 +81,6 @@ def test_deploy_verifies_bundle_release_matches_image_release():
     assert "image release does not match CI release" in workflow
 
 
-
 def test_deploy_bundles_and_verifies_complete_static_tree():
     workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
 
@@ -81,8 +99,6 @@ def test_static_sync_has_exact_rollback_backup():
 
 
 def test_home_template_css_files_exist_in_repository():
-    import re
-
     template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
     css_files = re.findall(
         r"url_for\('static',\s*filename='([^']+\.css)'",
