@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -128,7 +127,7 @@ def main() -> int:
     if not command:
         parser.error("run requires a command after --")
 
-    due, reason = should_run(Path(args.state))
+    due, _ = should_run(Path(args.state))
     if not due:
         return 0
     os.execvp(command[0], command)
