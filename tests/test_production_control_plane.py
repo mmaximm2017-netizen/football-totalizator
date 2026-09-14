@@ -34,19 +34,20 @@ def test_all_host_scripts_referenced_by_production_cron_are_managed():
 def test_production_cron_contains_expected_jobs_once():
     cron = (ROOT / "deploy" / "production.cron").read_text(encoding="utf-8")
 
-    expected = [
+    exact_once = [
         "host_telegram_notifier.py",
         "monitor_production_light.py",
         "monitor_production.py",
         "refresh_db_activity_gate.sh",
-        "db_activity_gate.py",
         "run_morning_digest.sh",
         "run_deadline_pushes.sh",
         "run_match_result_pushes.sh",
         "run_auto_results.sh",
     ]
-    for name in expected:
-        assert cron.count(name) >= 1
+    for name in exact_once:
+        assert cron.count(name) == 1
+
+    assert cron.count("db_activity_gate.py") == 3
 
 
 def test_production_cron_does_not_embed_secrets():
