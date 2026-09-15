@@ -14,6 +14,17 @@ ACTIVE_REFRESH_SECONDS = 15 * 60
 MAX_IDLE_REFRESH_SECONDS = 60 * 60
 FAIL_OPEN_GRACE_SECONDS = 10 * 60
 
+# Keep this predicate aligned with auto_result_worker._load_matches/classify_scope.
+# Only these matches can make the automatic-result worker useful.
+AUTO_RESULT_ELIGIBILITY_SQL = """
+    UPPER(COALESCE(m.status, 'SCHEDULED')) IN ('SCHEDULED','TIMED','LIVE')
+    AND (
+        (m.tournament_id = 5 AND m.league = 'rpl'
+         AND COALESCE(NULLIF(m.match_category, ''), 'rpl') IN ('rpl','national_team'))
+        OR (m.tournament_id = 6 AND m.league = 'rcup')
+    )
+"""
+
 
 def _as_int(value) -> int:
     try:
@@ -29,14 +40,13 @@ def build_plan() -> dict:
     cur = conn.cursor()
     try:
         cur.execute(
-            """
+            f"""
             SELECT
               EXISTS (
                 SELECT 1 FROM matches m
                 WHERE m.kickoff_time IS NOT NULL
                   AND m.home_score IS NULL AND m.away_score IS NULL
-                  AND UPPER(COALESCE(m.status, 'SCHEDULED')) IN
-                      ('SCHEDULED','TIMED','LIVE','IN_PLAY','PAUSED','HALFTIME')
+                  AND {AUTO_RESULT_ELIGIBILITY_SQL}
                   AND m.kickoff_time >= clock_timestamp() - INTERVAL '360 minutes'
                   AND m.kickoff_time <= clock_timestamp() - INTERVAL '100 minutes'
               ) AS auto_results_window,
@@ -58,7 +68,7 @@ def build_plan() -> dict:
               (SELECT EXTRACT(EPOCH FROM MIN(m.kickoff_time + INTERVAL '100 minutes'))::bigint
                FROM matches m
                WHERE m.kickoff_time IS NOT NULL AND m.home_score IS NULL AND m.away_score IS NULL
-                 AND UPPER(COALESCE(m.status, 'SCHEDULED')) IN ('SCHEDULED','TIMED','LIVE','IN_PLAY','PAUSED','HALFTIME')
+                 AND {AUTO_RESULT_ELIGIBILITY_SQL}
                  AND m.kickoff_time + INTERVAL '100 minutes' > clock_timestamp()) AS next_auto_results_at,
               (SELECT EXTRACT(EPOCH FROM MIN(m.deadline - INTERVAL '140 minutes'))::bigint
                FROM matches m JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
