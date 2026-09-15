@@ -56,10 +56,12 @@ def test_backup_jobs_are_managed_by_production_cron():
         encoding="utf-8"
     )
 
-    assert "30 3 * * *" in cron
+    # Emergency CU-budget mode: back up every four days and temporarily
+    # disable the restore-verification cron job until the budget resets.
+    assert "30 3 */4 * *" in cron
     assert "run_database_backup.sh" in cron
-    assert "15 4 * * 1" in cron
-    assert "verify_database_backup_restore.sh" in cron
+    assert "15 4 * * 1" not in cron
+    assert "verify_database_backup_restore.sh" not in cron
     assert "scripts/run_database_backup.sh" in manifest
     assert "scripts/verify_database_backup_restore.sh" in manifest
     assert "run_database_backup\\.sh" in workflow
