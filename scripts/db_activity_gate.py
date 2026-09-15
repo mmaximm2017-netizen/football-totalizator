@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Keep 5-minute DB worker responsiveness only around real activity windows.
-
-`plan` runs inside the app container and emits a tiny JSON plan. The plan includes
-`next_due`, the next time when a DB-sensitive window is expected to begin.
-
-`refresh-due` runs entirely on the VPS and decides whether the plan itself needs a
-DB refresh. This lets cron check every five minutes without waking Neon. Idle plans
-are refreshed at most hourly as a safety net for schedule/admin changes.
-
-`run -- <command>` also runs entirely on the VPS. It executes DB workers every five
-minutes while a planned window is active, and fails open if state is missing,
-stale, or reaches `next_due` before the refresh job has updated the plan.
-"""
+"""Keep DB-sensitive production jobs from waking Neon without useful work."""
 
 from __future__ import annotations
 
@@ -44,54 +32,39 @@ def build_plan() -> dict:
             """
             SELECT
               EXISTS (
-                SELECT 1
-                FROM matches m
+                SELECT 1 FROM matches m
                 WHERE m.kickoff_time IS NOT NULL
-                  AND m.home_score IS NULL
-                  AND m.away_score IS NULL
+                  AND m.home_score IS NULL AND m.away_score IS NULL
                   AND UPPER(COALESCE(m.status, 'SCHEDULED')) IN
                       ('SCHEDULED','TIMED','LIVE','IN_PLAY','PAUSED','HALFTIME')
                   AND m.kickoff_time >= clock_timestamp() - INTERVAL '360 minutes'
                   AND m.kickoff_time <= clock_timestamp() - INTERVAL '100 minutes'
               ) AS auto_results_window,
               EXISTS (
-                SELECT 1
-                FROM matches m
+                SELECT 1 FROM matches m
                 JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
                 WHERE m.deadline IS NOT NULL
                   AND UPPER(COALESCE(m.status, 'SCHEDULED')) NOT IN
-                      ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED',
-                       'SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
+                      ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED','SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
                   AND m.deadline >= clock_timestamp() + INTERVAL '95 minutes'
                   AND m.deadline <= clock_timestamp() + INTERVAL '140 minutes'
               ) AS deadline_window,
               EXISTS (
-                SELECT 1
-                FROM push_delivery_log d
+                SELECT 1 FROM push_delivery_log d
                 WHERE d.status IN ('ready','pending')
                   AND d.event_type IN ('match_result','deadline_2h')
                   AND d.updated_at >= clock_timestamp() - INTERVAL '1 day'
               ) AS delivery_backlog,
-              (
-                SELECT EXTRACT(EPOCH FROM MIN(m.kickoff_time + INTERVAL '100 minutes'))::bigint
-                FROM matches m
-                WHERE m.kickoff_time IS NOT NULL
-                  AND m.home_score IS NULL
-                  AND m.away_score IS NULL
-                  AND UPPER(COALESCE(m.status, 'SCHEDULED')) IN
-                      ('SCHEDULED','TIMED','LIVE','IN_PLAY','PAUSED','HALFTIME')
-                  AND m.kickoff_time + INTERVAL '100 minutes' > clock_timestamp()
-              ) AS next_auto_results_at,
-              (
-                SELECT EXTRACT(EPOCH FROM MIN(m.deadline - INTERVAL '140 minutes'))::bigint
-                FROM matches m
-                JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
-                WHERE m.deadline IS NOT NULL
-                  AND UPPER(COALESCE(m.status, 'SCHEDULED')) NOT IN
-                      ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED',
-                       'SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
-                  AND m.deadline - INTERVAL '140 minutes' > clock_timestamp()
-              ) AS next_deadline_at
+              (SELECT EXTRACT(EPOCH FROM MIN(m.kickoff_time + INTERVAL '100 minutes'))::bigint
+               FROM matches m
+               WHERE m.kickoff_time IS NOT NULL AND m.home_score IS NULL AND m.away_score IS NULL
+                 AND UPPER(COALESCE(m.status, 'SCHEDULED')) IN ('SCHEDULED','TIMED','LIVE','IN_PLAY','PAUSED','HALFTIME')
+                 AND m.kickoff_time + INTERVAL '100 minutes' > clock_timestamp()) AS next_auto_results_at,
+              (SELECT EXTRACT(EPOCH FROM MIN(m.deadline - INTERVAL '140 minutes'))::bigint
+               FROM matches m JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
+               WHERE m.deadline IS NOT NULL
+                 AND UPPER(COALESCE(m.status, 'SCHEDULED')) NOT IN ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED','SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
+                 AND m.deadline - INTERVAL '140 minutes' > clock_timestamp()) AS next_deadline_at
             """
         )
         auto_results, deadline, backlog, next_auto, next_deadline = cur.fetchone()
@@ -100,27 +73,14 @@ def build_plan() -> dict:
 
     now = int(time.time())
     reasons = []
-    if auto_results:
-        reasons.append("auto_results_window")
-    if deadline:
-        reasons.append("deadline_window")
-    if backlog:
-        reasons.append("delivery_backlog")
-
+    if auto_results: reasons.append("auto_results_window")
+    if deadline: reasons.append("deadline_window")
+    if backlog: reasons.append("delivery_backlog")
     active = bool(reasons)
-    future_due = [
-        value for value in (_as_int(next_auto), _as_int(next_deadline))
-        if value > now
-    ]
-    next_due = min(future_due) if future_due else 0
-
-    return {
-        "generated_at": now,
-        "active": active,
-        "active_until": now + ACTIVE_FOR_SECONDS if active else 0,
-        "next_due": next_due,
-        "reasons": reasons,
-    }
+    future_due = [value for value in (_as_int(next_auto), _as_int(next_deadline)) if value > now]
+    return {"generated_at": now, "active": active,
+            "active_until": now + ACTIVE_FOR_SECONDS if active else 0,
+            "next_due": min(future_due) if future_due else 0, "reasons": reasons}
 
 
 def load_plan(path: Path) -> dict | None:
@@ -132,89 +92,72 @@ def load_plan(path: Path) -> dict | None:
 
 
 def refresh_due(path: Path, now: int | None = None) -> tuple[bool, str]:
-    """Return whether refreshing the DB-derived plan is needed now."""
     now = int(time.time()) if now is None else int(now)
     plan = load_plan(path)
-    if not plan:
-        return True, "missing_plan"
-
+    if not plan: return True, "missing_plan"
     generated = _as_int(plan.get("generated_at"))
-    if generated <= 0 or generated > now + 60:
-        return True, "invalid_plan"
-
+    if generated <= 0 or generated > now + 60: return True, "invalid_plan"
     age = max(0, now - generated)
     if bool(plan.get("active")):
-        active_until = _as_int(plan.get("active_until"))
-        if active_until < now:
-            return True, "active_expired"
-        if age >= ACTIVE_REFRESH_SECONDS:
-            return True, "active_refresh"
+        if _as_int(plan.get("active_until")) < now: return True, "active_expired"
+        if age >= ACTIVE_REFRESH_SECONDS: return True, "active_refresh"
         return False, "active_fresh"
-
     next_due = _as_int(plan.get("next_due"))
-    if next_due and now >= next_due:
-        return True, "next_due"
-    if age >= MAX_IDLE_REFRESH_SECONDS:
-        return True, "idle_watchdog"
+    if next_due and now >= next_due: return True, "next_due"
+    if age >= MAX_IDLE_REFRESH_SECONDS: return True, "idle_watchdog"
     return False, "idle_wait"
 
 
 def should_run(path: Path, now: int | None = None) -> tuple[bool, str]:
     now = int(time.time()) if now is None else int(now)
     plan = load_plan(path)
-    if not plan:
-        return True, "missing_plan_fail_open"
-
+    if not plan: return True, "missing_plan_fail_open"
     generated = _as_int(plan.get("generated_at"))
-    if generated <= 0 or generated > now + 60:
-        return True, "invalid_plan_fail_open"
-
+    if generated <= 0 or generated > now + 60: return True, "invalid_plan_fail_open"
     if bool(plan.get("active")):
-        if _as_int(plan.get("active_until")) >= now:
-            return True, "active_window"
+        if _as_int(plan.get("active_until")) >= now: return True, "active_window"
         return True, "expired_active_fail_open"
-
     next_due = _as_int(plan.get("next_due"))
-    if next_due and now >= next_due:
-        return True, "next_due_fail_open"
-
-    if now - generated > MAX_IDLE_REFRESH_SECONDS + FAIL_OPEN_GRACE_SECONDS:
-        return True, "stale_plan_fail_open"
-
+    if next_due and now >= next_due: return True, "next_due_fail_open"
+    if now - generated > MAX_IDLE_REFRESH_SECONDS + FAIL_OPEN_GRACE_SECONDS: return True, "stale_plan_fail_open"
     return False, "idle"
+
+
+def monitor_due(path: Path, recovery_path: Path, now: int | None = None) -> tuple[bool, str]:
+    """Run the DB-aware monitor only when DB work is already justified.
+
+    A valid idle plan means the lightweight monitor is sufficient. Missing/stale
+    state fails open. An unresolved DB/auto-results incident also forces a probe
+    so recovery notifications are not lost.
+    """
+    try:
+        recovery = json.loads(recovery_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        recovery = {}
+    if isinstance(recovery, dict) and any(k in recovery for k in ("health_db", "auto_results")):
+        return True, "recovery_probe"
+    due, reason = should_run(path, now=now)
+    return due, reason
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("plan")
-
-    refresh = sub.add_parser("refresh-due")
-    refresh.add_argument("--state", required=True)
-
-    run = sub.add_parser("run")
-    run.add_argument("--state", required=True)
-    run.add_argument("remainder", nargs=argparse.REMAINDER)
+    refresh = sub.add_parser("refresh-due"); refresh.add_argument("--state", required=True)
+    monitor = sub.add_parser("monitor-due"); monitor.add_argument("--state", required=True); monitor.add_argument("--recovery-state", required=True)
+    run = sub.add_parser("run"); run.add_argument("--state", required=True); run.add_argument("remainder", nargs=argparse.REMAINDER)
     args = parser.parse_args()
-
-    if args.command == "plan":
-        print(json.dumps(build_plan(), sort_keys=True))
-        return 0
-
+    if args.command == "plan": print(json.dumps(build_plan(), sort_keys=True)); return 0
     if args.command == "refresh-due":
-        due, reason = refresh_due(Path(args.state))
-        print(reason)
-        return 0 if due else 3
-
+        due, reason = refresh_due(Path(args.state)); print(reason); return 0 if due else 3
+    if args.command == "monitor-due":
+        due, reason = monitor_due(Path(args.state), Path(args.recovery_state)); print(reason); return 0 if due else 3
     command = list(args.remainder)
-    if command and command[0] == "--":
-        command = command[1:]
-    if not command:
-        parser.error("run requires a command after --")
-
+    if command and command[0] == "--": command = command[1:]
+    if not command: parser.error("run requires a command after --")
     due, _ = should_run(Path(args.state))
-    if not due:
-        return 0
+    if not due: return 0
     os.execvp(command[0], command)
     return 127
 
