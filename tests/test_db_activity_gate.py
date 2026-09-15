@@ -87,7 +87,7 @@ def test_refresh_at_next_due(tmp_path):
     assert db_activity_gate.refresh_due(state, now) == (True, "next_due")
 
 
-def test_refresh_idle_watchdog_is_hourly(tmp_path):
+def test_refresh_idle_watchdog_is_bounded(tmp_path):
     state = tmp_path / "gate.json"
     now = epoch_for_minute(7)
     write_state(

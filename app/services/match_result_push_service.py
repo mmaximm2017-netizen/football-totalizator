@@ -15,6 +15,9 @@ from app.services.web_push_service import (
 EVENT_TYPE = "match_result"
 RETRY_AFTER_MINUTES = 15
 BOOTSTRAP_CUTOFF_ENV = "TOTISH_MATCH_RESULT_PUSH_SINCE"
+# Keep this floor when restoring the cron: deployment preserves the old .env.
+# Outbox rows remain intact; only events created after the emergency pause send.
+EMERGENCY_RESUME_AT = datetime(2026, 10, 1, tzinfo=timezone.utc)
 
 
 def normalize_now(value=None):
@@ -40,11 +43,9 @@ def normalize_since(value=None):
 def select_match_result_candidates(cur, now, since=None):
     """Return one candidate per user/match from the scored-result outbox."""
     stale_cutoff = now - timedelta(minutes=RETRY_AFTER_MINUTES)
-    since_clause = ""
-    params = [EVENT_TYPE, stale_cutoff]
-    if since is not None:
-        since_clause = "AND d.sent_at >= %s"
-        params.append(since)
+    since = max(since, EMERGENCY_RESUME_AT) if since is not None else EMERGENCY_RESUME_AT
+    since_clause = "AND d.sent_at >= %s"
+    params = [EVENT_TYPE, stale_cutoff, since]
 
     cur.execute(
         f"""
@@ -123,6 +124,7 @@ def claim_delivery(cur, candidate, now):
           AND match_id = %s
           AND event_type = %s
           AND event_key = %s
+          AND sent_at >= %s
           AND (
                 status = 'ready'
                 OR (
@@ -139,6 +141,7 @@ def claim_delivery(cur, candidate, now):
             candidate["match_id"],
             candidate["event_type"],
             candidate["event_key"],
+            EMERGENCY_RESUME_AT,
             stale_cutoff,
         ),
     )
