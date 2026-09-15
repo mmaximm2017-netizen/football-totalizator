@@ -47,7 +47,8 @@ def test_production_cron_contains_expected_jobs_once():
     for name in exact_once:
         assert cron.count(name) == 1
 
-    assert cron.count("db_activity_gate.py") == 3
+    # Three worker gates plus the hourly full-monitor gate.
+    assert cron.count("db_activity_gate.py") == 4
 
 
 def test_production_cron_does_not_embed_secrets():
