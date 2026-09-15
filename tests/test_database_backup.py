@@ -74,7 +74,7 @@ def test_monitor_checks_backup_freshness_without_exposing_dump_contents():
     )
 
     assert "def check_database_backup()" in source
-    assert '36 * 60 * 60' in source
+    assert '108 * 60 * 60' in source
     assert '"backup:stale"' in source
     assert '"backup:checksum_missing"' in source
     assert "check_database_backup()" in source

@@ -374,7 +374,7 @@ def check_database_backup():
         alert(
             "backup:missing",
             "Что именно произошло:\n"
-            "Каталог резервных копий уже существует, но ежедневного дампа базы в нём нет.",
+            "Каталог резервных копий уже существует, но планового дампа базы в нём нет.",
         )
         return False
 
@@ -390,14 +390,14 @@ def check_database_backup():
         )
         return False
 
-    max_age_seconds = 36 * 60 * 60
+    max_age_seconds = 108 * 60 * 60  # Four days plus a 12-hour delay allowance.
     if age_seconds > max_age_seconds:
         age_hours = age_seconds // 3600
         alert(
             "backup:stale",
             "Что именно произошло:\n"
-            "Последняя ежедневная резервная копия базы слишком старая.\n\n"
-            f"Возраст копии: {age_hours} ч. Допустимо: не более 36 ч.",
+            "Последняя плановая резервная копия базы слишком старая.\n\n"
+            f"Возраст копии: {age_hours} ч. Допустимо: не более 108 ч.",
         )
         return False
 

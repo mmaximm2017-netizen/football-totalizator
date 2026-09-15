@@ -13,7 +13,7 @@ cd "$PROJECT_ROOT"
 
 # This check is host-local and does not touch PostgreSQL. Cron may call this
 # script every five minutes; Neon is only contacted when the saved plan reaches
-# next_due, while a window is active, or when the hourly safety refresh is due.
+# next_due, while a window is active, or when the two-hour safety refresh is due.
 set +e
 /usr/bin/python3 "$SCRIPT_DIR/db_activity_gate.py" refresh-due --state "$STATE_FILE" >/dev/null 2>&1
 refresh_status=$?

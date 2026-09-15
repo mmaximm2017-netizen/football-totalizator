@@ -54,7 +54,6 @@ fi
 
 backup_date="$(TZ=Europe/Moscow date +%F)"
 iso_week="$(TZ=Europe/Moscow date +%G-W%V)"
-weekday="$(TZ=Europe/Moscow date +%u)"
 daily_name="totish-daily-${backup_date}.dump"
 daily_path="$BACKUP_DIR/$daily_name"
 tmp_path="$BACKUP_DIR/.${daily_name}.tmp"
@@ -100,8 +99,8 @@ chmod 600 "$daily_path"
 sha256sum "$daily_path" > "$daily_path.sha256"
 chmod 600 "$daily_path.sha256"
 
-if [[ "$weekday" == "7" ]]; then
-    weekly_path="$BACKUP_DIR/totish-weekly-${iso_week}.dump"
+weekly_path="$BACKUP_DIR/totish-weekly-${iso_week}.dump"
+if [[ ! -s "$weekly_path" || ! -s "$weekly_path.sha256" ]]; then
     cp "$daily_path" "$weekly_path"
     chmod 600 "$weekly_path"
     sha256sum "$weekly_path" > "$weekly_path.sha256"

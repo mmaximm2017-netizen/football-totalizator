@@ -54,9 +54,9 @@ def test_production_cron_contains_expected_jobs_once():
     for name in disabled_for_cu_conservation:
         assert name not in cron
 
-    # Auto-result worker gate plus the six-hour full-monitor gate.
+    # Auto-result worker gate plus the hourly full-monitor gate.
     assert cron.count("db_activity_gate.py") == 2
-    assert "0 */6 * * *" in cron
+    assert "0 * * * *" in cron
     assert "30 3 */4 * *" in cron
 
 

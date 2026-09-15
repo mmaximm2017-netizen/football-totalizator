@@ -103,7 +103,7 @@ class MatchResultPushTests(unittest.TestCase):
 
     def test_candidate_query_supports_bootstrap_cutoff(self):
         cursor = Cursor()
-        since = datetime(2026, 8, 15, 10, 0, tzinfo=timezone.utc)
+        since = datetime(2026, 10, 2, 10, 0, tzinfo=timezone.utc)
         service.select_match_result_candidates(cursor, since, since=since)
         query, params = cursor.executed[0]
         self.assertIn("d.sent_at >= %s", query)
