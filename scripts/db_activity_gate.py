@@ -34,6 +34,11 @@ def _as_int(value) -> int:
 
 
 def build_plan() -> dict:
+    """Plan only automatic-result DB work while CU conservation is active.
+
+    Deadline pushes and match-result pushes are intentionally disabled in
+    production.cron, so their deadlines/backlogs must not wake Neon either.
+    """
     from app.db import close_db, get_db
 
     conn = get_db()
@@ -50,47 +55,26 @@ def build_plan() -> dict:
                   AND m.kickoff_time >= clock_timestamp() - INTERVAL '360 minutes'
                   AND m.kickoff_time <= clock_timestamp() - INTERVAL '100 minutes'
               ) AS auto_results_window,
-              EXISTS (
-                SELECT 1 FROM matches m
-                JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
-                WHERE m.deadline IS NOT NULL
-                  AND UPPER(COALESCE(m.status, 'SCHEDULED')) NOT IN
-                      ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED','SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
-                  AND m.deadline >= clock_timestamp() + INTERVAL '95 minutes'
-                  AND m.deadline <= clock_timestamp() + INTERVAL '140 minutes'
-              ) AS deadline_window,
-              EXISTS (
-                SELECT 1 FROM push_delivery_log d
-                WHERE d.status IN ('ready','pending')
-                  AND d.event_type IN ('match_result','deadline_2h')
-                  AND d.updated_at >= clock_timestamp() - INTERVAL '1 day'
-              ) AS delivery_backlog,
               (SELECT EXTRACT(EPOCH FROM MIN(m.kickoff_time + INTERVAL '100 minutes'))::bigint
                FROM matches m
                WHERE m.kickoff_time IS NOT NULL AND m.home_score IS NULL AND m.away_score IS NULL
                  AND {AUTO_RESULT_ELIGIBILITY_SQL}
-                 AND m.kickoff_time + INTERVAL '100 minutes' > clock_timestamp()) AS next_auto_results_at,
-              (SELECT EXTRACT(EPOCH FROM MIN(m.deadline - INTERVAL '140 minutes'))::bigint
-               FROM matches m JOIN tournaments t ON t.id = m.tournament_id AND t.is_active = 1
-               WHERE m.deadline IS NOT NULL
-                 AND UPPER(COALESCE(m.status, 'SCHEDULED')) NOT IN ('FINISHED','COMPLETE','COMPLETED','CANCELLED','POSTPONED','SUSPENDED','LIVE','IN_PLAY','PAUSED','HALFTIME','ABANDONED')
-                 AND m.deadline - INTERVAL '140 minutes' > clock_timestamp()) AS next_deadline_at
+                 AND m.kickoff_time + INTERVAL '100 minutes' > clock_timestamp()) AS next_auto_results_at
             """
         )
-        auto_results, deadline, backlog, next_auto, next_deadline = cur.fetchone()
+        auto_results, next_auto = cur.fetchone()
     finally:
         close_db(conn, cur)
 
     now = int(time.time())
     reasons = []
-    if auto_results: reasons.append("auto_results_window")
-    if deadline: reasons.append("deadline_window")
-    if backlog: reasons.append("delivery_backlog")
+    if auto_results:
+        reasons.append("auto_results_window")
     active = bool(reasons)
-    future_due = [value for value in (_as_int(next_auto), _as_int(next_deadline)) if value > now]
+    next_auto = _as_int(next_auto)
     return {"generated_at": now, "active": active,
             "active_until": now + ACTIVE_FOR_SECONDS if active else 0,
-            "next_due": min(future_due) if future_due else 0, "reasons": reasons}
+            "next_due": next_auto if next_auto > now else 0, "reasons": reasons}
 
 
 def load_plan(path: Path) -> dict | None:
