@@ -39,16 +39,25 @@ def test_production_cron_contains_expected_jobs_once():
         "monitor_production_light.py",
         "monitor_production.py",
         "refresh_db_activity_gate.sh",
-        "run_morning_digest.sh",
-        "run_deadline_pushes.sh",
-        "run_match_result_pushes.sh",
         "run_auto_results.sh",
+        "run_database_backup.sh",
     ]
     for name in exact_once:
         assert cron.count(name) == 1
 
-    # Three worker gates plus the hourly full-monitor gate.
-    assert cron.count("db_activity_gate.py") == 4
+    disabled_for_cu_conservation = [
+        "run_morning_digest.sh",
+        "run_deadline_pushes.sh",
+        "run_match_result_pushes.sh",
+        "verify_database_backup_restore.sh",
+    ]
+    for name in disabled_for_cu_conservation:
+        assert name not in cron
+
+    # Auto-result worker gate plus the six-hour full-monitor gate.
+    assert cron.count("db_activity_gate.py") == 2
+    assert "0 */6 * * *" in cron
+    assert "30 3 */4 * *" in cron
 
 
 def test_production_cron_does_not_embed_secrets():
