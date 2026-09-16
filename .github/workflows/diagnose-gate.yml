@@ -38,7 +38,7 @@ jobs:
                     parts=line.split()
                     if len(parts)<6 or not re.fullmatch(r'[0-9*,/@A-Za-z-]+', parts[0]): continue
                     names=re.findall(r'[A-Za-z0-9_.-]+\.(?:sh|py)\b', line)
-                    print('CRON',label,' '.join(parts[:5]),'scripts='+','.join(names),'tools='+','.join(re.findall(r'(?<![A-Za-z_])(?:curl|wget|docker|python3?|psql|pg_dump|pg_restore|run-parts|systemctl|bash|sh)(?![A-Za-z_])',line)),'db_health='+str('/health/db' in line))
+                    print('CRON',label,' '.join(parts[:5]),'scripts='+','.join(names),'tools='+','.join(re.findall(r'(?<![A-Za-z_])(?:curl|wget|docker|python3?|psql|pg_dump|pg_restore|run-parts|systemctl|bash|sh)(?![A-Za-z_])',line)),'db_health='+str('/health/db' in line),'production_path='+str('/opt/football-totalizator' in line))
             for label, command in [('user',['crontab','-l']),('root',['sudo','-n','crontab','-l'])]:
                 r=subprocess.run(command,capture_output=True,text=True,timeout=10)
                 print('CRON_READ', label, r.returncode)
