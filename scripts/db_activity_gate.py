@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -43,6 +44,10 @@ def build_plan() -> dict:
     Deadline pushes and match-result pushes are intentionally disabled in
     production.cron, so their deadlines/backlogs must not wake Neon either.
     """
+    # Cron invokes this by filename inside the container without PYTHONPATH.
+    # Keep application imports confined to plan: host-local decisions must work
+    # without Flask, psycopg2 or a database connection.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from app.db import close_db, get_db
 
     conn = get_db()

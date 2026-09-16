@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,40 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class EmergencyGateTests(unittest.TestCase):
+    def test_filename_cli_without_pythonpath_publishes_usable_idle_plan(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            (root / 'app').mkdir()
+            script = root / 'scripts/db_activity_gate.py'
+            shutil.copyfile(ROOT / 'scripts/db_activity_gate.py', script)
+            (root / 'app/__init__.py').write_text('')
+            # Substitute only the database boundary; execute the real CLI in a
+            # fresh interpreter with the same import conditions as cron.
+            (root / 'app/db.py').write_text('''
+class Connection:
+    def cursor(self): return self
+    def execute(self, sql): pass
+    def fetchone(self): return False, None
+def get_db(): return Connection()
+def close_db(conn, cur): pass
+''')
+            env = dict(os.environ)
+            env.pop('PYTHONPATH', None)
+            result = subprocess.run([sys.executable, str(script), 'plan'],
+                                    cwd=root.parent, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            plan = json.loads(result.stdout)
+            self.assertFalse(plan['active'])
+            state = root / 'gate.json'
+            state.write_text(result.stdout)
+            # Subsequent host decisions must work even with no app installed.
+            shutil.rmtree(root / 'app')
+            refresh = subprocess.run([sys.executable, str(script), 'refresh-due',
+                                      '--state', str(state)], env=env, capture_output=True)
+            self.assertEqual(refresh.returncode, 3, refresh.stderr)
+            self.assertFalse(gate.should_run(state)[0])
+
     def test_idle_checks_do_not_import_or_query_database(self):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory) / 'gate.json'

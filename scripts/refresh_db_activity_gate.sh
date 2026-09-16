@@ -48,4 +48,8 @@ if [[ "$status" -eq 0 && -s "$TMP_FILE" ]]; then
 fi
 
 rm -f "$TMP_FILE"
+# Do not silently turn a failed refresh into an endless fail-open worker loop.
+# Log only the exit status; database exception text can contain connection data.
+[[ "$status" -ne 0 ]] || status=1
+echo "DB_ACTIVITY_GATE_REFRESH_FAILED exit_code=$status; previous plan retained" >&2
 exit "$status"

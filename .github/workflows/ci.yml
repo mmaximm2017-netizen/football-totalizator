@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - ops/neon-emergency-budget
   pull_request:
     branches:
       - main
@@ -63,6 +64,9 @@ jobs:
 
       - name: Bootstrap seed data
         run: python -m app.init_db
+
+      - name: Verify gate CLI without inherited import path
+        run: env -u PYTHONPATH python scripts/db_activity_gate.py plan
 
       - name: Verify application import
         run: python -c "from app import create_app; app=create_app(); print('APP_IMPORT_OK')"
