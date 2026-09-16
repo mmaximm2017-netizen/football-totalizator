@@ -29,6 +29,16 @@ jobs:
             state = root / 'db-activity-gate.json'
             plan = gate.load_plan(state)
             print('HOST_TIME', int(time.time()))
+            import getpass, shutil, socket
+            print('SSH_IDENTITY',getpass.getuser(),socket.gethostname())
+            print('COMMAND_PATHS',json.dumps({x:shutil.which(x) for x in ('sudo','crontab','tail')}))
+            try:
+                s=Path('/etc/sudoers.d/totish-neon-readonly').stat()
+                print('SUDOERS_FILE',s.st_uid,oct(s.st_mode & 0o777))
+            except OSError as e: print('SUDOERS_FILE_ERROR',type(e).__name__)
+            for command in (['sudo','-n','/usr/bin/crontab','-l'],['sudo','-n','/usr/bin/tail','-n','10000','/var/log/nginx/access.log']):
+                r=subprocess.run(command,capture_output=True,text=True,timeout=10)
+                print('EXACT_READ_PROBE',command[2],r.returncode,repr(r.stderr[:500]))
             print('GATE_PLAN', json.dumps({k: plan.get(k) for k in ('generated_at','active','active_until','next_due')} if plan else None))
             print('GATE_MONITOR_DECISION', gate.monitor_due(state, root / 'production-monitor-recovery.json'))
             def summarize(label, data):
