@@ -20,63 +20,45 @@ jobs:
             set -eu
             cd ${{ secrets.PROD_DEPLOY_PATH }}
             /usr/bin/python3 - <<'PY'
-            import json,re,subprocess,datetime,time
+            import json,re,subprocess,datetime
             from pathlib import Path
-            from collections import Counter
+            def run(args): return subprocess.run(args,capture_output=True,text=True,timeout=25)
+            r=run(['docker','events','--since','2026-09-16T04:43:00Z','--until','2026-09-16T10:33:00Z','--filter','type=container','--format','{{json .}}'])
+            for line in r.stdout.splitlines():
+                try: d=json.loads(line)
+                except ValueError: continue
+                if d.get('Action') not in ('create','start','die'): continue
+                a=d.get('Actor',{}).get('Attributes',{})
+                name=a.get('name','')
+                if 'football-totalizator' not in name: continue
+                print('CONTAINER_EVENT',datetime.datetime.fromtimestamp(d['time'],datetime.timezone.utc).isoformat(),d.get('Action'),name,a.get('com.docker.compose.service'),a.get('exitCode'))
+            r=run(['docker','logs','--timestamps','--since','2026-09-16T04:43:00Z','--until','2026-09-16T10:33:00Z','--tail','15000','football-totalizator-app-1'])
             wakes=['04:57:41','05:37:55','05:45:04','06:08:44','06:36:04','06:47:04','06:55:31','07:14:24','07:50:04','08:01:06','08:23:00','09:51:52','10:27:21']
             times={s:datetime.datetime.fromisoformat('2026-09-16T'+s+'+00:00').timestamp() for s in wakes}
-            def run(args):
-                return subprocess.run(args,capture_output=True,text=True,timeout=25)
-            r=run(['sudo','-n','/usr/bin/tail','-n','10000','/var/log/nginx/access.log'])
-            print('ACCESS_READ',r.returncode)
-            rows=[]
-            clients={}
-            for line in r.stdout.splitlines():
-                m=re.search(r'^(\S+) .*?\[([^]]+)\] "([A-Z]+) ([^ ]+) HTTP/[^"]+" (\d+) \S+ "([^"]*)" "([^"]*)"',line)
-                if not m: continue
-                try: t=datetime.datetime.strptime(m[2],'%d/%b/%Y:%H:%M:%S %z').timestamp()
+            for line in (r.stdout+r.stderr).splitlines():
+                try: t=datetime.datetime.fromisoformat(line.split(' ',1)[0].replace('Z','+00:00')).timestamp()
                 except ValueError: continue
-                path=m[4].split('?')[0]
-                path=re.sub(r'/[0-9]+(?=/|$)','/:id',path)
-                if not re.fullmatch(r'/[A-Za-z0-9_./:-]{0,100}',path): path='[redacted-path]'
-                ua=m[7].lower()
-                kind=next((k for k in ('uptimerobot','googlebot','bingbot','yandex','facebookexternalhit','petalbot','bytespider','curl','python','headless','bot') if k in ua), 'android-browser' if 'android' in ua else 'browser' if 'mozilla' in ua else 'other')
-                client=clients.setdefault(m[1],len(clients)+1)
-                rows.append((t,path,m[3],m[5],kind,client))
-            print('ACCESS_COVERAGE',len(rows),datetime.datetime.fromtimestamp(min(x[0] for x in rows),datetime.timezone.utc).isoformat() if rows else None)
-            for label,t in times.items():
-                near=[{'dt':int(x[0]-t),'path':x[1],'method':x[2],'status':x[3],'ua':x[4],'client':x[5]} for x in rows if -10<=x[0]-t<=20]
-                print('WAKE_HTTP',label,json.dumps(near))
-            print('NONHEALTH_ROUTES',json.dumps(Counter(x[1] for x in rows if min(times.values())-60<=x[0]<=max(times.values())+60 and x[1]!='/health').most_common(40)))
-            root=Path.home()/'.local/state/totish'
-            for filename in ('auto-results.log','db-activity-gate.log','production-monitor.log','database-backup.log'):
-                p=root/filename
-                if not p.exists(): continue
-                with p.open('rb') as f:
-                    f.seek(max(0,p.stat().st_size-200000))
-                    data=f.read().decode(errors='replace')
-                print('LOCAL_LOG',filename,'bytes',p.stat().st_size,'mtime',p.stat().st_mtime)
-                for line in data.splitlines():
-                    if '2026-09-16' not in line: continue
-                    if re.fullmatch(r'[\dT:+Z .-]+ (START auto-result runtime|FINISH auto-result runtime exit_code=\d+|SKIP overlapping run)',line):
-                        print('WORKER',line)
-                    elif any(s in line for s in ('DB_ACTIVITY_GATE','Traceback','ModuleNotFoundError')):
-                        print('LOCAL_MARKER',filename,re.sub(r'[^0-9A-Za-z_ :.+-]','?',line)[:180])
-            p=root/'db-activity-gate.json'
-            if p.exists():
-                d=json.loads(p.read_text())
-                print('PLAN',json.dumps({k:d.get(k) for k in ('generated_at','active','active_until','next_due')}))
-            r=run(['docker','logs','--timestamps','--since','2026-09-16T04:43:00Z','--until','2026-09-16T10:33:00Z','--tail','15000','football-totalizator-app-1'])
-            lines=(r.stdout+r.stderr).splitlines()
-            print('APP_LOG_LINES',len(lines))
-            for label,t in times.items():
-                found=[]
-                for line in lines:
-                    try: stamp=datetime.datetime.fromisoformat(line.split(' ',1)[0].replace('Z','+00:00')).timestamp()
-                    except ValueError: continue
-                    if not -10<=stamp-t<=20: continue
-                    markers=re.findall(r'(?:GET|POST|HEAD) /[A-Za-z0-9_./-]+|DB pool initialized|Dead pool connection discarded|PoolExhausted|[A-Za-z_]+Error|auto.result|health/db',line)
-                    if markers: found.append({'dt':int(stamp-t),'markers':markers})
-                print('WAKE_APP',label,json.dumps(found[:60]))
+                near=[s for s,v in times.items() if -15<=t-v<=30]
+                if not near: continue
+                fields={}
+                for k in ('method','path','session_cookie_present','session_user_id_present'):
+                    m=re.search(r'\b'+k+r'=([^ ]+)',line)
+                    if m:
+                        v=m[1].split('?')[0]
+                        if re.fullmatch(r'[A-Za-z0-9_/.-]{1,120}',v): fields[k]=v
+                if fields: print('APP_REQUEST',near[0],int(t-times[near[0]]),json.dumps(fields))
+            r=run(['sudo','-n','/usr/bin/tail','-n','10000','/var/log/nginx/access.log'])
+            for label in ('04:57:41','05:37:55','05:45:04','06:55:31','07:50:04','08:23:00','10:27:21'):
+                for line in r.stdout.splitlines():
+                    m=re.search(r'\[([^]]+)\] "([A-Z]+) ([^ ]+) HTTP/[^"]+" (\d+) \S+ "([^"]*)" "([^"]*)"',line)
+                    if not m: continue
+                    t=datetime.datetime.strptime(m[1],'%d/%b/%Y:%H:%M:%S %z').timestamp()
+                    if not -90<=t-times[label]<=90: continue
+                    path=m[3].split('?')[0]
+                    if path=='/health' or path.startswith('/static/'): continue
+                    if not re.fullmatch(r'/[A-Za-z0-9_./-]{0,80}',path): path='[redacted]'
+                    ua=m[6].lower()
+                    kind=next((k for k in ('chatgpt-user','oai-searchbot','gptbot','googlebot','bingbot','yandex','curl','python','headless','bot') if k in ua),'android' if 'android' in ua else 'browser' if 'mozilla' in ua else 'other')
+                    print('WIDER_HTTP',label,int(t-times[label]),path,m[2],m[4],kind)
             
             PY
