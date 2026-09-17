@@ -419,6 +419,20 @@ def create_app():
     def load_user():
         g.is_admin = False
 
+        # Public/technical endpoints must never wake Postgres merely because an
+        # otherwise authenticated browser sends its session cookie with them.
+        # Keep this list endpoint-based so a user-controlled path cannot bypass
+        # authentication for an application view.
+        db_free_endpoints = {
+            "static",
+            "service_worker",
+            "health",
+            "auth.login",
+            "auth.logout",
+        }
+        if request.endpoint in db_free_endpoints:
+            return
+
         # GPT uses bearer auth only. Never load, mutate, or otherwise process
         # browser-session user state for its strictly read-only API surface.
         if request.path.startswith("/api/gpt/"):
