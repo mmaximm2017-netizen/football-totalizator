@@ -141,6 +141,13 @@ def _profile_tournament_context(cur=None):
 
 @profile_bp.route('/profile')
 def profile():
+    # /profile is the signed-in user's legacy profile route. Check the signed
+    # session before acquiring a connection so bots and expired sessions do not
+    # wake Neon just to be redirected to login.
+    if 'user_id' not in session:
+        flash("Сессия не найдена", "error")
+        return redirect(url_for('auth.login'))
+
     conn = get_db()
     cur = conn.cursor()
 
@@ -162,8 +169,6 @@ def profile():
                 return redirect(url_for('table.table'))
             uid = row[0]
             viewer_user_id = session.get("user_id")
-            if not viewer_user_id:
-                return redirect(url_for("auth.login"))
             if str(viewer_user_id) != str(uid):
                 return redirect(
                     url_for(
@@ -176,9 +181,6 @@ def profile():
             user_is_deleted = row[2] if len(row) > 2 else row[1]
         else:
             uid = session.get('user_id')
-            if not uid:
-                flash("Сессия не найдена", "error")
-                return redirect(url_for('auth.login'))
 
             cur.execute(
                 """
