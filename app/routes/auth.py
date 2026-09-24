@@ -89,6 +89,15 @@ def login():
                 selected_tournament_id = get_session_start_tournament_id(cur)
             session.clear()
             session['user_id'] = user_id
+            # Associate the existing pseudonymous analytics ID with this player.
+            # This runs once per login, without a database lookup on page views.
+            from app import analytics_distinct_id, analytics_user_ref
+            from app.services.product_analytics import enqueue_posthog_event
+            enqueue_posthog_event("$identify", analytics_distinct_id(), {
+                "$process_person_profile": True,
+                "$set": {"username": username},
+                "totish_user_ref": analytics_user_ref(user_id),
+            })
             if selected_tournament_id:
                 session['selected_tournament_id'] = selected_tournament_id
                 session['tournament_selection_initialized'] = True
