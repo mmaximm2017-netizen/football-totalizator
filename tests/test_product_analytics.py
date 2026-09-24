@@ -129,3 +129,15 @@ def test_server_delivery_uses_posthog_ingestion_endpoint():
     assert payload["event"] == "login"
     assert payload["distinct_id"] == "anonymous-distinct-id"
     assert payload["properties"]["$process_person_profile"] is False
+
+
+def test_identified_player_has_profile_and_username():
+    fake_response = type("Response", (), {"raise_for_status": lambda self: None})()
+    with patch.object(product_analytics.requests, "post", return_value=fake_response) as post:
+        product_analytics._deliver_posthog_event(
+            "$identify", "stable-player-id",
+            {"totish_user_ref": "player-ref", "$set": {"username": "player"}},
+        )
+    payload = post.call_args.kwargs["json"]
+    assert payload["properties"]["$process_person_profile"] is True
+    assert payload["properties"]["$set"] == {"username": "player"}

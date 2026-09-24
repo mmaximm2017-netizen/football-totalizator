@@ -23,7 +23,7 @@ def _deliver_posthog_event(event_name, distinct_id, properties):
         "event": event_name,
         "distinct_id": distinct_id,
         "properties": {
-            "$process_person_profile": False,
+            "$process_person_profile": bool((properties or {}).get("totish_user_ref")),
             **(properties or {}),
         },
     }
