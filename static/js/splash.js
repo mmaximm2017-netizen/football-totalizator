@@ -49,7 +49,8 @@
 
     // Analytics goes to the same origin first. The Flask server forwards only a
     // strict allow-list of privacy-safe events/properties to PostHog. Prediction
-    // scores, names, credentials, and other personal data are never submitted.
+    // scores and credentials are never submitted. Identity is added server-side
+    // from the authenticated session, never from browser-supplied properties.
     function capture(eventName, properties) {
         try {
             const tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -168,6 +169,30 @@
             });
         };
     }
+
+    let lastTrackedUrl = window.location.href;
+
+    function trackNavigation(force) {
+        const nextUrl = window.location.href;
+        if (!force && nextUrl === lastTrackedUrl) return;
+        lastTrackedUrl = nextUrl;
+        trackPageIntent();
+    }
+
+    // The table switches tournaments with pushState; also cover future SPA
+    // routes, browser history and documents restored from the back/forward cache.
+    ['pushState', 'replaceState'].forEach(function (method) {
+        const original = window.history[method];
+        window.history[method] = function () {
+            const result = original.apply(this, arguments);
+            trackNavigation(false);
+            return result;
+        };
+    });
+    window.addEventListener('popstate', function () { trackNavigation(false); });
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) trackNavigation(true);
+    });
 
     trackPageIntent();
     installPredictionSuccessCapture();
