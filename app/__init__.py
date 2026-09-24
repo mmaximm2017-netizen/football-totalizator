@@ -311,6 +311,9 @@ def create_app():
         user_ref = analytics_user_ref(session.get("user_id"))
         if user_ref is not None:
             properties["totish_user_ref"] = user_ref
+            username = session.get("analytics_username")
+            if isinstance(username, str) and username:
+                properties["totish_username"] = username
         enqueue_posthog_event(event_name, analytics_distinct_id(), properties)
         return "", 204
 
@@ -452,7 +455,7 @@ def create_app():
 
         try:
             cur.execute(
-                "SELECT is_admin, last_seen, COALESCE(is_deleted, 0) FROM users WHERE id = %s",
+                "SELECT is_admin, last_seen, COALESCE(is_deleted, 0), username FROM users WHERE id = %s",
                 (session['user_id'],)
             )
 
@@ -461,7 +464,10 @@ def create_app():
             if user:
                 if user[2] == 1:
                     session.pop('user_id', None)
+                    session.pop('analytics_username', None)
                     return
+
+                session['analytics_username'] = user[3]
 
                 if user[0] == 1:
                     g.is_admin = True
