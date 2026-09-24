@@ -89,6 +89,7 @@ def login():
                 selected_tournament_id = get_session_start_tournament_id(cur)
             session.clear()
             session['user_id'] = user_id
+            session['analytics_username'] = username
             # Associate the existing pseudonymous analytics ID with this player.
             # This runs once per login, without a database lookup on page views.
             from app import analytics_distinct_id, analytics_user_ref
@@ -151,6 +152,7 @@ def register():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
+    session.pop('analytics_username', None)
     session.pop('selected_tournament_id', None)
     session.pop('tournament_selection_initialized', None)
     flash("Вы вышли из аккаунта", "success")
