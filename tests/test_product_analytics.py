@@ -1,4 +1,6 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from app import create_app
 from app.services import product_analytics
@@ -67,6 +69,73 @@ def test_identified_pageview_uses_server_session_username():
     assert properties["totish_username"] == "Игрок"
     assert properties["totish_user_ref"]
     assert properties["$pathname"] == "/table"
+    assert properties["$set"]["username"] == "Игрок"
+
+
+def test_anonymous_event_cannot_inherit_or_supply_identity():
+    client, headers = analytics_client()
+    with client.session_transaction() as current_session:
+        current_session["analytics_username"] = "stale-name"
+    with patch("app.enqueue_posthog_event") as enqueue, patch("app.get_db") as db:
+        response = client.post("/__analytics/event", headers=headers, json={
+            "event": "$pageview", "properties": {
+                "pathname": "/", "totish_username": "forged",
+                "$set": {"username": "forged"}, "distinct_id": "another-user",
+            },
+        })
+    assert response.status_code == 204
+    assert enqueue.call_args.args[2] == {
+        "$pathname": "/", "$current_url": "http://localhost/",
+    }
+    db.assert_not_called()
+
+
+def test_logout_and_next_account_have_separate_analytics_identity():
+    client, headers = analytics_client()
+    with client.session_transaction() as current_session:
+        current_session["user_id"] = 2
+        current_session["analytics_username"] = "Первый"
+    payload = {"event": "$pageview", "properties": {"pathname": "/"}}
+    with patch("app.enqueue_posthog_event") as enqueue, patch("app.get_db") as db:
+        client.post("/__analytics/event", headers=headers, json=payload)
+        first_id = enqueue.call_args.args[1]
+        assert client.post("/logout", headers=headers).status_code == 302
+        client.post("/__analytics/event", headers=headers, json=payload)
+        anonymous_id = enqueue.call_args.args[1]
+        assert "totish_username" not in enqueue.call_args.args[2]
+        assert "$set" not in enqueue.call_args.args[2]
+        with client.session_transaction() as current_session:
+            assert "analytics_username" not in current_session
+            current_session["user_id"] = 3
+            current_session["analytics_username"] = "Второй"
+        client.post("/__analytics/event", headers=headers, json=payload)
+        assert enqueue.call_args.args[2]["$set"]["username"] == "Второй"
+        assert len({first_id, anonymous_id, enqueue.call_args.args[1]}) == 3
+    db.assert_not_called()
+
+
+@pytest.mark.parametrize("path", ["/", "/table"])
+def test_existing_session_gets_identity_on_normal_page_request(path):
+    client, headers = analytics_client()
+    with client.session_transaction() as current_session:
+        current_session["user_id"] = 2
+    conn = MagicMock()
+    conn.cursor.return_value.fetchone.return_value = (0, None, 0, "Игрок")
+    # Exercise the real before_request hook without running unrelated page SQL.
+    endpoint = "main.index" if path == "/" else "table.table"
+    with client.application.test_request_context(path):
+        from flask import request
+        endpoint = request.endpoint
+    with patch.dict(client.application.view_functions, {endpoint: lambda: "ok"}):
+        with patch("app.get_db", return_value=conn), patch("app.close_db"):
+            assert client.get(path).status_code == 200
+    with patch("app.enqueue_posthog_event") as enqueue, patch("app.get_db") as db:
+        assert client.post("/__analytics/event", headers=headers, json={
+            "event": "$pageview", "properties": {"pathname": path},
+        }).status_code == 204
+    assert enqueue.call_args.args[2]["totish_username"] == "Игрок"
+    assert enqueue.call_args.args[2]["$set"]["username"] == "Игрок"
+    db.assert_not_called()
 
 
 def test_prediction_event_keeps_only_match_id():
