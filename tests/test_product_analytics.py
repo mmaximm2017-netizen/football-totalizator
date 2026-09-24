@@ -46,6 +46,29 @@ def test_pageview_is_sanitized_and_queued():
     }
 
 
+
+def test_identified_pageview_uses_server_session_username():
+    client, headers = analytics_client()
+    with client.session_transaction() as current_session:
+        current_session["user_id"] = 2
+        current_session["analytics_username"] = "Игрок"
+
+    with patch("app.enqueue_posthog_event") as enqueue:
+        response = client.post(
+            "/__analytics/event",
+            headers=headers,
+            json={"event": "$pageview", "properties": {
+                "pathname": "/table", "totish_username": "подмена",
+            }},
+        )
+
+    assert response.status_code == 204
+    properties = enqueue.call_args.args[2]
+    assert properties["totish_username"] == "Игрок"
+    assert properties["totish_user_ref"]
+    assert properties["$pathname"] == "/table"
+
+
 def test_prediction_event_keeps_only_match_id():
     client, headers = analytics_client()
 
