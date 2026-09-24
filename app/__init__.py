@@ -314,6 +314,9 @@ def create_app():
             username = session.get("analytics_username")
             if isinstance(username, str) and username:
                 properties["totish_username"] = username
+                # Refresh the person even for sessions opened before analytics
+                # identification was deployed. Never trust client identity fields.
+                properties["$set"] = {"username": username, "totish_user_ref": user_ref}
         enqueue_posthog_event(event_name, analytics_distinct_id(), properties)
         return "", 204
 
