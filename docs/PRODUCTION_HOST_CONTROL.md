@@ -36,8 +36,12 @@ GitHub and deploy it.
 
 ## Emergency CU policy through September 2026
 
-Result pushes, deadline pushes, morning digest and scheduled restore verification
-are absent from the managed cron. Backups run on day-of-month `*/4`; see
+The morning digest is restored for October at 05:00 UTC (08:00 Moscow) daily.
+Its wrapper retains the lock and per-Moscow-date state to prevent duplicate
+delivery. It uses the existing Telegram outbox and host relay.
+
+Result pushes, deadline pushes and scheduled restore verification remain absent
+from the managed cron. Backups run on day-of-month `*/4`; see
 `BACKUP_RECOVERY.md` for freshness and weekly retention.
 
 The light monitor and Telegram relay remain host-local. Every hour, monitor-due
