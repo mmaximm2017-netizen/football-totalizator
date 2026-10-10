@@ -15,6 +15,7 @@ def match(match_id, tournament, kickoff):
         "away_team": "ЦСКА",
         "kickoff_time": kickoff,
         "status": "SCHEDULED",
+        "tournament_id": 6 if tournament == "Кубок России" else 5,
     }
 
 
@@ -115,8 +116,8 @@ def test_render_groups_multiple_tournaments_with_friendly_names():
 def test_schedule_uses_moscow_day_boundary_and_groups_tournaments():
     cursor = Cursor(
         rows=[
-            (1, "Чемпионат России 🇷🇺", "Акрон", "ЦСКА", datetime(2026, 8, 28, 21, 30, tzinfo=timezone.utc), "SCHEDULED"),
-            (2, "Кубок России", "Зенит", "Ростов", datetime(2026, 8, 28, 14, 0, tzinfo=timezone.utc), "SCHEDULED"),
+            (1, "Чемпионат России 🇷🇺", "Акрон", "ЦСКА", datetime(2026, 8, 28, 21, 30, tzinfo=timezone.utc), "SCHEDULED", 5),
+            (2, "Кубок России", "Зенит", "Ростов", datetime(2026, 8, 28, 14, 0, tzinfo=timezone.utc), "SCHEDULED", 6),
         ]
     )
 
@@ -348,3 +349,33 @@ def test_runner_uses_production_image_fallback_when_primary_container_is_missing
     assert "image ls --format" in source
     assert "echo missing" in source
     assert source.index("resolve_fallback_image") < source.index("no production image fallback is available")
+
+
+def test_today_standings_deduplicate_and_reuse_canonical_ranking():
+    cur = Cursor()
+    kickoff = datetime(2026, 8, 28, 15, tzinfo=timezone.utc)
+    matches = [match(1, "РПЛ", kickoff), match(2, "РПЛ", kickoff), match(3, "Кубок России", kickoff)]
+    with patch.object(digest, "get_tournament_ranking", return_value=[]) as ranking:
+        tables = digest.fetch_today_standings(cur, matches)
+    assert {table["tournament_id"] for table in tables} == {5, 6}
+    assert ranking.call_count == 2
+    assert all(call.kwargs == {"cur": cur} for call in ranking.call_args_list)
+    with patch.object(digest, "get_tournament_ranking") as ranking:
+        assert digest.fetch_today_standings(cur, []) == []
+        ranking.assert_not_called()
+
+
+def test_standings_only_for_tournaments_playing_today():
+    kickoff = datetime(2026, 8, 28, 15, tzinfo=timezone.utc)
+    tables = [
+        {"tournament_id": 5, "tournament_name": "РПЛ", "ranking": [{"place": 1, "username": "Игрок РПЛ", "points": 217}]},
+        {"tournament_id": 6, "tournament_name": "Кубок России", "ranking": [{"place": 1, "username": "Игрок Кубка", "points": 99}]},
+    ]
+    message = digest.render_digest(digest_data(today_matches=[match(1, "РПЛ", kickoff)], standings=tables))
+    assert "🏆 Таблица ТОТИШ: РПЛ" in message
+    assert "1. Игрок РПЛ · 217" in message
+    assert "Игрок Кубка" not in message
+    message = digest.render_digest(digest_data(tomorrow_matches=[match(2, "Кубок России", kickoff)], standings=tables))
+    assert "🏆" not in message
+    assert "Игрок РПЛ" not in message
+    assert "Игрок Кубка" not in message

@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from app.db import close_db, get_db
 from app.models.scoring import calculate_points, has_valid_finished_score
+from app.services.ranking_service import get_tournament_ranking
 from app.utils import RU_MONTHS_GENITIVE
 
 MSK = ZoneInfo("Europe/Moscow")
@@ -49,7 +50,7 @@ def fetch_schedule_matches(cur, today):
     tomorrow = today + timedelta(days=1)
     cur.execute(
         """
-        SELECT m.id, t.name, m.home_team, m.away_team, m.kickoff_time, m.status
+        SELECT m.id, t.name, m.home_team, m.away_team, m.kickoff_time, m.status, m.tournament_id
         FROM matches m
         LEFT JOIN tournaments t ON t.id = m.tournament_id
         WHERE (m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date IN (%s, %s)
@@ -59,11 +60,12 @@ def fetch_schedule_matches(cur, today):
     )
     today_matches = []
     tomorrow_matches = []
-    for match_id, tournament_name, home_team, away_team, kickoff_time, status in cur.fetchall():
+    for match_id, tournament_name, home_team, away_team, kickoff_time, status, tournament_id in cur.fetchall():
         if kickoff_time is None:
             continue
         item = {
             "match_id": match_id,
+            "tournament_id": tournament_id,
             "tournament_name": tournament_name or "Турнир не указан",
             "home_team": home_team or "Команда не указана",
             "away_team": away_team or "Команда не указана",
@@ -75,6 +77,23 @@ def fetch_schedule_matches(cur, today):
         else:
             tomorrow_matches.append(item)
     return today_matches, tomorrow_matches
+
+
+def fetch_today_standings(cur, matches):
+    """Reuse the site's ranking, once per tournament playing today."""
+    tournaments = {}
+    for match in matches:
+        tournament_id = match.get("tournament_id")
+        if tournament_id is not None:
+            tournaments.setdefault(tournament_id, match["tournament_name"])
+    return [
+        {
+            "tournament_id": tournament_id,
+            "tournament_name": name,
+            "ranking": get_tournament_ranking(tournament_id, cur=cur),
+        }
+        for tournament_id, name in sorted(tournaments.items(), key=lambda item: (item[1], item[0]))
+    ]
 
 
 def find_finished_matches_without_result(cur):
@@ -258,10 +277,12 @@ def collect_digest(
     conn = cur = None
     today_matches = []
     tomorrow_matches = []
+    standings = []
     try:
         conn = get_db()
         cur = conn.cursor()
         today_matches, tomorrow_matches = fetch_schedule_matches(cur, today)
+        standings = fetch_today_standings(cur, today_matches)
         for match in find_finished_matches_without_result(cur):
             issues.append(
                 f"🔴 {match['home_team']} — {match['away_team']} завершён, но результат не внесён."
@@ -283,6 +304,7 @@ def collect_digest(
         "issues": issues,
         "today_matches": today_matches,
         "tomorrow_matches": tomorrow_matches,
+        "standings": standings,
     }
 
 
@@ -319,6 +341,16 @@ def render_digest(data):
     lines.extend(["", "⚽ Сегодня", ""])
     if data["today_matches"]:
         lines.extend(_render_matches(data["today_matches"]))
+        today_ids = {match.get("tournament_id") for match in data["today_matches"]}
+        for standing in data.get("standings", []):
+            if standing["tournament_id"] not in today_ids:
+                continue
+            name = _friendly_tournament_name(standing["tournament_name"])
+            lines.extend(["", f"🏆 Таблица ТОТИШ: {name}", "Место · Участник · Очки"])
+            for player in standing["ranking"]:
+                lines.append(f"{player['place']}. {player['username']} · {player['points']}")
+            if not standing["ranking"]:
+                lines.append("Участников пока нет.")
     else:
         lines.append("Сегодня матчей нет.")
         if data["tomorrow_matches"]:
