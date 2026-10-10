@@ -41,12 +41,12 @@ def test_production_cron_contains_expected_jobs_once():
         "refresh_db_activity_gate.sh",
         "run_auto_results.sh",
         "run_database_backup.sh",
+        "run_morning_digest.sh",
     ]
     for name in exact_once:
         assert cron.count(name) == 1
 
     disabled_for_cu_conservation = [
-        "run_morning_digest.sh",
         "run_deadline_pushes.sh",
         "run_match_result_pushes.sh",
         "verify_database_backup_restore.sh",
@@ -58,6 +58,8 @@ def test_production_cron_contains_expected_jobs_once():
     assert cron.count("db_activity_gate.py") == 2
     assert "0 * * * *" in cron
     assert "30 3 */4 * *" in cron
+    digest_entries = [line for line in cron.splitlines() if "run_morning_digest.sh" in line]
+    assert digest_entries[0].split()[:5] == ["0", "5", "*", "*", "*"]
 
 
 def test_production_cron_does_not_embed_secrets():
