@@ -193,6 +193,7 @@ def main_keyboard():
             [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
             [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
             [{"text": "⚙️ Система", "callback_data": "adm:system"}],
+            [{"text": "❓ Вопросы по базе", "callback_data": "adm:help"}],
             [{"text": "🔄 Обновить", "callback_data": "adm:main"}],
         ]
     )
@@ -739,6 +740,8 @@ def _leaves_today_section(callback_data):
 
 
 def _render_callback(callback_data):
+    if callback_data == "adm:help":
+        return _assistant_help(), main_keyboard()
     prediction_callback = re.fullmatch(r"adm:pred:(show|refresh):([1-9][0-9]*)", callback_data)
     if prediction_callback:
         action, match_id = prediction_callback.groups()
@@ -785,10 +788,57 @@ def _chat_id(update):
     return chat_id if isinstance(chat_id, int) else None
 
 
+def _authorized_sender(update):
+    """Telegram chat is a delivery target, never proof of sender identity."""
+    values = load_env()
+    configured = values.get("TELEGRAM_ADMIN_USER_ID") or os.getenv("TELEGRAM_ADMIN_USER_ID", "")
+    source = update.get("callback_query") or update.get("message") or {}
+    sender = source.get("from") or {}
+    return (
+        str(configured).isdigit() and int(configured) > 0
+        and type(sender.get("id")) is int and sender["id"] == int(configured)
+        and sender.get("is_bot") is not True
+        and not (update.get("message") or {}).get("sender_chat")
+    )
+
+
+def _assistant_help():
+    # Host scripts run without application dependencies. Help never wakes the DB.
+    return (
+        "❓ Вопросы ТОТИШу\n\n"
+        "Кто сейчас на первом месте в РПЛ?\n"
+        "Покажи таблицу РПЛ.\n"
+        "Сколько очков набрал Бек в РПЛ?\n"
+        "Кто сколько набрал за 17, 18 и 19 октября в РПЛ?\n"
+        "Кто поставил на Локомотив — Краснодар в РПЛ?\n"
+        "Как поставили на сегодняшние матчи РПЛ?\n"
+        "Кто угадал точный счёт сегодня в РПЛ?\n"
+        "Когда Макс Зенит последний раз получал 10 очков в РПЛ?\n"
+        "Очки игроков в девятом туре РПЛ.\n"
+        "Какие матчи сегодня в РПЛ?\n"
+        "Кто не сделал прогноз сегодня в РПЛ?\n\n"
+        "Уточнения: турнир, имя, дата, номер из списка. Контекст: 15 минут, до перезапуска помощника.\n"
+        "Даты без года: текущий год. Время МСК. /reset — сброс.\n"
+        "До дедлайна прогнозы и их отсутствие закрыты."
+    )
+
+
+def _assistant_chunks(text):
+    """Send every line; do not silently truncate a long standings/prediction list."""
+    while len(text) > MAX_MESSAGE_LENGTH:
+        split = text.rfind("\n", 0, MAX_MESSAGE_LENGTH)
+        if split <= 0:
+            split = MAX_MESSAGE_LENGTH
+        yield text[:split]
+        text = text[split:].lstrip("\n")
+    if text:
+        yield text
+
+
 def _handle_update(token, admin_chat_id, update):
     chat_id = _chat_id(update)
     callback = update.get("callback_query")
-    if chat_id != admin_chat_id:
+    if chat_id != admin_chat_id or not _authorized_sender(update):
         if isinstance(callback, dict) and callback.get("id"):
             _answer_callback_best_effort(token, callback["id"])
         logger.warning("telegram_admin_unauthorized_update chat_id=%s", chat_id)
@@ -845,6 +895,26 @@ def _handle_update(token, admin_chat_id, update):
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") in {"/start", "/menu"}:
         _deliver_with_retry(token, chat_id, _main_text(), main_keyboard())
+    elif isinstance(message, dict) and isinstance(message.get("text"), str):
+        text = message["text"]
+        if text.strip().lower() in {"/help", "помощь", "справка"}:
+            response = _assistant_help()
+        elif len(text) > 1000:
+            response = "Слишком длинный запрос. Максимум 1000 символов."
+        else:
+            try:
+                payload = _helper._exchange(
+                    {"action": "assistant", "text": text, "scope": f"{chat_id}:{message['from']['id']}"},
+                    QUERY_TIMEOUT,
+                )
+                response = payload["text"]
+            except Exception as exc:  # noqa: BLE001 - never disclose SQL, credentials, or tracebacks.
+                logger.warning("telegram_assistant_failed type=%s", type(exc).__name__)
+                response = "⚠️ Не удалось прочитать данные. Проверьте read-only доступ или повторите позже."
+        for chunk in _assistant_chunks(response):
+            delivered, _ = _deliver_with_retry(token, chat_id, chunk, main_keyboard())
+            if not delivered:
+                break
     return True
 
 

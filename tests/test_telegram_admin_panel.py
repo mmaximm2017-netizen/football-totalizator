@@ -12,6 +12,11 @@ from app.utils import is_before_deadline
 from scripts import telegram_admin_bot as bot
 
 
+@pytest.fixture(autouse=True)
+def admin_sender_config(monkeypatch):
+    monkeypatch.setattr(bot, "load_env", lambda: {"TELEGRAM_ADMIN_USER_ID": "456"})
+
+
 def match_row(deadline):
     return (42, 5, "Чемпионат России 🇷🇺", "Акрон", "ЦСКА", datetime(2026, 8, 28, 15, 0, tzinfo=timezone.utc), deadline, "SCHEDULED")
 
@@ -66,7 +71,7 @@ def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
 
-    assert callbacks == ["adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:main"]
+    assert callbacks == ["adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:help", "adm:main"]
     assert "adm:predictions" not in callbacks
     assert all(callback.startswith("adm:") for callback in callbacks)
 
@@ -98,7 +103,7 @@ def test_legacy_predictions_callback_routes_to_today_dashboard():
 
 def test_unauthorized_callback_is_acknowledged_without_query():
     token_calls = []
-    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 999}, "message_id": 1}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:today", "message": {"chat": {"id": 999}, "message_id": 1}}}
 
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: token_calls.append(args[1]) or True), patch.object(bot, "_docker_query") as query:
         assert bot._handle_update("token", 123, update) is True
@@ -109,7 +114,7 @@ def test_unauthorized_callback_is_acknowledged_without_query():
 
 def test_authorized_callback_acknowledges_then_edits_message():
     calls = []
-    update = {"callback_query": {"id": "cb", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}}
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append(args[1]) or True):
         assert bot._handle_update("token", 123, update) is True
 
@@ -131,7 +136,7 @@ def test_message_not_modified_is_benign():
 )
 def test_expired_callback_acknowledgement_does_not_block_authorized_action(description):
     calls = []
-    update = {"callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         calls.append(method)
@@ -148,7 +153,7 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
 
 def test_callback_ack_network_timeout_does_not_block_authorized_action():
     calls = []
-    update = {"callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         calls.append(method)
@@ -172,7 +177,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
     ),
 )
 def test_nonexpired_callback_ack_errors_do_not_block_render(error):
-    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         if method == "answerCallbackQuery":
@@ -225,7 +230,7 @@ def test_long_poll_has_grace_timeout_but_regular_post_does_not(monkeypatch):
 
 
 def test_unknown_callback_is_safe():
-    update = {"callback_query": {"id": "cb", "data": "adm:unknown", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:unknown", "message": {"chat": {"id": 123}, "message_id": 7}}}
     with patch.object(bot, "_telegram_request", return_value=True) as request, patch.object(bot, "_docker_query") as query:
         assert bot._handle_update("token", 123, update) is True
 
@@ -252,7 +257,7 @@ def test_malformed_callbacks_never_query_totish(callback):
 
 def test_container_query_failure_returns_safe_admin_message_without_traceback():
     calls = []
-    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append((args[1], args[2])) or True), patch.object(bot, "_docker_query", side_effect=RuntimeError("DATABASE_URL=secret")):
         assert bot._handle_update("token", 123, update) is True
 
@@ -353,7 +358,7 @@ def test_expired_callback_advances_offset_after_successful_render(tmp_path, monk
     monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
     monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
-    update = {"update_id": 10, "callback_query": {"id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"update_id": 10, "callback_query": {"from": {"id": 456}, "id": "old", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         if method == "getUpdates":
@@ -376,7 +381,7 @@ def test_callback_network_timeout_advances_offset_after_successful_render(tmp_pa
     monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
     monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
-    update = {"update_id": 10, "callback_query": {"id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"update_id": 10, "callback_query": {"from": {"id": 456}, "id": "fresh", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         if method == "getUpdates":
@@ -406,7 +411,7 @@ def test_get_updates_network_error_remains_controlled_poller_failure(tmp_path, m
 
 
 def test_delivery_retries_once_then_succeeds_and_advances_offset(monkeypatch):
-    updates = [{"update_id": 10, "callback_query": {"id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}}]
+    updates = [{"update_id": 10, "callback_query": {"from": {"id": 456}, "id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}}]
     edit_attempts = []
     saved_offsets = []
 
@@ -431,8 +436,8 @@ def test_delivery_retries_once_then_succeeds_and_advances_offset(monkeypatch):
 
 def test_poisoned_delivery_does_not_block_next_update_or_offset(monkeypatch):
     updates = [
-        {"update_id": 10, "callback_query": {"id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}},
-        {"update_id": 11, "callback_query": {"id": "cb2", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 8}}},
+        {"update_id": 10, "callback_query": {"from": {"id": 456}, "id": "cb1", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 7}}},
+        {"update_id": 11, "callback_query": {"from": {"id": 456}, "id": "cb2", "data": "adm:main", "message": {"chat": {"id": 123}, "message_id": 8}}},
     ]
     attempts = {7: 0, 8: 0}
     saved_offsets = []
@@ -463,7 +468,7 @@ def test_malformed_update_with_id_advances_offset_and_does_not_block_following_u
     monkeypatch.setattr(bot, "LOCK_FILE", tmp_path / "lock")
     monkeypatch.setattr(bot, "_config", lambda: ("token", 123))
     monkeypatch.setattr(bot, "_lock", lambda: type("Lock", (), {"close": lambda self: None})())
-    monkeypatch.setattr(bot, "_telegram_request", lambda *args, **kwargs: [{"update_id": 10, "callback_query": {"id": "cb", "message": None}}, {"update_id": 11, "message": {"chat": {"id": 123}, "text": "/start"}}])
+    monkeypatch.setattr(bot, "_telegram_request", lambda *args, **kwargs: [{"update_id": 10, "callback_query": {"from": {"id": 456}, "id": "cb", "message": None}}, {"update_id": 11, "message": {"chat": {"id": 123}, "text": "/start"}}])
     handled = []
     monkeypatch.setattr(bot, "_handle_update", lambda *args: handled.append(args[2]["update_id"]) or True)
 
@@ -840,7 +845,7 @@ def test_today_photo_not_modified_does_not_create_duplicate(tmp_path, monkeypatc
 def test_leaving_today_deletes_photo_before_opening_text_section(callback_data, monkeypatch):
     bot._today_photo_messages[123] = [77]
     calls = []
-    update = {"callback_query": {"id": "cb", "data": callback_data, "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": callback_data, "message": {"chat": {"id": 123}, "message_id": 7}}}
 
     def request(token, method, payload, timeout, **kwargs):
         calls.append(method)
@@ -857,7 +862,7 @@ def test_leaving_today_deletes_photo_before_opening_text_section(callback_data, 
 def test_today_refresh_keeps_photo_and_uses_media_edit(monkeypatch):
     bot._today_photo_messages[123] = [77]
     payload = {"matches": [{}], "photo_paths": ["page"], "photo_error": False}
-    update = {"callback_query": {"id": "cb", "data": "adm:today:refresh", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:today:refresh", "message": {"chat": {"id": 123}, "message_id": 7}}}
     delete = MagicMock()
     sync = MagicMock(return_value=True)
     monkeypatch.setattr(bot, "_delete_today_photos_if_present", delete)
@@ -904,7 +909,7 @@ def test_today_cleanup_network_error_is_bounded_and_nonfatal(monkeypatch):
 
 
 def test_text_section_to_text_section_uses_edit_not_new_message(monkeypatch):
-    update = {"callback_query": {"id": "cb", "data": "adm:system", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:system", "message": {"chat": {"id": 123}, "message_id": 7}}}
     calls = []
     monkeypatch.setattr(bot, "_render_callback", lambda data: ("system", bot.main_keyboard()))
     monkeypatch.setattr(bot, "_telegram_request", lambda token, method, payload, timeout: calls.append(method) or True)
@@ -1013,7 +1018,7 @@ def test_edit_message_media_not_modified_is_benign(tmp_path, monkeypatch):
 
 def test_today_photo_failure_keeps_text_callback_handled(monkeypatch):
     payload = {"matches": [{"tournament_name": "РПЛ", "kickoff_time": "2026-08-28T15:00:00+00:00", "home_team": "Акрон", "away_team": "ЦСКА", "predicted_count": 1, "participant_count": 2}], "photo_paths": ["bad"], "photo_error": False}
-    update = {"callback_query": {"id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
+    update = {"callback_query": {"from": {"id": 456}, "id": "cb", "data": "adm:today", "message": {"chat": {"id": 123}, "message_id": 7}}}
     deliveries = []
     monkeypatch.setattr(bot, "_render_callback", lambda data: bot._format_today_dashboard(payload))
     monkeypatch.setattr(bot, "_deliver_with_retry", lambda *args, **kwargs: deliveries.append(args[2]) or (True, None))

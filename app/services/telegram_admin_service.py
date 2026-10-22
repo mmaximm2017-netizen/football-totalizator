@@ -23,6 +23,7 @@ from app.utils import MSK, is_before_deadline
 
 MAX_CALENDAR_MATCHES = 10
 ALLOWED_ACTIONS = {
+    "assistant",
     "today",
     "today-dashboard",
     "prediction-status",
@@ -429,6 +430,10 @@ def dispatch_request(request):
     action = request.get("action")
     if action not in ALLOWED_ACTIONS:
         raise ValueError("invalid_action")
+    if action == "assistant":
+        from app.services.telegram_sql_assistant import answer
+
+        return answer(request.get("text"), request.get("scope"))
     kind = request.get("kind")
     if kind is not None and kind not in {"rpl", "cup"}:
         raise ValueError("invalid_kind")
