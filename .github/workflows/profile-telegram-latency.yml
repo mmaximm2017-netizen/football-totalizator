@@ -1,0 +1,97 @@
+name: Profile Telegram latency
+on:
+  push:
+    branches: [ops/profile-telegram-latency]
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 6
+    steps:
+      - name: Read-only timing samples
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            import hashlib
+            import os
+            import time
+            from contextlib import contextmanager
+            from app.services import telegram_bot_ui_service as ui
+            from app.services import telegram_sql_assistant as assistant
+            from app.gpt_db import short_gpt_read
+            print('PROFILE_RELEASE', os.environ.get('TOTISH_RELEASE'))
+            class TimedCursor:
+                def __init__(self, cur):
+                    self.cur = cur
+                def execute(self, sql, params=()):
+                    start = time.monotonic()
+                    try:
+                        self.cur.execute(sql, params)
+                    finally:
+                        print('PROFILE_SQL', hashlib.sha256(sql.encode()).hexdigest()[:10], round(1000 * (time.monotonic() - start)), flush=True)
+                def fetchall(self):
+                    return self.cur.fetchall()
+            @contextmanager
+            def measured_reader():
+                start = time.monotonic()
+                with short_gpt_read() as cur:
+                    print('PROFILE_CONNECT_MS', round(1000 * (time.monotonic() - start)), flush=True)
+                    yield TimedCursor(cur)
+            ui.short_gpt_read = measured_reader
+            assistant.short_gpt_read = measured_reader
+            cases = [
+                ('ranking_rpl', 'ui:v:rpl:ranking:all:0:0'),
+                ('rounds_rpl', 'ui:r:rpl:points:all:0:0'),
+                ('wins_rpl', 'ui:v:rpl:round_wins:all:0:0'),
+                ('streak_rpl', 'ui:v:rpl:streak:all:0:0'),
+                ('average_rpl', 'ui:v:rpl:average:all:0:0'),
+                ('predictions_today', 'ui:v:rpl:predictions:today:0:0'),
+                ('ranking_cup', 'ui:v:cup:ranking:all:0:0'),
+            ]
+            for name, callback in cases:
+                print('PROFILE_BEGIN', name, flush=True)
+                start = time.monotonic()
+                try:
+                    result = ui.render(callback)
+                    assert result['text'] and result['rows']
+                    print('PROFILE_TOTAL_MS', name, round(1000 * (time.monotonic() - start)), flush=True)
+                except Exception as exc:
+                    print('PROFILE_ERROR', name, type(exc).__name__, round(1000 * (time.monotonic() - start)), flush=True)
+            PY
+            python3 - <<'PY'
+            import time
+            import subprocess
+            from scripts import telegram_admin_bot as bot
+            try:
+                for name, data in [('local_menu', 'ui:s:stats'), ('helper_ranking', 'ui:v:rpl:ranking:all:0:0'), ('helper_wins', 'ui:v:rpl:round_wins:all:0:0')]:
+                    start = time.monotonic()
+                    try:
+                        bot._ui_screen(data, 'profile')
+                        print('PROFILE_HOST_MS', name, round(1000 * (time.monotonic() - start)), flush=True)
+                    except Exception as exc:
+                        print('PROFILE_HOST_ERROR', name, type(exc).__name__, flush=True)
+                start = time.monotonic()
+                try:
+                    token, _ = bot._config()
+                    bot._telegram_request(token, 'getMe', {}, timeout=5)
+                    print('PROFILE_TELEGRAM_MS', round(1000 * (time.monotonic() - start)), flush=True)
+                except Exception:
+                    print('PROFILE_TELEGRAM_UNAVAILABLE', flush=True)
+                logs = subprocess.run(['journalctl', '-u', 'totish-telegram-admin.service', '--since', '-30 min', '--no-pager', '-o', 'cat'], capture_output=True, text=True, timeout=10)
+                timings = [line for line in logs.stdout.splitlines() if 'telegram_admin_callback duration_ms=' in line]
+                print('PROFILE_JOURNAL_SAMPLES', len(timings), flush=True)
+                for line in timings[-20:]:
+                    print('PROFILE_CALLBACK_MS', line.rsplit('duration_ms=', 1)[-1], flush=True)
+            finally:
+                bot._helper.close()
+            PY
