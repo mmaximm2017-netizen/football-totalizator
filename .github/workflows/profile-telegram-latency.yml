@@ -29,7 +29,9 @@ jobs:
             commands=[['journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat']]
             allowed=subprocess.run(['sudo','-n','-l'],capture_output=True,text=True,timeout=10)
             print('BOT_SUDO_LIST_STATUS',allowed.returncode,flush=True)
-            if allowed.returncode==0 and re.search(r'NOPASSWD:.*journalctl',allowed.stdout):
+            print('BOT_SUDO_COMMAND_PATHS',','.join(sorted(set(re.findall(r'/[A-Za-z0-9_./-]+', allowed.stdout)))),flush=True)
+            print('BOT_SUDO_NOPASSWD', 'NOPASSWD' in allowed.stdout, flush=True)
+            if allowed.returncode==0 and re.search(r'NOPASSWD:[\s\S]*journalctl',allowed.stdout):
                 commands.append(['sudo','-n','journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat'])
             for command in commands:
                 logs=subprocess.run(command,capture_output=True,text=True,timeout=15)
