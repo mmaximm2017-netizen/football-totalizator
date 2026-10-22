@@ -1,0 +1,57 @@
+name: Read-only Telegram audit
+on:
+  push:
+    branches: [ops/audit-telegram-20261022]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Read runtime and reader privileges without sending messages
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 3m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            printf 'MANAGED_RELEASE '
+            cat .totish-managed-release
+            systemctl show totish-telegram-admin.service --property=ActiveState,SubState,ExecMainStartTimestamp,FragmentPath,User,NoNewPrivileges,PrivateTmp
+            docker exec -i football-totalizator-app-1 python - <<'PYAUDIT'
+            import os, time
+            from app.gpt_db import short_gpt_read
+            from app.services.telegram_bot_ui_service import render
+            print('APP_RELEASE', os.environ.get('TOTISH_RELEASE', 'unknown'))
+            with short_gpt_read() as cur:
+                cur.execute("SELECT current_user, current_setting('transaction_read_only')")
+                print('READER_SESSION', cur.fetchone())
+                cur.execute("SELECT rolsuper, rolcreaterole, rolcreatedb, rolbypassrls FROM pg_roles WHERE rolname=current_user")
+                print('READER_ROLE_FLAGS', cur.fetchone())
+                for table in ('public.users','public.predictions','public.matches','gpt_safe.users','gpt_safe.predictions','gpt_safe.matches'):
+                    cur.execute("SELECT has_table_privilege(current_user,%s,'SELECT'), has_table_privilege(current_user,%s,'INSERT,UPDATE,DELETE,TRUNCATE')", (table,table))
+                    print('READER_GRANT', table, cur.fetchone())
+                cur.execute("SELECT COUNT(*) FROM gpt_safe.predictions WHERE deadline IS NULL OR deadline > CURRENT_TIMESTAMP")
+                print('VISIBLE_PREDEADLINE_PREDICTIONS', cur.fetchone()[0])
+            for kind in ('rpl','cup'):
+                start=time.monotonic()
+                payload=render(f'ui:v:{kind}:ranking:all:0:0')
+                print('TABLE_RENDER',kind,'text_chars',len(payload['text']),'keyboard_rows',len(payload['rows']),'ms',round((time.monotonic()-start)*1000))
+            PYAUDIT
+            python3 - <<'PYHOST'
+            import time
+            from scripts import telegram_admin_bot as bot
+            token,_=bot._config()
+            started=time.monotonic()
+            try:
+                result=bot._telegram_request(token,'getWebhookInfo',{},timeout=3)
+                print('TELEGRAM_WEBHOOK',bool(result.get('url')),'pending_updates',result.get('pending_update_count'),'ms',round((time.monotonic()-started)*1000))
+            except Exception as exc:
+                print('TELEGRAM_PROBE_ERROR',type(exc).__name__)
+            PYHOST
