@@ -17,6 +17,7 @@
     hits: ['target', 'Попадания в точный счёт'],
     streak: ['streak', 'Матчи без точного счёта']
   };
+  const metricTitles = {points: 'Очки', round_wins: 'Победы в турах', average: 'Средние очки', hits: 'Точные счета', streak: 'Серии без точного счёта'};
 
   function node(tag, className, text) {
     const element = document.createElement(tag);
@@ -99,6 +100,123 @@
     table.append(body);
     if (body.childElementCount) $('content').append(table);
   }
+  function matchHeader(lines, index) {
+    const teams = lines[index]?.split(' — ');
+    const stamp = lines[index + 1]?.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2}) МСК$/);
+    if (teams?.length !== 2 || teams.some(team => !team.trim()) || !stamp) return null;
+    const [, day, month, year, hour, minute] = stamp;
+    const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+    if (date.getUTCFullYear() !== Number(year) || date.getUTCMonth() + 1 !== Number(month) || date.getUTCDate() !== Number(day) || Number(hour) > 23 || Number(minute) > 59) return null;
+    return {home: teams[0], away: teams[1], date, day: `${year}-${month}-${day}`, time: `${hour}:${minute}`, details: []};
+  }
+  function predictionRows(lines) {
+    const rows = [];
+    for (const line of lines) {
+      const score = line.match(/^(.+): (\d+):(\d+)$/);
+      const missing = line.match(/^(.+): нет прогноза$/);
+      if (score) rows.push({name: score[1], value: `${score[2]}:${score[3]}`});
+      else if (missing) rows.push({name: missing[1], value: 'Нет прогноза', missing: true});
+      else return null;
+    }
+    return rows;
+  }
+  function scheduleCards(body, metric) {
+    const lines = body.split('\n').filter(line => line.trim());
+    const matches = [];
+    for (let i = 0; i < lines.length;) {
+      const match = matchHeader(lines, i);
+      if (!match) return false;
+      i += 2;
+      while (i < lines.length && !matchHeader(lines, i)) match.details.push(lines[i++]);
+      // Unknown or partial schedule formats keep the original readable text.
+      if (metric === 'matches' && match.details.length) return false;
+      matches.push(match);
+    }
+    if (!matches.length) return false;
+    let group, previousDay;
+    for (const match of matches) {
+      if (match.day !== previousDay) {
+        group = node('section', 'match-day');
+        const heading = node('h2', 'day-heading');
+        const date = node('time', '', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(match.date));
+        date.dateTime = match.day;
+        heading.append(date, node('span', 'day-weekday', new Intl.DateTimeFormat('ru-RU', {weekday: 'long', timeZone: 'UTC'}).format(match.date)));
+        group.append(heading); $('content').append(group); previousDay = match.day;
+      }
+      const card = node('article', 'match-card');
+      card.setAttribute('aria-label', `${match.home} — ${match.away}, ${match.time} МСК`);
+      const fixture = node('div', 'match-fixture');
+      const teams = node('div', 'match-teams');
+      for (const [index, name] of [match.home, match.away].entries()) {
+        const team = node('div', 'match-team');
+        const mark = node('span', 'team-initial' + (index ? ' away' : ''), Array.from(name.trim())[0]);
+        mark.setAttribute('aria-hidden', 'true');
+        team.append(mark, node('span', 'team-name', name)); teams.append(team);
+      }
+      const clock = node('div', 'match-clock');
+      const time = node('time', '', match.time); time.dateTime = match.time;
+      clock.append(time, node('span', '', 'МСК')); fixture.append(teams, clock); card.append(fixture);
+      if (match.details.length) {
+        const rows = predictionRows(match.details);
+        if (rows) {
+          const table = node('table', 'prediction-table');
+          table.setAttribute('aria-label', `Прогнозы: ${match.home} — ${match.away}`);
+          const head = node('thead'), header = node('tr');
+          for (const title of ['Участник', 'Прогноз']) { const cell = node('th', '', title); cell.scope = 'col'; header.append(cell); }
+          head.append(header); const tbody = node('tbody');
+          for (const entry of rows) {
+            const row = node('tr'); row.append(node('td', 'prediction-name', entry.name), node('td', entry.missing ? 'prediction-missing' : 'prediction-score', entry.value)); tbody.append(row);
+          }
+          table.append(head, tbody); card.append(table);
+        } else {
+          // Deadline messages and unrecognized continuation notes are preserved.
+          card.append(node('p', 'match-note', match.details.join('\n')));
+        }
+      }
+      group.append(card);
+    }
+    return true;
+  }
+  function measurementTable(body, metric) {
+    if (metric === 'points') {
+      const lines = body.split('\n').filter(Boolean);
+      if (!lines.some(line => /^\d+\. .+: -?\d+(?:[.,]\d+)? очк\.$/.test(line))) return false;
+      rankingTable(lines); return true;
+    }
+    const labels = {round_wins: 'Победы', average: 'Ср. очки', hits: 'Точные счета', streak: 'Без точного'};
+    if (!labels[metric]) return false;
+    const entries = [], notes = [];
+    for (const line of body.split('\n').filter(Boolean)) {
+      let match;
+      if (metric === 'round_wins' && (match = line.match(/^(\d+)\. (.+): (\d+) побед$/))) entries.push({name: match[2], value: match[3], position: match[1]});
+      else if (metric === 'average' && (match = line.match(/^(.+): (-?\d+(?:[.,]\d+)?) очк\. \((\d+) прогнозов\)$/))) entries.push({name: match[1], value: match[2], note: `${match[3]} прогнозов`});
+      else if (metric === 'hits' && (match = line.match(/^(.+): (\d+) раз$/))) entries.push({name: match[1], value: match[2]});
+      else if (metric === 'streak' && (match = line.match(/^(.+): (\d+) матчей(?: \((.+)\))?$/))) entries.push({name: match[1], value: match[2], note: match[3] || ''});
+      else if (['average', 'hits'].includes(metric) && (match = line.match(/^(.+): нет прогнозов с начисленными очками$/))) entries.push({name: match[1], value: '—', note: 'Нет прогнозов с начисленными очками'});
+      else notes.push(line);
+    }
+    if (!entries.length) return false;
+    const table = node('table', 'measurement-table');
+    const head = node('thead'), header = node('tr');
+    for (const title of ['Участник', labels[metric]]) { const cell = node('th', '', title); cell.scope = 'col'; header.append(cell); }
+    head.append(header); const tbody = node('tbody');
+    for (const entry of entries) {
+      const row = node('tr'), person = node('td');
+      const name = node('div', 'measurement-name');
+      if (entry.position) name.append(node('span', 'measurement-position', entry.position.padStart(2, '0')));
+      name.append(node('span', '', entry.name)); person.append(name);
+      if (entry.note) person.append(node('span', 'measurement-note', entry.note));
+      const value = node('td', 'measurement-value', entry.value);
+      if (metric === 'streak') value.append(node('small', '', 'матчей'));
+      row.append(person, value); tbody.append(row);
+    }
+    table.append(head, tbody); $('content').append(table);
+    if (notes.length) {
+      const details = node('details', 'method-note');
+      details.append(node('summary', '', 'Как считается'), node('p', '', notes.join('\n'))); $('content').append(details);
+    }
+    return true;
+  }
   function follow(data) {
     if (data === 'adm:main') { history = []; return load(root()); }
     if (data.startsWith('ui:s:')) {
@@ -107,6 +225,8 @@
     if (data.startsWith('ui:')) return load(data, {push: true});
   }
   function draw(payload) {
+    const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
+    if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
     const text = payload.text || '';
     const divider = text.indexOf('\n\n');
     const heading = divider >= 0 ? text.slice(0, divider) : '';
@@ -122,8 +242,13 @@
       rankingTable(body.split('\n').filter(Boolean));
     } else {
       // Keep trusted result text intact; never interpret names or answers as HTML.
-      if (heading && !current.startsWith('ui:t:stats:')) $('content').append(node('p', 'screen-note', heading));
-      if (!expect && !current.startsWith('ui:t:stats:')) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
+      const enhanced = ['matches', 'predictions', 'points', 'round_wins', 'average', 'hits', 'streak'].includes(metric);
+      const context = enhanced && heading.includes('\n') ? heading.split('\n').slice(1).join('\n') : heading;
+      if (context && !current.startsWith('ui:t:stats:')) $('content').append(node('p', enhanced ? 'context-strip' : 'screen-note', context));
+      if (!expect && !current.startsWith('ui:t:stats:')) {
+        const rendered = ['matches', 'predictions'].includes(metric) ? scheduleCards(body, metric) : measurementTable(body, metric);
+        if (!rendered) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
+      }
       else if (expect) $('content').append(node('p', 'screen-note', 'Выберите один день или диапазон дат. Время МСК.'));
     }
     for (const row of payload.rows || []) {

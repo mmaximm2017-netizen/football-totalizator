@@ -56,6 +56,20 @@ context. The existing question parser remains deterministic and free of paid
 AI calls. Context is integrity protected, not encrypted; it contains the
 question filters already visible to the authorized user.
 
+## Result presentation
+
+The browser recognizes the existing fixed text formats without another database
+query: schedules become fixture cards grouped by Moscow calendar day, and each
+prediction list stays under its own fixture. Missing forecasts and pre-deadline
+notices remain explicit. A page starting midway through a forecast list keeps
+its original text rather than attributing rows to a guessed match.
+
+Points, round wins, averages, exact scores and streaks use labeled value columns.
+Explanations are kept in the expandable «Как считается» section; streak caveats
+and missing scored forecasts remain attached to the correct participant. Unknown
+or invalid formats fall back to the original text. All names and values use DOM
+text nodes, never HTML interpolation.
+
 ## Verification and release
 
 Run tests/test_telegram_mini_app.py and the existing Telegram tests. The CI UI

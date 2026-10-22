@@ -142,3 +142,39 @@ dialog::backdrop { background: #041c4770; backdrop-filter: blur(3px); }
   .metric-title { font-size: 13px; }
   .ranking-table .avatar { display: none; }
 }
+/* Result views share the same compact hierarchy: period, day, fixture, values. */
+.context-strip { margin: 0 0 22px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.match-day { margin: 0 0 24px; }
+.day-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin: 0 2px 11px; font-size: 13px; font-weight: 750; letter-spacing: -.2px; line-height: 1.5; }
+.day-weekday { color: var(--muted); font-size: 9px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+.match-card { overflow: hidden; margin-bottom: 9px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); box-shadow: var(--shadow); }
+.match-fixture { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 14px; }
+.match-teams { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.match-team { display: flex; align-items: center; gap: 9px; }
+.team-initial { display: grid; place-items: center; flex-shrink: 0; width: 27px; height: 27px; border-radius: 9px; background: var(--soft); color: var(--accent); font-size: 11px; font-weight: 750; border: 1px solid var(--line); }
+.team-initial.away { background: var(--raised); color: var(--muted); }
+.team-name { min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; font-weight: 650; }
+.match-clock { flex-shrink: 0; min-width: 64px; padding: 9px 8px; border-radius: 12px; background: var(--soft); color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
+.match-clock time { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
+.match-clock span { display: block; font-size: 8px; font-weight: 650; letter-spacing: .8px; margin-top: 3px; opacity: .8; }
+.match-note { white-space: pre-line; overflow-wrap: anywhere; padding: 13px 15px; margin: 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; background: var(--raised); }
+.prediction-table, .measurement-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.prediction-table th, .measurement-table th { padding: 11px 14px; font-size: 9px; font-weight: 650; text-align: left; color: var(--muted); background: var(--raised); border-bottom: 1px solid var(--line); }
+.prediction-table th:first-child { width: 65%; }
+.prediction-table th:last-child, .measurement-table th:last-child { text-align: right; }
+.prediction-table td, .measurement-table td { padding: 13px 14px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; vertical-align: middle; }
+.prediction-table tbody tr:last-child td, .measurement-table tbody tr:last-child td { border-bottom: 0; }
+.prediction-name { font-size: 12px; font-weight: 600; }
+.prediction-score { text-align: right; font-size: 17px; font-weight: 800; color: var(--accent); }
+.prediction-missing { text-align: right; color: var(--muted); font-size: 10px; }
+.measurement-table { border: 1px solid var(--line); border-radius: 20px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+.measurement-table th:last-child { width: 89px; }
+.measurement-name { display: flex; align-items: baseline; gap: 9px; font-size: 13px; line-height: 1.5; font-weight: 650; }
+.measurement-name > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.measurement-position { flex-shrink: 0; color: var(--muted); font-size: 10px; font-weight: 600; }
+.measurement-value { text-align: right; font-size: 22px; line-height: 1.2; font-weight: 800; color: var(--accent); }
+.measurement-value small { display: block; color: var(--muted); font-size: 9px; font-weight: 500; margin-top: 5px; }
+.measurement-note { display: block; color: var(--muted); font-size: 9px; line-height: 1.5; margin-top: 5px; }
+.method-note { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 15px; margin-top: 14px; padding: 0 14px; font-size: 11px; }
+.method-note summary { cursor: pointer; min-height: 44px; padding: 14px 0; font-weight: 600; }
+.method-note p { white-space: pre-line; line-height: 1.8; margin: 0 0 14px; }
