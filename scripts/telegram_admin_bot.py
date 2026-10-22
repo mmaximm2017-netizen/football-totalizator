@@ -28,6 +28,11 @@ try:
 except ModuleNotFoundError:  # Allows unit tests to import the script as a module.
     from scripts.host_telegram_notifier import load_env
 
+try:
+    from telegram_bot_ui import local_screen
+except ModuleNotFoundError:
+    from scripts.telegram_bot_ui import local_screen
+
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = Path.home() / ".local" / "state" / "totish"
@@ -72,6 +77,8 @@ HELPER_ACTIONS = {
 logger = logging.getLogger("totish.telegram_admin")
 TODAY_PHOTO_ROOT = (ROOT / "runtime" / "telegram-outbox" / "admin-cards").resolve()
 _today_photo_messages = {}
+_ui_inputs = {}
+UI_INPUT_TTL = 900
 
 
 def _config():
@@ -178,10 +185,7 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
     rows = list(extra_rows)
     rows.extend(
         [
-            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
-            [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
-            [{"text": "⚙️ Система", "callback_data": "adm:system"}],
-            [{"text": "🔄 Обновить", "callback_data": refresh_callback}],
+            [{"text": "↻ Обновить", "callback_data": refresh_callback}, {"text": "🏠 Меню", "callback_data": "adm:main"}],
         ]
     )
     return _keyboard(rows)
@@ -190,11 +194,10 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
 def main_keyboard():
     return _keyboard(
         [
-            [{"text": "⚽ Сегодня", "callback_data": "adm:today"}, {"text": "🏆 Таблица", "callback_data": "adm:table"}],
-            [{"text": "📅 Календарь", "callback_data": "adm:calendar"}, {"text": "🚨 Проблемы", "callback_data": "adm:problems"}],
-            [{"text": "⚙️ Система", "callback_data": "adm:system"}],
-            [{"text": "❓ Вопросы по базе", "callback_data": "adm:help"}],
-            [{"text": "🔄 Обновить", "callback_data": "adm:main"}],
+            [{"text": "🏆 Таблица", "callback_data": "ui:s:ranking"}, {"text": "⚽ Матчи", "callback_data": "ui:s:matches"}],
+            [{"text": "🎯 Прогнозы", "callback_data": "ui:s:predictions"}, {"text": "📊 Статистика", "callback_data": "ui:s:stats"}],
+            [{"text": "👤 Участник", "callback_data": "ui:s:player"}, {"text": "❓ Что спросить", "callback_data": "adm:help"}],
+            [{"text": "⚙️ Администрирование", "callback_data": "ui:tools"}],
         ]
     )
 
@@ -235,7 +238,7 @@ def _tournament_heading(name, table=False):
 
 
 def _main_text():
-    return f"🤖 ТОТИШ — Администратор\n{_updated_line()}"
+    return "⚽ ТОТИШ\n\nТаблица, прогнозы и статистика под рукой.\nВыберите раздел или напишите вопрос сообщением.\n\nНапример: кто сколько раз выигрывал туры РПЛ?"
 
 
 def _format_today(payload):
@@ -810,26 +813,19 @@ def _assistant_help():
     # Host scripts run without application dependencies. Help never wakes the DB.
     return (
         "❓ Вопросы ТОТИШу\n\n"
-        "Кто сейчас на первом месте в РПЛ?\n"
         "Покажи таблицу РПЛ.\n"
         "Сколько очков набрал Бек в РПЛ?\n"
-        "Кто сколько набрал за 17, 18 и 19 октября в РПЛ?\n"
-        "Кто поставил на Локомотив — Краснодар в РПЛ?\n"
+        "Кто сколько набрал вчера в РПЛ?\n"
         "Как поставили на сегодняшние матчи РПЛ?\n"
-        "Кто угадал точный счёт сегодня в РПЛ?\n"
-        "Когда Макс Зенит последний раз получал 10 очков в РПЛ?\n"
-        "Очки игроков в девятом туре РПЛ.\n"
-        "Какие матчи сегодня в РПЛ?\n"
-        "Кто не сделал прогноз сегодня в РПЛ?\n\n"
         "Кто сколько раз выигрывал туры РПЛ?\n"
-        "Какая серия без точного счёта у Бека в РПЛ?\n"
-        "Рекорд очков за матч у игроков РПЛ.\n"
-        "Сравни Бека и Макс Зенит в РПЛ.\n"
-        "Средние очки игроков в РПЛ.\n"
-        "Сколько раз Бек получал 10 очков в РПЛ?\n\n"
-        "Уточнения: турнир, имя, дата, номер из списка. Контекст: 15 минут, до перезапуска помощника.\n"
-        "Даты без года: текущий год. Время МСК. /reset — сброс.\n"
-        "До дедлайна прогнозы и их отсутствие закрыты."
+        "Сравни Бека и Макс Зенит в РПЛ.\n\n"
+        "Также доступны серии без точного счёта, рекорды, средние очки, "
+        "точные счета и последний прогноз на заданное число очков.\n\n"
+        "Турнир: РПЛ, Кубок России или ЧМ.\n"
+        "Период: сегодня, вчера, 9 тур или с 17.10 по 19.10.2026.\n"
+        "Даты без года: текущий год. Время МСК.\n"
+        "Контекст: 15 минут, до перезапуска помощника. /reset — сброс.\n"
+        "🔒 До дедлайна прогнозы и их отсутствие закрыты."
     )
 
 
@@ -845,6 +841,37 @@ def _assistant_chunks(text):
         yield text
 
 
+def _ui_screen(data, scope, text=None):
+    _ui_inputs.pop(scope, None)
+    payload = local_screen(data) if text is None else None
+    while payload and "next" in payload:
+        data = payload["next"]
+        payload = local_screen(data)
+    if not payload:
+        payload = _helper._exchange(
+            {"action": "assistant-ui", "callback": data, "text": text},
+            QUERY_TIMEOUT,
+        )
+    if payload.get("expect"):
+        if len(_ui_inputs) >= 32:
+            _ui_inputs.pop(next(iter(_ui_inputs)))
+        _ui_inputs[scope] = (time.monotonic(), payload["expect"])
+    return payload["text"], _keyboard(payload["rows"])
+
+
+def _assistant_markup(payload):
+    rows = []
+    for choice in payload.get("choices", [])[:8]:
+        # Choice text is only presentation. Callback carries a validated index.
+        rows.append([{"text": str(choice["label"])[:50], "callback_data": f"qa:{choice['value']}"}])
+    rows.append([{"text": "❓ Примеры", "callback_data": "adm:help"}, {"text": "🏠 Меню", "callback_data": "adm:main"}])
+    return _keyboard(rows)
+
+
+def _ask_assistant(text, scope):
+    return _helper._exchange({"action": "assistant", "text": text, "scope": scope}, QUERY_TIMEOUT)
+
+
 def _handle_update(token, admin_chat_id, update):
     chat_id = _chat_id(update)
     callback = update.get("callback_query")
@@ -857,10 +884,29 @@ def _handle_update(token, admin_chat_id, update):
         callback_id = callback.get("id")
         callback_data = callback.get("data", "")
         callback_started = time.monotonic()
-        if _leaves_today_section(callback_data):
+        scope = f"{chat_id}:{callback['from']['id']}"
+        _ui_inputs.pop(scope, None)
+        guided = isinstance(callback_data, str) and callback_data.startswith(("ui:", "qa:"))
+        if guided and callback_id:
+            _answer_callback_best_effort(token, callback_id)
+        if guided or _leaves_today_section(callback_data):
             _delete_today_photos_if_present(token, chat_id)
         try:
-            rendered = _render_callback(callback_data)
+            if isinstance(callback_data, str) and callback_data.startswith("ui:"):
+                rendered = _ui_screen(callback_data, scope)
+            elif isinstance(callback_data, str) and callback_data.startswith("qa:"):
+                choice = callback_data[3:]
+                values = {"rpl": "РПЛ", "cup": "Кубок России", "wc": "ЧМ", "today": "сегодня", "yesterday": "вчера"}
+                if choice not in values and not re.fullmatch(r"[1-9][0-9]{0,2}", choice):
+                    raise ValueError("invalid_assistant_choice")
+                payload = _ask_assistant(values.get(choice, choice), scope)
+                # Callback results may be long too; preserve every line.
+                chunks = list(_assistant_chunks(payload["text"]))
+                for chunk in chunks[:-1]:
+                    _deliver_with_retry(token, chat_id, chunk, _keyboard([]))
+                rendered = (chunks[-1], _assistant_markup(payload))
+            else:
+                rendered = _render_callback(callback_data)
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.
             logger.error("telegram_admin_query_failed type=%s", type(exc).__name__)
             _deliver_with_retry(
@@ -895,7 +941,7 @@ def _handle_update(token, admin_chat_id, update):
             "telegram_admin_callback_delivery_ready duration_ms=%s",
             int((time.monotonic() - callback_started) * 1000),
         )
-        if callback_id:
+        if callback_id and not guided:
             _answer_callback_best_effort(token, callback_id)
         logger.info(
             "telegram_admin_callback duration_ms=%s",
@@ -904,25 +950,34 @@ def _handle_update(token, admin_chat_id, update):
         return True
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") in {"/start", "/menu"}:
+        _ui_inputs.pop(f"{chat_id}:{message['from']['id']}", None)
         _deliver_with_retry(token, chat_id, _main_text(), main_keyboard())
     elif isinstance(message, dict) and isinstance(message.get("text"), str):
         text = message["text"]
+        scope = f"{chat_id}:{message['from']['id']}"
+        waiting = _ui_inputs.pop(scope, None)
+        if waiting and time.monotonic() - waiting[0] <= UI_INPUT_TTL and not text.startswith("/"):
+            try:
+                response, markup = _ui_screen(waiting[1], scope, text)
+            except Exception as exc:  # noqa: BLE001 - never disclose backend errors.
+                logger.warning("telegram_ui_failed type=%s", type(exc).__name__)
+                response, markup = "⚠️ Не удалось получить данные. Повторите выбор периода.", main_keyboard()
+            _deliver_with_retry(token, chat_id, response, markup)
+            return True
+        payload = {}
         if text.strip().lower() in {"/help", "помощь", "справка"}:
             response = _assistant_help()
         elif len(text) > 1000:
             response = "Слишком длинный запрос. Максимум 1000 символов."
         else:
             try:
-                payload = _helper._exchange(
-                    {"action": "assistant", "text": text, "scope": f"{chat_id}:{message['from']['id']}"},
-                    QUERY_TIMEOUT,
-                )
+                payload = _ask_assistant(text, scope)
                 response = payload["text"]
             except Exception as exc:  # noqa: BLE001 - never disclose SQL, credentials, or tracebacks.
                 logger.warning("telegram_assistant_failed type=%s", type(exc).__name__)
                 response = "⚠️ Не удалось прочитать данные. Проверьте read-only доступ или повторите позже."
         for chunk in _assistant_chunks(response):
-            delivered, _ = _deliver_with_retry(token, chat_id, chunk, main_keyboard())
+            delivered, _ = _deliver_with_retry(token, chat_id, chunk, _assistant_markup(payload))
             if not delivered:
                 break
     return True

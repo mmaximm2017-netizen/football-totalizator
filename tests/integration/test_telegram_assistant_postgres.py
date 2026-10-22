@@ -11,6 +11,7 @@ import pytest
 
 from app.models.scoring import calculate_points
 from app.services import telegram_sql_assistant as a
+from app.services import telegram_bot_ui_service as ui
 from app.services.ranking_service import _fetch_ranking
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -89,6 +90,49 @@ def test_ranking_matches_canonical_and_excludes_unfinished_and_other_tournament(
     assert lines == ['1. Бек: 10 очк. (1 прогнозов)', '2. Макс Зенит: 7 очк. (1 прогнозов)']
     assert calculate_points(2, 1, 2, 1) == canonical[0]['points']
     assert calculate_points(2, 1, 1, 0) == canonical[1]['points']
+
+
+@pytest.fixture
+def guided_ui(analytics, monkeypatch):
+    safe, _ = analytics
+
+    @contextmanager
+    def reader():
+        yield safe
+
+    monkeypatch.setattr(ui, 'short_gpt_read', reader)
+    return analytics
+
+
+def test_guided_player_card_uses_canonical_order_and_tournament_scope(guided_ui):
+    rpl = ui.render('ui:v:rpl:card:all:2:0')['text']
+    assert 'Макс Зенит' in rpl and 'Место: 2 из 2' in rpl
+    assert 'Очки: 7' in rpl and 'До лидера: 3 очк.' in rpl
+    cup = ui.render('ui:v:cup:card:all:1:0')['text']
+    assert 'Очки: 11' in cup and 'Место: 1 из 2' in cup
+    assert '999' not in rpl + cup
+
+
+def test_guided_recent_matches_hide_live_future_and_other_tournament(guided_ui):
+    result = ui.render('ui:v:rpl:recent:all:1:0')['text']
+    assert 'Локомотив — Краснодар' in result and '10 очк.' in result
+    assert 'Зенит — ЦСКА' not in result and '999' not in result and '11 очк.' not in result
+
+
+def test_guided_personal_predictions_only_show_selected_player_after_deadline(guided_ui):
+    result = ui.render('ui:v:rpl:predictions:yesterday:1:0')['text']
+    assert 'Бек: 2:1' in result and 'Макс Зенит:' not in result
+    tomorrow = (datetime.now(a.MSK).date() + a.timedelta(days=1)).strftime('%Y%m%d')
+    result = ui.render(f'ui:v:rpl:predictions:d{tomorrow}-{tomorrow}:1:0')['text']
+    assert 'закрыты' in result and '9:9' not in result
+
+
+def test_guided_round_picker_and_totals_use_derived_calendar(guided_ui):
+    result = ui.render('ui:r:rpl:points:all:0:0')
+    choices = [b['callback_data'] for row in result['rows'] for b in row if b['callback_data'].startswith('ui:v:')]
+    assert choices == ['ui:v:rpl:points:r1:0:0']
+    result = ui.render(choices[0])['text']
+    assert 'Тур 1' in result and 'Бек: 10' in result and 'Макс Зенит: 7' in result
 
 
 def test_end_to_end_clarifications_and_date_aggregate(analytics):
