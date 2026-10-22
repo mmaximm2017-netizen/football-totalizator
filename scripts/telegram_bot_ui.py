@@ -43,7 +43,7 @@ def local_screen(data):
     if match:
         section, kind = match.groups()
         if section == "stats":
-            items = list(METRICS.items())
+            items = [(metric, label) for metric, label in METRICS.items() if metric != "record"]
             return {"text": f"📊 Статистика · {KINDS[kind]}\n\nЧто показать?", "rows": [
                 [button(label, callback("p", kind, metric)) for metric, label in items[i:i + 2]] for i in range(0, len(items), 2)
             ] + [nav("ui:s:stats")]}
