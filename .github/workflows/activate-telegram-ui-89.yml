@@ -62,8 +62,8 @@ jobs:
             env = dict(os.environ, XDG_RUNTIME_DIR=f'/run/user/{owner.pw_uid}', DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{owner.pw_uid}/bus')
             prefix = []
             if os.geteuid() != owner.pw_uid:
-                assert os.geteuid() == 0, 'cannot control poller owner service'
-                prefix = ['runuser', '-u', owner.pw_name, '--', 'env', f'XDG_RUNTIME_DIR={env["XDG_RUNTIME_DIR"]}', f'DBUS_SESSION_BUS_ADDRESS={env["DBUS_SESSION_BUS_ADDRESS"]}']
+                prefix = (['runuser', '-u', owner.pw_name, '--'] if os.geteuid() == 0 else ['sudo', '-n', '-u', owner.pw_name])
+                prefix += ['env', f'XDG_RUNTIME_DIR={env["XDG_RUNTIME_DIR"]}', f'DBUS_SESSION_BUS_ADDRESS={env["DBUS_SESSION_BUS_ADDRESS"]}']
             unit = 'totish-telegram-admin.service'
             command = prefix + ['systemctl', '--user']
             subprocess.run(command + ['is-active', '--quiet', unit], env=env, check=True)
