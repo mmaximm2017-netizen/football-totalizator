@@ -128,3 +128,24 @@ are not reconstructed. The UI explains this in «Как считается». If
 existed before the round, or earlier points are still pending, movement is left
 unknown instead of inventing a previous place. No scoring, schema, roster or
 production-data changes are made by this feature.
+
+
+## Participant links
+
+Participant nicknames in the standings, finished-match forecasts and round
+summaries open the existing read-only profile by authoritative user ID within
+the selected tournament. Mini App ranking responses attach place/name/ID
+metadata from the same ordered ranking read (`with_players=True`); ordinary
+bot output remains unchanged. Finished-match forecast rows now carry the ID
+already present in the user join, and round summaries reuse their existing IDs.
+Names are never used to guess identity or construct HTML. Missing or malformed
+IDs remain plain text. No extra participant lookup query is added to list reads.
+
+The profile offers an explicit return to its source view, including after a
+load error. Telegram Back also returns when there is no inner profile history.
+The original tab, tournament, selected round, open match, scroll position and
+nickname focus are restored. An automatically selected round is pinned to its
+actual number for the return trip. State and profile cache remain in memory;
+manual tab/tournament changes discard the return context. Existing profile
+actions, archive restrictions, launch validation and forecast privacy gates are
+unchanged. No database writes, account linking or public access is introduced.

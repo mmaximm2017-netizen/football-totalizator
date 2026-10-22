@@ -7,6 +7,7 @@
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
+  let profileReturn = null;
   const hasAuth = Boolean(tg?.initData);
   let themePreference = 'light';
   try { if (localStorage.getItem('totish-mini-theme') === 'dark') themePreference = 'dark'; } catch { /* Appearance storage is optional. */ }
@@ -61,7 +62,7 @@
     if (tab === 'matches') $('page-title').append(node('small', 'match-timezone', 'МСК'));
     $('eyebrow').textContent = tab === 'ranking' ? 'ОБЩИЙ ЗАЧЁТ' : kind === 'rpl' ? 'РОССИЙСКАЯ ПРЕМЬЕР-ЛИГА' : 'КУБОК РОССИИ';
     if (tg?.BackButton) {
-      if (history.length) tg.BackButton.show(); else tg.BackButton.hide();
+      if (history.length || profileReturn) tg.BackButton.show(); else tg.BackButton.hide();
     }
   }
   async function api(body, signal) {
@@ -80,7 +81,48 @@
     $('controls').replaceChildren();
     $('date-form').hidden = true;
   }
-  function rankingTable(lines) {
+  function participantName(name, uid, className = '') {
+    const valid = /^[1-9][0-9]{0,9}$/.test(String(uid));
+    if (!valid) return node('span', className, name);
+    const button = node('button', `participant-link ${className}`, name);
+    button.type = 'button'; button.dataset.userId = String(uid);
+    button.setAttribute('aria-label', `Открыть профиль: ${name}`);
+    button.addEventListener('click', () => {
+      const originCallback = current.startsWith('round:') ? `round:${kind}:${document.querySelector('.round-select').value}` : current;
+      profileReturn = {callback: originCallback, text: currentText, kind, tab, history: [...history], scroll: window.scrollY,
+        match: $('content').querySelector('details.round-match[open]')?.dataset.matchId,
+        uid: String(uid), from: $('date-from').value, to: $('date-to').value};
+      tab = 'player'; history = []; feedback(); load(`ui:v:${kind}:card:all:${uid}:0`);
+      window.scrollTo(0, 0);
+    });
+    return button;
+  }
+  function restoreOrigin(origin) {
+    if (!origin) return;
+    const match = [...$('content').querySelectorAll('details.round-match')].find(card => card.dataset.matchId === origin.match);
+    if (match) match.open = true;
+    const button = [...(match || $('content')).querySelectorAll('.participant-link')].find(link => link.dataset.userId === origin.uid);
+    button?.focus({preventScroll: true});
+    if (origin.from) $('date-from').value = origin.from;
+    if (origin.to) $('date-to').value = origin.to;
+    requestAnimationFrame(() => {
+      if (current === origin.callback && tab === origin.tab && kind === origin.kind) window.scrollTo(0, origin.scroll);
+    });
+  }
+  function returnFromProfile() {
+    const origin = profileReturn;
+    if (!origin) return;
+    profileReturn = null; kind = origin.kind; tab = origin.tab; history = origin.history;
+    load(origin.callback, {text: origin.text, restore: origin});
+  }
+  function profileBackButton() {
+    if (!profileReturn) return;
+    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : '‹ К таблице';
+    const button = node('button', 'summary-back profile-back', label); button.type = 'button';
+    button.addEventListener('click', () => { feedback(); returnFromProfile(); });
+    $('content').append(button);
+  }
+  function rankingTable(lines, participants = []) {
     const table = node('table', 'ranking-table');
     const head = node('thead'), header = node('tr');
     ['№', 'УЧАСТНИК', 'ОЧКИ'].forEach(label => {
@@ -93,7 +135,8 @@
       if (!match) { $('content').append(node('p', 'screen-note', line)); return; }
       const row = node('tr'), name = node('td', 'player-name');
       const player = node('div', 'player-content');
-      player.append(node('span', 'player-label', match[2])); name.append(player);
+      const entry = participants.find(person => person.place === Number(match[1]) && person.name === match[2]);
+      player.append(participantName(match[2], entry?.user_id, 'player-label')); name.append(player);
       row.dataset.place = match[1];
       row.append(node('td', '', match[1].padStart(2, '0')), name, node('td', '', match[3]));
       body.append(row);
@@ -138,6 +181,7 @@
         list.append(heading); previousDay = day;
       }
       const card = node(match.finished ? 'details' : 'article', 'round-match');
+      card.dataset.matchId = String(match.id);
       const fixture = node(match.finished ? 'summary' : 'div', 'round-fixture');
       const time = node('time', 'round-time', new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
       time.dateTime = match.kickoff;
@@ -156,7 +200,8 @@
         head.append(header);
         for (const prediction of match.predictions) {
           const row = node('tr');
-          row.append(node('td', '', prediction.name), node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
+          const name = node('td'); name.append(participantName(prediction.name, prediction.user_id));
+          row.append(name, node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
           body.append(row);
         }
         table.append(head, body); card.append(result, table);
@@ -191,7 +236,7 @@
     head.append(header);
     for (const entry of payload.rows) {
       const row = node('tr'); row.dataset.winner = String(entry.winner);
-      const person = node('td'), name = node('span', 'summary-name', entry.name);
+      const person = node('td'), name = participantName(entry.name, entry.user_id, 'summary-name');
       person.append(name);
       if (entry.winner) person.append(node('small', 'winner-label', 'Победитель тура'));
       const places = node('td', 'summary-places');
@@ -252,9 +297,9 @@
   }
   function follow(data) {
     if (/^ui:[pvrud]:(rpl|cup):predictions:/.test(data)) {
-      tab = 'matches'; history = []; return load(root());
+      tab = 'matches'; history = []; profileReturn = null; return load(root());
     }
-    if (data === 'adm:main') { history = []; return load(root()); }
+    if (data === 'adm:main') { history = []; profileReturn = null; return load(root()); }
     if (data.startsWith('ui:s:')) {
       history = []; return load(root());
     }
@@ -264,12 +309,14 @@
     if (payload.type === 'round_matches') { roundMatches(payload); return; }
     if (payload.type === 'round_summary') { roundSummary(payload); return; }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
+    if (metric === 'card') $('page-title').textContent = 'Профиль';
     if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
     const text = payload.text || '';
     const divider = text.indexOf('\n\n');
     const heading = divider >= 0 ? text.slice(0, divider) : '';
     const body = divider >= 0 ? text.slice(divider + 2) : text;
     $('content').replaceChildren(); $('controls').replaceChildren();
+    profileBackButton();
     $('controls').classList.toggle('metric-grid', current.startsWith('ui:t:stats:'));
     expect = payload.expect || null;
     $('date-form').hidden = !expect;
@@ -277,7 +324,7 @@
     if (isRanking) {
       const page = heading.match(/Страница \d+\/\d+/);
       if (page) $('content').append(node('p', 'screen-note', page[0]));
-      rankingTable(body.split('\n').filter(Boolean));
+      rankingTable(body.split('\n').filter(Boolean), payload.participants);
     } else {
       // Keep trusted result text intact; never interpret names or answers as HTML.
       const enhanced = ['matches', 'predictions', 'points', 'round_wins', 'average', 'hits', 'streak'].includes(metric);
@@ -314,7 +361,7 @@
       $('date-from').value = today; $('date-to').value = today;
     }
   }
-  async function load(callback, {push = false, force = false, text = null} = {}) {
+  async function load(callback, {push = false, force = false, text = null, restore = null} = {}) {
     if (push && current && current !== callback) history.push(current);
     current = callback; currentText = text; synchronize();
     const id = ++sequence;
@@ -324,7 +371,7 @@
     setStatus(); $('content').setAttribute('aria-busy', 'true'); $('updated').textContent = '';
     try {
       if (cached && Date.now() - cached.time < 30000) {
-        draw(cached.payload); $('updated').textContent = cached.label; return;
+        draw(cached.payload); restoreOrigin(restore); $('updated').textContent = cached.label; return;
       }
       skeleton();
       const round = callback.match(/^(round|summary):(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
@@ -333,13 +380,16 @@
       if (id !== sequence) return;
       const label = (round ? 'Время матчей МСК · ' : '') + 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';
       if (!text && !payload.expect) {
-        cache.set(callback, {payload, time: Date.now(), label});
-        if (cache.size > 40) cache.delete(cache.keys().next().value);
+        const entry = {payload, time: Date.now(), label};
+        cache.set(callback, entry);
+        if (payload.type === 'round_matches') cache.set(`round:${payload.kind}:${payload.round_number}`, entry);
+        while (cache.size > 40) cache.delete(cache.keys().next().value);
       }
-      draw(payload); $('updated').textContent = label;
+      draw(payload); restoreOrigin(restore); $('updated').textContent = label;
     } catch (error) {
       if (id !== sequence) return;
       $('content').replaceChildren(); $('controls').replaceChildren();
+      profileBackButton();
       setStatus(error.name === 'AbortError' ? 'Загрузка заняла слишком много времени. Нажмите обновление.' : error.message, true);
     } finally {
       clearTimeout(timer);
@@ -349,14 +399,15 @@
   function back() {
     const target = history.pop();
     if (target) load(target);
+    else if (profileReturn) returnFromProfile();
   }
   document.querySelectorAll('[data-kind]').forEach(button => button.addEventListener('click', () => {
     if (kind === button.dataset.kind) return;
-    kind = button.dataset.kind; history = []; feedback(); load(root());
+    kind = button.dataset.kind; history = []; profileReturn = null; feedback(); load(root());
   }));
   document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => {
     if (tab === button.dataset.tab && current === root()) return;
-    tab = button.dataset.tab; history = []; feedback(); load(root());
+    tab = button.dataset.tab; history = []; profileReturn = null; feedback(); load(root());
   }));
   $('refresh').addEventListener('click', () => load(current || root(), {force: true, text: currentText}));
   $('date-form').addEventListener('submit', event => {

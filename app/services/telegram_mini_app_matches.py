@@ -63,15 +63,15 @@ def matches_payload(kind, round_number=None, now=None):
         # forecast reads, including absence information. Preserve stored points.
         if completed:
             predictions = read(cur, """
-                SELECT m.match_id, u.username, p.predicted_home, p.predicted_away, p.points
+                SELECT m.match_id, u.user_id, u.username, p.predicted_home, p.predicted_away, p.points
                 FROM gpt_safe.matches m CROSS JOIN gpt_safe.users u
                 LEFT JOIN gpt_safe.predictions p ON p.user_id = u.user_id
                   AND p.match_id = m.match_id AND p.tournament_id = m.tournament_id
                 WHERE m.tournament_id = %s AND m.match_id = ANY(%s::integer[])
                 ORDER BY m.match_id, u.username, u.user_id
             """, (tid, list(completed)))
-            for mid, name, ph, pa, points in predictions:
+            for mid, uid, name, ph, pa, points in predictions:
                 prediction = [ph, pa] if ph is not None and pa is not None else None
-                completed[mid]["predictions"].append({"name": name, "score": prediction,
+                completed[mid]["predictions"].append({"user_id": uid, "name": name, "score": prediction,
                                                      "points": points if prediction else None})
     return payload

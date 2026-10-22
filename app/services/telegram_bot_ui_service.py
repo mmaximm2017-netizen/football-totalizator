@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 
 from app.gpt_db import short_gpt_read
 from app.services.telegram_sql_assistant import (
-    Clarify, FINISHED, Question, choose_tournament, execute_question, parse_dates, read,
+    Clarify, FINISHED, MAX_ROWS, Question, choose_tournament, execute_question, parse_dates, read,
 )
 from app.utils import MSK
 from scripts.telegram_bot_ui import KINDS, METRICS, TITLES, button, callback, local_screen, nav, parse
@@ -58,12 +58,12 @@ def _ranking(cur, tid):
     """, (tid,))
 
 
-def render(data, text=None, now=None):
+def render(data, text=None, now=None, with_players=False):
     now = now or datetime.now(MSK)
     stage, kind, metric, period, user, page = parse(data)
     local = local_screen(data)
     if local and "next" in local:
-        return render(local["next"], now=now)
+        return render(local["next"], now=now, with_players=with_players)
     if text is not None:
         if stage != "d" or not isinstance(text, str) or len(text) > 1000:
             raise ValueError("invalid_ui_input")
@@ -127,7 +127,16 @@ def render(data, text=None, now=None):
                 lines.append("Архивный участник. Доступна итоговая таблица; подробные прогнозы закрыты.")
                 rows = [nav(callback("u", kind, "card"))]
             return {"text": "\n".join(lines), "rows": rows}
-        if metric == "recent":
+        participants = None
+        if metric == "ranking" and with_players:
+            ranking = _ranking(cur, tid)
+            participants = [{"place": i, "user_id": row[0], "name": row[1]} for i, row in enumerate(ranking[:MAX_ROWS], 1)]
+            lines = [f"{i}. {row[1]}: {row[2]} очк." for i, row in enumerate(ranking[:MAX_ROWS], 1)]
+            if not ranking or not any(row[3] for row in ranking):
+                lines.insert(0, "Нет завершённых прогнозов за выбранные условия; нули не означают сыгранные матчи.")
+            if len(ranking) > MAX_ROWS:
+                lines.append("Показаны первые 200 участников. Уточните игрока.")
+        elif metric == "recent":
             if not player:
                 raise ValueError("player_required")
             recent = read(cur, f"""
@@ -169,4 +178,7 @@ def render(data, text=None, now=None):
         rows += [nav("ui:s:ranking")]
     else:
         rows += [nav(callback("p", kind, metric))]
-    return {"text": heading + "\n\n" + pages[page], "rows": rows}
+    result = {"text": heading + "\n\n" + pages[page], "rows": rows}
+    if participants is not None:
+        result["participants"] = participants
+    return result

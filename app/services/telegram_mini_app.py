@@ -75,8 +75,8 @@ def screen_payload(data, text=None):
         data = payload["next"]
         payload = local_screen(data)
     if payload is None or text is not None:
-        parse(data)
-        payload = render(data, text=text)
+        _, _, metric, *_ = parse(data)
+        payload = render(data, text=text, with_players=True) if metric == "ranking" else render(data, text=text)
     return payload
 
 
