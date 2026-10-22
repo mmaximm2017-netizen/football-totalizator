@@ -80,15 +80,20 @@ def parse_dates(text, now):
         return sorted(set(relative))
     values = []
     try:
-        iso = re.findall(r"\b\d{4}-\d{2}-\d{2}\b", text)
-        numeric = re.findall(r"\b(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\b", text)
+        iso_pattern = r"\b\d{4}-\d{2}-\d{2}\b"
+        numeric_pattern = r"\b(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\b"
+        iso = re.findall(iso_pattern, text)
+        numeric = re.findall(numeric_pattern, text)
         if iso:
             values = [date.fromisoformat(v) for v in iso]
+            remainder = re.sub(iso_pattern, "", text)
         elif numeric:
             values = [date(int(y or today.year), int(m), int(d)) for d, m, y in numeric]
+            remainder = re.sub(numeric_pattern, "", text)
         else:
             months = "|".join(RU_MONTHS_GENITIVE.values())
-            for days, month, year in re.findall(rf"((?:\d{{1,2}}\s*(?:,|и|-|–)\s*)*\d{{1,2}})\s+({months})(?:\s+(\d{{4}}))?", text):
+            month_pattern = rf"((?:\d{{1,2}}\s*(?:,|и|-|–)\s*)*\d{{1,2}})\s+({months})(?:\s+(\d{{4}}))?"
+            for days, month, year in re.findall(month_pattern, text):
                 month_num = next(n for n, name in RU_MONTHS_GENITIVE.items() if name == month)
                 numbers = [int(v) for v in re.findall(r"\d+", days)]
                 if re.search(r"[-–]", days):
@@ -96,10 +101,17 @@ def parse_dates(text, now):
                     if not numbers:
                         raise ValueError
                 values.extend(date(int(year or today.year), month_num, n) for n in numbers)
+            remainder = re.sub(month_pattern, "", text)
         if not values:
             if re.search(r"\b(за|с|по)\s+\d|недел|месяц|период|год|январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр", text):
                 raise Clarify("Укажите даты: 17, 18 и 19 октября 2026 или с 17.10.2026 по 19.10.2026.")
             return []
+        # Never use only the parseable part of a mixed/unsupported period.
+        without_metrics = re.sub(r"\b\d+\s*(?:й\s+тур\w*|тур\w*|очк\w*)", "", remainder)
+        if re.search(rf"{months_pattern}|недел|месяц|\d{{4}}-\d{{2}}|\.\d+|\b(?:и|по)\s+\d{{1,2}}\b|\b\d+\b", without_metrics):
+            raise Clarify("Не все даты распознаны. Укажите весь список в одном формате, например: 17, 18 и 19 октября 2026.")
+        if re.search(r"\bдо\s+\d|\b(?:с|по)\s+\d", text) and not (re.search(r"\bс\b.+\bпо\b", text) and len(values) == 2):
+            raise Clarify("Укажите обе границы периода: с 17.10.2026 по 19.10.2026.")
         if re.search(r"\bс\b.+\bпо\b", text) and len(values) == 2:
             if values[0] > values[1] or (values[1] - values[0]).days > 366:
                 raise ValueError
@@ -147,7 +159,11 @@ def parse_question(text, previous=None, now=None):
         raise Clarify("Выберите один турнир: РПЛ, Кубок России или ЧМ.")
     if tournaments:
         q.tournament = tournaments[0]
-    dates = parse_dates(text, now or datetime.now(MSK))
+    try:
+        dates = parse_dates(text, now or datetime.now(MSK))
+    except Clarify as exc:
+        exc.question = q
+        raise
     if dates:
         q.dates, q.round_number, q.match_id, q.teams = dates, None, None, []
     words = {"первом": 1, "втором": 2, "третьем": 3, "четвертом": 4, "пятом": 5, "шестом": 6, "седьмом": 7, "восьмом": 8, "девятом": 9, "десятом": 10}
@@ -155,7 +171,7 @@ def parse_question(text, previous=None, now=None):
     word_round = next((v for k, v in words.items() if re.search(rf"\b{k}\s+тур", n)), None)
     if rnd or word_round:
         q.round_number = int(rnd[1]) if rnd else word_round
-        q.dates, q.match_id, q.teams = [], None, []
+        q.dates, q.match_id, q.teams = dates, None, []
     elif "тур" in n and not tournaments and "турнир" not in n:
         raise Clarify("Укажите номер тура, например: в 9 туре РПЛ.")
     pts = re.search(r"\b(\d{1,2})\s+очк", n)
@@ -402,12 +418,15 @@ def answer(text, scope, now=None):
         label = ", ".join(datetime.fromisoformat(d).strftime("%d.%m.%Y") for d in q.dates)
         if len(label) > 100:
             label = f"{q.dates[0]} … {q.dates[-1]} ({len(q.dates)} дней)"
-        detail = f"\nДаты МСК: {label}" if q.dates else f"\nТур {q.round_number}" if q.round_number else "\nПериод: всё время турнира"
+        detail = f"\nДаты МСК: {label}" if q.dates else "" if q.round_number else "\nПериод: всё время турнира"
+        if q.round_number:
+            detail += f"\nТур {q.round_number}"
         if q.intent == "last":
             detail += f"\nПоследний прогноз: ровно {q.points} очк."
         save_session(scope, clock, q, pending)
         return {"text": f"🏆 {name}{detail}\nУчастники: открытый список ТОТИШа.\n\n" + "\n".join(lines)}
     except Clarify as exc:
+        q = q or getattr(exc, "question", None)
         if q:
             save_session(scope, clock, q, pending)
         return {"text": str(exc)}

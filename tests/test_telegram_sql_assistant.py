@@ -61,7 +61,7 @@ def test_midnight_is_moscow():
     assert a.parse_dates('сегодня', datetime(2026, 10, 21, 22, tzinfo=timezone.utc)) == ['2026-10-22']
 
 
-@pytest.mark.parametrize('text', ['32 октября', '31.02.2026', 'за неделю', 'за 17 и 19', 'с 19.10 по 17.10', 'с 2024-01-01 по 2026-10-01'])
+@pytest.mark.parametrize('text', ['32 октября', '31.02.2026', 'за неделю', 'за 17 и 19', 'с 19.10 по 17.10', 'с 2024-01-01 по 2026-10-01', '2026-10-17 и 19 октября', 'за неделю 17 октября', '17.10.26', '17 октября и 19', '17 18 19 октября', 'с 17 октября', 'до 19 октября'])
 def test_invalid_or_unsupported_dates_never_broaden(text):
     with pytest.raises(a.Clarify):
         a.parse_dates(text, NOW)
@@ -125,6 +125,21 @@ def test_followup_keeps_intent_and_changes_date_only():
         result = a.answer('за вчера', '1', NOW)['text']
     assert '21.10.2026' in result
     assert a.SESSIONS['1'][1].intent == 'points'
+
+
+def test_period_clarification_keeps_player_and_intent():
+    cur = Cursor()
+    with patch.object(a, 'short_gpt_read', side_effect=lambda: cursor_context(cur)):
+        assert 'Укажите даты' in a.answer('Результат Бека за выбранный период в РПЛ', '1', NOW)['text']
+        assert 'Уточните выбор' in a.answer('17 октября', '1', NOW)['text']  # Inflection requires confirmation.
+        assert 'Бек: 10' in a.answer('Бек', '1', NOW)['text']
+
+
+def test_date_and_round_constraints_are_both_kept():
+    q = a.parse_question('очки игроков в 9 туре за 17 октября в РПЛ', now=NOW)
+    where, params = a.match_filters(q, 5)
+    assert 'round_number' in where and 'ANY' in where
+    assert params == [5, ['2026-10-17'], 9]
 
 
 def test_context_isolation_and_expiry():
