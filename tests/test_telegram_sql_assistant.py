@@ -72,7 +72,7 @@ def test_round_and_filters():
     assert q.round_number == 9
     assert q.dates == []
     sql, params = a.match_filters(q, 5)
-    assert 'm.tournament_id = %s' in sql and 'm.round_number = %s' in sql
+    assert 'm.tournament_id = %s' in sql and 'r.round_number = %s' in sql
     assert params == [5, 9]
 
 
@@ -263,3 +263,79 @@ def test_helper_protocol_routes_only_assistant_text_not_sql():
         answer.assert_called_once_with('очки Бека', '-123:456')
     with pytest.raises(ValueError):
         service.dispatch_request({'action': 'sql', 'sql': 'SELECT 1'})
+
+
+@pytest.mark.parametrize('text,intent', [
+    ('Кто сколько раз выигрывал туры РПЛ', 'round_wins'),
+    ('Кто побеждал в турах?', 'round_wins'),
+    ('Победители туров РПЛ', 'round_wins'),
+    ('Кто занял первое место в 9 туре РПЛ?', 'round_wins'),
+    ('Какая серия без точного счёта у Бека в РПЛ?', 'streak'),
+    ('Серия без 10 или 11 очков в РПЛ у Бека', 'streak'),
+    ('Рекорд очков за матч у игроков РПЛ', 'record'),
+    ('Максимум очков за матч Бек РПЛ', 'record'),
+    ('Сравни Бека и Макс Зенит в РПЛ', 'compare'),
+    ('Средние очки игроков в РПЛ', 'average'),
+    ('Сколько раз Бек получал 10 очков в РПЛ?', 'hits'),
+    ('Сколько раз Бек угадал точный счёт в РПЛ?', 'hits'),
+])
+def test_extended_intents(text, intent):
+    assert a.parse_question(text, now=NOW).intent == intent
+
+
+def test_generic_round_wins_does_not_require_round_number_in_followup():
+    previous = a.parse_question('Кто сколько раз выигрывал туры?', now=NOW)
+    q = a.parse_question('РПЛ', previous, NOW)
+    assert q.intent == 'round_wins' and q.round_number is None and q.tournament == 'рпл'
+
+
+def test_exact_hit_buckets_and_explicit_ten_are_different():
+    assert a.parse_question('Сколько раз Бек угадал точный счёт в РПЛ?', now=NOW).points == -1
+    assert a.parse_question('Сколько раз Бек получал 10 очков в РПЛ?', now=NOW).points == 10
+    assert a.parse_question('Сколько раз Бек получал 11 очков в РПЛ?', now=NOW).points == 11
+
+
+def test_point_total_is_not_misread_as_count_and_hit_count_requires_score():
+    assert a.parse_question('Количество очков Бека в РПЛ', now=NOW).intent == 'points'
+    with pytest.raises(a.Clarify) as error:
+        a.parse_question('Сколько раз Бек получал очки в РПЛ?', now=NOW)
+    pending = error.value.question
+    resolved = a.parse_question('7 очков', pending, NOW)
+    assert resolved.intent == 'hits' and resolved.points == 7 and not resolved.needs_points
+
+
+@pytest.mark.parametrize('text', ['Серия без 7 очков в РПЛ', 'Рекорд за тур в РПЛ'])
+def test_unsupported_extended_metric_does_not_silently_change_meaning(text):
+    with pytest.raises(a.Clarify):
+        a.parse_question(text, now=NOW)
+
+
+def test_compare_resolves_two_people_and_not_zenit_team():
+    cur = Cursor()
+    q = a.parse_question('Сравни Бек и Макс Зенит в РПЛ', now=NOW)
+    assert a.resolve_player(cur, q.original, q, None) is None
+    assert set(q.players) == {'Бек', 'Макс Зенит'}
+    assert q.teams == []
+
+
+@pytest.mark.parametrize('intent', ['round_wins', 'streak', 'record', 'average', 'hits', 'compare'])
+def test_extended_queries_use_safe_views_parameters_and_limits(intent):
+    cur = MagicMock()
+    cur.fetchall.return_value = []
+    q = a.Question(intent=intent, player="x'; DROP TABLE users; --", dates=['2026-10-17'], players=['Бек', 'Макс Зенит'])
+    a.execute_question(cur, q, 6, NOW)
+    statement, params = cur.execute.call_args.args
+    assert 'gpt_safe.' in statement and q.player not in statement
+    assert 'LIMIT %s' in statement and params[-1] == a.MAX_ROWS + 1
+    assert 'FINISHED' in statement
+
+
+def test_round_wins_requires_whole_round_before_date_filter():
+    cur = MagicMock()
+    cur.fetchall.return_value = []
+    a.execute_question(cur, a.Question(intent='round_wins', dates=['2026-10-17']), 5, NOW)
+    sql, params = cur.execute.call_args.args
+    assert 'BOOL_AND' in sql and 'gpt_safe.calendar_rounds' in sql
+    assert 'MAX((m.kickoff_time' in sql
+    assert 'RANK() OVER (PARTITION BY round_number ORDER BY points DESC)' in sql
+    assert params[0] == 5
