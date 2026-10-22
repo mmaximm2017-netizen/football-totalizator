@@ -89,10 +89,8 @@
       const match = line.match(/^(\d+)\. (.+): (-?\d+(?:[.,]\d+)?) очк\.$/);
       if (!match) { $('content').append(node('p', 'screen-note', line)); return; }
       const row = node('tr'), name = node('td', 'player-name');
-      const initial = match[2].trim().slice(0, 1).toLocaleUpperCase('ru');
-      const avatar = node('span', 'avatar', initial); avatar.setAttribute('aria-hidden', 'true');
       const player = node('div', 'player-content');
-      player.append(avatar, node('span', 'player-label', match[2])); name.append(player);
+      player.append(node('span', 'player-label', match[2])); name.append(player);
       row.dataset.place = match[1];
       row.append(node('td', '', match[1].padStart(2, '0')), name, node('td', '', match[3]));
       body.append(row);
@@ -147,11 +145,9 @@
       card.setAttribute('aria-label', `${match.home} — ${match.away}, ${match.time} МСК`);
       const fixture = node('div', 'match-fixture');
       const teams = node('div', 'match-teams');
-      for (const [index, name] of [match.home, match.away].entries()) {
+      for (const name of [match.home, match.away]) {
         const team = node('div', 'match-team');
-        const mark = node('span', 'team-initial' + (index ? ' away' : ''), Array.from(name.trim())[0]);
-        mark.setAttribute('aria-hidden', 'true');
-        team.append(mark, node('span', 'team-name', name)); teams.append(team);
+        team.append(node('span', 'team-name', name)); teams.append(team);
       }
       const clock = node('div', 'match-clock');
       const time = node('time', '', match.time); time.dateTime = match.time;
