@@ -36,17 +36,17 @@ def results(cur, fixtures, predictions=(), rounds=None):
 def test_whole_round_preserves_results_zero_and_unscored_points(database, kind, tid):
     cur, _ = database
     fixtures = [fixture(mid=i) for i in range(1, 17)]
-    results(cur, fixtures, [(1, 'Бек', 2, 1, 10), (1, 'Ноль', 0, 4, 0),
-                            (1, 'Ожидает', 1, 1, None), (1, 'Пропуск', None, None, None)])
+    results(cur, fixtures, [(1, 21, 'Бек', 2, 1, 10), (1, 22, 'Ноль', 0, 4, 0),
+                            (1, 23, 'Ожидает', 1, 1, None), (1, 24, 'Пропуск', None, None, None)])
     payload = matches.matches_payload(kind, 12, NOW)
     assert len(payload['matches']) == 16  # A large round is never split or truncated.
     match = payload['matches'][0]
     assert match['score'] == [2, 1]
     assert match['predictions'] == [
-        {'name': 'Бек', 'score': [2, 1], 'points': 10},
-        {'name': 'Ноль', 'score': [0, 4], 'points': 0},
-        {'name': 'Ожидает', 'score': [1, 1], 'points': None},
-        {'name': 'Пропуск', 'score': None, 'points': None},
+        {'user_id': 21, 'name': 'Бек', 'score': [2, 1], 'points': 10},
+        {'user_id': 22, 'name': 'Ноль', 'score': [0, 4], 'points': 0},
+        {'user_id': 23, 'name': 'Ожидает', 'score': [1, 1], 'points': None},
+        {'user_id': 24, 'name': 'Пропуск', 'score': None, 'points': None},
     ]
     query, params = cur.execute.call_args_list[3].args
     assert params == (tid, 12) and 'r.tournament_id = m.tournament_id' in query
@@ -89,7 +89,7 @@ def test_missing_deadline_fails_closed(database):
 @pytest.mark.parametrize('status', ['FINISHED', 'COMPLETE', 'completed'])
 def test_only_finished_ids_enter_batched_forecast_read(database, status):
     cur, _ = database
-    results(cur, [fixture(1, status), fixture(2, 'LIVE'), fixture(3, 'SCHEDULED')], [(1, 'Бек', 2, 1, 10)])
+    results(cur, [fixture(1, status), fixture(2, 'LIVE'), fixture(3, 'SCHEDULED')], [(1, 21, 'Бек', 2, 1, 10)])
     payload = matches.matches_payload('rpl', now=NOW)
     assert [m['finished'] for m in payload['matches']] == [True, False, False]
     assert cur.execute.call_args.args[1] == (5, [1])

@@ -425,3 +425,19 @@ def test_round_summary_partial_round_and_first_round(round_summary):
     source.execute("UPDATE matches SET status='SCHEDULED',deadline=CURRENT_TIMESTAMP+interval '1 day' WHERE id=3002")
     source.execute("UPDATE matches SET status='SCHEDULED',deadline=NULL WHERE id=3003")
     assert summary.round_summary_payload('rpl', 2)['status'] == 'no_results'
+
+
+def test_mini_ranking_ids_survive_rename_and_profile_remains_tournament_scoped(guided_ui):
+    _, source = guided_ui
+    source.execute("UPDATE users SET username='Новый ник: с двоеточием' WHERE id=1")
+    payload = ui.render('ui:v:rpl:ranking:all:0:0', with_players=True)
+    assert payload['participants'][0] == {'place': 1, 'user_id': 1, 'name': 'Новый ник: с двоеточием'}
+    assert payload['participants'][1]['user_id'] == 2
+    rpl = ui.render('ui:v:rpl:card:all:1:0')
+    cup = ui.render('ui:v:cup:card:all:1:0')
+    assert 'Новый ник: с двоеточием' in rpl['text'] and 'Очки: 10' in rpl['text']
+    assert 'Очки: 11' in cup['text']
+    source.execute('UPDATE tournaments SET is_active=0 WHERE id=5')
+    archive = ui.render('ui:v:rpl:ranking:all:0:0', with_players=True)
+    assert any(row['user_id'] == 4 for row in archive['participants'])
+    assert 'Архивный участник' in ui.render('ui:v:rpl:card:all:4:0')['text']

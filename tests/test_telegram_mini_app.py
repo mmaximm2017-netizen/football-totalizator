@@ -75,7 +75,7 @@ def test_ranking_uses_existing_read_only_renderer(client, monkeypatch, kind):
     monkeypatch.setattr(mini, "render", render)
     response = post(client, {"callback": f"ui:t:ranking:{kind}"})
     assert response.status_code == 200
-    render.assert_called_once_with(f"ui:v:{kind}:ranking:all:0:0", text=None)
+    render.assert_called_once_with(f"ui:v:{kind}:ranking:all:0:0", text=None, with_players=True)
     assert response.get_json()["text"] == "1. Бек: 10 очк."
 
 

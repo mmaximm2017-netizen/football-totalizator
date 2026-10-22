@@ -222,3 +222,19 @@ def test_participant_picker_paginates_without_losing_users():
             result = ui.render(callback("u", "rpl", "card", page=page), now=NOW)
         selected += [row[0]["text"] for row in result["rows"] if row[0]["text"].startswith("Участник")]
     assert selected == [name for _, name in users]
+
+
+def test_mini_app_ranking_attaches_authoritative_ids_without_name_lookup():
+    cur = MagicMock()
+    # Same visible nickname, different IDs. Place and ID come from one ordered read.
+    cur.fetchall.side_effect = [[(5, 'Чемпионат России')],
+                              [(42, 'Один ник', 10, 1, 1, 0, 0), (99, 'Один ник', 7, 1, 0, 1, 0)]]
+    with patch.object(ui, 'short_gpt_read', side_effect=lambda: reader(cur)):
+        payload = ui.render('ui:v:rpl:ranking:all:0:0', now=NOW, with_players=True)
+    assert payload['participants'] == [
+        {'place': 1, 'user_id': 42, 'name': 'Один ник'},
+        {'place': 2, 'user_id': 99, 'name': 'Один ник'},
+    ]
+    assert cur.execute.call_count == 2
+    assert cur.execute.call_args.args[1] == (5,)
+    assert '1. Один ник: 10 очк.' in payload['text']

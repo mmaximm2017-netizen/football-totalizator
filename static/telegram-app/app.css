@@ -223,3 +223,9 @@ summary.round-fixture { cursor: pointer; }
 .rank-change.up { color: var(--accent); }
 .rank-change.down { color: var(--danger); }
 .summary-caveat { margin-top: 14px; }
+
+.participant-link { display: inline-block; min-height: 24px; padding: 2px 0; border: 0; border-radius: 3px; background: transparent; color: var(--accent); text-align: left; font: inherit; line-height: inherit; font-weight: inherit; overflow-wrap: anywhere; max-width: 100%; }
+.participant-link:hover, .participant-link:active { text-decoration: underline; text-underline-offset: 3px; }
+.participant-link:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.participant-link.summary-name { font-size: 12px; font-weight: 650; }
+.profile-back { display: block; margin-bottom: 12px; }
