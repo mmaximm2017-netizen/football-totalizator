@@ -35,7 +35,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   }
   else if(cb.startsWith('ui:v:') && ['round_wins','average','hits','streak'].includes(cb.split(':')[3])) {
    const metric=cb.split(':')[3];
-   const bodies={round_wins:'Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.\nУчтено туров с прогнозами: 11.\n1. Бек: 4 побед\n2. Макс Зенит: 3 побед\n3. Денис 05: 0 побед',average:'Средние очки за прогноз с начисленными очками (пропуски исключены)\nБек: 5.25 очк. (32 прогнозов)\nИгрок: с двоеточием: 0.00 очк. (2 прогнозов)\nДенис 05: нет прогнозов с начисленными очками',hits:'Число прогнозов на 10/11 очков\nБек: 8 раз\nМакс Зенит: 0 раз',streak:'Текущая серия без 10/11 очков. Пропуски прогнозов включены; серия ограничена выбранным периодом/туром.\nБек: 12 матчей (точных счетов в выборке нет)\nМакс Зенит: 0 матчей'};
+   const bodies={round_wins:'Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.\nУчтено туров с прогнозами: 11.\n1. Бек: 4 побед\n2. Макс Зенит: 3 побед\n3. Byza-Zenit: 2 побед\n4. БЕК125125: 1 побед\n5. Денис 05: 1 побед\n6. Bowb: 0 побед',average:'Средние очки за прогноз с начисленными очками (пропуски исключены)\nБек: 5.25 очк. (32 прогнозов)\nИгрок: с двоеточием: 0.00 очк. (2 прогнозов)\nДенис 05: нет прогнозов с начисленными очками',hits:'Число прогнозов на 10/11 очков\nБек: 8 раз\nМакс Зенит: 0 раз',streak:'Текущая серия без 10/11 очков. Пропуски прогнозов включены; серия ограничена выбранным периодом/туром.\nБек: 12 матчей (точных счетов в выборке нет)\nМакс Зенит: 0 матчей'};
    p={text:'Статистика · РПЛ\nВесь турнир · МСК\n\n'+bodies[metric],rows:[]};
   }
   else if(cb.startsWith('ui:p:'))p={text:'Статистика\n\nВыберите период.',rows:[[{text:'Весь турнир',callback_data:cb.replace('ui:p:','ui:v:')}],[{text:'Свои даты',callback_data:cb.replace('ui:p:','ui:d:')}]]};
@@ -258,6 +258,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   assert.ok(await page.locator('.measurement-table tbody tr').count()>=2);
   assert.notEqual(await page.locator('#page-title').textContent(),'Статистика');
   assert.equal(await page.locator('.method-note').count(),1);
+  if(metric==='round_wins'){assert.equal(await page.locator('.measurement-table tbody tr').count(),6);assert.ok((await page.locator('.measurement-table').textContent()).includes('Bowb'));}
   if(metric==='average')assert.deepEqual(await page.locator('.measurement-value').allTextContents(),['5.25','0.00','—']);
   if(metric==='streak')assert.ok((await page.locator('.measurement-note').textContent()).includes('точных счетов в выборке нет'));
   await page.screenshot({path:`test-results/mini-app/measure-${metric}.png`,fullPage:true,animations:'disabled'});

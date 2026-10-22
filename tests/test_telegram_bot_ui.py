@@ -132,6 +132,20 @@ def test_pagination_preserves_every_character_including_long_blocks():
     assert "".join(ui._pages(["я" * 7000])) == "я" * 7000
 
 
+@pytest.mark.parametrize("kind", ["rpl", "cup"])
+@pytest.mark.parametrize("metric", ["ranking", "points", "round_wins", "average", "hits", "streak"])
+def test_app_keeps_all_six_participants_with_explanations_on_one_page(kind, metric):
+    notes = ["Пояснение " + "я" * 800 for _ in range(3)]
+    participants = [f"{i}. Участник {i}: {7 - i} побед" for i in range(1, 7)]
+    lines = notes + participants
+    with patch.object(ui, "short_gpt_read", side_effect=lambda: reader(MagicMock())), patch.object(ui, "choose_tournament", return_value=(5 if kind == "rpl" else 6, kind)), patch.object(ui, "execute_question", return_value=(lines, None)):
+        # A saved old page callback must recover the complete table, too.
+        result = ui.render(callback("v", kind, metric, page=1), now=NOW, paginate=False)
+    assert result["text"].endswith("\n".join(lines))
+    assert "Страница" not in result["text"]
+    assert not any(b["text"] in {"‹ Предыдущие", "Следующие ›"} for row in result["rows"] for b in row)
+
+
 def test_admin_tools_callback_acknowledged_before_render_and_edits_same_message():
     events = []
     with patch.object(bot, "_telegram_request", side_effect=lambda token, method, *a, **k: events.append(method)), patch.object(bot, "_ui_screen", side_effect=lambda *a: events.append("query") or ("данные", "{}")):
