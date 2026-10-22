@@ -74,6 +74,45 @@ jobs:
       - name: Run test suite
         run: pytest -q
 
+  mini-app-ui:
+    name: Test Telegram Mini App UI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_KEY: ci-test-api-key
+      INVITE_CODE: ci-test-invite-code
+      ADMIN_USERNAME: ci-admin
+      ADMIN_PASSWORD: ci-test-admin-password
+      DATABASE_URL: postgresql://invalid.invalid/ci-mini-app
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install UI test dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          npm install --prefix "$RUNNER_TEMP/totish-ui" playwright@1.62.1
+          node "$RUNNER_TEMP/totish-ui/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Exercise mobile screens with fixture API responses
+        run: |
+          python -m flask --app app:create_app run --host 127.0.0.1 --port 8765 > /tmp/totish-ui-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:8765/health
+          NODE_PATH="$RUNNER_TEMP/totish-ui/node_modules" node tests/browser/telegram_mini_app.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mini-app-browser-screenshots
+          path: test-results/mini-app
+          if-no-files-found: ignore
+
   lint:
     name: Lint with Ruff
     runs-on: ubuntu-latest
@@ -143,6 +182,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
       - test
+      - mini-app-ui
       - lint
       - security
       - docker

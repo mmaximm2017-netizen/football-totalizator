@@ -245,6 +245,7 @@ def create_app():
     from app.routes.push import push_bp
     from app.routes.agent_api import agent_api_bp
     from app.routes.gpt_api import gpt_api_bp
+    from app.routes.telegram_mini_app import telegram_mini_app_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -258,6 +259,7 @@ def create_app():
     app.register_blueprint(push_bp)
     app.register_blueprint(agent_api_bp)
     app.register_blueprint(gpt_api_bp)
+    app.register_blueprint(telegram_mini_app_bp)
 
     @app.get("/service-worker.js")
     def service_worker():
@@ -366,6 +368,9 @@ def create_app():
         # POST /api/gpt/query must not depend on a browser CSRF session.
         if request.endpoint and request.endpoint.startswith("gpt_api."):
             return
+        # This POST validates Telegram's signed launch data on every request.
+        if request.endpoint == "telegram_mini_app.screen":
+            return
         if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return
 
@@ -437,6 +442,9 @@ def create_app():
             "auth.logout",
         }
         if request.endpoint in db_free_endpoints:
+            return
+        # Mini App identity comes only from signed Telegram data, never cookies.
+        if request.blueprint == "telegram_mini_app":
             return
 
         # GPT uses bearer auth only. Never load, mutate, or otherwise process

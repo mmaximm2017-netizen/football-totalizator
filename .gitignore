@@ -36,6 +36,7 @@ Thumbs.db
 # Cache
 .cache/
 .pytest_cache/
+test-results/
 
 # Build
 build/
