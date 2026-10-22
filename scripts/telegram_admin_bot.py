@@ -793,7 +793,11 @@ def _authorized_sender(update):
     values = load_env()
     configured = values.get("TELEGRAM_ADMIN_USER_ID") or os.getenv("TELEGRAM_ADMIN_USER_ID", "")
     source = update.get("callback_query") or update.get("message") or {}
+    if not isinstance(source, dict):
+        return False
     sender = source.get("from") or {}
+    if not isinstance(sender, dict):
+        return False
     return (
         str(configured).isdigit() and int(configured) > 0
         and type(sender.get("id")) is int and sender["id"] == int(configured)

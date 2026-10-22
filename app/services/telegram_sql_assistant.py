@@ -64,13 +64,20 @@ class Question:
 
 def parse_dates(text, now):
     text = text.lower().replace("ё", "е")
+    for typo in ("севодня", "сегодя"):
+        text = re.sub(rf"\b{typo}\b", "сегодня", text)
     # A shared month in «с 17 по 19 октября» applies to both boundaries.
     months_pattern = "|".join(RU_MONTHS_GENITIVE.values())
     text = re.sub(rf"\bс\s+(\d{{1,2}})\s+по\s+(\d{{1,2}})\s+({months_pattern})(?:\s+(\d{{4}}))?", lambda m: f"с {m[1]} {m[3]} {m[4] or now.year} по {m[2]} {m[3]} {m[4] or now.year}", text)
     today = now.astimezone(MSK).date()
-    for word, offset in (("позавчера", -2), ("сегодня", 0), ("сегодняшн", 0), ("вчера", -1), ("завтра", 1)):
-        if word in text:
-            return [(today + timedelta(days=offset)).isoformat()]
+    relative = []
+    for pattern, offset in ((r"\bпозавчера\b", -2), (r"\bсегодня\b|\bсегодняшн\w*", 0), (r"\bвчера\b", -1), (r"\bзавтра\b", 1)):
+        if re.search(pattern, text):
+            relative.append((today + timedelta(days=offset)).isoformat())
+    if relative:
+        if re.search(rf"\d{{4}}-\d{{2}}|\d{{1,2}}\.\d{{1,2}}|\d+\s+(?:{months_pattern})", text):
+            raise Clarify("Не смешивайте относительные и числовые даты. Укажите все нужные дни с месяцем и годом.")
+        return sorted(set(relative))
     values = []
     try:
         iso = re.findall(r"\b\d{4}-\d{2}-\d{2}\b", text)

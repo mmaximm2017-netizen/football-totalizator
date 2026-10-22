@@ -50,6 +50,8 @@ def test_intents(text, intent):
     ('2026-10-17 и 2026-10-19', ['2026-10-17', '2026-10-19']),
     ('сегодня', ['2026-10-22']), ('вчера', ['2026-10-21']),
     ('позавчера', ['2026-10-20']), ('завтра', ['2026-10-23']),
+    ('вчера и сегодня', ['2026-10-21', '2026-10-22']),
+    ('севодня', ['2026-10-22']),
 ])
 def test_dates(text, dates):
     assert a.parse_dates(text, NOW) == dates
@@ -212,6 +214,17 @@ def test_missing_user_configuration_denies_even_matching_private_chat(monkeypatc
     monkeypatch.setattr(bot, 'load_env', lambda: {})
     monkeypatch.delenv('TELEGRAM_ADMIN_USER_ID', raising=False)
     assert not bot._authorized_sender({'message': {'from': {'id': 123}, 'chat': {'id': 123}}})
+
+
+@pytest.mark.parametrize('sender', ['456', {'id': 456, 'is_bot': True}, {'id': '456'}, None])
+def test_malformed_or_bot_sender_is_denied(sender, monkeypatch):
+    monkeypatch.setattr(bot, 'load_env', lambda: {'TELEGRAM_ADMIN_USER_ID': '456'})
+    assert not bot._authorized_sender({'message': {'from': sender}})
+
+
+def test_anonymous_group_sender_is_denied(monkeypatch):
+    monkeypatch.setattr(bot, 'load_env', lambda: {'TELEGRAM_ADMIN_USER_ID': '456'})
+    assert not bot._authorized_sender({'message': {'from': {'id': 456}, 'sender_chat': {'id': -123}}})
 
 
 def test_help_callback_and_text_do_not_query(monkeypatch):
