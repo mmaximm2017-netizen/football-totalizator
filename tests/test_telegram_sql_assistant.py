@@ -295,6 +295,15 @@ def test_exact_hit_buckets_and_explicit_ten_are_different():
     assert a.parse_question('Сколько раз Бек получал 11 очков в РПЛ?', now=NOW).points == 11
 
 
+def test_point_total_is_not_misread_as_count_and_hit_count_requires_score():
+    assert a.parse_question('Количество очков Бека в РПЛ', now=NOW).intent == 'points'
+    with pytest.raises(a.Clarify) as error:
+        a.parse_question('Сколько раз Бек получал очки в РПЛ?', now=NOW)
+    pending = error.value.question
+    resolved = a.parse_question('7 очков', pending, NOW)
+    assert resolved.intent == 'hits' and resolved.points == 7 and not resolved.needs_points
+
+
 @pytest.mark.parametrize('text', ['Серия без 7 очков в РПЛ', 'Рекорд за тур в РПЛ'])
 def test_unsupported_extended_metric_does_not_silently_change_meaning(text):
     with pytest.raises(a.Clarify):

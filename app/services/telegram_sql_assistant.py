@@ -67,6 +67,7 @@ class Question:
     points: int = 10
     original: str = ""
     players: list[str] = field(default_factory=list)
+    needs_points: bool = False
 
 
 def parse_dates(text, now):
@@ -145,7 +146,7 @@ def parse_question(text, previous=None, now=None):
         intent = "record"
     elif "средн" in n:
         intent = "average"
-    elif re.search(r"сколько раз|число|количество", n) and re.search(r"очк|очков|точн", n):
+    elif re.search(r"сколько раз|(?:число|количество)\s+(?:точн|прогноз)", n) and re.search(r"очк|очков|точн", n):
         intent = "hits"
     elif re.search(r"на первом|на 1 месте|первый|лидер", n):
         intent = "leader"
@@ -163,6 +164,8 @@ def parse_question(text, previous=None, now=None):
         intent = "points"
     elif "матч" in n:
         intent = "matches"
+    if previous and previous.needs_points and re.fullmatch(r"(?:на )?\d{1,2} очк\w*", n):
+        intent = None
     q = Question(tournament=previous.tournament if previous else None) if intent else Question(**vars(previous)) if previous else Question()
     q.intent = intent or q.intent
     if intent:
@@ -196,8 +199,15 @@ def parse_question(text, previous=None, now=None):
     pts = re.search(r"\b(\d{1,2})\s+очк", n)
     if pts:
         q.points = int(pts[1])
+        q.needs_points = False
     if q.intent == "hits" and "точн" in n and not pts:
         q.points = -1  # Both exact-score buckets (10 and 11), not a new score value.
+        q.needs_points = False
+    elif q.intent == "hits" and not pts and intent:
+        q.needs_points = True
+        exc = Clarify("Прогнозы на сколько очков посчитать? Ответьте, например: 7 очков. Или спросите число точных счетов.")
+        exc.question = q
+        raise exc
     if q.intent == "streak" and not re.search(r"точн|\b10\b|\b11\b", n) and intent:
         raise Clarify("Пока поддерживается серия без точного счёта (10/11 очков). Например: серия Бека без точного счёта в РПЛ.")
     if q.intent == "record" and "тур" in n and "матч" not in n and "турнир" not in n and not re.search(r"\d+\s+тур|девятом\s+тур", n):
