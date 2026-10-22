@@ -245,3 +245,25 @@ def test_superseded_photo_does_not_reach_telegram(tmp_path):
         send.assert_not_called()
     finally:
         bot._operation.reset(context)
+
+
+def test_recovery_does_not_delete_newer_failure_queued_during_send(tmp_path):
+    bot._queue_delivery_notice(123, 1)
+    def send(*args):
+        bot._queue_delivery_notice(123, 2)
+        return True, {}
+    with patch.object(bot, '_deliver_with_retry', side_effect=send):
+        bot._retry_delivery_notice('token', 123)
+    assert json.loads((tmp_path / 'telegram-admin-recovery.json').read_text())['update_id'] == 2
+
+
+def test_retry_does_not_sleep_past_operation_budget():
+    import time
+    context = bot._operation.set({'current': lambda: True, 'deadline': time.monotonic() + .1, 'failed': False})
+    try:
+        with patch.object(bot, '_telegram_request', side_effect=http_error(429, 'limited', 2)) as send, patch.object(bot.time, 'sleep') as sleep:
+            assert not bot._deliver_with_retry('token', 123, 'text', '{}', 7)[0]
+        assert send.call_count == 1
+        sleep.assert_not_called()
+    finally:
+        bot._operation.reset(context)

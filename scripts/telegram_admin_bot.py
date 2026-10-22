@@ -52,6 +52,7 @@ OPERATION_TIMEOUT = 12
 _operation = ContextVar("telegram_operation", default=None)
 _dispatcher = None
 _delivery_lock = threading.RLock()
+_recovery_lock = threading.Lock()
 UI_REQUEST_TIMEOUT = 3
 BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
@@ -628,7 +629,8 @@ def _deliver_with_retry_inner(token, chat_id, text, markup, message_id=None, sle
             can_retry = transient and attempt == 1 and delay <= 2
             if can_retry:
                 try:
-                    _remaining(delay + UI_REQUEST_TIMEOUT)
+                    if _remaining(delay + UI_REQUEST_TIMEOUT) < delay + UI_REQUEST_TIMEOUT:
+                        can_retry = False
                 except TimeoutError:
                     can_retry = False
             if can_retry:
@@ -644,6 +646,11 @@ def _deliver_with_retry_inner(token, chat_id, text, markup, message_id=None, sle
 
 
 def _queue_delivery_notice(chat_id, update_id):
+    with _recovery_lock:
+        _queue_delivery_notice_inner(chat_id, update_id)
+
+
+def _queue_delivery_notice_inner(chat_id, update_id):
     # Store only recovery metadata, never a forecast, token or user question.
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     target = STATE_DIR / "telegram-admin-recovery.json"
@@ -666,7 +673,15 @@ def _retry_delivery_notice(token, chat_id):
         return
     delivered, _ = _deliver_with_retry(token, chat_id, "⚠️ Предыдущий ответ не удалось доставить. Откройте нужный раздел ещё раз.", main_keyboard())
     if delivered:
-        target.unlink(missing_ok=True)
+        with _recovery_lock:
+            # A worker may have queued a newer failure while this HTTP call waited.
+            try:
+                current = json.loads(target.read_text())
+            except FileNotFoundError:
+                return
+            if current != pending:
+                return
+            target.unlink(missing_ok=True)
         logger.info("telegram_admin_delivery_recovered update_id=%s", pending.get("update_id"))
 
 
