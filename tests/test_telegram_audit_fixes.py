@@ -112,7 +112,7 @@ def test_failed_recovery_write_does_not_acknowledge_update(monkeypatch):
 
 
 @pytest.mark.parametrize('kind', ['rpl', 'cup'])
-@pytest.mark.parametrize('section', ['ranking', 'matches', 'predictions'])
+@pytest.mark.parametrize('section', ['matches', 'predictions'])
 def test_period_back_returns_to_tournament_selection(kind, section):
     _, markup = bot._ui_screen(f'ui:t:{section}:{kind}', 'scope')
     back = json.loads(markup)['inline_keyboard'][-1][0]['callback_data']

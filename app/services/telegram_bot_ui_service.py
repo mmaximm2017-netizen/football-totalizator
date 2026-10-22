@@ -61,6 +61,9 @@ def _ranking(cur, tid):
 def render(data, text=None, now=None):
     now = now or datetime.now(MSK)
     stage, kind, metric, period, user, page = parse(data)
+    local = local_screen(data)
+    if local and "next" in local:
+        return render(local["next"], now=now)
     if text is not None:
         if stage != "d" or not isinstance(text, str) or len(text) > 1000:
             raise ValueError("invalid_ui_input")
@@ -149,17 +152,21 @@ def render(data, text=None, now=None):
     page = min(page, len(pages) - 1)
     title = METRICS.get(metric, TITLES.get(metric, "Последние матчи"))
     heading = f"{title} · {KINDS[kind]}\n{label} · МСК" + (f"\n👤 {player}" if player else "")
+    if metric == "ranking":
+        heading = f"{title} · {KINDS[kind]}"
     if metric in {"ranking", "points"} and period != "all":
         heading += "\nСостав за период: действующие участники ТОТИШа."
     if len(pages) > 1:
         heading += f"\nСтраница {page + 1}/{len(pages)}"
     rows = _pagination("v", kind, metric, period, user, page, len(pages))
     actions = [button("↻ Обновить", callback("v", kind, metric, period, user, page))]
-    if metric != "recent":
+    if metric not in {"recent", "ranking"}:
         actions.append(button("Другой период", callback("p", kind, metric, user=user)))
     rows += [actions]
     if user:
         rows += [nav(callback("v", kind, "card", user=user))]
+    elif metric == "ranking":
+        rows += [nav("ui:s:ranking")]
     else:
         rows += [nav(callback("p", kind, metric))]
     return {"text": heading + "\n\n" + pages[page], "rows": rows}

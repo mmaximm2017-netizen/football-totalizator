@@ -49,11 +49,15 @@ def local_screen(data):
             ] + [nav("ui:s:stats")]}
         if section == "player":
             return {"next": callback("u", kind, "card")}
+        if section == "ranking":
+            return {"next": callback("v", kind, "ranking")}
         return {"next": callback("p", kind, section)}
     try:
         stage, kind, metric, period, user, page = parse(data)
     except ValueError:
         return None
+    if metric == "ranking" and (stage != "v" or period != "all" or user):
+        return {"next": callback("v", kind, "ranking", page=page if stage == "v" else 0)}
     if stage == "p":
         section = "stats" if metric in METRICS else metric if metric in TITLES else "player"
         rows = [[button("Сегодня", callback("v", kind, metric, "today", user)), button("Вчера", callback("v", kind, metric, "yesterday", user))],
