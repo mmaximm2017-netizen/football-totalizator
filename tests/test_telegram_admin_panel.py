@@ -74,7 +74,7 @@ def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
 
-    assert callbacks == ["ui:s:ranking", "ui:s:matches", "ui:s:predictions", "ui:s:stats", "ui:s:player", "adm:help", "ui:tools"]
+    assert callbacks == ["adm:help", "ui:tools"]
     assert "adm:predictions" not in callbacks
     assert all(callback.startswith(("adm:", "ui:")) for callback in callbacks)
 

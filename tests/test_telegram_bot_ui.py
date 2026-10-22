@@ -132,10 +132,10 @@ def test_pagination_preserves_every_character_including_long_blocks():
     assert "".join(ui._pages(["я" * 7000])) == "я" * 7000
 
 
-def test_guided_callback_acknowledged_before_query_and_edits_same_message():
+def test_admin_tools_callback_acknowledged_before_render_and_edits_same_message():
     events = []
     with patch.object(bot, "_telegram_request", side_effect=lambda token, method, *a, **k: events.append(method)), patch.object(bot, "_ui_screen", side_effect=lambda *a: events.append("query") or ("данные", "{}")):
-        bot._handle_update("token", 123, callback_update(callback("v", "rpl", "ranking")))
+        bot._handle_update("token", 123, callback_update("ui:tools"))
     assert events == ["answerCallbackQuery", "query", "editMessageText"]
 
 
@@ -153,14 +153,14 @@ def test_date_input_is_scoped_and_menu_cancels_it():
     assert not bot._ui_inputs
 
 
-def test_custom_date_text_goes_to_guided_helper_not_language_parser():
+def test_old_custom_date_prompt_does_not_capture_a_new_message():
     bot._ui_screen(callback("d", "cup", "points"), "123:456")
     with patch.object(bot, "_helper") as helper, patch.object(bot, "_deliver_with_retry", return_value=(True, {})):
         helper._exchange.return_value = {"text": "очки", "rows": []}
         bot._handle_update("token", 123, message("17.10.2026"))
         request = helper._exchange.call_args.args[0]
-    assert request["action"] == "assistant-ui" and request["text"] == "17.10.2026"
-    assert request["callback"].startswith("ui:d:cup:")
+    assert request == {"action": "assistant", "text": "17.10.2026", "scope": "123:456"}
+    assert not bot._ui_inputs
 
 
 def test_expired_custom_date_prompt_does_not_capture_new_question():
@@ -238,3 +238,33 @@ def test_mini_app_ranking_attaches_authoritative_ids_without_name_lookup():
     assert cur.execute.call_count == 2
     assert cur.execute.call_args.args[1] == (5,)
     assert '1. Один ник: 10 очк.' in payload['text']
+
+
+@pytest.mark.parametrize('data', ['ui:s:ranking', 'ui:s:matches', 'ui:s:predictions', 'ui:s:stats', 'ui:s:player',
+                                 'ui:t:ranking:cup', 'ui:v:rpl:ranking:all:0:0',
+                                 'ui:r:cup:points:all:0:0', 'ui:d:rpl:points:all:0:0',
+                                 'ui:v:cup:card:all:42:0', 'adm:table', 'adm:table:rpl', 'adm:table:cup:refresh'])
+def test_retired_bot_buttons_offer_app_without_helper_or_database(data, monkeypatch):
+    monkeypatch.setattr(bot, 'load_env', lambda: {'TELEGRAM_ADMIN_USER_ID': '456', 'TELEGRAM_ERROR_CHAT_ID': '123'})
+    with patch.object(bot, '_helper') as helper, patch.object(bot, '_ui_screen') as screen, patch.object(bot, '_docker_query') as query, patch.object(bot, '_telegram_request'), patch.object(bot, '_deliver_with_retry', return_value=(True, {})) as deliver:
+        assert bot._is_local_update(callback_update(data))
+        assert bot._handle_update('token', 123, callback_update(data))
+    helper._exchange.assert_not_called()
+    screen.assert_not_called()
+    query.assert_not_called()
+    assert 'теперь в приложении' in deliver.call_args.args[2]
+    buttons = [b for row in json.loads(deliver.call_args.args[3])['inline_keyboard'] for b in row]
+    assert any(b.get('web_app', {}).get('url') == 'https://totish.ru/telegram-app' for b in buttons)
+    assert not any(b.get('callback_data', '').startswith('ui:') and b.get('callback_data') != 'ui:tools' for b in buttons)
+
+
+def test_start_and_menu_use_compact_app_menu_without_helper(monkeypatch):
+    monkeypatch.setattr(bot, 'load_env', lambda: {'TELEGRAM_ADMIN_USER_ID': '456', 'TELEGRAM_ERROR_CHAT_ID': '123'})
+    for command in ('/start', '/menu'):
+        with patch.object(bot, '_helper') as helper, patch.object(bot, '_deliver_with_retry', return_value=(True, {})) as deliver:
+            assert bot._handle_update('token', 123, message(command))
+        helper._exchange.assert_not_called()
+        assert 'в приложении' in deliver.call_args.args[2]
+        buttons = [b for row in json.loads(deliver.call_args.args[3])['inline_keyboard'] for b in row]
+        assert len(buttons) == 3
+        assert {b.get('callback_data') for b in buttons if 'callback_data' in b} == {'adm:help', 'ui:tools'}
