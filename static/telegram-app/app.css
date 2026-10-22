@@ -76,8 +76,6 @@ h2 { font-size: 23px; }
 .player-name { font-weight: 650; }
 .player-content { display: flex; align-items: center; gap: 8px; }
 .player-label { min-width: 0; overflow-wrap: anywhere; }
-.avatar { display: inline-grid; flex-shrink: 0; place-items: center; width: 30px; height: 32px; background: var(--raised); border: 1px solid var(--line); border-radius: 11px; font-size: 11px; font-weight: 750; color: var(--accent); }
-.ranking-table tr[data-place="1"] .avatar { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .data-card { border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 19px; margin: 0 0 10px; white-space: pre-line; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; box-shadow: var(--shadow); }
 .screen-note { color: var(--muted); font-size: 12px; line-height: 1.6; white-space: pre-line; margin: 0 0 16px; }
 .controls { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
@@ -140,7 +138,6 @@ dialog::backdrop { background: #041c4770; backdrop-filter: blur(3px); }
   .tournaments button { font-size: 12px; }
   .metric-grid button.metric-card { padding-left: 13px; padding-right: 13px; }
   .metric-title { font-size: 13px; }
-  .ranking-table .avatar { display: none; }
 }
 /* Result views share the same compact hierarchy: period, day, fixture, values. */
 .context-strip { margin: 0 0 22px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
@@ -151,8 +148,6 @@ dialog::backdrop { background: #041c4770; backdrop-filter: blur(3px); }
 .match-fixture { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 14px; }
 .match-teams { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .match-team { display: flex; align-items: center; gap: 9px; }
-.team-initial { display: grid; place-items: center; flex-shrink: 0; width: 27px; height: 27px; border-radius: 9px; background: var(--soft); color: var(--accent); font-size: 11px; font-weight: 750; border: 1px solid var(--line); }
-.team-initial.away { background: var(--raised); color: var(--muted); }
 .team-name { min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; font-weight: 650; }
 .match-clock { flex-shrink: 0; min-width: 64px; padding: 9px 8px; border-radius: 12px; background: var(--soft); color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
 .match-clock time { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
