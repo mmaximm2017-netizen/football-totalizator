@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 from zoneinfo import ZoneInfo
 
 try:
@@ -30,8 +30,10 @@ except ModuleNotFoundError:  # Allows unit tests to import the script as a modul
 
 try:
     from telegram_bot_ui import local_screen
+    from telegram_http import urlopen
 except ModuleNotFoundError:
     from scripts.telegram_bot_ui import local_screen
+    from scripts.telegram_http import urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
