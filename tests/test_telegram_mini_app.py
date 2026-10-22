@@ -75,7 +75,7 @@ def test_ranking_uses_existing_read_only_renderer(client, monkeypatch, kind):
     monkeypatch.setattr(mini, "render", render)
     response = post(client, {"callback": f"ui:t:ranking:{kind}"})
     assert response.status_code == 200
-    render.assert_called_once_with(f"ui:v:{kind}:ranking:all:0:0", text=None, with_players=True)
+    render.assert_called_once_with(f"ui:v:{kind}:ranking:all:0:0", text=None, with_players=True, paginate=False)
     assert response.get_json()["text"] == "1. Бек: 10 очк."
 
 
@@ -101,7 +101,7 @@ def test_date_input_uses_same_renderer_and_deadline_policy(client, monkeypatch):
     data = "ui:d:cup:predictions:all:0:0"
     response = post(client, {"callback": data, "text": "22.10.2026"})
     assert response.status_code == 200
-    render.assert_called_once_with(data, text="22.10.2026")
+    render.assert_called_once_with(data, text="22.10.2026", paginate=False)
 
 
 def test_errors_do_not_leak_database_or_launch_details(client, monkeypatch):

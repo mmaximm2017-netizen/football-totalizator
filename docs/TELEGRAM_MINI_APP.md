@@ -1,5 +1,9 @@
 # Telegram Mini App
 
+Таблицы результатов в приложении показываются целиком, без разбиения участников
+на страницы. Пояснения к расчётам не сокращают число видимых участников.
+Лимиты длины сообщений и пагинация текстового Telegram-рендерера сохраняются.
+
 The existing Flask application serves `/telegram-app` and its JSON endpoint
 `POST /telegram-app/api`. No separate hosting, AI provider, database schema or
 package is needed in production. The Mini App is an admin analytics viewer;

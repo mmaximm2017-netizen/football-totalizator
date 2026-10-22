@@ -58,12 +58,12 @@ def _ranking(cur, tid):
     """, (tid,))
 
 
-def render(data, text=None, now=None, with_players=False):
+def render(data, text=None, now=None, with_players=False, paginate=True):
     now = now or datetime.now(MSK)
     stage, kind, metric, period, user, page = parse(data)
     local = local_screen(data)
     if local and "next" in local:
-        return render(local["next"], now=now, with_players=with_players)
+        return render(local["next"], now=now, with_players=with_players, paginate=paginate)
     if text is not None:
         if stage != "d" or not isinstance(text, str) or len(text) > 1000:
             raise ValueError("invalid_ui_input")
@@ -157,7 +157,9 @@ def render(data, text=None, now=None, with_players=False):
                 WHERE r.tournament_id = %s AND r.round_number = %s""", (tid, rnd))
             if bounds and bounds[0][0]:
                 label += f" · {bounds[0][0].astimezone(MSK):%d.%m}–{bounds[0][1].astimezone(MSK):%d.%m.%Y}"
-    pages = _pages(lines)
+    # Telegram messages have a length limit; the app can show the whole table.
+    # Explanatory lines must not push participants onto a second app page.
+    pages = _pages(lines) if paginate else ["\n".join(lines)]
     page = min(page, len(pages) - 1)
     title = METRICS.get(metric, TITLES.get(metric, "Последние матчи"))
     heading = f"{title} · {KINDS[kind]}\n{label} · МСК" + (f"\n👤 {player}" if player else "")
