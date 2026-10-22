@@ -101,3 +101,30 @@ are uploaded as mini-app-browser-screenshots.
 The existing release workflow checks app health, exact image release and loaded
 host bot module hashes. The first end-to-end Telegram launch with real signed
 initData still needs verification after an explicitly authorized deployment.
+
+## Round summaries
+
+The «Итоги тура» button next to refresh opens totals for the selected round,
+including past rounds, without adding height to the fixture list. A separate
+signed `round_summary` action reads only on demand and uses the same short
+read-only connection and repeatable-read snapshot. A return button restores the
+selected round. Refresh bypasses the existing 30-second in-memory cache.
+
+Round totals sum stored points for valid finished, played, post-deadline matches
+in that calendar round. A partially played round is explicitly preliminary and
+has no winner labels. Missing or invalid stored points in completed fixtures
+produce an awaiting-scoring state rather than zero totals or premature winners.
+Shared leaders by round points are all winners once the round is fully finished;
+a round without scored forecasts has no winner.
+
+Overall places are reconstructed immediately before the first kickoff and after
+the last kickoff of the selected round, bounded by now. They include tournament
+fixtures in those chronological windows (including simultaneous kickoffs), and
+exclude matches after the selected round. The canonical overall tie-break order
+is points, exact scores (10/11), exact differences (7/8), outcomes (3), username.
+The calculation uses current results and the active roster from `gpt_safe.users`,
+not historical membership or result-finalization snapshots. Deleted identities
+are not reconstructed. The UI explains this in «Как считается». If no standings
+existed before the round, or earlier points are still pending, movement is left
+unknown instead of inventing a previous place. No scoring, schema, roster or
+production-data changes are made by this feature.

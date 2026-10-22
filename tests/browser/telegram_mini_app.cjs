@@ -7,13 +7,17 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  const page=await browser.newPage({viewport:{width:360,height:800},deviceScaleFactor:1});
  const errors=[];page.on('pageerror', e=>errors.push(e.message));
  await page.route('https://telegram.org/js/telegram-web-app.js', r=>r.fulfill({contentType:'application/javascript',body:`window.Telegram={WebApp:{initData:'test-signed-launch',colorScheme:'dark',ready(){},expand(){},onEvent(){},BackButton:{show(){},hide(){},onClick(){}},HapticFeedback:{selectionChanged(){}}}};`}));
- let fail=false, delayRpl=false;
+ let fail=false, delayRpl=false, summaryMode='';
  const requests=[];
  await page.route('**/telegram-app/api', async r=>{
   const b=r.request().postDataJSON(); requests.push(b);
   assert.equal(r.request().headers().authorization,'tma test-signed-launch');
   if(fail){await r.fulfill({status:503,json:{error:'Не удалось загрузить данные. Попробуйте ещё раз.'}});return;}
   if(b.action==='question'){await r.fulfill({json:{text:'Какой турнир?',state:'signed-state',choices:[{label:'РПЛ',value:'rpl'}]}});return;}
+  if(b.action==='round_summary') {
+   const final=b.round_number===11;
+   await r.fulfill({json:{type:'round_summary',kind:b.kind,round_number:b.round_number,status:summaryMode||(final?'final':'in_progress'),finished_matches:final?8:3,total_matches:8,movement_available:true,has_scores:true,rows:summaryMode?[]:[{user_id:1,name:'Бек',points:12,place:1,before_place:2,after_place:1,movement:1,winner:final},{user_id:2,name:'Макс Зенит',points:12,place:1,before_place:1,after_place:2,movement:-1,winner:final},{user_id:3,name:'<img src=x onerror=alert(1)>',points:0,place:3,before_place:3,after_place:3,movement:0,winner:false}]}});return;
+  }
   if(b.action==='matches') {
    const cup=b.kind==='cup';
    if(delayRpl&&!cup) await new Promise(x=>setTimeout(x,200));
@@ -156,6 +160,50 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.screenshot({path:'test-results/mini-app/round-compact-320.png',fullPage:true,animations:'disabled'});
  await page.setViewportSize({width:360,height:800});
  await page.locator('[data-kind=rpl]').click();
+ await page.getByRole('button',{name:'Итоги тура',exact:true}).click();
+ await page.locator('.round-summary-table').waitFor();
+ assert.equal(await page.locator('#page-title').textContent(),'Итоги тура 12');
+ assert.ok((await page.locator('.summary-status').textContent()).includes('Предварительные'));
+ assert.equal(await page.locator('.winner-label').count(),0);
+ assert.deepEqual(await page.locator('.summary-points').allTextContents(),['12','12','0']);
+ assert.deepEqual(await page.locator('.rank-change').allTextContents(),['↑ 1','↓ 1','Без изменений']);
+ assert.equal(await page.locator('#content img').count(),0);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.getByRole('button',{name:'Матчи тура 12',exact:false}).click();
+ await page.getByRole('combobox',{name:'Выбрать тур'}).selectOption('11');
+ await page.waitForFunction(()=>document.querySelector('.round-select')?.value==='11');
+ await page.getByRole('button',{name:'Итоги тура',exact:true}).click();
+ await page.locator('.round-summary-table').waitFor();
+ assert.equal(requests.at(-1).action,'round_summary');
+ assert.equal(requests.at(-1).round_number,11);
+ assert.equal(await page.locator('.winner-label').count(),2);
+ assert.equal(await page.locator('.summary-status').textContent(),'Тур завершён');
+ await page.screenshot({path:'test-results/mini-app/round-summary-old-light.png',fullPage:true,animations:'disabled'});
+ await page.locator('#toggle-theme').click();
+ await page.screenshot({path:'test-results/mini-app/round-summary-old-dark.png',fullPage:true,animations:'disabled'});
+ await page.locator('#toggle-theme').click();
+ await page.setViewportSize({width:320,height:740});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.screenshot({path:'test-results/mini-app/round-summary-320.png',fullPage:true,animations:'disabled'});
+ summaryMode='pending_points';
+ await page.locator('#refresh').click();
+ await page.getByText('Очки за завершённые матчи ещё не начислены полностью. Обновите итоги позже.',{exact:true}).waitFor();
+ assert.equal(await page.locator('.round-summary-table').count(),0);
+ summaryMode='no_results';
+ await page.locator('#refresh').click();
+ await page.getByText('Завершённых матчей в этом туре пока нет.',{exact:true}).waitFor();
+ assert.equal(await page.locator('.round-summary-table').count(),0);
+ summaryMode='';
+ await page.getByRole('button',{name:'Матчи тура 11',exact:false}).click();
+ await page.getByRole('button',{name:'Итоги тура',exact:true}).click();
+ await page.locator('#refresh').click();
+ await page.locator('.round-summary-table').waitFor();
+ await page.locator('[data-kind=cup]').click();
+ await page.getByText('Кубковая команда',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Итоги тура',exact:true}).click();
+ await page.locator('.round-summary-table').waitFor();
+ assert.equal(requests.at(-1).kind,'cup');
+ await page.setViewportSize({width:360,height:800});
  for(const metric of ['round_wins','average','hits','streak']) {
   await page.locator('[data-tab=stats]').click();
   await page.locator(`[data-metric=${metric}]`).click();
@@ -171,6 +219,6 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.setViewportSize({width:320,height:740});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.deepEqual(errors,[]);
- console.log('MINI_APP_BROWSER_OK: whole round fits 320/360px, finished accordion, stored points, hidden unfinished predictions, navigation, dates, XSS, questions, retry, themes');
+ console.log('MINI_APP_BROWSER_OK: historical round summaries, joint winners, movements, pending/no results, whole round fits 320/360px, finished accordion, stored points, hidden unfinished predictions, navigation, dates, XSS, questions, retry, themes');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

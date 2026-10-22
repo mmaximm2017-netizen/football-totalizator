@@ -204,3 +204,22 @@ summary.round-fixture { cursor: pointer; }
 .match-predictions tr:last-child td { border-bottom: 0; }
 .match-predictions .missing-score { font-size: 9px; color: var(--muted); }
 .result-empty { padding: 12px; margin: 0; }
+
+.section-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.summary-button { min-height: 34px; border: 1px solid var(--line); border-radius: 11px; padding: 6px 9px; color: var(--accent); background: var(--surface); font-size: 11px; font-weight: 700; }
+.summary-back { border: 0; padding: 8px 0; min-height: 36px; background: transparent; color: var(--accent); font-weight: 650; font-size: 12px; }
+.summary-status { padding: 12px; margin: 7px 0 14px; border-radius: 12px; background: var(--soft); color: var(--accent); font-size: 12px; line-height: 1.6; }
+.round-summary-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); font-variant-numeric: tabular-nums; }
+.round-summary-table th { padding: 12px 9px; background: var(--raised); color: var(--muted); font-size: 9px; font-weight: 650; text-align: left; }
+.round-summary-table th:nth-child(2) { width: 21%; text-align: center; }
+.round-summary-table th:last-child { width: 31%; text-align: right; }
+.round-summary-table td { padding: 14px 9px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.round-summary-table tr[data-winner="true"] { background: var(--soft); }
+.summary-name { display: block; font-size: 12px; font-weight: 650; }
+.winner-label { display: block; color: var(--accent); font-size: 9px; margin-top: 5px; }
+.summary-points { text-align: center; color: var(--accent); font-size: 22px; font-weight: 800; }
+.summary-places { text-align: right; font-size: 13px; font-weight: 650; }
+.rank-change { display: block; font-size: 9px; margin-top: 5px; color: var(--muted); font-weight: 500; }
+.rank-change.up { color: var(--accent); }
+.rank-change.down { color: var(--danger); }
+.summary-caveat { margin-top: 14px; }
