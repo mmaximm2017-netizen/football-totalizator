@@ -1,0 +1,79 @@
+name: Verify Telegram 92 production
+on:
+  push:
+    branches: [ops/verify-telegram-92]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Verify running code and read-only sections
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 3m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            exec 9>/tmp/totish-production-deploy.lock
+            flock -w 60 9
+            test "$(cat .totish-managed-release)" = "251cfad5efae6dd62e3bf3fc25c64c8d397d067b"
+            python3 - <<'PYHOST'
+            import time
+            from pathlib import Path
+            from scripts.activate_telegram_admin import verified
+            from scripts import telegram_admin_bot as bot
+            root=Path.cwd()
+            assert verified(root), 'system process PID/hash mismatch'
+            print('TELEGRAM_92_PROCESS_HASHES_OK', flush=True)
+            try:
+                for kind in ('rpl','cup'):
+                    for metric in ('ranking','points','average','round_wins'):
+                        started=time.monotonic()
+                        payload=bot._helper._exchange({'action':'assistant-ui','callback':f'ui:v:{kind}:{metric}:all:0:0'},8)
+                        assert payload.get('text') and payload.get('rows'), 'empty section'
+                        assert 'Не удалось' not in payload['text'], 'failed section'
+                        print('TELEGRAM_92_SECTION_OK',kind,metric,'chars',len(payload['text']),'ms',round(1000*(time.monotonic()-started)),flush=True)
+            finally:
+                bot._helper.close()
+            token,_=bot._config()
+            info=bot._telegram_request(token,'getWebhookInfo',{},timeout=3)
+            assert not info.get('url'), 'unexpected webhook'
+            print('TELEGRAM_92_NETWORK_OK','pending_updates',info.get('pending_update_count'),flush=True)
+            PYHOST
+            docker exec -i football-totalizator-app-1 python - <<'PYAPP'
+            import os
+            from datetime import datetime,timezone,timedelta
+            from app.gpt_db import short_gpt_read
+            from app.services.telegram_admin_service import _scores_closed
+            from app.services import telegram_error_notifier
+            from scripts import telegram_http
+            assert os.environ.get('TOTISH_RELEASE')=='251cfad5efae6dd62e3bf3fc25c64c8d397d067b', 'wrong app release'
+            now=datetime.now(timezone.utc)
+            assert _scores_closed(None,now) and _scores_closed('invalid',now)
+            assert _scores_closed(now+timedelta(seconds=1),now)
+            assert not _scores_closed(now,now)
+            print('TELEGRAM_92_DEADLINE_GATES_OK',flush=True)
+            assert telegram_error_notifier.urlopen is telegram_http.urlopen
+            print('TELEGRAM_92_SHARED_TRANSPORT_OK',flush=True)
+            with short_gpt_read() as cur:
+                cur.execute("SELECT current_user,current_setting('transaction_read_only')")
+                assert cur.fetchone()==('totish_gpt_reader','on')
+                for name in ('public.users','public.predictions','public.matches'):
+                    cur.execute("SELECT has_table_privilege(current_user,%s,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')",(name,))
+                    assert not cur.fetchone()[0], 'unexpected public grants'
+                cur.execute("SELECT has_table_privilege(current_user,'gpt_safe.tournament_rankings','SELECT'),has_table_privilege(current_user,'gpt_safe.tournament_rankings','INSERT,UPDATE,DELETE,TRUNCATE')")
+                assert cur.fetchone()==(True,False)
+                cur.execute("SELECT COUNT(*) FROM gpt_safe.predictions WHERE deadline IS NULL OR deadline>CURRENT_TIMESTAMP")
+                assert cur.fetchone()[0]==0
+            print('TELEGRAM_92_READER_AND_PRIVACY_OK',flush=True)
+            PYAPP
+            curl --fail --silent --show-error --max-time 10 https://totish.ru/health
+            echo
+            echo TELEGRAM_92_PRODUCTION_SMOKE_OK
