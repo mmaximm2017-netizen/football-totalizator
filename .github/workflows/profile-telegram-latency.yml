@@ -21,34 +21,21 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
-            python3 - <<'PYTRACE'
-            import json
-            import time
+            python3 - <<'PYLOG'
             import subprocess
-            from scripts import telegram_admin_bot as bot
-            try:
-                for kind in ('rpl', 'cup'):
-                    start=time.monotonic()
-                    text, markup=bot._ui_screen(f'ui:t:ranking:{kind}', 'trace')
-                    buttons=[b for row in json.loads(markup)['inline_keyboard'] for b in row]
-                    print('TABLE_TRACE_FIRST',kind,'period_picker' if 'Выберите период' in text else 'result',len(text),len(buttons),flush=True)
-                    data=next((b['callback_data'] for b in buttons if b['text']=='Весь турнир'),None)
-                    if data:
-                        text,markup=bot._ui_screen(data,'trace')
-                    print('TABLE_TRACE_RESULT',kind,len(text),len(json.loads(markup)['inline_keyboard']),round(1000*(time.monotonic()-start)),flush=True)
-                    assert 'очк.' in text or 'Нет завершённых' in text
-                    # Exercise callback authorization and rendering without delivering messages.
-                    values=bot.load_env()
-                    sender=int(values['TELEGRAM_ADMIN_USER_ID'])
-                    token,chat=bot._config()
-                    deliveries=[]
-                    old_request=bot._telegram_request
-                    bot._telegram_request=lambda token,method,payload,**kwargs: deliveries.append((method,len(payload.get('text','')))) or True
-                    bot._handle_update(token,chat,{'callback_query':{'id':'trace','data':data or f'ui:v:{kind}:ranking:all:0:0','from':{'id':sender},'message':{'chat':{'id':chat},'message_id':1}}})
-                    bot._telegram_request=old_request
-                    print('TABLE_TRACE_DELIVERY',kind,json.dumps(deliveries),flush=True)
-                state=subprocess.run(['systemctl','show','totish-telegram-admin.service','--property=ActiveState,ExecMainStartTimestamp,WorkingDirectory'],capture_output=True,text=True,timeout=10)
-                print('TABLE_TRACE_SERVICE',state.stdout.strip().replace('\n',' | '),flush=True)
-            finally:
-                bot._helper.close()
-            PYTRACE
+            import re
+            props=subprocess.run(['systemctl','show','totish-telegram-admin.service','--property=StandardOutput,StandardError,FragmentPath'],capture_output=True,text=True,timeout=10)
+            print('BOT_LOG_TARGET',props.stdout.strip().replace('\n',' | '),flush=True)
+            commands=[['journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat']]
+            allowed=subprocess.run(['sudo','-n','-l'],capture_output=True,text=True,timeout=10)
+            print('BOT_SUDO_LIST_STATUS',allowed.returncode,flush=True)
+            if allowed.returncode==0 and re.search(r'NOPASSWD:.*journalctl',allowed.stdout):
+                commands.append(['sudo','-n','journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat'])
+            for command in commands:
+                logs=subprocess.run(command,capture_output=True,text=True,timeout=15)
+                print('BOT_JOURNAL_RESULT',logs.returncode,len(logs.stdout.splitlines()),bool(logs.stderr),flush=True)
+                for line in logs.stdout.splitlines()[-300:]:
+                    found=re.search(r'(telegram_admin_(?:delivery_|query_failed|callback |poller_failed)[A-Za-z0-9_ =:-]*)',line)
+                    if found:
+                        print('BOT_LOG',found.group(1),flush=True)
+            PYLOG
