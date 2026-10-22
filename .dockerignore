@@ -27,3 +27,4 @@ dist/
 !scripts/auto_result_sources.py
 
 !scripts/auto_result_policy.py
+!scripts/telegram_bot_ui.py

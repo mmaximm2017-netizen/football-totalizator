@@ -389,8 +389,9 @@ def execute_question(cur, q, tid, now):
             FROM gpt_safe.users u
             LEFT JOIN gpt_safe.predictions p ON p.user_id = u.user_id
                 AND p.match_id = %s AND p.tournament_id = %s
+            WHERE (%s::text IS NULL OR u.username = %s)
             ORDER BY u.username LIMIT %s
-        """, (mid, tid, MAX_ROWS + 1))
+        """, (mid, tid, q.player, q.player, MAX_ROWS + 1))
         for name, ph, pa in scores[:MAX_ROWS]:
             if q.intent == "missing":
                 if ph is None or pa is None:
@@ -443,7 +444,7 @@ def answer(text, scope, now=None):
             q.tournament = text.strip()
         if not q.tournament:
             save_session(scope, clock, q, pending)
-            return {"text": "Какой турнир: РПЛ, Кубок России или ЧМ?"}
+            return {"text": "Какой турнир: РПЛ, Кубок России или ЧМ?", "choices": [{"label": label, "value": value} for label, value in (("РПЛ", "rpl"), ("Кубок России", "cup"), ("ЧМ", "wc"))]}
         with short_gpt_read() as cur:
             tournaments = read(cur, "SELECT tournament_id, tournament_name FROM gpt_safe.tournaments ORDER BY tournament_id")
             tid, name = choose_tournament(q, tournaments)
@@ -477,9 +478,15 @@ def answer(text, scope, now=None):
         if q.intent == "last":
             detail += f"\nПоследний прогноз: ровно {q.points} очк."
         save_session(scope, clock, q, pending)
-        return {"text": f"🏆 {name}{detail}\nУчастники: открытый список ТОТИШа.\n\n" + "\n".join(lines)}
+        result = {"text": f"🏆 {name}{detail}\nУчастники: открытый список ТОТИШа.\n\n" + "\n".join(lines)}
+        if pending:
+            result["choices"] = [{"label": value, "value": str(i)} for i, value in enumerate(pending[1], 1)]
+        return result
     except Clarify as exc:
         q = q or getattr(exc, "question", None)
         if q:
             save_session(scope, clock, q, pending)
-        return {"text": str(exc)}
+        result = {"text": str(exc)}
+        if q and q.intent in {"matches", "predictions", "missing"} and not q.dates and not q.round_number:
+            result["choices"] = [{"label": "Сегодня", "value": "today"}, {"label": "Вчера", "value": "yesterday"}]
+        return result

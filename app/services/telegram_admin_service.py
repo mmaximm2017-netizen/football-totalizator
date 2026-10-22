@@ -24,6 +24,7 @@ from app.utils import MSK, is_before_deadline
 MAX_CALENDAR_MATCHES = 10
 ALLOWED_ACTIONS = {
     "assistant",
+    "assistant-ui",
     "today",
     "today-dashboard",
     "prediction-status",
@@ -430,6 +431,10 @@ def dispatch_request(request):
     action = request.get("action")
     if action not in ALLOWED_ACTIONS:
         raise ValueError("invalid_action")
+    if action == "assistant-ui":
+        from app.services.telegram_bot_ui_service import render
+
+        return render(request.get("callback"), request.get("text"))
     if action == "assistant":
         from app.services.telegram_sql_assistant import answer
 

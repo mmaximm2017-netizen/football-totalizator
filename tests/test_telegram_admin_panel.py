@@ -71,9 +71,9 @@ def test_main_keyboard_layout_is_fixed_and_safe():
     keyboard = json.loads(bot.main_keyboard())
     callbacks = [button["callback_data"] for row in keyboard["inline_keyboard"] for button in row]
 
-    assert callbacks == ["adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system", "adm:help", "adm:main"]
+    assert callbacks == ["ui:s:ranking", "ui:s:matches", "ui:s:predictions", "ui:s:stats", "ui:s:player", "adm:help", "ui:tools"]
     assert "adm:predictions" not in callbacks
-    assert all(callback.startswith("adm:") for callback in callbacks)
+    assert all(callback.startswith(("adm:", "ui:")) for callback in callbacks)
 
 
 def test_dashboard_navigation_is_present_on_main_sections():
@@ -84,7 +84,7 @@ def test_dashboard_navigation_is_present_on_main_sections():
         bot._format_problems({"issues": []}),
         bot._format_system({"system": {}, "worker_statuses": []}),
     )
-    required = {"adm:today", "adm:table", "adm:calendar", "adm:problems", "adm:system"}
+    required = {"adm:main"}
     for _, markup in renderers:
         callbacks = {button["callback_data"] for row in json.loads(markup)["inline_keyboard"] for button in row}
         assert required <= callbacks
