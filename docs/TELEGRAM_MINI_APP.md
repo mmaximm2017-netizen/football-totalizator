@@ -43,9 +43,11 @@ errors and a bounded per-worker limit of 60 authorized requests/minute. With
 multiple Gunicorn workers this is a per-worker burst guard, not a global quota.
 
 The browser has a bounded, memory-only, 30-second screen cache. Refresh bypasses
-it; no background polling, localStorage, analytics trackers, or persistent
-forecast cache are added. Tab changes cancel stale requests. Light/dark mode
-follows Telegram. Assets are versioned by TOTISH_RELEASE. Telegram SDK source
+it; no background polling, analytics trackers, or persistent forecast cache are
+added. Tab changes cancel stale requests. The blue/white light theme is the
+default; the header toggle selects a navy dark theme. Only that appearance
+preference is saved in localStorage; launch data, questions and results remain
+in memory. Assets are versioned by TOTISH_RELEASE. Telegram SDK source
 and validation scheme: https://core.telegram.org/bots/webapps.
 
 Question follow-ups use a signed, user-bound, 15-minute context token carried
