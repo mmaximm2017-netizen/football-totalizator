@@ -1,0 +1,103 @@
+name: Activate Telegram UI 89
+
+on:
+  push:
+    branches: [ops/activate-telegram-ui-89]
+
+permissions:
+  contents: read
+
+jobs:
+  activate:
+    name: Restart and verify deployed Telegram UI
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Verify release and restart existing poller
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            exec 9>/tmp/totish-production-deploy.lock
+            flock -w 60 9
+            expected=1f3a525be1b3a4307f4b815826635c85f30f6f47
+            test "$(cat .totish-managed-release)" = "$expected"
+            actual="$(docker exec football-totalizator-app-1 python -c 'import os; print(os.environ.get("TOTISH_RELEASE", ""))')"
+            test "$actual" = "$expected"
+            python3 - <<'PY'
+            import hashlib
+            import os
+            from pathlib import Path
+            import pwd
+            import subprocess
+            import time
+
+            expected = {
+                'scripts/telegram_admin_bot.py': '9ab3fec770159e8ed96b44aee069421e48c9fd8612f7c26137ab006772e7ed99',
+                'scripts/telegram_bot_ui.py': 'ca1a857f8725b6954ebf604e55971e803a432584f32a12991db33dc1dadd7b72',
+            }
+            for path, digest in expected.items():
+                assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, 'host source mismatch'
+            print('DEPLOYED_RELEASE_AND_HOST_SOURCE_OK')
+            owners = set()
+            pids = []
+            for proc in Path('/proc').iterdir():
+                if not proc.name.isdigit():
+                    continue
+                try:
+                    args = (proc / 'cmdline').read_bytes().split(b'\0')
+                    if any(arg == b'scripts/telegram_admin_bot.py' or arg.endswith(b'/scripts/telegram_admin_bot.py') for arg in args):
+                        owners.add(proc.stat().st_uid)
+                        pids.append(int(proc.name))
+                except (FileNotFoundError, PermissionError, ProcessLookupError):
+                    continue
+            assert len(owners) == 1 and len(pids) == 1, 'expected one existing Telegram poller'
+            owner = pwd.getpwuid(owners.pop())
+            env = dict(os.environ, XDG_RUNTIME_DIR=f'/run/user/{owner.pw_uid}', DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{owner.pw_uid}/bus')
+            prefix = []
+            if os.geteuid() != owner.pw_uid:
+                assert os.geteuid() == 0, 'cannot control poller owner service'
+                prefix = ['runuser', '-u', owner.pw_name, '--', 'env', f'XDG_RUNTIME_DIR={env["XDG_RUNTIME_DIR"]}', f'DBUS_SESSION_BUS_ADDRESS={env["DBUS_SESSION_BUS_ADDRESS"]}']
+            unit = 'totish-telegram-admin.service'
+            command = prefix + ['systemctl', '--user']
+            subprocess.run(command + ['is-active', '--quiet', unit], env=env, check=True)
+            old_pid = int(subprocess.check_output(command + ['show', '--property=MainPID', '--value', unit], env=env, text=True).strip())
+            assert old_pid == pids[0], 'service PID differs from poller PID'
+            subprocess.run(command + ['restart', unit], env=env, check=True)
+            time.sleep(3)
+            subprocess.run(command + ['is-active', '--quiet', unit], env=env, check=True)
+            new_pid = int(subprocess.check_output(command + ['show', '--property=MainPID', '--value', unit], env=env, text=True).strip())
+            assert new_pid > 0 and new_pid != old_pid, 'poller was not restarted'
+            assert Path(f'/proc/{new_pid}').exists()
+            print('TELEGRAM_POLLER_RESTARTED_AND_ACTIVE')
+            PY
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            from app.services.telegram_admin_service import dispatch_request
+            for kind in ('rpl', 'cup'):
+                for cb in (f'ui:v:{kind}:ranking:all:0:0', f'ui:r:{kind}:points:all:0:0', f'ui:v:{kind}:predictions:today:0:0'):
+                    result = dispatch_request({'action': 'assistant-ui', 'callback': cb})
+                    assert result['text'] and result['rows'], 'guided result unavailable'
+                users = dispatch_request({'action': 'assistant-ui', 'callback': f'ui:u:{kind}:card:all:0:0'})
+                cards = [b['callback_data'] for row in users['rows'] for b in row if b['callback_data'].startswith(f'ui:v:{kind}:card:')]
+                if cards:
+                    result = dispatch_request({'action': 'assistant-ui', 'callback': cards[0]})
+                    assert result['text'] and result['rows'], 'participant card unavailable'
+            print('READ_ONLY_UI_PRODUCTION_SMOKE_OK')
+            PY
+            python3 - <<'PY'
+            from scripts import telegram_admin_bot as bot
+            try:
+                token, _chat = bot._config()
+                result = bot._telegram_request(token, 'getMe', {}, timeout=5)
+                assert result.get('is_bot') is True
+            except Exception:
+                raise SystemExit('TELEGRAM_CONNECTIVITY_CHECK_FAILED') from None
+            print('TELEGRAM_CONNECTIVITY_OK')
+            PY
+            curl --fail --silent --show-error --max-time 10 https://totish.ru/health
