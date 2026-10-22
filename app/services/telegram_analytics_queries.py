@@ -79,11 +79,12 @@ def _round_wins(cur, q, tid, limit):
         return ['Победы считаются по целому туру. Уберите фильтр команд или матча.']
     rows = _rows(cur, f"""
         WITH eligible AS (
-            SELECT m.tournament_id, m.round_number
-            FROM gpt_safe.matches m
-            WHERE m.tournament_id = %s AND m.round_number IS NOT NULL
-              AND (%s::integer IS NULL OR m.round_number = %s)
-            GROUP BY m.tournament_id, m.round_number
+            SELECT r.tournament_id, r.round_number
+            FROM gpt_safe.calendar_rounds r
+            JOIN gpt_safe.matches m ON m.match_id = r.match_id AND m.tournament_id = r.tournament_id
+            WHERE r.tournament_id = %s
+              AND (%s::integer IS NULL OR r.round_number = %s)
+            GROUP BY r.tournament_id, r.round_number
             HAVING BOOL_AND(COALESCE(UPPER(m.status) IN {FINISHED_STATUSES_SQL}
                 AND m.kickoff_time <= CURRENT_TIMESTAMP
                 AND m.deadline <= CURRENT_TIMESTAMP
@@ -91,14 +92,16 @@ def _round_wins(cur, q, tid, limit):
               AND (%s::date[] IS NULL OR MAX((m.kickoff_time AT TIME ZONE 'Europe/Moscow')::date) = ANY(%s::date[]))
               AND NOT EXISTS (
                   SELECT 1 FROM gpt_safe.predictions bad
-                  WHERE bad.tournament_id = m.tournament_id AND bad.round_number = m.round_number
+                  JOIN gpt_safe.calendar_rounds br ON br.match_id = bad.match_id AND br.tournament_id = bad.tournament_id
+                  WHERE br.tournament_id = r.tournament_id AND br.round_number = r.round_number
                     AND (bad.points IS NULL OR bad.points NOT IN (0,2,3,5,7,8,10,11))
               )
         ), totals AS (
             SELECT u.user_id, u.username, e.round_number, COALESCE(SUM(p.points), 0) AS points, COUNT(p.points) AS submitted
             FROM gpt_safe.users u CROSS JOIN eligible e
+            JOIN gpt_safe.calendar_rounds cr ON cr.tournament_id = e.tournament_id AND cr.round_number = e.round_number
             LEFT JOIN gpt_safe.predictions p ON p.user_id = u.user_id
-                AND p.tournament_id = e.tournament_id AND p.round_number = e.round_number
+                AND p.tournament_id = cr.tournament_id AND p.match_id = cr.match_id
             GROUP BY u.user_id, u.username, e.round_number
         ), ranked AS (
             SELECT *, RANK() OVER (PARTITION BY round_number ORDER BY points DESC) AS place,
@@ -114,7 +117,7 @@ def _round_wins(cur, q, tid, limit):
         WHERE (%s::text IS NULL OR u.username = %s)
         ORDER BY 2 DESC, u.username LIMIT %s
     """, [tid, q.round_number, q.round_number, q.dates or None, q.dates or None, q.player, q.player, limit + 1])
-    lines = ['Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.']
+    lines = ['Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.', 'Туры по соседним датам МСК; один пустой день разделяет туры. Сборная и Суперкубок вне туров.']
     if q.dates:
         lines.append('Даты отбирают туры по дате последнего матча (МСК).')
     if not rows or not rows[0][3]:

@@ -72,7 +72,7 @@ def test_round_and_filters():
     assert q.round_number == 9
     assert q.dates == []
     sql, params = a.match_filters(q, 5)
-    assert 'm.tournament_id = %s' in sql and 'm.round_number = %s' in sql
+    assert 'm.tournament_id = %s' in sql and 'r.round_number = %s' in sql
     assert params == [5, 9]
 
 
@@ -335,7 +335,7 @@ def test_round_wins_requires_whole_round_before_date_filter():
     cur.fetchall.return_value = []
     a.execute_question(cur, a.Question(intent='round_wins', dates=['2026-10-17']), 5, NOW)
     sql, params = cur.execute.call_args.args
-    assert 'BOOL_AND' in sql and 'round_number IS NOT NULL' in sql
+    assert 'BOOL_AND' in sql and 'gpt_safe.calendar_rounds' in sql
     assert 'MAX((m.kickoff_time' in sql
     assert 'RANK() OVER (PARTITION BY round_number ORDER BY points DESC)' in sql
     assert params[0] == 5

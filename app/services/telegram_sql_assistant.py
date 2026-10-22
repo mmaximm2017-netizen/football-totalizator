@@ -253,7 +253,7 @@ def match_filters(q, tid):
         clauses.append(f"{DATE_SQL} = ANY(%s::date[])")
         params.append(q.dates)
     if q.round_number:
-        clauses.append("m.round_number = %s")
+        clauses.append("EXISTS (SELECT 1 FROM gpt_safe.calendar_rounds r WHERE r.match_id = m.match_id AND r.tournament_id = m.tournament_id AND r.round_number = %s)")
         params.append(q.round_number)
     if len(q.teams) == 1:
         clauses.append("(m.home_team = %s OR m.away_team = %s)")
@@ -473,7 +473,7 @@ def answer(text, scope, now=None):
             label = f"{q.dates[0]} … {q.dates[-1]} ({len(q.dates)} дней)"
         detail = f"\nДаты МСК: {label}" if q.dates else "" if q.round_number else "\nПериод: всё время турнира"
         if q.round_number:
-            detail += f"\nТур {q.round_number}"
+            detail += f"\nТур {q.round_number} по соседним датам МСК (один пустой день разделяет туры)"
         if q.intent == "last":
             detail += f"\nПоследний прогноз: ровно {q.points} очк."
         save_session(scope, clock, q, pending)
