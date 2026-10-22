@@ -1,0 +1,47 @@
+name: Verify match text 91
+on:
+  push:
+    branches: [ops/verify-match-text-91]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Verify deployed match output without sending messages
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 3m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            exec 9>/tmp/totish-production-deploy.lock
+            flock -w 60 9
+            expected=6e44680229f449d866be2bd4b53698fc23dedeb3
+            test "$(cat .totish-managed-release)" = "$expected"
+            actual="$(docker exec football-totalizator-app-1 python -c 'import os; print(os.environ.get("TOTISH_RELEASE", ""))')"
+            test "$actual" = "$expected"
+            echo MATCH_TEXT_RELEASE_OK
+            docker exec -i football-totalizator-app-1 python - <<'PY'
+            import re
+            from app.services.telegram_admin_service import dispatch_request
+            for kind in ('rpl', 'cup'):
+                picker = dispatch_request({'action': 'assistant-ui', 'callback': f'ui:r:{kind}:matches:all:0:0'})
+                choices = [button['callback_data'] for row in picker['rows'] for button in row if button['callback_data'].startswith(f'ui:v:{kind}:matches:r')]
+                assert choices, 'round list unavailable'
+                for callback in choices[:2]:
+                    result = dispatch_request({'action': 'assistant-ui', 'callback': callback})
+                    text = result['text']
+                    assert 'МСК' in text and ' — ' in text, 'match list unavailable'
+                    assert not re.search(r'\b(?:FINISHED|COMPLETE|COMPLETED|SCHEDULED|LIVE|IN_PLAY|POSTPONED|CANCELLED)\b', text), 'raw status still visible'
+                    assert 'нет статуса' not in text
+                print('MATCH_TEXT_STATUS_FREE', kind, min(2, len(choices)), flush=True)
+            print('MATCH_TEXT_PRODUCTION_SMOKE_OK', flush=True)
+            PY
+            curl --fail --silent --show-error --max-time 10 https://totish.ru/health
