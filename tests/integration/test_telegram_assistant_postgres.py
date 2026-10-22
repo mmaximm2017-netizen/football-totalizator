@@ -359,9 +359,9 @@ def round_summary(analytics, monkeypatch):
     source.execute("UPDATE matches SET league='other' WHERE tournament_id=5")
     source.execute("INSERT INTO users(id,username,password,is_admin,is_deleted) VALUES(5,'Bowb','secret',0,0)")
     source.execute("""
-        INSERT INTO matches(id,tournament_id,league,home_team,away_team,kickoff_time,deadline,status,home_score,away_score)
+        INSERT INTO matches(id,tournament_id,league,home_team,away_team,kickoff_time,deadline,status,home_score,away_score,round_number)
         SELECT id,5,'rpl','A','B',CURRENT_TIMESTAMP-days*interval '1 day',
-               CURRENT_TIMESTAMP-days*interval '1 day'-interval '1 hour','FINISHED',2,1
+               CURRENT_TIMESTAMP-days*interval '1 day'-interval '1 hour','FINISHED',2,1,99
         FROM (VALUES (3001,20),(3002,17),(3003,17),(3004,14),(3005,14)) v(id,days)
     """)
     source.execute("""
