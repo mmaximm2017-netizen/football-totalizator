@@ -22,41 +22,26 @@ jobs:
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
             python3 - <<'PYNET'
-            import json
-            import os
             import socket
             import time
             from scripts import telegram_admin_bot as bot
-            print('NETWORK_PROXY_CONFIGURED', any(os.getenv(k) for k in ('HTTPS_PROXY','https_proxy','ALL_PROXY','all_proxy')))
-            start = time.monotonic()
-            addresses = socket.getaddrinfo('api.telegram.org', 443, type=socket.SOCK_STREAM)
-            print('NETWORK_DNS_MS', round(1000 * (time.monotonic() - start)))
-            seen = set()
-            for family, socktype, proto, _, address in addresses:
-                if family in seen:
-                    continue
-                seen.add(family)
-                start = time.monotonic()
-                try:
-                    with socket.socket(family, socktype, proto) as conn:
-                        conn.settimeout(2)
-                        conn.connect(address)
-                    print('NETWORK_TCP', family.name, 'ok', round(1000 * (time.monotonic() - start)), flush=True)
-                except Exception as exc:
-                    print('NETWORK_TCP', family.name, type(exc).__name__, round(1000 * (time.monotonic() - start)), flush=True)
+            namespace = {'__name__': 'telegram_transport_candidate'}
+            exec('"""Telegram HTTPS with staggered IPv6/IPv4 connects and one connect deadline.\n\nUses the first TCP connection that succeeds; HTTP requests are sent only once.\nThe standard HTTPSConnection still performs TLS and hostname verification.\n"""\nimport errno\nfrom http.client import HTTPSConnection\nimport os\nimport selectors\nimport socket\nimport time\nfrom urllib.request import HTTPSHandler, build_opener\n\nCONNECT_DELAY = 0.25\n\n\ndef _addresses(host, port):\n    families = {}\n    seen = set()\n    for address in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):\n        family, kind, protocol, _, target = address\n        key = family, kind, protocol, target\n        if key not in seen:\n            seen.add(key)\n            families.setdefault(family, []).append(address)\n    # Interleave address families so a black-holed family cannot block the other.\n    result = []\n    while any(families.values()):\n        for items in families.values():\n            if items:\n                result.append(items.pop(0))\n    return result\n\n\ndef connect_telegram(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):\n    host, port = address\n    if host != \'api.telegram.org\':\n        # Preserve configured proxy behavior and all unrelated connections.\n        return socket.create_connection(address, timeout, source_address)\n    if timeout is socket._GLOBAL_DEFAULT_TIMEOUT:\n        timeout = socket.getdefaulttimeout()\n    candidates = _addresses(host, port)\n    if not candidates:\n        raise OSError(\'Telegram DNS returned no addresses\')\n    start = time.monotonic()\n    deadline = None if timeout is None else start + timeout\n    next_start = start\n    pending = set()\n    sockets = set()\n    winner = None\n    connected = False\n    last_error = None\n    with selectors.DefaultSelector() as selector:\n        try:\n            while candidates or pending:\n                now = time.monotonic()\n                if deadline is not None and now >= deadline:\n                    raise TimeoutError(\'Telegram connect deadline exceeded\')\n                if candidates and (not pending or now >= next_start):\n                    family, kind, protocol, _, target = candidates.pop(0)\n                    conn = None\n                    try:\n                        conn = socket.socket(family, kind, protocol)\n                        sockets.add(conn)\n                        conn.setblocking(False)\n                        if source_address:\n                            conn.bind(source_address)\n                        status = conn.connect_ex(target)\n                        if status in (0, errno.EISCONN):\n                            winner = conn\n                            break\n                        if status not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EALREADY, errno.EINTR):\n                            raise OSError(status, os.strerror(status))\n                        selector.register(conn, selectors.EVENT_WRITE)\n                        pending.add(conn)\n                        next_start = now + CONNECT_DELAY\n                    except OSError as exc:\n                        last_error = exc\n                        if conn is not None:\n                            conn.close()\n                        continue\n                if not pending:\n                    continue\n                now = time.monotonic()\n                wait = None if deadline is None else max(0, deadline - now)\n                if candidates:\n                    until_next = max(0, next_start - now)\n                    wait = until_next if wait is None else min(wait, until_next)\n                for key, _events in selector.select(wait):\n                    conn = key.fileobj\n                    selector.unregister(conn)\n                    pending.remove(conn)\n                    error = conn.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)\n                    if not error:\n                        winner = conn\n                        break\n                    last_error = OSError(error, os.strerror(error))\n                    conn.close()\n                if winner is not None:\n                    break\n            if winner is None:\n                raise last_error or OSError(\'Telegram connection failed\')\n            winner.settimeout(timeout)\n            connected = True\n            return winner\n        finally:\n            for conn in sockets:\n                if conn is not winner or not connected:\n                    conn.close()\n\n\nclass TelegramHTTPSConnection(HTTPSConnection):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self._create_connection = connect_telegram\n\n\nclass TelegramHTTPSHandler(HTTPSHandler):\n    def https_open(self, request):\n        return self.do_open(TelegramHTTPSConnection, request, context=self._context)\n\n\nurlopen = build_opener(TelegramHTTPSHandler()).open\n', namespace)
+            standard = bot.urlopen
+            candidate = namespace['urlopen']
+            resolver = socket.getaddrinfo
+            def ipv4_first(*args, **kwargs):
+                return sorted(resolver(*args, **kwargs), key=lambda item: item[0] != socket.AF_INET)
+            socket.getaddrinfo = ipv4_first
             token, _ = bot._config()
-            original = socket.getaddrinfo
-            for mode in ('default', 'ipv4', 'ipv4', 'default'):
-                if mode == 'ipv4':
-                    socket.getaddrinfo = lambda host, port, family=0, type=0, proto=0, flags=0: original(host, port, socket.AF_INET, type, proto, flags)
-                else:
-                    socket.getaddrinfo = original
+            for mode in ('sequential', 'raced', 'sequential', 'raced', 'raced', 'raced'):
+                bot.urlopen = standard if mode == 'sequential' else candidate
                 start = time.monotonic()
                 try:
                     result = bot._telegram_request(token, 'getMe', {}, timeout=3)
                     assert result.get('is_bot')
-                    print('NETWORK_TELEGRAM', mode, 'ok', round(1000 * (time.monotonic() - start)), flush=True)
+                    print('CANDIDATE_TELEGRAM', mode, 'ok', round(1000 * (time.monotonic() - start)), flush=True)
                 except Exception as exc:
-                    print('NETWORK_TELEGRAM', mode, type(exc).__name__, type(getattr(exc, 'reason', None)).__name__, round(1000 * (time.monotonic() - start)), flush=True)
-            socket.getaddrinfo = original
+                    print('CANDIDATE_TELEGRAM', mode, type(exc).__name__, type(getattr(exc, 'reason', None)).__name__, round(1000 * (time.monotonic() - start)), flush=True)
+            socket.getaddrinfo = resolver
             PYNET
