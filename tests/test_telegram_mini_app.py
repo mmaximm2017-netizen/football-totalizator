@@ -146,3 +146,14 @@ def test_bot_launch_button_is_private_chat_only(monkeypatch):
         assert bool(web) == (chat_id == "123")
         if web:
             assert web[0]["web_app"]["url"] == "https://totish.ru/telegram-app"
+
+
+def test_round_matches_requires_signed_launch_before_database_access(client, monkeypatch):
+    reader = MagicMock(return_value={"type": "round_matches", "matches": []})
+    monkeypatch.setattr("app.routes.telegram_mini_app.matches_payload", reader)
+    assert post(client, {"action": "matches", "kind": "rpl"}, raw="hash=bad").status_code == 401
+    reader.assert_not_called()
+    response = post(client, {"action": "matches", "kind": "cup", "round_number": 6})
+    assert response.status_code == 200
+    reader.assert_called_once_with("cup", 6)
+    assert response.headers["Cache-Control"] == "no-store"
