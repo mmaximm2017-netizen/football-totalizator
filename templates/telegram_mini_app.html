@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111916">
+  <title>ТОТИШ · Мини-приложение</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='telegram-app/app.css', v=release) }}">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+  <script src="{{ url_for('static', filename='telegram-app/app.js', v=release) }}" defer></script>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-table" viewBox="0 0 24 24"><path d="M8 3h8v5c0 3-2 5-4 5S8 11 8 8V3ZM8 5H4v3c0 2 2 3 5 3m7-6h4v3c0 2-2 3-5 3M12 13v5m-4 3h8m-6-3h4v3"/></symbol>
+    <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 3-2 6H9l-2-6 5-3Zm0-4v4m9 4-4-1m1 9-3-3m-9 3 3-3m-6-5 4-1"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M6 16v-5m6 5V4m6 12V8"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 18 0Z"/><path d="M7 10h8m-8 4h5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 1 0 0 8m0-13v5h-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m4 11 16-7-7 16-2-7-7-2Zm7 2 9-9"/></symbol>
+  </svg>
+  <div class="app-shell">
+    <header class="brand-bar">
+      <div class="brand"><span class="brand-mark">Т</span><span>ТОТИШ<small>ФУТБОЛ В ЦИФРАХ</small></span></div>
+      <button class="icon-button" id="open-chat" aria-label="Задать вопрос"><svg><use href="#i-chat"/></svg></button>
+    </header>
+    <div class="tournaments" role="group" aria-label="Турнир">
+      <button data-kind="rpl" aria-pressed="true"><span class="league-dot"></span>РПЛ</button>
+      <button data-kind="cup" aria-pressed="false"><span class="cup-dot"></span>Кубок России</button>
+    </div>
+    <main id="main">
+      <div class="section-heading"><div><p class="eyebrow" id="eyebrow">ОБЩИЙ ЗАЧЁТ</p><h1 id="page-title">Таблица</h1></div><button id="refresh" class="icon-button" aria-label="Обновить данные"><svg><use href="#i-refresh"/></svg></button></div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <section id="content" aria-label="Данные турнира" aria-busy="false"></section>
+      <div id="controls" class="controls"></div>
+      <form id="date-form" class="date-form" hidden><label>С даты<input id="date-from" type="date" required></label><label>По дату<input id="date-to" type="date" required></label><button class="primary" type="submit">Показать</button></form>
+      <p class="updated" id="updated"></p>
+    </main>
+    <nav class="bottom-nav" aria-label="Разделы">
+      <button data-tab="ranking" aria-current="page"><svg><use href="#i-table"/></svg><span>Таблица</span></button>
+      <button data-tab="matches"><svg><use href="#i-ball"/></svg><span>Матчи</span></button>
+      <button data-tab="predictions"><svg><use href="#i-target"/></svg><span>Прогнозы</span></button>
+      <button data-tab="stats"><svg><use href="#i-chart"/></svg><span>Статистика</span></button>
+      <button data-tab="player"><svg><use href="#i-user"/></svg><span>Участники</span></button>
+    </nav>
+  </div>
+  <dialog id="chat-dialog" aria-labelledby="chat-title">
+    <div class="chat-header"><div><p class="eyebrow">ДАННЫЕ ТОТИША</p><h2 id="chat-title">Спросить у бота</h2></div><button class="icon-button" id="close-chat" aria-label="Закрыть">✕</button></div>
+    <div class="chat-feed" id="chat-feed" aria-live="polite"><p class="chat-intro">Те же вопросы, что в чате с ботом.<br>Ответы из базы турнира.</p><div id="suggestions"><button>Кто сколько раз выигрывал туры РПЛ?</button><button>Кто сколько набрал вчера в Кубке России?</button><button>Матчи сегодня в РПЛ</button></div></div>
+    <form id="question-form"><label class="sr-only" for="question">Ваш вопрос</label><input id="question" maxlength="1000" placeholder="Спросите о турнире…" autocomplete="off" required><button class="primary send" aria-label="Отправить вопрос"><svg><use href="#i-send"/></svg></button></form>
+  </dialog>
+</body>
+</html>

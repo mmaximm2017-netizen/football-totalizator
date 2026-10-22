@@ -239,14 +239,18 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
 
 
 def main_keyboard():
-    return _keyboard(
-        [
-            [{"text": "🏆 Таблица", "callback_data": "ui:s:ranking"}, {"text": "⚽ Матчи", "callback_data": "ui:s:matches"}],
-            [{"text": "🎯 Прогнозы", "callback_data": "ui:s:predictions"}, {"text": "📊 Статистика", "callback_data": "ui:s:stats"}],
-            [{"text": "👤 Участник", "callback_data": "ui:s:player"}, {"text": "❓ Что спросить", "callback_data": "adm:help"}],
-            [{"text": "⚙️ Администрирование", "callback_data": "ui:tools"}],
-        ]
-    )
+    rows = [
+        [{"text": "🏆 Таблица", "callback_data": "ui:s:ranking"}, {"text": "⚽ Матчи", "callback_data": "ui:s:matches"}],
+        [{"text": "🎯 Прогнозы", "callback_data": "ui:s:predictions"}, {"text": "📊 Статистика", "callback_data": "ui:s:stats"}],
+        [{"text": "👤 Участник", "callback_data": "ui:s:player"}, {"text": "❓ Что спросить", "callback_data": "adm:help"}],
+        [{"text": "⚙️ Администрирование", "callback_data": "ui:tools"}],
+    ]
+    # Telegram permits inline web_app buttons only in private chats.
+    values = load_env()
+    chat_id = str(values.get("TELEGRAM_ERROR_CHAT_ID") or os.getenv("TELEGRAM_ERROR_CHAT_ID", ""))
+    if chat_id.isdigit() and int(chat_id) > 0:
+        rows.insert(0, [{"text": "📱 Открыть приложение", "web_app": {"url": "https://totish.ru/telegram-app"}}])
+    return _keyboard(rows)
 
 
 def _menu_button():
