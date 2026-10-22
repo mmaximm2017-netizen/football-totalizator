@@ -902,9 +902,17 @@ def _handle_update(token, admin_chat_id, update):
                 payload = _ask_assistant(values.get(choice, choice), scope)
                 # Callback results may be long too; preserve every line.
                 chunks = list(_assistant_chunks(payload["text"]))
-                for chunk in chunks[:-1]:
-                    _deliver_with_retry(token, chat_id, chunk, _keyboard([]))
-                rendered = (chunks[-1], _assistant_markup(payload))
+                if len(chunks) > 1:
+                    delivered, _ = _deliver_with_retry(token, chat_id, chunks[0], _keyboard([]), callback.get("message", {}).get("message_id"))
+                    if delivered:
+                        for index, chunk in enumerate(chunks[1:], 1):
+                            markup = _assistant_markup(payload) if index == len(chunks) - 1 else _keyboard([])
+                            delivered, _ = _deliver_with_retry(token, chat_id, chunk, markup)
+                            if not delivered:
+                                break
+                    rendered = None
+                else:
+                    rendered = (chunks[0], _assistant_markup(payload))
             else:
                 rendered = _render_callback(callback_data)
         except Exception as exc:  # noqa: BLE001 - Telegram must receive a safe fallback message.

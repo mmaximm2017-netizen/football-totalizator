@@ -154,6 +154,22 @@ def test_helper_protocol_supports_ui_without_primary_database():
     render.assert_called_once_with(callback("u", "cup", "card"), None)
 
 
+def test_long_clarification_reply_edits_first_chunk_then_sends_remaining_in_order():
+    text = ("Бек: 10 очк.\n" * 700).rstrip()
+    with patch.object(bot, "_helper") as helper, patch.object(bot, "_deliver_with_retry", return_value=(True, {})) as deliver, patch.object(bot, "_telegram_request"):
+        helper._exchange.return_value = {"text": text}
+        bot._handle_update("token", 123, callback_update("qa:rpl"))
+    calls = deliver.call_args_list
+    assert calls[0].args[4] == 7
+    assert all(len(call.args) == 4 for call in calls[1:])
+    assert "\n".join(call.args[2] for call in calls) == text
+
+
+def test_personal_period_back_button_returns_to_participant_card():
+    screen = local_screen(callback("p", "cup", "points", user=12))
+    assert screen["rows"][-1][0]["callback_data"] == callback("v", "cup", "card", user=12)
+
+
 def test_round_picker_scoped_and_uses_calendar_rounds():
     cur = MagicMock()
     cur.fetchall.side_effect = [[(5, "Чемпионат России 🇷🇺"), (6, "Кубок России")], [(2, NOW, NOW + timedelta(days=2))]]
