@@ -10,7 +10,10 @@ forecast submission and account linking are outside this release.
 After an authorized deployment, `/start` or the existing main menu in a private
 bot chat includes **Открыть приложение** pointing to
 `https://totish.ru/telegram-app`. Inline web_app launch needs no BotFather
-configuration. Existing commands and inline navigation remain available.
+configuration. The bot menu keeps the app launcher, question help and administration. Retired
+analytics buttons in old bot messages offer the app launcher locally without a
+helper/database read. Existing question commands and administrative navigation
+remain available. Shared screen renderers are retained for the Mini App.
 The launch button is omitted when TELEGRAM_ERROR_CHAT_ID is absent or is a
 group ID. Obtain a fresh menu message after deployment; Telegram cannot update
 previously sent keyboards automatically.

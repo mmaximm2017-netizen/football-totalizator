@@ -240,9 +240,7 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
 
 def main_keyboard():
     rows = [
-        [{"text": "🏆 Таблица", "callback_data": "ui:s:ranking"}, {"text": "⚽ Матчи", "callback_data": "ui:s:matches"}],
-        [{"text": "🎯 Прогнозы", "callback_data": "ui:s:predictions"}, {"text": "📊 Статистика", "callback_data": "ui:s:stats"}],
-        [{"text": "👤 Участник", "callback_data": "ui:s:player"}, {"text": "❓ Что спросить", "callback_data": "adm:help"}],
+        [{"text": "❓ Спросить бота", "callback_data": "adm:help"}],
         [{"text": "⚙️ Администрирование", "callback_data": "ui:tools"}],
     ]
     # Telegram permits inline web_app buttons only in private chats.
@@ -289,7 +287,18 @@ def _tournament_heading(name, table=False):
 
 
 def _main_text():
-    return "⚽ ТОТИШ\n\nТаблица, прогнозы и статистика под рукой.\nВыберите раздел или напишите вопрос сообщением.\n\nНапример: кто сколько раз выигрывал туры РПЛ?"
+    return "⚽ ТОТИШ\n\nТаблица, матчи, прогнозы и итоги туров доступны в приложении.\n\nВопрос боту можно написать сообщением.\nНапример: кто сколько раз выигрывал туры РПЛ?"
+
+
+def _app_redirect():
+    markup = main_keyboard()
+    has_launcher = any("web_app" in button for row in json.loads(markup)["inline_keyboard"] for button in row)
+    action = "Нажмите «Открыть приложение»." if has_launcher else "Кнопка приложения доступна только в личном чате с ботом."
+    return f"📱 Этот раздел теперь в приложении.\n{action}\n\nВопрос боту по-прежнему можно написать сообщением.", markup
+
+
+def _is_retired_table(data):
+    return isinstance(data, str) and data.replace(":refresh", "") in {"adm:table", "adm:table:rpl", "adm:table:cup"}
 
 
 def _format_today(payload):
@@ -1044,8 +1053,13 @@ def _handle_update_inner(token, admin_chat_id, update):
         if guided or _leaves_today_section(callback_data):
             _delete_today_photos_if_present(token, chat_id)
         try:
-            if isinstance(callback_data, str) and callback_data.startswith("ui:"):
-                rendered = _ui_screen(callback_data, scope)
+            if _is_retired_table(callback_data):
+                rendered = _app_redirect()
+            elif isinstance(callback_data, str) and callback_data.startswith("ui:"):
+                if callback_data == "ui:tools":
+                    rendered = _ui_screen(callback_data, scope)
+                else:
+                    rendered = _app_redirect()
             elif isinstance(callback_data, str) and callback_data.startswith("qa:"):
                 choice = callback_data[3:]
                 values = {"rpl": "РПЛ", "cup": "Кубок России", "wc": "ЧМ", "today": "сегодня", "yesterday": "вчера"}
@@ -1113,15 +1127,8 @@ def _handle_update_inner(token, admin_chat_id, update):
     elif isinstance(message, dict) and isinstance(message.get("text"), str):
         text = message["text"]
         scope = f"{chat_id}:{message['from']['id']}"
-        waiting = _ui_inputs.pop(scope, None)
-        if waiting and time.monotonic() - waiting[0] <= UI_INPUT_TTL and not text.startswith("/"):
-            try:
-                response, markup = _ui_screen(waiting[1], scope, text)
-            except Exception as exc:  # noqa: BLE001 - never disclose backend errors.
-                logger.warning("telegram_ui_failed type=%s", type(exc).__name__)
-                response, markup = "⚠️ Не удалось получить данные. Повторите выбор периода.", main_keyboard()
-            _deliver_with_retry(token, chat_id, response, markup)
-            return True
+        # Old date prompts must not capture new natural-language questions.
+        _ui_inputs.pop(scope, None)
         payload = {}
         if text.strip().lower() in {"/help", "помощь", "справка"}:
             response = _assistant_help()
@@ -1195,10 +1202,9 @@ def _is_local_update(update):
         return True
     if not isinstance(data, str):
         return False
-    screen = local_screen(data)
-    while screen and "next" in screen:
-        screen = local_screen(screen["next"])
-    return bool(screen)
+    # Removed guided sections redirect locally, including old data-bearing
+    # callbacks. Do not queue a helper/DB request just to show the app launcher.
+    return data.startswith("ui:") or _is_retired_table(data)
 
 
 def _write_process_version():
