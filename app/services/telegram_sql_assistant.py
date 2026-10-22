@@ -24,6 +24,12 @@ HELP = """Вопросы ТОТИШу (без ИИ API):
 • Какие матчи сегодня в РПЛ?
 • Кто не сделал прогноз сегодня в РПЛ?
 • Результат Бека с 17 октября по 19 октября 2026 в РПЛ.
+• Кто сколько раз выигрывал туры РПЛ?
+• Какая серия без точного счёта у Бека в РПЛ?
+• Рекорд очков за матч у игроков РПЛ.
+• Сравни Бека и Макс Зенит в РПЛ.
+• Средние очки игроков в РПЛ.
+• Сколько раз Бек получал 10 очков в РПЛ?
 
 Уточнения: «Кубок России», «за вчера», имя или номер из списка.
 Даты без года: текущий год. Время МСК. /reset сбрасывает контекст.
@@ -60,6 +66,7 @@ class Question:
     teams: list[str] = field(default_factory=list)
     points: int = 10
     original: str = ""
+    players: list[str] = field(default_factory=list)
 
 
 def parse_dates(text, now):
@@ -128,7 +135,19 @@ def parse_dates(text, now):
 def parse_question(text, previous=None, now=None):
     n = corrected(text)
     intent = None
-    if re.search(r"на первом|на 1 месте|первый|лидер", n):
+    if re.search(r"выигр|побед|побеж|перв.*мест", n) and re.search(r"\bтур(?:а|ы|ов|е|ах|у|ом)?\b", n):
+        intent = "round_wins"
+    elif "сравн" in n:
+        intent = "compare"
+    elif "сери" in n and re.search(r"без|не получ|не брал", n):
+        intent = "streak"
+    elif re.search(r"рекорд|максимум|максимальн|лучший результат", n):
+        intent = "record"
+    elif "средн" in n:
+        intent = "average"
+    elif re.search(r"сколько раз|число|количество", n) and re.search(r"очк|очков|точн", n):
+        intent = "hits"
+    elif re.search(r"на первом|на 1 месте|первый|лидер", n):
         intent = "leader"
     elif "таблиц" in n or "рейтинг" in n:
         intent = "ranking"
@@ -172,11 +191,17 @@ def parse_question(text, previous=None, now=None):
     if rnd or word_round:
         q.round_number = int(rnd[1]) if rnd else word_round
         q.dates, q.match_id, q.teams = dates, None, []
-    elif "тур" in n and not tournaments and "турнир" not in n:
+    elif "тур" in n and not tournaments and "турнир" not in n and intent != "round_wins":
         raise Clarify("Укажите номер тура, например: в 9 туре РПЛ.")
     pts = re.search(r"\b(\d{1,2})\s+очк", n)
     if pts:
         q.points = int(pts[1])
+    if q.intent == "hits" and "точн" in n and not pts:
+        q.points = -1  # Both exact-score buckets (10 and 11), not a new score value.
+    if q.intent == "streak" and not re.search(r"точн|\b10\b|\b11\b", n) and intent:
+        raise Clarify("Пока поддерживается серия без точного счёта (10/11 очков). Например: серия Бека без точного счёта в РПЛ.")
+    if q.intent == "record" and "тур" in n and "матч" not in n and "турнир" not in n and not re.search(r"\d+\s+тур|девятом\s+тур", n):
+        raise Clarify("Умею показывать рекорд очков за один матч. Для суммы за конкретный тур спросите: очки игроков в 9 туре РПЛ.")
     return q
 
 
@@ -249,7 +274,21 @@ def resolve_player(cur, text, q, pending):
         else:
             q.match_id = int(selected.split(" · ")[-1])
         return None
-    if q.intent in {"points", "last"}:
+    if q.intent == "compare":
+        users = [r[0] for r in read(cur, "SELECT username FROM gpt_safe.users ORDER BY username")]
+        found, exact = candidates(text, users)
+        if not found:
+            found, exact = candidates(q.original, users)
+        if exact:
+            q.players = list(dict.fromkeys(q.players + found))
+        if len(q.players) != 2:
+            suggestions = found if found and not exact else users
+            if len(q.players) == 1:
+                suggestions = [name for name in suggestions if name not in q.players]
+                raise Clarify(f"Выбран участник: {q.players[0]}. Укажите второго: " + ", ".join(suggestions))
+            raise Clarify("Для сравнения укажите два точных имени: " + ", ".join(suggestions))
+        return None
+    if q.intent in {"points", "last", "round_wins", "streak", "record", "average", "hits"}:
         users = [r[0] for r in read(cur, "SELECT username FROM gpt_safe.users ORDER BY username")]
         # A new explicit name in a short follow-up replaces the previous player.
         found, exact = candidates(text, users)
@@ -261,13 +300,17 @@ def resolve_player(cur, text, q, pending):
             q.player = found[0]
         elif found:
             return "player", found
-        elif q.intent == "last" or not re.search(r"кто сколько|игрок|участник|все", normal(q.original)):
+        elif q.intent == "last" or not re.search(r"кто|игрок|участник|все|победител|рекорд", normal(q.original)):
             return "player", users
     return None
 
 
 def execute_question(cur, q, tid, now):
     where, params = match_filters(q, tid)
+    if q.intent in {"round_wins", "streak", "record", "average", "hits", "compare"}:
+        from app.services.telegram_analytics_queries import analytics_lines
+
+        return analytics_lines(cur, q, tid, where, params, FINISHED, MAX_ROWS), None
     if q.intent in {"leader", "ranking", "points"}:
         # Same tie breakers as ranking_service, using safe participant views.
         rows = read(cur, f"""
@@ -404,7 +447,7 @@ def answer(text, scope, now=None):
             else:
                 teams = [r[0] for r in read(cur, "SELECT home_team FROM gpt_safe.matches WHERE tournament_id = %s UNION SELECT away_team FROM gpt_safe.matches WHERE tournament_id = %s", (tid, tid)) if r[0]]
                 found, exact = candidates(q.original + " " + text, teams)
-                if exact and found and not q.player:
+                if exact and found and not q.player and not q.players:
                     if len(found) > 2:
                         raise Clarify("Укажите ровно две команды или конкретную дату.")
                     q.teams = found

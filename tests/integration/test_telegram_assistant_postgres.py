@@ -140,3 +140,80 @@ def test_real_transaction_readonly_rejects_mutation(analytics):
     finally:
         conn.rollback()
         conn.close()
+
+
+@pytest.fixture
+def round_analytics(analytics):
+    safe, source = analytics
+    source.execute("""
+        INSERT INTO matches(id,tournament_id,home_team,away_team,kickoff_time,deadline,status,home_score,away_score,round_number) VALUES
+        (21,5,'Локомотив','Краснодар',CURRENT_TIMESTAMP-interval '5 days',CURRENT_TIMESTAMP-interval '6 days','FINISHED',2,1,7),
+        (22,5,'Зенит','ЦСКА',CURRENT_TIMESTAMP-interval '4 days',CURRENT_TIMESTAMP-interval '5 days','FINISHED',0,0,7),
+        (23,5,'Зенит','Краснодар',CURRENT_TIMESTAMP-interval '3 days',CURRENT_TIMESTAMP-interval '4 days','FINISHED',3,0,8),
+        (24,5,'Локомотив','ЦСКА',CURRENT_TIMESTAMP-interval '2 days',CURRENT_TIMESTAMP-interval '3 days','FINISHED',1,0,NULL)
+    """)
+    source.execute("""
+        INSERT INTO predictions(user_id,match_id,tournament_id,home_goals,away_goals,points) VALUES
+        (1,21,5,2,1,10),(2,21,5,2,1,10),(1,22,5,2,1,0),
+        (1,23,5,0,1,0),(2,23,5,3,0,11),(1,24,5,1,0,10)
+    """)
+    return safe, source
+
+
+def test_round_wins_shared_first_full_round_only_and_tournament_isolation(round_analytics):
+    safe, _ = round_analytics
+    now = datetime.now(timezone.utc)
+    lines, _ = a.execute_question(safe, a.Question(intent='round_wins'), 5, now)
+    assert 'Учтено туров с прогнозами: 2.' in lines
+    assert '1. Макс Зенит: 2 побед' in lines
+    assert '2. Бек: 1 побед' in lines
+    cup, _ = a.execute_question(safe, a.Question(intent='round_wins'), 6, now)
+    assert '1. Бек: 1 побед' in cup
+    assert '2. Макс Зенит: 0 побед' in cup
+
+
+def test_round_date_filter_never_completes_partial_round(round_analytics):
+    safe, source = round_analytics
+    source.execute("SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date - 1")
+    day = source.fetchone()[0].isoformat()
+    lines, _ = a.execute_question(safe, a.Question(intent='round_wins', dates=[day]), 5, datetime.now(timezone.utc))
+    assert 'Завершённых туров с начисленными прогнозами нет.' in lines
+
+
+def test_round_wins_reject_invalid_points_and_future_deadline(round_analytics):
+    safe, source = round_analytics
+    source.execute('UPDATE predictions SET points=999 WHERE match_id=21 AND user_id=1')
+    source.execute("UPDATE matches SET deadline=CURRENT_TIMESTAMP+interval '1 day' WHERE id=23")
+    lines, _ = a.execute_question(safe, a.Question(intent='round_wins'), 5, datetime.now(timezone.utc))
+    assert 'Завершённых туров с начисленными прогнозами нет.' in lines
+
+
+def test_streak_counts_missing_prediction_and_stops_at_exact(round_analytics):
+    safe, _ = round_analytics
+    lines, _ = a.execute_question(safe, a.Question(intent='streak', round_number=7), 5, datetime.now(timezone.utc))
+    assert 'Бек: 1 матчей' in lines and 'Макс Зенит: 1 матчей' in lines
+
+
+def test_average_record_hits_and_compare_use_stored_finished_points(round_analytics):
+    safe, _ = round_analytics
+    now = datetime.now(timezone.utc)
+    average, _ = a.execute_question(safe, a.Question(intent='average', round_number=7), 5, now)
+    assert 'Бек: 5.00 очк. (2 прогнозов)' in average
+    assert 'Макс Зенит: 10.00 очк. (1 прогнозов)' in average
+    record, _ = a.execute_question(safe, a.Question(intent='record', round_number=7), 5, now)
+    assert 'Бек: 10 очк.' in record
+    hits, _ = a.execute_question(safe, a.Question(intent='hits', round_number=8, points=-1), 5, now)
+    assert 'Макс Зенит: 1 раз' in hits
+    tens, _ = a.execute_question(safe, a.Question(intent='hits', round_number=8, points=10), 5, now)
+    assert 'Макс Зенит: 0 раз' in tens
+    compare, _ = a.execute_question(safe, a.Question(intent='compare', round_number=7, players=['Бек', 'Макс Зенит']), 5, now)
+    assert any('Бек\n10 очк. · среднее 5.00' in line for line in compare)
+    assert any('Макс Зенит\n10 очк. · среднее 10.00' in line for line in compare)
+
+
+def test_new_question_after_unsupported_screenshot_is_now_answered(round_analytics):
+    result = a.answer('Кто сколько раз выигрывал туры РПЛ', 'screenshot')['text']
+    assert 'Макс Зенит: 2 побед' in result
+    comparison = a.answer('Сравни Бек и Макс Зенит в РПЛ', 'compare')['text']
+    assert 'Сравнение' in comparison
+    assert a.SESSIONS['compare'][1].teams == []
