@@ -67,3 +67,37 @@ pre-October outbox events at selection and atomic claim even when the deployed
 `TOTISH_MATCH_RESULT_PUSH_SINCE` is old; a later configured SINCE still wins.
 Events and scoring are retained unchanged. Do not revert this safety floor
 with the cron policy. New October events remain eligible for normal delivery.
+
+## Telegram process activation
+
+The live bot is a **system** unit, `/etc/systemd/system/totish-telegram-admin.service`,
+currently running as root. The checked-in unit now describes that runtime; do not
+use `systemctl --user` for this installation. The service template is delivered
+as a managed file but is not silently installed into `/etc` by the deploy user.
+
+One root bootstrap is required before the first deployment of this change.
+Use the reviewed new checkout and the actual username used by the deployment:
+
+```bash
+python3 scripts/install_telegram_admin_service.py DEPLOY_USERNAME
+```
+
+This validates the username and sudoers rule, installs the system-unit template,
+and grants only this command without a password:
+`/usr/bin/systemctl restart totish-telegram-admin.service`.
+It neither grants general sudo nor restarts the bot. Installation and activation
+are production changes and belong to an explicitly authorized release.
+
+The deployment preflight checks restart permission before replacing the
+application or host files. Missing permission fails the deployment visibly.
+After synchronization, `activate_telegram_admin.py` restarts the unit only when
+its running PID/source hashes cannot be verified. It verifies ActiveState,
+MainPID and hashes for all five loaded host modules against the managed files.
+The root bot publishes those hashes, without secrets, to
+`runtime/telegram-admin-process.json`. A release marker on disk alone is not
+accepted as proof of the running bot version. Activation failure triggers
+restoration of host files, static assets, crontab, image and the old bot process.
+
+No root bootstrap, restart or production database migration was performed while
+preparing this PR. The additive migration 0008 exposes only aggregate finished
+rankings and grants the reader SELECT; it changes no forecasts or points.

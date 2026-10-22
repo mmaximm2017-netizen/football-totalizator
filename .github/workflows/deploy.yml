@@ -180,6 +180,8 @@ jobs:
             }
             release_source="$(mktemp -d)"
             tar -xzf "$incoming_archive" -C "$release_source"
+            # Refuse BEFORE replacing app/host files if bot activation is impossible.
+            python3 "$release_source/scripts/activate_telegram_admin.py" --preflight --source "$release_source" --installed "$PWD"
 
             bootstrap_backup="$(mktemp -d)"
             cp docker-compose.yml "$bootstrap_backup/docker-compose.yml"
@@ -338,6 +340,23 @@ jobs:
                 crontab "$control_backup/crontab" || true
               fi
               restore_previous || true
+              exit 1
+            fi
+
+            if ! python3 scripts/activate_telegram_admin.py --installed "$PWD"; then
+              echo "TELEGRAM ACTIVATION FAILED: restoring host files and previous image" >&2
+              while IFS= read -r backup_path; do
+                relative="${backup_path#"$control_backup/files/"}"
+                cp "$backup_path" "$relative"
+              done < <(find "$control_backup/files" -type f)
+              if [[ -d "$control_backup/static" ]]; then
+                rm -rf static
+                mv "$control_backup/static" static
+              fi
+              crontab "$control_backup/crontab" || true
+              restore_previous || true
+              # Restore the old bot code as well when activation failed midway.
+              sudo -n /usr/bin/systemctl restart totish-telegram-admin.service || true
               exit 1
             fi
 

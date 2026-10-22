@@ -2,6 +2,8 @@
 """One-shot, admin-only Telegram inline-keyboard poller for TOTISH."""
 
 import argparse
+from contextvars import ContextVar
+import hashlib
 import json
 import logging
 import os
@@ -9,6 +11,7 @@ import re
 import select
 import subprocess
 import tempfile
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -31,9 +34,11 @@ except ModuleNotFoundError:  # Allows unit tests to import the script as a modul
 try:
     from telegram_bot_ui import local_screen
     from telegram_http import urlopen
+    from telegram_update_queue import UpdateDispatcher
 except ModuleNotFoundError:
     from scripts.telegram_bot_ui import local_screen
     from scripts.telegram_http import urlopen
+    from scripts.telegram_update_queue import UpdateDispatcher
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,7 +47,12 @@ OFFSET_FILE = STATE_DIR / "telegram-admin-offset.json"
 LOCK_FILE = STATE_DIR / "telegram-admin-poller.lock"
 MAX_MESSAGE_LENGTH = 3800
 POLL_TIMEOUT = 50
-QUERY_TIMEOUT = 20
+QUERY_TIMEOUT = 8
+OPERATION_TIMEOUT = 12
+_operation = ContextVar("telegram_operation", default=None)
+_dispatcher = None
+_delivery_lock = threading.RLock()
+_recovery_lock = threading.Lock()
 UI_REQUEST_TIMEOUT = 3
 BACKOFF_SECONDS = (1, 2, 5, 10)
 CONTAINER_NAME = "football-totalizator-app-1"
@@ -133,7 +143,7 @@ def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT, long_poll=Fa
         data=body,
         method="POST",
     )
-    with urlopen(request, timeout=timeout + 10 if long_poll else timeout) as response:
+    with urlopen(request, timeout=timeout + 10 if long_poll else _remaining(timeout)) as response:
         value = json.loads(response.read().decode("utf-8"))
     if not isinstance(value, dict) or value.get("ok") is not True:
         raise RuntimeError("telegram_api_error")
@@ -141,7 +151,42 @@ def _telegram_request(token, method, payload, timeout=POLL_TIMEOUT, long_poll=Fa
 
 
 def _telegram_error_text(error):
-    return f"{error.reason} {error.read().decode('utf-8', errors='replace')}".lower()
+    if not hasattr(error, "telegram_description"):
+        body = error.read().decode("utf-8", errors="replace")
+        error.telegram_description = f"{error.reason} {body}".lower()
+        try:
+            error.telegram_retry_after = max(0, int(json.loads(body).get("parameters", {}).get("retry_after", 0)))
+        except (ValueError, TypeError, AttributeError):
+            error.telegram_retry_after = 0
+    return error.telegram_description
+
+
+def _error_category(error):
+    if isinstance(error, HTTPError):
+        description = _telegram_error_text(error)
+        for marker, category in (("message is not modified", "not_modified"),
+                                 ("message to edit not found", "missing_message"),
+                                 ("message can't be edited", "uneditable_message"),
+                                 ("message cannot be edited", "uneditable_message"),
+                                 ("there is no text in the message to edit", "uneditable_message")):
+            if marker in description:
+                return category
+        return "rate_limit" if error.code == 429 else "http_error"
+    return "network" if isinstance(error, (URLError, TimeoutError)) else "invalid_response"
+
+
+def _remaining(timeout):
+    operation = _operation.get()
+    if operation:
+        timeout = min(timeout, operation["deadline"] - time.monotonic())
+        if timeout <= 0:
+            raise TimeoutError("telegram_operation_deadline")
+    return timeout
+
+
+def _operation_fields():
+    operation = _operation.get() or {}
+    return operation.get("id", "none"), operation.get("route", "none")
 
 
 def _answer_callback_best_effort(token, callback_id):
@@ -209,7 +254,7 @@ def _menu_button():
 
 
 def _safe_text(text):
-    return text[:MAX_MESSAGE_LENGTH]
+    return text
 
 
 def _friendly_tournament(name):
@@ -311,7 +356,7 @@ def _format_table(payload):
         return _safe_text(f"🏆 Турнирная таблица\n{_updated_line()}\n\nТурнир не найден."), _dashboard_keyboard("adm:table:rpl")
     lines = ["🏆 Турнирная таблица", _updated_line(), "", _tournament_heading(tournament["name"], table=True), ""]
     medals = {1: "🥇", 2: "🥈", 3: "🥉"}
-    for row in payload.get("ranking", [])[:20]:
+    for row in payload.get("ranking", []):
         place = medals.get(row["place"], f"{row['place']}.")
         lines.append(f"{place} {row['username']} — {row['points']}")
     kind = "rpl" if tournament["name"] == "Чемпионат России 🇷🇺" else "cup"
@@ -374,7 +419,7 @@ def _host_metadata(docker_bin):
             ["stat", "-c", "%Y", path],
             text=True,
             capture_output=True,
-            timeout=5,
+            timeout=_remaining(2),
             check=False,
         )
         return completed.stdout.strip() if completed.returncode == 0 else ""
@@ -383,7 +428,7 @@ def _host_metadata(docker_bin):
         [docker_bin, "inspect", "-f", "{{.State.Status}}|{{.State.Running}}|{{.State.Restarting}}", CONTAINER_NAME],
         text=True,
         capture_output=True,
-        timeout=5,
+        timeout=_remaining(2),
         check=False,
     )
     return {
@@ -447,10 +492,13 @@ class PersistentHelper:
         return line
 
     def _exchange(self, request, timeout):
+        timeout = _remaining(timeout)
+        started = time.monotonic()
         request_id = self.next_request_id
         self.next_request_id += 1
         request = {"id": request_id, **request}
         for attempt in range(2):
+            timeout = _remaining(timeout)
             process = self._start()
             try:
                 process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
@@ -460,6 +508,8 @@ class PersistentHelper:
                     raise RuntimeError("container_query_invalid_response")
                 if response.get("ok") is not True or not isinstance(response.get("payload"), dict):
                     raise RuntimeError("container_query_failed")
+                operation_id, route = _operation_fields()
+                logger.info("telegram_admin_helper operation=%s route=%s id=%s duration_ms=%s", operation_id, route, request_id, int((time.monotonic() - started) * 1000))
                 return response["payload"]
             except (BrokenPipeError, OSError, json.JSONDecodeError):
                 self.close()
@@ -528,48 +578,111 @@ def _edit_or_send(token, chat_id, text, markup, message_id=None):
     try:
         return _telegram_request(token, "editMessageText", payload, timeout=UI_REQUEST_TIMEOUT)
     except HTTPError as exc:
-        if exc.code == 400 and "message is not modified" in _telegram_error_text(exc):
+        category = _error_category(exc)
+        if exc.code == 400 and category == "not_modified":
             logger.info("telegram_admin_message_not_modified")
             return None
+        if exc.code == 400 and category in {"missing_message", "uneditable_message"}:
+            payload.pop("message_id", None)
+            return _telegram_request(token, "sendMessage", payload, timeout=UI_REQUEST_TIMEOUT)
         raise
 
 
+def _is_current():
+    operation = _operation.get()
+    return operation is None or operation["current"]()
+
+
 def _deliver_with_retry(token, chat_id, text, markup, message_id=None, sleep=None):
+    with _delivery_lock:
+        if not _is_current():
+            logger.info("telegram_admin_delivery_superseded operation=%s route=%s", *_operation_fields())
+            return True, None
+        chunks = list(_assistant_chunks(text)) or [""]
+        result = None
+        for index, chunk in enumerate(chunks):
+            if not _is_current():
+                return True, None
+            keyboard = markup if index == len(chunks) - 1 else _keyboard([])
+            delivered, result = _deliver_with_retry_inner(token, chat_id, chunk, keyboard, message_id if index == 0 else None, sleep)
+            if not delivered:
+                return False, None
+        return True, result
+
+
+def _deliver_with_retry_inner(token, chat_id, text, markup, message_id=None, sleep=None):
     sleep = sleep or time.sleep
     method = "sendMessage" if message_id is None else "editMessageText"
+    operation_id, route = _operation_fields()
     for attempt in (1, 2):
         started = time.monotonic()
         try:
             result = _edit_or_send(token, chat_id, text, markup, message_id)
-            logger.info(
-                "telegram_admin_delivery method=%s attempt=%s duration_ms=%s",
-                method,
-                attempt,
-                int((time.monotonic() - started) * 1000),
-            )
+            logger.info("telegram_admin_delivery operation=%s route=%s method=%s attempt=%s duration_ms=%s", operation_id, route, method, attempt, int((time.monotonic() - started) * 1000))
             return True, result
         except (HTTPError, URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as exc:
-            transient = isinstance(exc, (URLError, TimeoutError)) or (
-                isinstance(exc, HTTPError) and (exc.code == 429 or exc.code >= 500)
-            )
-            if transient and attempt == 1:
-                logger.warning(
-                    "telegram_admin_delivery_retry method=%s type=%s attempt=%s",
-                    method,
-                    type(exc).__name__,
-                    attempt,
-                )
-                sleep(0.2)
+            category = _error_category(exc)
+            code = exc.code if isinstance(exc, HTTPError) else 0
+            # HTTPError is a URLError subclass: classify HTTP status FIRST.
+            transient = (code == 429 or code >= 500) if code else isinstance(exc, (URLError, TimeoutError))
+            delay = getattr(exc, "telegram_retry_after", 0) if code == 429 else 0.2
+            can_retry = transient and attempt == 1 and delay <= 2
+            if can_retry:
+                try:
+                    if _remaining(delay + UI_REQUEST_TIMEOUT) < delay + UI_REQUEST_TIMEOUT:
+                        can_retry = False
+                except TimeoutError:
+                    can_retry = False
+            if can_retry:
+                logger.warning("telegram_admin_delivery_retry operation=%s route=%s method=%s code=%s category=%s attempt=%s", operation_id, route, method, code, category, attempt)
+                sleep(delay)
                 continue
-            logger.error(
-                "telegram_admin_delivery_failed method=%s type=%s attempts=%s duration_ms=%s",
-                method,
-                type(exc).__name__,
-                attempt,
-                int((time.monotonic() - started) * 1000),
-            )
+            operation = _operation.get()
+            if operation is not None:
+                operation["failed"] = True
+            logger.error("telegram_admin_delivery_failed operation=%s route=%s method=%s code=%s category=%s attempts=%s duration_ms=%s", operation_id, route, method, code, category, attempt, int((time.monotonic() - started) * 1000))
             return False, None
     return False, None
+
+
+def _queue_delivery_notice(chat_id, update_id):
+    with _recovery_lock:
+        _queue_delivery_notice_inner(chat_id, update_id)
+
+
+def _queue_delivery_notice_inner(chat_id, update_id):
+    # Store only recovery metadata, never a forecast, token or user question.
+    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    target = STATE_DIR / "telegram-admin-recovery.json"
+    with tempfile.NamedTemporaryFile("w", dir=STATE_DIR, delete=False) as handle:
+        json.dump({"chat_id": chat_id, "update_id": update_id, "created": time.time()}, handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+        temporary = Path(handle.name)
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, target)
+
+
+def _retry_delivery_notice(token, chat_id):
+    target = STATE_DIR / "telegram-admin-recovery.json"
+    try:
+        pending = json.loads(target.read_text())
+    except FileNotFoundError:
+        return
+    if pending.get("chat_id") != chat_id:
+        return
+    delivered, _ = _deliver_with_retry(token, chat_id, "⚠️ Предыдущий ответ не удалось доставить. Откройте нужный раздел ещё раз.", main_keyboard())
+    if delivered:
+        with _recovery_lock:
+            # A worker may have queued a newer failure while this HTTP call waited.
+            try:
+                current = json.loads(target.read_text())
+            except FileNotFoundError:
+                return
+            if current != pending:
+                return
+            target.unlink(missing_ok=True)
+        logger.info("telegram_admin_delivery_recovered update_id=%s", pending.get("update_id"))
 
 
 def _multipart_photo_request(token, method, fields, photo_path, timeout=UI_REQUEST_TIMEOUT):
@@ -589,8 +702,11 @@ def _multipart_photo_request(token, method, fields, photo_path, timeout=UI_REQUE
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
         method="POST",
     )
-    with urlopen(request, timeout=timeout) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    with _delivery_lock:
+        if not _is_current():
+            return None
+        with urlopen(request, timeout=_remaining(timeout)) as response:
+            payload = json.loads(response.read().decode("utf-8"))
     if payload.get("ok") is not True:
         raise RuntimeError("telegram_photo_api_error")
     return payload.get("result")
@@ -631,6 +747,13 @@ def _edit_today_photo(token, chat_id, message_id, path, caption):
 
 
 def _sync_today_photos(token, chat_id, payload):
+    with _delivery_lock:
+        return _sync_today_photos_inner(token, chat_id, payload)
+
+
+def _sync_today_photos_inner(token, chat_id, payload):
+    if not _is_current():
+        return True
     started = time.monotonic()
     if payload.get("photo_error"):
         logger.warning("telegram_admin_today_photo_failed stage=render")
@@ -690,6 +813,11 @@ def _sync_today_photos(token, chat_id, payload):
 
 
 def _delete_today_photos_if_present(token, chat_id, sleep=None):
+    with _delivery_lock:
+        return _delete_today_photos_inner(token, chat_id, sleep)
+
+
+def _delete_today_photos_inner(token, chat_id, sleep=None):
     sleep = sleep or time.sleep
     message_ids = _today_photo_messages.pop(chat_id, [])
     benign_markers = (
@@ -854,7 +982,7 @@ def _ui_screen(data, scope, text=None):
             {"action": "assistant-ui", "callback": data, "text": text},
             QUERY_TIMEOUT,
         )
-    if payload.get("expect"):
+    if payload.get("expect") and _is_current():
         if len(_ui_inputs) >= 32:
             _ui_inputs.pop(next(iter(_ui_inputs)))
         _ui_inputs[scope] = (time.monotonic(), payload["expect"])
@@ -875,6 +1003,24 @@ def _ask_assistant(text, scope):
 
 
 def _handle_update(token, admin_chat_id, update):
+    raw_route = (update.get("callback_query") or {}).get("data", "text")
+    route = raw_route if isinstance(raw_route, str) and re.fullmatch(r"[a-z0-9:_-]{1,64}", raw_route) else "invalid"
+    operation = {"id": uuid.uuid4().hex[:12], "route": route, "deadline": time.monotonic() + OPERATION_TIMEOUT, "failed": False, "current": update.get("_is_current", lambda: True)}
+    context = _operation.set(operation)
+    started = time.monotonic()
+    try:
+        result = _handle_update_inner(token, admin_chat_id, update)
+        return bool(result and not operation["failed"])
+    except Exception as exc:  # Leave a durable recovery notice without disclosing backend details.
+        operation["failed"] = True
+        logger.error("telegram_admin_operation_failed id=%s route=%s type=%s", operation["id"], route, type(exc).__name__)
+        return False
+    finally:
+        logger.info("telegram_admin_operation id=%s route=%s delivered=%s duration_ms=%s", operation["id"], route, not operation["failed"], int((time.monotonic() - started) * 1000))
+        _operation.reset(context)
+
+
+def _handle_update_inner(token, admin_chat_id, update):
     chat_id = _chat_id(update)
     callback = update.get("callback_query")
     if chat_id != admin_chat_id or not _authorized_sender(update):
@@ -889,7 +1035,7 @@ def _handle_update(token, admin_chat_id, update):
         scope = f"{chat_id}:{callback['from']['id']}"
         _ui_inputs.pop(scope, None)
         guided = isinstance(callback_data, str) and callback_data.startswith(("ui:", "qa:"))
-        if guided and callback_id:
+        if callback_id and not update.get("_acknowledged"):
             _answer_callback_best_effort(token, callback_id)
         if guided or _leaves_today_section(callback_data):
             _delete_today_photos_if_present(token, chat_id)
@@ -951,8 +1097,6 @@ def _handle_update(token, admin_chat_id, update):
             "telegram_admin_callback_delivery_ready duration_ms=%s",
             int((time.monotonic() - callback_started) * 1000),
         )
-        if callback_id and not guided:
-            _answer_callback_best_effort(token, callback_id)
         logger.info(
             "telegram_admin_callback duration_ms=%s",
             int((time.monotonic() - callback_started) * 1000),
@@ -995,6 +1139,7 @@ def _handle_update(token, admin_chat_id, update):
 
 def _poll_cycle(token, admin_chat_id):
     try:
+        _retry_delivery_notice(token, admin_chat_id)
         offset = _state()
         payload = {"limit": 25, "timeout": POLL_TIMEOUT, "allowed_updates": json.dumps(["message", "callback_query"])}
         if offset is not None:
@@ -1010,9 +1155,15 @@ def _poll_cycle(token, admin_chat_id):
             if not isinstance(update_id, int):
                 logger.warning("telegram_admin_malformed_update_without_id")
                 continue
-            if _handle_update(token, admin_chat_id, update):
-                _save_offset(update_id + 1)
-                logger.info("telegram_admin_update_processed update_id=%s", update_id)
+            if _dispatcher is not None and _chat_id(update) == admin_chat_id and _authorized_sender(update):
+                _dispatcher.submit(update)
+                delivered = None
+            else:
+                delivered = _handle_update(token, admin_chat_id, update)
+                if not delivered:
+                    _queue_delivery_notice(admin_chat_id, update_id)
+            _save_offset(update_id + 1)
+            logger.info("telegram_admin_update_processed update_id=%s status=%s", update_id, "queued" if delivered is None else "delivered" if delivered else "recovery_pending")
         return 0
     except Exception as exc:  # noqa: BLE001 - poll cycle uses bounded retry in daemon mode.
         logger.error("telegram_admin_poller_failed type=%s", type(exc).__name__)
@@ -1031,11 +1182,44 @@ def run_once():
         lock.close()
 
 
+def _is_local_update(update):
+    text = (update.get("message") or {}).get("text")
+    if text in {"/menu", "/start", "/help"}:
+        return True
+    data = (update.get("callback_query") or {}).get("data")
+    if data in {"adm:main", "adm:help"}:
+        return True
+    if not isinstance(data, str):
+        return False
+    screen = local_screen(data)
+    while screen and "next" in screen:
+        screen = local_screen(screen["next"])
+    return bool(screen)
+
+
+def _write_process_version():
+    import inspect
+    modules = (Path(__file__), Path(inspect.getfile(local_screen)), ROOT / "scripts" / "telegram_http.py", ROOT / "scripts" / "host_telegram_notifier.py", ROOT / "scripts" / "telegram_update_queue.py")
+    hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in modules}
+    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    target = ROOT / "runtime" / "telegram-admin-process.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", dir=target.parent, delete=False) as handle:
+        json.dump({"pid": os.getpid(), "hashes": hashes}, handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+        temporary = Path(handle.name)
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, target)
+
+
 def run_forever(max_cycles=None, sleep=time.sleep):
+    global _dispatcher
     token, admin_chat_id = _config()
     lock = _lock()
     if lock is None:
         return 0
+    _write_process_version()
     logger.info("telegram_admin_started")
     warmup_started = time.monotonic()
     try:
@@ -1051,6 +1235,14 @@ def run_forever(max_cycles=None, sleep=time.sleep):
             type(exc).__name__,
             int((time.monotonic() - warmup_started) * 1000),
         )
+    def handle_queued(update):
+        logger.info("telegram_admin_queue_wait update_id=%s duration_ms=%s", update["update_id"], int((time.monotonic() - update.get("_received", time.monotonic())) * 1000))
+        if not _handle_update(token, admin_chat_id, update):
+            _queue_delivery_notice(admin_chat_id, update["update_id"])
+
+    _dispatcher = UpdateDispatcher(STATE_DIR / "telegram-admin-inbox", handle_queued, _is_local_update,
+                                   lambda callback_id: _answer_callback_best_effort(token, callback_id))
+    _dispatcher.start()
     backoff_index = 0
     cycles = 0
     try:
@@ -1069,6 +1261,8 @@ def run_forever(max_cycles=None, sleep=time.sleep):
         logger.info("telegram_admin_stopped")
         return 0
     finally:
+        _dispatcher.close()
+        _dispatcher = None
         _helper.close()
         lock.close()
 

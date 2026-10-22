@@ -7,7 +7,12 @@ import os
 import time
 from pathlib import Path
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+try:
+    from telegram_http import urlopen
+except ModuleNotFoundError:
+    from scripts.telegram_http import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env"

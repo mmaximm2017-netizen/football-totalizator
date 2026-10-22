@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
@@ -19,9 +20,16 @@ from app.services.morning_digest_service import (
 )
 from app.services.ranking_service import get_tournament_ranking
 from app.services.telegram_match_card_service import render_today_cards
-from app.utils import MSK, is_before_deadline
+from app.utils import MSK, parse_datetime
 
+logger = logging.getLogger(__name__)
 MAX_CALENDAR_MATCHES = 10
+
+
+def _scores_closed(deadline, now=None):
+    value = parse_datetime(deadline)
+    current = parse_datetime(now) if now is not None else datetime.now(MSK)
+    return value is None or current is None or value > current
 ALLOWED_ACTIONS = {
     "assistant",
     "assistant-ui",
@@ -156,7 +164,7 @@ def today_dashboard(now=None):
                     participation.setdefault(match_id, set()).add(user_id)
 
         for match in matches:
-            match["deadline_open"] = is_before_deadline({"deadline": match["deadline"]}, now=now)
+            match["deadline_open"] = _scores_closed(match["deadline"], now=now)
             predicted_ids = participation.get(match["match_id"], set())
             match["participants"] = [
                 {
@@ -248,7 +256,7 @@ def prediction_status(match_id=None, now=None):
         match = _relevant_match(cur, match_id)
         if not match:
             return {"ok": True, "match": None, "participants": []}
-        deadline_open = is_before_deadline({"deadline": match["deadline"]}, now=now)
+        deadline_open = _scores_closed(match["deadline"], now=now)
         participants = _visible_participants(cur)
         # This query intentionally selects only participation existence, never scores.
         cur.execute(
@@ -281,7 +289,7 @@ def prediction_scores(match_id=None, now=None):
         match = _relevant_match(cur, match_id)
         if not match:
             return {"ok": True, "match": None, "deadline_open": False, "predictions": []}
-        if is_before_deadline({"deadline": match["deadline"]}, now=now):
+        if _scores_closed(match["deadline"], now=now):
             return {"ok": True, "match": match, "deadline_open": True, "predictions": []}
         cur.execute(
             """
@@ -514,6 +522,8 @@ def dispatch_protocol_request(request):
 def serve(input_stream=sys.stdin, output_stream=sys.stdout):
     for line in input_stream:
         request_id = None
+        started = time.monotonic()
+        action = "invalid"
         try:
             request = json.loads(line)
             if not isinstance(request, dict):
@@ -521,18 +531,23 @@ def serve(input_stream=sys.stdin, output_stream=sys.stdout):
             request_id = request.get("id")
             if isinstance(request_id, bool) or not isinstance(request_id, int) or request_id < 1:
                 raise ValueError("invalid_request_id")
+            candidate = request.get("action", request.get("command"))
+            action = candidate if candidate in ALLOWED_ACTIONS or candidate == "warmup" else "invalid"
             payload = dispatch_protocol_request(request)
             response = {"id": request_id, "ok": True, "payload": payload}
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             response = {"id": request_id, "ok": False, "error": str(exc) or "invalid_request"}
-        except Exception:  # noqa: BLE001 - protocol must return a bounded safe error.
+        except Exception as exc:  # noqa: BLE001 - never log SQL, credentials or user text.
+            logger.error("telegram_helper_failed id=%s action=%s type=%s sqlstate=%s", request_id, action, type(exc).__name__, getattr(exc, "pgcode", None))
             response = {"id": request_id, "ok": False, "error": "query_failed"}
+        logger.info("telegram_helper id=%s action=%s ok=%s duration_ms=%s", request_id, action, response["ok"], int((time.monotonic() - started) * 1000))
         output_stream.write(json.dumps(response, ensure_ascii=False, default=str) + "\n")
         output_stream.flush()
     return 0
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--action", choices=tuple(sorted(ALLOWED_ACTIONS)))

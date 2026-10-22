@@ -323,22 +323,30 @@ def execute_question(cur, q, tid, now):
         return analytics_lines(cur, q, tid, where, params, FINISHED, MAX_ROWS), None
     if q.intent in {"leader", "ranking", "points"}:
         # Same tie breakers as ranking_service, using safe participant views.
-        rows = read(cur, f"""
-            SELECT u.username, COALESCE(SUM(p.points), 0), COUNT(p.match_id),
-                   COUNT(*) FILTER (WHERE p.points >= 10) AS exact,
-                   COUNT(*) FILTER (WHERE p.points BETWEEN 7 AND 8) AS diff,
-                   COUNT(*) FILTER (WHERE p.points = 3) AS outcome
-            FROM gpt_safe.users u
-            LEFT JOIN (
-                SELECT p.* FROM gpt_safe.predictions p
-                JOIN gpt_safe.matches m ON m.match_id = p.match_id AND m.tournament_id = p.tournament_id
-                WHERE {where} AND {FINISHED}
-            ) p ON p.user_id = u.user_id
-            WHERE (%s::text IS NULL OR u.username = %s)
-            GROUP BY u.user_id, u.username
-            ORDER BY 2 DESC, exact DESC, diff DESC, outcome DESC, u.username
-            LIMIT %s
-        """, tuple(params + [q.player, q.player, MAX_ROWS + 1]))
+        if not (q.dates or q.round_number or q.teams or q.match_id):
+            rows = read(cur, """
+                SELECT username, points, forecasts, exact, diff, outcome
+                FROM gpt_safe.tournament_rankings
+                WHERE tournament_id = %s AND (%s::text IS NULL OR username = %s)
+                ORDER BY points DESC, exact DESC, diff DESC, outcome DESC, username LIMIT %s
+            """, (tid, q.player, q.player, MAX_ROWS + 1))
+        else:
+            rows = read(cur, f"""
+                SELECT u.username, COALESCE(SUM(p.points), 0), COUNT(p.match_id),
+                       COUNT(*) FILTER (WHERE p.points >= 10) AS exact,
+                       COUNT(*) FILTER (WHERE p.points BETWEEN 7 AND 8) AS diff,
+                       COUNT(*) FILTER (WHERE p.points = 3) AS outcome
+                FROM gpt_safe.users u
+                LEFT JOIN (
+                    SELECT p.* FROM gpt_safe.predictions p
+                    JOIN gpt_safe.matches m ON m.match_id = p.match_id AND m.tournament_id = p.tournament_id
+                    WHERE {where} AND {FINISHED}
+                ) p ON p.user_id = u.user_id
+                WHERE (%s::text IS NULL OR u.username = %s)
+                GROUP BY u.user_id, u.username
+                ORDER BY 2 DESC, exact DESC, diff DESC, outcome DESC, u.username
+                LIMIT %s
+            """, tuple(params + [q.player, q.player, MAX_ROWS + 1]))
         if q.intent == "leader" and not any(r[2] for r in rows):
             return ["Нет завершённых прогнозов. Лидер по этим данным не определён."], None
         if q.intent == "leader":
@@ -478,7 +486,7 @@ def answer(text, scope, now=None):
         if q.intent == "last":
             detail += f"\nПоследний прогноз: ровно {q.points} очк."
         save_session(scope, clock, q, pending)
-        result = {"text": f"🏆 {name}{detail}\nУчастники: открытый список ТОТИШа.\n\n" + "\n".join(lines)}
+        result = {"text": f"🏆 {name}{detail}\nИтоговая таблица учитывает архивных участников; выборки за период — действующих.\n\n" + "\n".join(lines)}
         if pending:
             result["choices"] = [{"label": value, "value": str(i)} for i, value in enumerate(pending[1], 1)]
         return result

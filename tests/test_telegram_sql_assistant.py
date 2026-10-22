@@ -97,7 +97,7 @@ class Cursor:
             return [('Бек',), ('Макс Зенит',)]
         if sql.startswith('SELECT home_team'):
             return [('Локомотив',), ('Краснодар',)]
-        if 'COALESCE(SUM' in sql:
+        if 'COALESCE(SUM' in sql or 'SELECT username, points, forecasts' in sql:
             return [('Бек', 10, 1, 1, 0, 0)]
         return []
 
@@ -114,7 +114,7 @@ def test_tournament_clarification_keeps_original_player():
         connect.assert_not_called()
         result = a.answer('РПЛ', '1', NOW)['text']
     assert 'Бек: 10' in result
-    aggregate = next(p for sql, p in cur.queries if 'COALESCE(SUM' in sql)
+    aggregate = next(p for sql, p in cur.queries if 'COALESCE(SUM' in sql or 'SELECT username, points, forecasts' in sql)
     assert aggregate[-3:-1] == ['Бек', 'Бек'] or aggregate[-3:-1] == ('Бек', 'Бек')
 
 

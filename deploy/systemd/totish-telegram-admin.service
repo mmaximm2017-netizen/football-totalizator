@@ -1,15 +1,20 @@
 [Unit]
 Description=TOTISH Telegram Admin Panel poller
-After=default.target
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
 
 [Service]
+Type=simple
+User=root
 WorkingDirectory=/opt/football-totalizator
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 scripts/telegram_admin_bot.py
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=30
 NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

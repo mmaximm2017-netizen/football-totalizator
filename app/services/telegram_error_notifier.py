@@ -9,7 +9,8 @@ from datetime import datetime
 import uuid
 from pathlib import Path
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from scripts.telegram_http import urlopen
 
 logger = logging.getLogger(__name__)
 
