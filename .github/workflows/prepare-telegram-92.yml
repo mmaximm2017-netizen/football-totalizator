@@ -1,0 +1,77 @@
+name: Prepare Telegram 92 activation
+on:
+  push:
+    branches: [ops/prepare-telegram-92]
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7f3e43da9924f69e74e1e24c5c98e624c3ff102d
+      - name: Prepare reviewed bootstrap
+        run: |
+          mkdir -p telegram-bootstrap-92
+          for path in scripts/install_telegram_admin_service.py scripts/activate_telegram_admin.py scripts/telegram_admin_bot.py scripts/telegram_bot_ui.py scripts/telegram_http.py scripts/host_telegram_notifier.py scripts/telegram_update_queue.py deploy/systemd/totish-telegram-admin.service; do
+            cp --parents "$path" telegram-bootstrap-92/
+          done
+          cat > telegram-bootstrap-92/bootstrap.sh <<'BOOTSTRAP'
+          #!/bin/bash
+          set -Eeuo pipefail
+          stage="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+          installed="$(cd "$stage/../.." && pwd)"
+          cd "$stage"
+          sha256sum -c SHA256SUMS
+          deploy_user="$(stat -c %U "$installed/.totish-managed-release")"
+          python3 scripts/install_telegram_admin_service.py "$deploy_user"
+          BOOTSTRAP
+          cd telegram-bootstrap-92
+          find scripts deploy -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum bootstrap.sh >> SHA256SUMS
+      - name: Stage bootstrap without changing service or privileges
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          source: telegram-bootstrap-92
+          target: ${{ secrets.PROD_DEPLOY_PATH }}/.deploy-incoming
+      - name: Verify activation access
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            installed="$PWD"
+            cd .deploy-incoming/telegram-bootstrap-92
+            sha256sum -c SHA256SUMS >/dev/null
+            echo TELEGRAM_92_BOOTSTRAP_FILES_VERIFIED
+            python3 - <<'PY'
+            import importlib.util
+            import os
+            import subprocess
+            from pathlib import Path
+            stage=Path.cwd()
+            installed=stage.parent.parent
+            assert installed.joinpath('.totish-managed-release').stat().st_uid == os.geteuid(), 'deployment-owner mismatch'
+            spec=importlib.util.spec_from_file_location('activation',stage/'scripts/activate_telegram_admin.py')
+            module=importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            try:
+                module.check_access()
+                print('TELEGRAM_92_RESTART_ACCESS_OK',flush=True)
+            except (RuntimeError,subprocess.SubprocessError):
+                print('TELEGRAM_92_ROOT_BOOTSTRAP_REQUIRED',flush=True)
+            PY
+            systemctl show totish-telegram-admin.service --property=ActiveState,SubState
+            curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8000/health
