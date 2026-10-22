@@ -21,23 +21,27 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd ${{ secrets.PROD_DEPLOY_PATH }}
-            python3 - <<'PYLOG'
-            import subprocess
-            import re
-            props=subprocess.run(['systemctl','show','totish-telegram-admin.service','--property=StandardOutput,StandardError,FragmentPath'],capture_output=True,text=True,timeout=10)
-            print('BOT_LOG_TARGET',props.stdout.strip().replace('\n',' | '),flush=True)
-            commands=[['journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat']]
-            allowed=subprocess.run(['sudo','-n','-l'],capture_output=True,text=True,timeout=10)
-            print('BOT_SUDO_LIST_STATUS',allowed.returncode,flush=True)
-            print('BOT_SUDO_COMMAND_PATHS',','.join(sorted(set(re.findall(r'/[A-Za-z0-9_./-]+', allowed.stdout)))),flush=True)
-            print('BOT_SUDO_NOPASSWD', 'NOPASSWD' in allowed.stdout, flush=True)
-            if allowed.returncode==0 and re.search(r'NOPASSWD:[\s\S]*journalctl',allowed.stdout):
-                commands.append(['sudo','-n','journalctl','-u','totish-telegram-admin.service','--since','-45 min','--no-pager','-o','cat'])
-            for command in commands:
-                logs=subprocess.run(command,capture_output=True,text=True,timeout=15)
-                print('BOT_JOURNAL_RESULT',logs.returncode,len(logs.stdout.splitlines()),bool(logs.stderr),flush=True)
-                for line in logs.stdout.splitlines()[-300:]:
-                    found=re.search(r'(telegram_admin_(?:delivery_|query_failed|callback |poller_failed)[A-Za-z0-9_ =:-]*)',line)
-                    if found:
-                        print('BOT_LOG',found.group(1),flush=True)
-            PYLOG
+            python3 - <<'PYBODY'
+            import socket
+            import time
+            from urllib.parse import urlencode
+            from scripts import telegram_admin_bot as bot
+            resolver=socket.getaddrinfo
+            token,_=bot._config()
+            cases=[]
+            for label,cb in [('table_rpl','ui:t:ranking:rpl'),('table_cup','ui:t:ranking:cup'),('matches','ui:t:matches:rpl')]:
+                text,markup=bot._ui_screen(cb,'body-test')
+                cases.append((label,{'text':text,'reply_markup':markup}))
+            cases.append(('large',{'padding':'x'*6000}))
+            for family in (socket.AF_INET6,socket.AF_INET):
+                socket.getaddrinfo=lambda host,port,af=0,type=0,proto=0,flags=0: resolver(host,port,family,type,proto,flags)
+                for label,payload in cases:
+                    start=time.monotonic()
+                    try:
+                        result=bot._telegram_request(token,'getMe',payload,timeout=3)
+                        assert result.get('is_bot')
+                        print('BODY_PROBE',family.name,label,len(urlencode(payload)),'ok',round(1000*(time.monotonic()-start)),flush=True)
+                    except Exception as exc:
+                        print('BODY_PROBE',family.name,label,len(urlencode(payload)),type(exc).__name__,round(1000*(time.monotonic()-start)),flush=True)
+            socket.getaddrinfo=resolver
+            PYBODY
