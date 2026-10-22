@@ -41,9 +41,40 @@ def test_section_and_tournament_navigation_do_not_wake_database(section):
         assert "турнир" in text
         rows = json.loads(markup)["inline_keyboard"]
         assert rows[0][0]["callback_data"] == f"ui:t:{section}:rpl"
-        if section != "player":
+        if section not in {"player", "ranking"}:
             bot._ui_screen(f"ui:t:{section}:cup", "123:456")
         helper._exchange.assert_not_called()
+
+
+@pytest.mark.parametrize("kind", ["rpl", "cup"])
+def test_table_selection_loads_current_ranking_immediately(kind):
+    with patch.object(bot, "_helper") as helper:
+        helper._exchange.return_value = {"text": "Таблица", "rows": []}
+        bot._ui_screen(f"ui:t:ranking:{kind}", "123:456")
+    assert helper._exchange.call_args.args[0]["callback"] == callback("v", kind, "ranking")
+
+
+@pytest.mark.parametrize("kind, tid", [("rpl", 5), ("cup", 6)])
+def test_table_has_no_period_controls_and_pagination_keeps_tournament(kind, tid):
+    cur = MagicMock()
+    def execute(_cur, question, tournament, now):
+        assert tournament == tid
+        assert question.intent == "ranking"
+        assert question.dates == [] and question.round_number is None
+        assert question.player is None
+        return [f"Участник {i}" for i in range(20)], None
+    with patch.object(ui, "short_gpt_read", side_effect=lambda: reader(cur)), patch.object(ui, "choose_tournament", return_value=(tid, kind)), patch.object(ui, "execute_question", side_effect=execute):
+        first = ui.render(callback("p", kind, "ranking"), now=NOW)
+        buttons = [b for row in first["rows"] for b in row]
+        next_page = next(b["callback_data"] for b in buttons if b["text"] == "Следующие ›")
+        second = ui.render(next_page, now=NOW)
+        legacy = ui.render(callback("v", kind, "ranking", "yesterday", user=12), now=NOW)
+    for result in (first, second, legacy):
+        labels = [b["text"] for row in result["rows"] for b in row]
+        assert set(labels) <= {"‹ Предыдущие", "Следующие ›", "↻ Обновить", "‹ Назад", "🏠 Меню"}
+        assert result["rows"][-1][0]["callback_data"] == "ui:s:ranking"
+        assert "МСК" not in result["text"] and "Весь турнир" not in result["text"]
+    assert "Участник 8" in second["text"]
 
 
 def test_all_generated_local_routes_are_valid_and_callbacks_fit_telegram_limit():
