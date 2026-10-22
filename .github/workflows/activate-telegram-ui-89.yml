@@ -9,12 +9,12 @@ permissions:
 
 jobs:
   activate:
-    name: Restart and verify deployed Telegram UI
+    name: Verify deployed Telegram UI
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
     steps:
-      - name: Verify release and restart existing poller
+      - name: Verify release and guided UI without service privileges
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -32,11 +32,7 @@ jobs:
             test "$actual" = "$expected"
             python3 - <<'PY'
             import hashlib
-            import os
             from pathlib import Path
-            import pwd
-            import subprocess
-            import time
 
             expected = {
                 'scripts/telegram_admin_bot.py': '9ab3fec770159e8ed96b44aee069421e48c9fd8612f7c26137ab006772e7ed99',
@@ -45,37 +41,7 @@ jobs:
             for path, digest in expected.items():
                 assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, 'host source mismatch'
             print('DEPLOYED_RELEASE_AND_HOST_SOURCE_OK')
-            owners = set()
-            pids = []
-            for proc in Path('/proc').iterdir():
-                if not proc.name.isdigit():
-                    continue
-                try:
-                    args = (proc / 'cmdline').read_bytes().split(b'\0')
-                    if any(arg == b'scripts/telegram_admin_bot.py' or arg.endswith(b'/scripts/telegram_admin_bot.py') for arg in args):
-                        owners.add(proc.stat().st_uid)
-                        pids.append(int(proc.name))
-                except (FileNotFoundError, PermissionError, ProcessLookupError):
-                    continue
-            assert len(owners) == 1 and len(pids) == 1, 'expected one existing Telegram poller'
-            owner = pwd.getpwuid(owners.pop())
-            env = dict(os.environ, XDG_RUNTIME_DIR=f'/run/user/{owner.pw_uid}', DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{owner.pw_uid}/bus')
-            prefix = []
-            if os.geteuid() != owner.pw_uid:
-                prefix = (['runuser', '-u', owner.pw_name, '--'] if os.geteuid() == 0 else ['sudo', '-n', '-u', owner.pw_name])
-                prefix += ['env', f'XDG_RUNTIME_DIR={env["XDG_RUNTIME_DIR"]}', f'DBUS_SESSION_BUS_ADDRESS={env["DBUS_SESSION_BUS_ADDRESS"]}']
-            unit = 'totish-telegram-admin.service'
-            command = prefix + ['systemctl', '--user']
-            subprocess.run(command + ['is-active', '--quiet', unit], env=env, check=True)
-            old_pid = int(subprocess.check_output(command + ['show', '--property=MainPID', '--value', unit], env=env, text=True).strip())
-            assert old_pid == pids[0], 'service PID differs from poller PID'
-            subprocess.run(command + ['restart', unit], env=env, check=True)
-            time.sleep(3)
-            subprocess.run(command + ['is-active', '--quiet', unit], env=env, check=True)
-            new_pid = int(subprocess.check_output(command + ['show', '--property=MainPID', '--value', unit], env=env, text=True).strip())
-            assert new_pid > 0 and new_pid != old_pid, 'poller was not restarted'
-            assert Path(f'/proc/{new_pid}').exists()
-            print('TELEGRAM_POLLER_RESTARTED_AND_ACTIVE')
+            print('TELEGRAM_RESTART_REQUIRES_ROOT')
             PY
             docker exec -i football-totalizator-app-1 python - <<'PY'
             from app.services.telegram_admin_service import dispatch_request
