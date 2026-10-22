@@ -60,7 +60,7 @@ def local_screen(data):
                 [button("Выбрать тур", callback("r", kind, metric, user=user)), button("Свои даты", callback("d", kind, metric, user=user))]]
         if metric not in {"matches", "predictions", "recent"}:
             rows.append([button("Весь турнир", callback("v", kind, metric, user=user))])
-        rows.append(nav(callback("v", kind, "card", user=user) if user else f"ui:t:{section}:{kind}"))
+        rows.append(nav(callback("v", kind, "card", user=user) if user else f"ui:t:stats:{kind}" if section == "stats" else f"ui:s:{section}"))
         return {"text": f"{METRICS.get(metric, TITLES.get(metric, '👤 Участник'))} · {KINDS[kind]}\n\nВыберите период. Время МСК.", "rows": rows}
     if stage == "d":
         return {"text": f"📅 Свои даты · {KINDS[kind]}\n\nНапишите дату или период:\n17.10.2026\nс 17.10.2026 по 19.10.2026\n\nДаты без года относятся к текущему году. Время МСК.", "rows": [nav(callback("p", kind, metric, user=user))], "expect": data}

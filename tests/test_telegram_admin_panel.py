@@ -13,7 +13,10 @@ from scripts import telegram_admin_bot as bot
 
 
 @pytest.fixture(autouse=True)
-def admin_sender_config(monkeypatch):
+def admin_sender_config(monkeypatch, tmp_path):
+    monkeypatch.setattr(bot, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(bot, "OFFSET_FILE", tmp_path / "offset.json")
+    monkeypatch.setattr(bot, "_write_process_version", lambda: None)
     monkeypatch.setattr(bot, "load_env", lambda: {"TELEGRAM_ADMIN_USER_ID": "456"})
 
 
@@ -118,7 +121,7 @@ def test_authorized_callback_acknowledges_then_edits_message():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append(args[1]) or True):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 def test_message_not_modified_is_benign():
@@ -148,7 +151,7 @@ def test_expired_callback_acknowledgement_does_not_block_authorized_action(descr
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 def test_callback_ack_network_timeout_does_not_block_authorized_action():
@@ -165,7 +168,7 @@ def test_callback_ack_network_timeout_does_not_block_authorized_action():
         assert bot._handle_update("token", 123, update) is True
 
     render.assert_called_once_with("adm:today")
-    assert calls == ["editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "editMessageText"]
 
 
 @pytest.mark.parametrize(
@@ -261,9 +264,9 @@ def test_container_query_failure_returns_safe_admin_message_without_traceback():
     with patch.object(bot, "_telegram_request", side_effect=lambda *args, **kwargs: calls.append((args[1], args[2])) or True), patch.object(bot, "_docker_query", side_effect=RuntimeError("DATABASE_URL=secret")):
         assert bot._handle_update("token", 123, update) is True
 
-    assert calls[0][0] == "editMessageText"
-    assert "Не удалось получить данные ТОТИШа" in calls[0][1]["text"]
-    assert "secret" not in calls[0][1]["text"]
+    assert calls[1][0] == "editMessageText"
+    assert "Не удалось получить данные ТОТИШа" in calls[1][1]["text"]
+    assert "secret" not in calls[1][1]["text"]
 
 
 def test_offset_state_is_atomic_and_malformed_state_is_safe(tmp_path, monkeypatch):
@@ -855,7 +858,7 @@ def test_leaving_today_deletes_photo_before_opening_text_section(callback_data, 
     monkeypatch.setattr(bot, "_render_callback", lambda data: ("section", bot.main_keyboard()))
 
     assert bot._handle_update("token", 123, update) is True
-    assert calls == ["deleteMessage", "editMessageText", "answerCallbackQuery"]
+    assert calls == ["answerCallbackQuery", "deleteMessage", "editMessageText"]
     assert 123 not in bot._today_photo_messages
 
 
@@ -1094,13 +1097,13 @@ def test_system_renderer_shows_missing_and_future_worker_metadata_without_false_
     assert "🟢 Обработка результатов — 0 мин назад" in text
 
 
-def test_systemd_unit_matches_user_service_runtime():
+def test_systemd_unit_matches_system_service_runtime():
     unit = (bot.ROOT / "deploy" / "systemd" / "totish-telegram-admin.service").read_text(encoding="utf-8")
 
-    assert "User=" not in unit
+    assert "User=root" in unit
     assert "WorkingDirectory=/opt/football-totalizator" in unit
     assert "ExecStart=/usr/bin/python3 scripts/telegram_admin_bot.py" in unit
-    assert "WantedBy=default.target" in unit
+    assert "WantedBy=multi-user.target" in unit
 
 
 def test_visual_today_empty_and_grouped_matches(monkeypatch):
@@ -1193,7 +1196,8 @@ def test_visual_problems_and_message_limit(monkeypatch):
     assert healthy.startswith("🟢 Всё работает штатно\n🕒 Обновлено: 15:00")
     assert "Проблем не обнаружено." in healthy
     assert failed.startswith("🚨 Обнаружена проблема\n🕒 Обновлено: 15:00")
-    assert len(bounded) == bot.MAX_MESSAGE_LENGTH
+    assert "x" * (bot.MAX_MESSAGE_LENGTH + 100) in bounded
+    assert all(len(chunk) <= bot.MAX_MESSAGE_LENGTH for chunk in bot._assistant_chunks(bounded))
 
 
 def test_visual_system_blocks_and_updated_time(monkeypatch):

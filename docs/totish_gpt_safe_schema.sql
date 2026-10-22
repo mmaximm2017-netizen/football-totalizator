@@ -13,6 +13,7 @@ CREATE SCHEMA IF NOT EXISTS gpt_safe;
 REVOKE ALL ON SCHEMA gpt_safe FROM PUBLIC;
 
 
+DROP VIEW IF EXISTS gpt_safe.tournament_rankings;
 DROP VIEW IF EXISTS gpt_safe.calendar_rounds;
 DROP VIEW IF EXISTS gpt_safe.predictions;
 DROP VIEW IF EXISTS gpt_safe.matches;
@@ -204,6 +205,25 @@ FROM included i
 JOIN numbered n ON n.tournament_id = i.tournament_id AND n.match_date = i.match_date;
 
 
+CREATE VIEW gpt_safe.tournament_rankings AS
+SELECT t.id AS tournament_id, u.id AS user_id, u.username,
+       COALESCE(SUM(p.points), 0) AS points,
+       COUNT(p.points) AS forecasts,
+       COUNT(*) FILTER (WHERE p.points >= 10) AS exact,
+       COUNT(*) FILTER (WHERE p.points BETWEEN 7 AND 8) AS diff,
+       COUNT(*) FILTER (WHERE p.points = 3) AS outcome
+FROM public.tournaments t CROSS JOIN public.users u
+LEFT JOIN (
+    SELECT p.user_id, p.tournament_id, p.points
+    FROM public.predictions p
+    JOIN public.matches m ON m.id = p.match_id AND m.tournament_id = p.tournament_id
+    WHERE UPPER(m.status) IN ('FINISHED', 'COMPLETE', 'COMPLETED')
+      AND m.kickoff_time <= CURRENT_TIMESTAMP
+      AND m.deadline IS NOT NULL AND m.deadline <= CURRENT_TIMESTAMP
+) p ON p.user_id = u.id AND p.tournament_id = t.id
+WHERE u.is_admin = 0 AND (t.is_active = 0 OR COALESCE(u.is_deleted, 0) = 0)
+GROUP BY t.id, u.id, u.username;
+
 -- ============================================================
 -- READER ACCESS
 --
@@ -219,7 +239,8 @@ GRANT SELECT ON
     gpt_safe.tournaments,
     gpt_safe.matches,
     gpt_safe.predictions,
-    gpt_safe.calendar_rounds
+    gpt_safe.calendar_rounds,
+    gpt_safe.tournament_rankings
 TO totish_gpt_reader;
 
 COMMIT;

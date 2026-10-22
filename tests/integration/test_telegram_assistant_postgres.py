@@ -61,7 +61,7 @@ def analytics(monkeypatch):
         cur.execute("UPDATE matches SET league=CASE WHEN tournament_id=5 THEN 'rpl' ELSE 'rcup' END")
         # Use definitions from the authoritative safe-schema file, not hand-made mocks.
         definitions = re.findall(r'CREATE VIEW gpt_safe\.\w+ AS.*?;', (ROOT / 'docs/totish_gpt_safe_schema.sql').read_text(), re.S)
-        assert len(definitions) == 5
+        assert len(definitions) == 6
         for ddl in definitions:
             cur.execute(ddl.replace('gpt_safe.', f'"{safe}".').replace('public.', f'"{source}".'))
         cursor = SafeCursor(cur, safe)
@@ -309,3 +309,29 @@ def test_agreed_production_date_ranges_form_17_rpl_and_6_cup_rounds(analytics):
     rows = a.read(safe, 'SELECT tournament_id, round_number, MIN(match_date), MAX(match_date) FROM gpt_safe.calendar_rounds WHERE tournament_id IN (7,8) GROUP BY tournament_id, round_number ORDER BY tournament_id, round_number')
     expected = [(tid, i, date.fromisoformat('2026-'+first), date.fromisoformat('2026-'+last)) for tid, blocks in ranges.items() for i, (first,last) in enumerate(blocks,1)]
     assert rows == expected
+
+
+def test_archive_table_includes_deleted_participant_and_matches_canonical(guided_ui):
+    safe, source = guided_ui
+    source.execute('UPDATE tournaments SET is_active = 0 WHERE id = 5')
+    canonical = _fetch_ranking(source, 5, False)
+    lines, _ = a.execute_question(safe, a.Question(intent='ranking'), 5, datetime.now(timezone.utc))
+    assert len(lines) == len(canonical) == 3
+    for index, row in enumerate(canonical, 1):
+        assert lines[index - 1].startswith(f"{index}. {row['username']}: {row['points']} очк.")
+    card = ui.render('ui:v:rpl:card:all:4:0')
+    assert 'deleted' in card['text'] and 'Очки: 10' in card['text']
+    assert 'Архивный участник' in card['text']
+    callbacks = [button['callback_data'] for row in card['rows'] for button in row]
+    assert not any(':predictions:' in value or ':recent:' in value for value in callbacks)
+    source.execute("UPDATE tournaments SET is_active = 1 WHERE id = 5")
+    lines, _ = a.execute_question(safe, a.Question(intent='ranking'), 5, datetime.now(timezone.utc))
+    assert len(lines) == 2 and not any('deleted' in line for line in lines)
+
+
+def test_aggregate_rankings_do_not_reveal_future_or_null_deadline_predictions(analytics):
+    safe, source = analytics
+    source.execute("UPDATE matches SET status='FINISHED', home_score=9, away_score=9, kickoff_time=CURRENT_TIMESTAMP-interval '1 hour' WHERE id IN (13,14)")
+    source.execute('UPDATE tournaments SET is_active = 0 WHERE id = 5')
+    rows = a.read(safe, 'SELECT user_id, points FROM gpt_safe.tournament_rankings WHERE tournament_id = %s ORDER BY user_id', (5,))
+    assert rows == [(1, 10), (2, 7), (4, 10)]
