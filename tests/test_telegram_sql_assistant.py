@@ -177,6 +177,14 @@ def test_at_deadline_predictions_are_visible_and_scoped():
     assert cur.execute.call_args.args[1][:2] == (42, 5)
 
 
+@pytest.mark.parametrize('status', ['FINISHED', 'SCHEDULED', 'LIVE', 'POSTPONED', 'CANCELLED', None, 'unknown'])
+def test_match_output_has_no_status_text_or_replacement(status):
+    cur = MagicMock()
+    cur.fetchall.return_value = [(42, 'Локомотив', 'Краснодар', NOW, NOW, status)]
+    lines, _ = a.execute_question(cur, a.Question(intent='matches', dates=['2026-10-22']), 5, NOW)
+    assert lines == ['Локомотив — Краснодар\n22.10.2026 13:00 МСК']
+
+
 @pytest.mark.parametrize('intent', ['points', 'ranking', 'leader', 'last', 'exact'])
 def test_point_queries_require_finished_and_use_parameters(intent):
     cur = MagicMock()
