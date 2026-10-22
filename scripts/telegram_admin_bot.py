@@ -687,8 +687,11 @@ def _multipart_photo_request(token, method, fields, photo_path, timeout=UI_REQUE
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
         method="POST",
     )
-    with urlopen(request, timeout=timeout) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    with _delivery_lock:
+        if not _is_current():
+            return None
+        with urlopen(request, timeout=_remaining(timeout)) as response:
+            payload = json.loads(response.read().decode("utf-8"))
     if payload.get("ok") is not True:
         raise RuntimeError("telegram_photo_api_error")
     return payload.get("result")
@@ -729,6 +732,11 @@ def _edit_today_photo(token, chat_id, message_id, path, caption):
 
 
 def _sync_today_photos(token, chat_id, payload):
+    with _delivery_lock:
+        return _sync_today_photos_inner(token, chat_id, payload)
+
+
+def _sync_today_photos_inner(token, chat_id, payload):
     if not _is_current():
         return True
     started = time.monotonic()
@@ -790,6 +798,11 @@ def _sync_today_photos(token, chat_id, payload):
 
 
 def _delete_today_photos_if_present(token, chat_id, sleep=None):
+    with _delivery_lock:
+        return _delete_today_photos_inner(token, chat_id, sleep)
+
+
+def _delete_today_photos_inner(token, chat_id, sleep=None):
     sleep = sleep or time.sleep
     message_ids = _today_photo_messages.pop(chat_id, [])
     benign_markers = (

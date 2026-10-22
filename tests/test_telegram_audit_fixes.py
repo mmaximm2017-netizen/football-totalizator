@@ -217,3 +217,31 @@ def test_delivery_logs_identify_route_and_http_category_without_secret(caplog):
         assert bot._handle_update('SECRET_TOKEN', 123, update(10, 'adm:main')) is False
     assert 'route=adm:main' in caplog.text and 'code=403' in caplog.text
     assert 'SECRET_FORECAST' not in caplog.text and 'SECRET_TOKEN' not in caplog.text
+
+
+@pytest.mark.parametrize('policy,allowed', [
+    ('(root) NOPASSWD: /usr/bin/systemctl restart totish-telegram-admin.service', True),
+    ('(root) NOPASSWD: /usr/bin/systemctl restart\n    totish-telegram-admin.service', True),
+    ('(root) /usr/bin/systemctl restart totish-telegram-admin.service', False),
+    ('(root) NOPASSWD: /usr/bin/crontab', False),
+])
+def test_activation_requires_specific_passwordless_restart_rule(policy, allowed):
+    with patch.object(activation.os, 'geteuid', return_value=1000), patch.object(activation.subprocess, 'run', return_value=MagicMock(stdout=policy)) as run:
+        if allowed:
+            activation.check_access()
+        else:
+            with pytest.raises(RuntimeError, match='permission_missing'):
+                activation.check_access()
+    assert run.call_args.args[0] == ['/usr/bin/sudo', '-n', '-l']
+
+
+def test_superseded_photo_does_not_reach_telegram(tmp_path):
+    photo = tmp_path / 'card.png'
+    photo.write_bytes(b'png')
+    context = bot._operation.set({'current': lambda: False})
+    try:
+        with patch.object(bot, 'urlopen') as send:
+            assert bot._send_today_photo('token', 123, photo, 'caption') is None
+        send.assert_not_called()
+    finally:
+        bot._operation.reset(context)
