@@ -1,0 +1,77 @@
+name: Verify Telegram transport 90
+on:
+  push:
+    branches: [ops/verify-telegram-transport-90]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - name: Verify release, service and API connection
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          command_timeout: 3m
+          script: |
+            set -Eeuo pipefail
+            cd ${{ secrets.PROD_DEPLOY_PATH }}
+            exec 9>/tmp/totish-production-deploy.lock
+            flock -w 60 9
+            expected=da33212ad366ec886126c4c60ac5232126a05c0b
+            test "$(cat .totish-managed-release)" = "$expected"
+            actual="$(docker exec football-totalizator-app-1 python -c 'import os; print(os.environ.get("TOTISH_RELEASE", ""))')"
+            test "$actual" = "$expected"
+            python3 - <<'PY'
+            import hashlib
+            import json
+            from pathlib import Path
+            import subprocess
+            import time
+            from scripts import telegram_admin_bot as bot
+            from scripts.telegram_http import TelegramHTTPSHandler
+
+            for path, digest in {
+                'scripts/telegram_admin_bot.py': '12e26ddaa28e0fb3e86891039fdba7db0109695eefcb6d6a87ad273548024bd1',
+                'scripts/telegram_http.py': '57411d4f3fed7275c05251aeb19a2f23e2bc67ffe60898c02b77ea35e5fef938',
+            }.items():
+                assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, 'source mismatch'
+            assert any(isinstance(handler, TelegramHTTPSHandler) for handler in bot.urlopen.__self__.handlers)
+            print('TRANSPORT_RELEASE_AND_HOST_SOURCE_OK', flush=True)
+            unit = 'totish-telegram-admin.service'
+            def show(prop):
+                return subprocess.run(['systemctl', 'show', '--value', f'--property={prop}', unit], capture_output=True, text=True, timeout=10).stdout.strip()
+            state = show('LoadState')
+            print('POLLER_SYSTEM_UNIT', state, show('ActiveState'), flush=True)
+            if state == 'loaded':
+                before = show('MainPID')
+                restarted = subprocess.run(['systemctl', '--no-ask-password', 'restart', unit], capture_output=True, text=True, timeout=30)
+                if restarted.returncode == 0:
+                    time.sleep(3)
+                    assert show('ActiveState') == 'active' and show('MainPID') not in ('0', before), 'poller restart verification failed'
+                    print('POLLER_RESTARTED_AND_ACTIVE', flush=True)
+                else:
+                    print('POLLER_RESTART_REQUIRES_ROOT', flush=True)
+            else:
+                print('POLLER_RESTART_SERVICE_MANAGER_UNKNOWN', flush=True)
+            assert len(json.loads(bot.main_keyboard())['inline_keyboard']) == 4
+            token, _ = bot._config()
+            successes = 0
+            for sample in range(4):
+                start = time.monotonic()
+                try:
+                    result = bot._telegram_request(token, 'getMe', {}, timeout=3)
+                    assert result.get('is_bot')
+                    successes += 1
+                    print('TRANSPORT_API_MS', round(1000 * (time.monotonic() - start)), flush=True)
+                except Exception as exc:
+                    print('TRANSPORT_API_ERROR', type(exc).__name__, flush=True)
+            assert successes == 4, 'Telegram connectivity sample failed'
+            print('TRANSPORT_PRODUCTION_SMOKE_OK', flush=True)
+            PY
+            curl --fail --silent --show-error --max-time 10 https://totish.ru/health
