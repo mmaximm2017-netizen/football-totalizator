@@ -3,7 +3,7 @@
   'use strict';
   const tg = window.Telegram?.WebApp;
   const $ = id => document.getElementById(id);
-  const titles = {ranking: 'Таблица', matches: 'Матчи', predictions: 'Прогнозы', stats: 'Статистика', player: 'Участники'};
+  const titles = {ranking: 'Таблица', matches: 'Матчи', stats: 'Статистика', player: 'Участники'};
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
@@ -25,7 +25,7 @@
     if (text !== undefined) element.textContent = text;
     return element;
   }
-  function root() { return `ui:t:${tab}:${kind}`; }
+  function root() { return tab === 'matches' ? `round:${kind}:auto` : `ui:t:${tab}:${kind}`; }
   function icon(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
@@ -50,12 +50,14 @@
     $('status').classList.toggle('error', error);
   }
   function synchronize() {
+    document.body.dataset.view = tab;
     document.querySelectorAll('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === kind)));
     document.querySelectorAll('[data-tab]').forEach(b => {
       if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
     $('page-title').textContent = titles[tab];
+    if (tab === 'matches') $('page-title').append(node('small', 'match-timezone', 'МСК'));
     $('eyebrow').textContent = tab === 'ranking' ? 'ОБЩИЙ ЗАЧЁТ' : kind === 'rpl' ? 'РОССИЙСКАЯ ПРЕМЬЕР-ЛИГА' : 'КУБОК РОССИИ';
     if (tg?.BackButton) {
       if (history.length) tg.BackButton.show(); else tg.BackButton.hide();
@@ -98,80 +100,72 @@
     table.append(body);
     if (body.childElementCount) $('content').append(table);
   }
-  function matchHeader(lines, index) {
-    const teams = lines[index]?.split(' — ');
-    const stamp = lines[index + 1]?.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2}) МСК$/);
-    if (teams?.length !== 2 || teams.some(team => !team.trim()) || !stamp) return null;
-    const [, day, month, year, hour, minute] = stamp;
-    const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
-    if (date.getUTCFullYear() !== Number(year) || date.getUTCMonth() + 1 !== Number(month) || date.getUTCDate() !== Number(day) || Number(hour) > 23 || Number(minute) > 59) return null;
-    return {home: teams[0], away: teams[1], date, day: `${year}-${month}-${day}`, time: `${hour}:${minute}`, details: []};
-  }
-  function predictionRows(lines) {
-    const rows = [];
-    for (const line of lines) {
-      const score = line.match(/^(.+): (\d+):(\d+)$/);
-      const missing = line.match(/^(.+): нет прогноза$/);
-      if (score) rows.push({name: score[1], value: `${score[2]}:${score[3]}`});
-      else if (missing) rows.push({name: missing[1], value: 'Нет прогноза', missing: true});
-      else return null;
+  function roundMatches(payload) {
+    $('content').replaceChildren(); $('controls').replaceChildren();
+    $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
+    if (!payload.rounds.length) {
+      $('content').append(node('p', 'screen-note', 'Туров пока нет.')); return;
     }
-    return rows;
-  }
-  function scheduleCards(body, metric) {
-    const lines = body.split('\n').filter(line => line.trim());
-    const matches = [];
-    for (let i = 0; i < lines.length;) {
-      const match = matchHeader(lines, i);
-      if (!match) return false;
-      i += 2;
-      while (i < lines.length && !matchHeader(lines, i)) match.details.push(lines[i++]);
-      // Unknown or partial schedule formats keep the original readable text.
-      if (metric === 'matches' && match.details.length) return false;
-      matches.push(match);
+    const picker = node('div', 'round-picker');
+    const index = payload.rounds.findIndex(round => round.number === payload.round_number);
+    const changeRound = number => { feedback(); load(`round:${kind}:${number}`); };
+    const previous = node('button', 'round-step'); previous.type = 'button';
+    previous.setAttribute('aria-label', 'Предыдущий тур'); previous.append(icon('arrow'));
+    previous.disabled = index <= 0;
+    previous.addEventListener('click', () => changeRound(payload.rounds[index - 1].number));
+    const select = node('select', 'round-select'); select.setAttribute('aria-label', 'Выбрать тур');
+    const shortDate = value => new Intl.DateTimeFormat('ru-RU', {day: '2-digit', month: '2-digit', timeZone: 'Europe/Moscow'}).format(new Date(value));
+    for (const round of payload.rounds) {
+      const option = node('option', '', `Тур ${round.number} · ${shortDate(round.start)}–${shortDate(round.end)}.${round.end.slice(0, 4)}`);
+      option.value = round.number; option.selected = round.number === payload.round_number; select.append(option);
     }
-    if (!matches.length) return false;
-    let group, previousDay;
-    for (const match of matches) {
-      if (match.day !== previousDay) {
-        group = node('section', 'match-day');
-        const heading = node('h2', 'day-heading');
-        const date = node('time', '', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(match.date));
-        date.dateTime = match.day;
-        heading.append(date, node('span', 'day-weekday', new Intl.DateTimeFormat('ru-RU', {weekday: 'long', timeZone: 'UTC'}).format(match.date)));
-        group.append(heading); $('content').append(group); previousDay = match.day;
+    select.addEventListener('change', () => changeRound(select.value));
+    const next = node('button', 'round-step next'); next.type = 'button';
+    next.setAttribute('aria-label', 'Следующий тур'); next.append(icon('arrow'));
+    next.disabled = index < 0 || index >= payload.rounds.length - 1;
+    next.addEventListener('click', () => changeRound(payload.rounds[index + 1].number));
+    picker.append(previous, select, next); $('content').append(picker);
+    const list = node('div', 'round-list');
+    let previousDay;
+    for (const match of payload.matches) {
+      const kickoff = new Date(match.kickoff);
+      const day = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow'}).format(kickoff);
+      if (previousDay !== day) {
+        const heading = node('h2', 'round-day', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Europe/Moscow'}).format(kickoff));
+        list.append(heading); previousDay = day;
       }
-      const card = node('article', 'match-card');
-      card.setAttribute('aria-label', `${match.home} — ${match.away}, ${match.time} МСК`);
-      const fixture = node('div', 'match-fixture');
-      const teams = node('div', 'match-teams');
-      for (const name of [match.home, match.away]) {
-        const team = node('div', 'match-team');
-        team.append(node('span', 'team-name', name)); teams.append(team);
-      }
-      const clock = node('div', 'match-clock');
-      const time = node('time', '', match.time); time.dateTime = match.time;
-      clock.append(time, node('span', '', 'МСК')); fixture.append(teams, clock); card.append(fixture);
-      if (match.details.length) {
-        const rows = predictionRows(match.details);
-        if (rows) {
-          const table = node('table', 'prediction-table');
-          table.setAttribute('aria-label', `Прогнозы: ${match.home} — ${match.away}`);
-          const head = node('thead'), header = node('tr');
-          for (const title of ['Участник', 'Прогноз']) { const cell = node('th', '', title); cell.scope = 'col'; header.append(cell); }
-          head.append(header); const tbody = node('tbody');
-          for (const entry of rows) {
-            const row = node('tr'); row.append(node('td', 'prediction-name', entry.name), node('td', entry.missing ? 'prediction-missing' : 'prediction-score', entry.value)); tbody.append(row);
-          }
-          table.append(head, tbody); card.append(table);
-        } else {
-          // Deadline messages and unrecognized continuation notes are preserved.
-          card.append(node('p', 'match-note', match.details.join('\n')));
+      const card = node(match.finished ? 'details' : 'article', 'round-match');
+      const fixture = node(match.finished ? 'summary' : 'div', 'round-fixture');
+      const time = node('time', 'round-time', new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
+      time.dateTime = match.kickoff;
+      const teams = node('span', 'round-teams');
+      teams.append(node('span', '', match.home), node('span', '', match.away));
+      fixture.append(time, teams);
+      if (match.finished) {
+        const arrow = node('span', 'round-expand'); arrow.append(icon('arrow')); fixture.append(arrow);
+        card.append(fixture);
+        const result = node('div', 'match-result');
+        result.append(node('span', '', 'Итоговый счёт'), node('strong', '', match.score.join(':')));
+        const table = node('table', 'match-predictions');
+        table.setAttribute('aria-label', `Прогнозы и очки: ${match.home} — ${match.away}`);
+        const head = node('thead'), header = node('tr'), body = node('tbody');
+        for (const title of ['Участник', 'Прогноз', 'Очки']) { const th = node('th', '', title); th.scope = 'col'; header.append(th); }
+        head.append(header);
+        for (const prediction of match.predictions) {
+          const row = node('tr');
+          row.append(node('td', '', prediction.name), node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
+          body.append(row);
         }
-      }
-      group.append(card);
+        table.append(head, body); card.append(result, table);
+        if (!match.predictions.length) card.append(node('p', 'screen-note result-empty', 'Прогнозов нет.'));
+        card.addEventListener('toggle', () => {
+          if (card.open) list.querySelectorAll('details[open]').forEach(other => { if (other !== card) other.open = false; });
+        });
+      } else card.append(fixture);
+      list.append(card);
     }
-    return true;
+    if (!payload.matches.length) list.append(node('p', 'screen-note', 'В этом туре матчей пока нет.'));
+    $('content').append(list);
   }
   function measurementTable(body, metric) {
     if (metric === 'points') {
@@ -214,6 +208,9 @@
     return true;
   }
   function follow(data) {
+    if (/^ui:[pvrud]:(rpl|cup):predictions:/.test(data)) {
+      tab = 'matches'; history = []; return load(root());
+    }
     if (data === 'adm:main') { history = []; return load(root()); }
     if (data.startsWith('ui:s:')) {
       history = []; return load(root());
@@ -221,6 +218,7 @@
     if (data.startsWith('ui:')) return load(data, {push: true});
   }
   function draw(payload) {
+    if (payload.type === 'round_matches') { roundMatches(payload); return; }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
     if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
     const text = payload.text || '';
@@ -242,7 +240,7 @@
       const context = enhanced && heading.includes('\n') ? heading.split('\n').slice(1).join('\n') : heading;
       if (context && !current.startsWith('ui:t:stats:')) $('content').append(node('p', enhanced ? 'context-strip' : 'screen-note', context));
       if (!expect && !current.startsWith('ui:t:stats:')) {
-        const rendered = ['matches', 'predictions'].includes(metric) ? scheduleCards(body, metric) : measurementTable(body, metric);
+        const rendered = measurementTable(body, metric);
         if (!rendered) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
       }
       else if (expect) $('content').append(node('p', 'screen-note', 'Выберите один день или диапазон дат. Время МСК.'));
@@ -285,9 +283,11 @@
         draw(cached.payload); $('updated').textContent = cached.label; return;
       }
       skeleton();
-      const payload = await api({action: 'screen', callback, text}, controller.signal);
+      const round = callback.match(/^round:(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
+      const body = round ? {action: 'matches', kind: round[1], round_number: round[2] === 'auto' ? null : Number(round[2])} : {action: 'screen', callback, text};
+      const payload = await api(body, controller.signal);
       if (id !== sequence) return;
-      const label = 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';
+      const label = (round ? 'Время матчей МСК · ' : '') + 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';
       if (!text && !payload.expect) {
         cache.set(callback, {payload, time: Date.now(), label});
         if (cache.size > 40) cache.delete(cache.keys().next().value);

@@ -58,11 +58,30 @@ question filters already visible to the authorized user.
 
 ## Result presentation
 
-The browser recognizes the existing fixed text formats without another database
-query: schedules become fixture cards grouped by Moscow calendar day, and each
-prediction list stays under its own fixture. Missing forecasts and pre-deadline
-notices remain explicit. A page starting midway through a forecast list keeps
-its original text rather than attributing rows to a guessed match.
+The Mini App has one «Матчи» tab for schedules, results and forecasts. The
+`matches` API action accepts only the tournament kind and an optional validated
+round number. It reads the existing `gpt_safe.calendar_rounds` classification;
+national-team and Supercup fixtures remain outside rounds. The current/upcoming
+round opens by default, or the last round after the season. The selector and
+arrows navigate whole rounds, without Telegram text-page limits or match caps.
+
+Collapsed fixtures use a compact layout tested with eight matches at 360×800 and
+320×740. A finished fixture expands to its score and a participant / forecast /
+stored points table. Only one result stays open. Expanded results, large rounds,
+large accessibility fonts, or very long team names may require vertical scrolling.
+
+Finished status aliases and complete valid scores use the canonical scoring
+validator. Future kickoffs, missing/future deadlines, live and scheduled matches
+never include results, predictions or absence data in this response. A single
+batched query reads forecasts for eligible finished IDs only, scoped to their
+tournament. The read-only transaction uses a repeatable-read snapshot so scores
+and stored points cannot come from different versions of a result update. Null
+points stay «—», zero stays 0; missing forecasts are explicit. No points are
+recalculated, no new background polling or database writes are introduced.
+
+Existing bot/chat prediction screens retain their deadline policy. Participant
+forecast buttons in the Mini App lead to the combined matches tab. All names and
+values use DOM text nodes, never HTML interpolation.
 
 Points, round wins, averages, exact scores and streaks use labeled value columns.
 Explanations are kept in the expandable «Как считается» section; streak caveats

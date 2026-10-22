@@ -5,6 +5,7 @@ import os
 from flask import Blueprint, current_app, jsonify, render_template, request
 
 from app.services.telegram_mini_app import allow_request, question_payload, screen_payload, validate_launch
+from app.services.telegram_mini_app_matches import matches_payload
 
 logger = logging.getLogger(__name__)
 telegram_mini_app_bp = Blueprint("telegram_mini_app", __name__, url_prefix="/telegram-app")
@@ -50,6 +51,8 @@ def screen():
     try:
         if payload.get("action") == "question":
             result = question_payload(payload.get("text"), payload.get("state"), uid, current_app.secret_key)
+        elif payload.get("action") == "matches":
+            result = matches_payload(payload.get("kind"), payload.get("round_number"))
         elif payload.get("action", "screen") == "screen":
             result = screen_payload(payload.get("callback"), payload.get("text"))
         else:
