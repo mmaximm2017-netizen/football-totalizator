@@ -87,7 +87,7 @@ def test_ranking_matches_canonical_and_excludes_unfinished_and_other_tournament(
     assert rows == [('Бек', 10), ('Макс Зенит', 7)]
     lines, _ = a.execute_question(safe, a.Question(intent='ranking'), 5, datetime.now(timezone.utc))
     assert [row['username'] for row in canonical] == ['Бек', 'Макс Зенит']
-    assert lines == ['1. Бек: 10 очк. (1 прогнозов)', '2. Макс Зенит: 7 очк. (1 прогнозов)']
+    assert lines == ['1. Бек: 10 очк.', '2. Макс Зенит: 7 очк.']
     assert calculate_points(2, 1, 2, 1) == canonical[0]['points']
     assert calculate_points(2, 1, 1, 0) == canonical[1]['points']
 

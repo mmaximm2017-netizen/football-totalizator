@@ -351,7 +351,7 @@ def execute_question(cur, q, tid, now):
             return ["Нет завершённых прогнозов. Лидер по этим данным не определён."], None
         if q.intent == "leader":
             rows = rows[:1]
-        lines = [f"{i}. {r[0]}: {r[1]} очк. ({r[2]} прогнозов)" for i, r in enumerate(rows[:MAX_ROWS], 1)]
+        lines = [f"{i}. {r[0]}: {r[1]} очк." for i, r in enumerate(rows[:MAX_ROWS], 1)]
         if not rows or not any(r[2] for r in rows):
             lines.insert(0, "Нет завершённых прогнозов за выбранные условия; нули не означают сыгранные матчи.")
         if len(rows) > MAX_ROWS:
