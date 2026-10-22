@@ -8,6 +8,15 @@
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
   const hasAuth = Boolean(tg?.initData);
+  let themePreference = 'light';
+  try { if (localStorage.getItem('totish-mini-theme') === 'dark') themePreference = 'dark'; } catch { /* Appearance storage is optional. */ }
+  const metrics = {
+    points: ['chart', 'За день, тур или период'],
+    round_wins: ['table', 'Кто чаще побеждает'],
+    average: ['chart', 'Эффективность прогнозов'],
+    hits: ['target', 'Попадания в точный счёт'],
+    streak: ['streak', 'Матчи без точного счёта']
+  };
 
   function node(tag, className, text) {
     const element = document.createElement(tag);
@@ -16,8 +25,23 @@
     return element;
   }
   function root() { return `ui:t:${tab}:${kind}`; }
+  function icon(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#i-${name}`); svg.setAttribute('aria-hidden', 'true');
+    svg.append(use); return svg;
+  }
   function theme() {
-    document.documentElement.dataset.theme = tg?.colorScheme === 'light' ? 'light' : 'dark';
+    const dark = themePreference === 'dark';
+    document.documentElement.dataset.theme = themePreference;
+    $('toggle-theme').setAttribute('aria-label', dark ? 'Включить светлую тему' : 'Включить тёмную тему');
+    $('toggle-theme').setAttribute('aria-pressed', String(dark));
+    $('toggle-theme').replaceChildren(icon(dark ? 'sun' : 'moon'));
+    try {
+      tg?.setHeaderColor?.('#1465e8');
+      tg?.setBackgroundColor?.(dark ? '#09172c' : '#f0f6ff');
+      if (tg?.isVersionAtLeast?.('7.10')) tg.setBottomBarColor?.(dark ? '#09172c' : '#f0f6ff');
+    } catch { /* Older Telegram clients still render the app normally. */ }
   }
   function feedback() { tg?.HapticFeedback?.selectionChanged(); }
   function setStatus(message = '', error = false) {
@@ -66,7 +90,9 @@
       const row = node('tr'), name = node('td', 'player-name');
       const initial = match[2].trim().slice(0, 1).toLocaleUpperCase('ru');
       const avatar = node('span', 'avatar', initial); avatar.setAttribute('aria-hidden', 'true');
-      name.append(avatar, document.createTextNode(match[2]));
+      const player = node('div', 'player-content');
+      player.append(avatar, node('span', 'player-label', match[2])); name.append(player);
+      row.dataset.place = match[1];
       row.append(node('td', '', match[1].padStart(2, '0')), name, node('td', '', match[3]));
       body.append(row);
     });
@@ -97,8 +123,8 @@
     } else {
       // Keep trusted result text intact; never interpret names or answers as HTML.
       if (heading && !current.startsWith('ui:t:stats:')) $('content').append(node('p', 'screen-note', heading));
-      if (!expect) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
-      else $('content').append(node('p', 'screen-note', 'Выберите один день или диапазон дат. Время МСК.'));
+      if (!expect && !current.startsWith('ui:t:stats:')) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
+      else if (expect) $('content').append(node('p', 'screen-note', 'Выберите один день или диапазон дат. Время МСК.'));
     }
     for (const row of payload.rows || []) {
       const line = node('div', 'control-row');
@@ -108,6 +134,13 @@
         if (!target || target === 'adm:main' || action.text.includes('Обновить')) continue;
         if (target.startsWith('ui:s:') || (target === root() && history.length === 0)) continue;
         const button = node('button', '', action.text);
+        const metric = target.split(':')[3];
+        if (current.startsWith('ui:t:stats:') && metrics[metric]) {
+          button.className = 'metric-card'; button.dataset.metric = metric;
+          const badge = node('span', 'metric-icon'); badge.append(icon(metrics[metric][0]));
+          const arrow = node('span', 'metric-arrow'); arrow.append(icon('arrow'));
+          button.replaceChildren(badge, arrow, node('span', 'metric-title', action.text), node('span', 'metric-description', metrics[metric][1]));
+        }
         button.type = 'button'; button.addEventListener('click', () => { feedback(); follow(target); });
         line.append(button);
       }
@@ -170,6 +203,11 @@
     load(expect, {text: `с ${format(start)} по ${format(end)}`, force: true});
   });
   const dialog = $('chat-dialog');
+  $('toggle-theme').addEventListener('click', () => {
+    themePreference = themePreference === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem('totish-mini-theme', themePreference); } catch { /* Optional preference only. */ }
+    feedback(); theme();
+  });
   $('open-chat').addEventListener('click', () => dialog.showModal());
   $('close-chat').addEventListener('click', () => dialog.close());
   function bubble(text, outgoing = false) {

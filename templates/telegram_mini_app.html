@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111916">
+  <meta name="theme-color" content="#1465e8">
   <title>ТОТИШ · Мини-приложение</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='telegram-app/app.css', v=release) }}">
   <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
@@ -20,11 +20,17 @@
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 1 0 0 8m0-13v5h-5"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></symbol>
     <symbol id="i-send" viewBox="0 0 24 24"><path d="m4 11 16-7-7 16-2-7-7-2Zm7 2 9-9"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14A8.5 8.5 0 0 1 10 4a8.5 8.5 0 1 0 10 10Z"/></symbol>
+    <symbol id="i-streak" viewBox="0 0 24 24"><path d="M3 17h4l3-10 4 13 3-9h4"/></symbol>
   </svg>
   <div class="app-shell">
     <header class="brand-bar">
       <div class="brand"><span class="brand-mark">Т</span><span>ТОТИШ<small>ФУТБОЛ В ЦИФРАХ</small></span></div>
-      <button class="icon-button" id="open-chat" aria-label="Задать вопрос"><svg><use href="#i-chat"/></svg></button>
+      <div class="header-actions">
+        <button class="icon-button" id="toggle-theme" aria-label="Включить тёмную тему" aria-pressed="false"><svg><use href="#i-moon"/></svg></button>
+        <button class="icon-button" id="open-chat" aria-label="Задать вопрос"><svg><use href="#i-chat"/></svg></button>
+      </div>
     </header>
     <div class="tournaments" role="group" aria-label="Турнир">
       <button data-kind="rpl" aria-pressed="true"><span class="league-dot"></span>РПЛ</button>
