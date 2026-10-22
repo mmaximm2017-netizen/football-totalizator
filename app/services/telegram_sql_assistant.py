@@ -376,8 +376,8 @@ def execute_question(cur, q, tid, now):
         choices = [f"{r[1]} — {r[2]} · {r[3].astimezone(MSK):%d.%m.%Y} · {r[0]}" for r in rows]
         return ["Выберите номер матча:"] + [f"{i}. {v}" for i, v in enumerate(choices, 1)], ("match", choices)
     lines = []
-    for mid, home, away, kickoff, deadline, status in rows:
-        lines.append(f"{home} — {away}\n{kickoff.astimezone(MSK):%d.%m.%Y %H:%M} МСК · {status or 'нет статуса'}")
+    for mid, home, away, kickoff, deadline, _status in rows:
+        lines.append(f"{home} — {away}\n{kickoff.astimezone(MSK):%d.%m.%Y %H:%M} МСК")
         if q.intent == "matches":
             continue
         dt = parse_datetime(deadline)
