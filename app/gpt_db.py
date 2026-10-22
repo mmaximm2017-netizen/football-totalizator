@@ -3,7 +3,9 @@
 import logging
 import os
 import threading
+from contextlib import contextmanager
 
+import psycopg2
 from psycopg2 import InterfaceError, OperationalError
 from psycopg2.pool import PoolError, ThreadedConnectionPool
 
@@ -15,6 +17,27 @@ _pool_lock = threading.Lock()
 
 class GPTDatabaseUnavailable(RuntimeError):
     """The isolated GPT database connection cannot be used."""
+
+
+@contextmanager
+def short_gpt_read():
+    """On-demand host-assistant read: no pool, idle session, or primary-DB fallback."""
+    conn = None
+    try:
+        url = _database_url()
+        if not url:
+            raise GPTDatabaseUnavailable("gpt_database_not_configured")
+        conn = psycopg2.connect(url, connect_timeout=5)
+        conn.set_session(readonly=True, autocommit=False)
+        with conn.cursor() as cur:
+            cur.execute("SET LOCAL statement_timeout = %s", (GPT_DB_STATEMENT_TIMEOUT_MS,))
+            yield cur
+    finally:
+        if conn is not None:
+            try:
+                conn.rollback()
+            finally:
+                conn.close()
 
 
 def _database_url():
