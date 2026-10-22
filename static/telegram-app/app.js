@@ -51,6 +51,7 @@
   }
   function synchronize() {
     document.body.dataset.view = tab;
+    $('open-round-summary').hidden = true;
     document.querySelectorAll('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === kind)));
     document.querySelectorAll('[data-tab]').forEach(b => {
       if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
@@ -125,6 +126,8 @@
     next.disabled = index < 0 || index >= payload.rounds.length - 1;
     next.addEventListener('click', () => changeRound(payload.rounds[index + 1].number));
     picker.append(previous, select, next); $('content').append(picker);
+    $('open-round-summary').hidden = !payload.matches.length;
+    $('open-round-summary').onclick = () => { feedback(); load(`summary:${kind}:${payload.round_number}`, {push: true}); };
     const list = node('div', 'round-list');
     let previousDay;
     for (const match of payload.matches) {
@@ -166,6 +169,46 @@
     }
     if (!payload.matches.length) list.append(node('p', 'screen-note', 'В этом туре матчей пока нет.'));
     $('content').append(list);
+  }
+  function roundSummary(payload) {
+    $('content').replaceChildren(); $('controls').replaceChildren();
+    $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
+    $('page-title').textContent = `Итоги тура ${payload.round_number}`;
+    const back = node('button', 'summary-back', `‹ Матчи тура ${payload.round_number}`); back.type = 'button';
+    back.addEventListener('click', () => { feedback(); history = []; load(`round:${kind}:${payload.round_number}`); });
+    $('content').append(back);
+    const messages = {
+      final: 'Тур завершён',
+      in_progress: `Предварительные итоги · завершено ${payload.finished_matches} из ${payload.total_matches} матчей`,
+      no_results: 'Завершённых матчей в этом туре пока нет.',
+      pending_points: 'Очки за завершённые матчи ещё не начислены полностью. Обновите итоги позже.'
+    };
+    $('content').append(node('p', 'summary-status', messages[payload.status] || 'Итоги пока недоступны.'));
+    if (!payload.rows.length) return;
+    const table = node('table', 'round-summary-table'); table.setAttribute('aria-label', `Итоги тура ${payload.round_number}`);
+    const head = node('thead'), header = node('tr'), body = node('tbody');
+    for (const label of ['Участник', 'За тур', 'Место: до → после']) { const th = node('th', '', label); th.scope = 'col'; header.append(th); }
+    head.append(header);
+    for (const entry of payload.rows) {
+      const row = node('tr'); row.dataset.winner = String(entry.winner);
+      const person = node('td'), name = node('span', 'summary-name', entry.name);
+      person.append(name);
+      if (entry.winner) person.append(node('small', 'winner-label', 'Победитель тура'));
+      const places = node('td', 'summary-places');
+      places.append(node('span', '', `${entry.before_place ?? '—'} → ${entry.after_place ?? '—'}`));
+      if (entry.movement !== null) {
+        const direction = entry.movement > 0 ? 'up' : entry.movement < 0 ? 'down' : 'same';
+        const label = entry.movement > 0 ? `↑ ${entry.movement}` : entry.movement < 0 ? `↓ ${Math.abs(entry.movement)}` : 'Без изменений';
+        places.append(node('small', `rank-change ${direction}`, label));
+      }
+      row.append(person, node('td', 'summary-points', String(entry.points)), places); body.append(row);
+    }
+    table.append(head, body); $('content').append(table);
+    if (!payload.has_scores) $('content').append(node('p', 'screen-note', 'В этом туре нет прогнозов с начисленными очками.'));
+    const method = node('details', 'method-note');
+    const explanation = 'Общий зачёт: места до первого и после последнего матча выбранного тура. Более поздние матчи не учитываются. Для незавершённого тура учитываются только завершённые матчи. Места восстановлены по текущим результатам и действующему составу участников; это не сохранённый снимок прошлой таблицы. При равенстве очков за тур победа у каждого лидера. В общем зачёте действуют обычные дополнительные показатели турнира.';
+    method.append(node('summary', '', 'Как считается'), node('p', '', explanation)); $('content').append(method);
+    if (!payload.movement_available) $('content').append(node('p', 'screen-note summary-caveat', 'Изменение места недоступно: до тура зачёт ещё не сформирован или есть неначисленные очки.'));
   }
   function measurementTable(body, metric) {
     if (metric === 'points') {
@@ -219,6 +262,7 @@
   }
   function draw(payload) {
     if (payload.type === 'round_matches') { roundMatches(payload); return; }
+    if (payload.type === 'round_summary') { roundSummary(payload); return; }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
     if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
     const text = payload.text || '';
@@ -283,8 +327,8 @@
         draw(cached.payload); $('updated').textContent = cached.label; return;
       }
       skeleton();
-      const round = callback.match(/^round:(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
-      const body = round ? {action: 'matches', kind: round[1], round_number: round[2] === 'auto' ? null : Number(round[2])} : {action: 'screen', callback, text};
+      const round = callback.match(/^(round|summary):(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
+      const body = round ? {action: round[1] === 'summary' ? 'round_summary' : 'matches', kind: round[2], round_number: round[3] === 'auto' ? null : Number(round[3])} : {action: 'screen', callback, text};
       const payload = await api(body, controller.signal);
       if (id !== sequence) return;
       const label = (round ? 'Время матчей МСК · ' : '') + 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';

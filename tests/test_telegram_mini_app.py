@@ -157,3 +157,13 @@ def test_round_matches_requires_signed_launch_before_database_access(client, mon
     assert response.status_code == 200
     reader.assert_called_once_with("cup", 6)
     assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_round_summary_checks_auth_and_keeps_private_cache_policy(client, monkeypatch):
+    reader = MagicMock(return_value={'type': 'round_summary', 'rows': []})
+    monkeypatch.setattr('app.routes.telegram_mini_app.round_summary_payload', reader)
+    assert post(client, {'action': 'round_summary', 'kind': 'rpl', 'round_number': 1}, raw='hash=bad').status_code == 401
+    reader.assert_not_called()
+    response = post(client, {'action': 'round_summary', 'kind': 'cup', 'round_number': 3})
+    assert response.status_code == 200 and response.headers['Cache-Control'] == 'no-store'
+    reader.assert_called_once_with('cup', 3)

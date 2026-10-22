@@ -335,3 +335,93 @@ def test_aggregate_rankings_do_not_reveal_future_or_null_deadline_predictions(an
     source.execute('UPDATE tournaments SET is_active = 0 WHERE id = 5')
     rows = a.read(safe, 'SELECT user_id, points FROM gpt_safe.tournament_rankings WHERE tournament_id = %s ORDER BY user_id', (5,))
     assert rows == [(1, 10), (2, 7), (4, 10)]
+
+
+@pytest.fixture
+def round_summary(analytics, monkeypatch):
+    from app.services import telegram_round_summary as summary
+    safe, source = analytics
+    # Each integration fixture already has a transaction with temporary DDL.
+    # Production establishes repeatable read before its first SELECT.
+    class SummaryCursor:
+        def execute(self, sql, params=()):
+            if not sql.startswith('SET TRANSACTION'):
+                safe.execute(sql, params)
+
+        def fetchall(self):
+            return safe.fetchall()
+
+    @contextmanager
+    def reader():
+        yield SummaryCursor()
+
+    monkeypatch.setattr(summary, 'short_gpt_read', reader)
+    source.execute("UPDATE matches SET league='other' WHERE tournament_id=5")
+    source.execute("INSERT INTO users(id,username,password,is_admin,is_deleted) VALUES(5,'Bowb','secret',0,0)")
+    source.execute("""
+        INSERT INTO matches(id,tournament_id,league,home_team,away_team,kickoff_time,deadline,status,home_score,away_score)
+        SELECT id,5,'rpl','A','B',CURRENT_TIMESTAMP-days*interval '1 day',
+               CURRENT_TIMESTAMP-days*interval '1 day'-interval '1 hour','FINISHED',2,1
+        FROM (VALUES (3001,20),(3002,17),(3003,17),(3004,14),(3005,14)) v(id,days)
+    """)
+    source.execute("""
+        INSERT INTO predictions(user_id,match_id,tournament_id,home_goals,away_goals,points) VALUES
+        (1,3001,5,2,1,10),(2,3001,5,1,0,7),
+        (1,3002,5,0,4,0),(2,3002,5,2,1,10),
+        (1,3003,5,0,4,0),(2,3003,5,1,1,2),
+        (1,3004,5,2,1,10),(1,3005,5,2,1,10)
+    """)
+    return summary, source
+
+
+def test_round_summary_reconstructs_old_tour_without_later_points(round_summary):
+    summary, _ = round_summary
+    payload = summary.round_summary_payload('rpl', 2)
+    assert payload['status'] == 'final' and payload['total_matches'] == 2
+    by_name = {row['name']: row for row in payload['rows']}
+    assert by_name['Макс Зенит']['points'] == 12
+    assert by_name['Макс Зенит']['before_place'] == 2
+    assert by_name['Макс Зенит']['after_place'] == 1
+    assert by_name['Макс Зенит']['movement'] == 1
+    assert by_name['Макс Зенит']['winner'] is True
+    assert by_name['Бек']['points'] == 0 and by_name['Бек']['movement'] == -1
+    assert by_name['Bowb']['points'] == 0 and by_name['Bowb']['movement'] == 0
+    assert set(by_name) == {'Бек', 'Макс Зенит', 'Bowb'}
+    # The later tour puts Bek back on top, without changing the earlier summary.
+    later = summary.round_summary_payload('rpl', 3)
+    assert next(row for row in later['rows'] if row['name'] == 'Бек')['after_place'] == 1
+    cup = summary.round_summary_payload('cup', 1)
+    assert next(row for row in cup['rows'] if row['name'] == 'Бек')['points'] == 11
+
+
+def test_round_summary_joint_winners_ignore_overall_tiebreaks(round_summary):
+    summary, source = round_summary
+    source.execute('UPDATE predictions SET points=CASE WHEN match_id=3002 THEN 7 ELSE 5 END WHERE user_id=1 AND match_id IN (3002,3003)')
+    payload = summary.round_summary_payload('rpl', 2)
+    winners = [row for row in payload['rows'] if row['winner']]
+    assert len(winners) == 2 and {row['points'] for row in winners} == {12}
+    assert {row['place'] for row in winners} == {1}
+
+
+@pytest.mark.parametrize('points', [None, 999])
+def test_round_summary_waits_for_valid_stored_scoring(round_summary, points):
+    summary, source = round_summary
+    source.execute('UPDATE predictions SET points=%s WHERE match_id=3002 AND user_id=1', (points,))
+    payload = summary.round_summary_payload('rpl', 2)
+    assert payload['status'] == 'pending_points' and not payload['rows']
+
+
+def test_round_summary_partial_round_and_first_round(round_summary):
+    summary, source = round_summary
+    source.execute("UPDATE matches SET status='LIVE',home_score=99 WHERE id=3003")
+    payload = summary.round_summary_payload('rpl', 2)
+    assert payload['status'] == 'in_progress'
+    assert payload['finished_matches'] == 1 and payload['total_matches'] == 2
+    assert next(row for row in payload['rows'] if row['name'] == 'Макс Зенит')['points'] == 10
+    assert not any(row['winner'] for row in payload['rows'])
+    first = summary.round_summary_payload('rpl', 1)
+    assert not first['movement_available']
+    assert all(row['movement'] is None and row['before_place'] is None for row in first['rows'])
+    source.execute("UPDATE matches SET status='SCHEDULED',deadline=CURRENT_TIMESTAMP+interval '1 day' WHERE id=3002")
+    source.execute("UPDATE matches SET status='SCHEDULED',deadline=NULL WHERE id=3003")
+    assert summary.round_summary_payload('rpl', 2)['status'] == 'no_results'
