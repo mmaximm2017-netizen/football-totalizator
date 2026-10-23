@@ -214,6 +214,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('.round-day').count(),3);
  assert.equal(await page.locator('.round-teams .club-logo').count(),16);
  assert.equal(await page.locator('.round-match[open]').count(),0);
+ const readableWords=()=>page.locator('.round-teams .club-label').evaluateAll(labels=>labels.filter(el=>['Краснодар','Локомотив'].includes(el.textContent)).every(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)+1));
  const fits=()=>page.evaluate(()=>{
   const last=document.querySelector('.round-match:last-child').getBoundingClientRect();
   const nav=document.querySelector('.bottom-nav').getBoundingClientRect();
@@ -221,7 +222,17 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  });
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit above navigation at 360x800');
+ assert.equal(await readableWords(),true,'Long club names fit without splitting a word');
+ const teamStyle=await page.locator('.round-teams .club-name').first().evaluate(el=>({font:parseFloat(getComputedStyle(el).fontSize),crest:el.querySelector('img').getBoundingClientRect().width,left:el.getBoundingClientRect().left-el.closest('.round-match').getBoundingClientRect().left}));
+ assert.ok(teamStyle.font>=14 && teamStyle.crest>=30 && teamStyle.left<=12,'Larger teams use the free space at the card edge');
  await page.screenshot({path:'test-results/mini-app/round-compact-light.png',fullPage:true,animations:'disabled'});
+ for(const viewport of [{width:393,height:740},{width:414,height:896}]) {
+  await page.setViewportSize(viewport);
+  assert.equal(await fits(),true,`Whole round fits ${viewport.width}x${viewport.height}`);
+  assert.equal(await page.locator('.round-teams .club-label').evaluateAll(labels=>labels.every(el=>el.scrollWidth<=el.clientWidth+1)),true,'Team labels wrap without clipping');
+  await page.screenshot({path:`test-results/mini-app/round-readable-${viewport.width}.png`,fullPage:true,animations:'disabled'});
+ }
+ await page.setViewportSize({width:360,height:800});
  await page.locator('.round-teams .club-logo').first().evaluate(img=>img.dispatchEvent(new Event('error')));
  assert.equal(await page.locator('.round-teams .club-logo').count(),15);
  assert.equal(await page.locator('.round-teams .club-name').first().textContent(),'Ахмат');
@@ -277,6 +288,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.setViewportSize({width:320,height:740});
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit at 320x740');
+ assert.equal(await readableWords(),true,'Long club names remain whole at 320px');
  await page.screenshot({path:'test-results/mini-app/round-compact-320.png',fullPage:true,animations:'disabled'});
  await page.setViewportSize({width:360,height:800});
  await page.locator('[data-kind=rpl]').click();
