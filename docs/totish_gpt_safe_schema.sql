@@ -14,6 +14,7 @@ REVOKE ALL ON SCHEMA gpt_safe FROM PUBLIC;
 
 
 DROP VIEW IF EXISTS gpt_safe.tournament_rankings;
+DROP VIEW IF EXISTS gpt_safe.match_events;
 DROP VIEW IF EXISTS gpt_safe.calendar_rounds;
 DROP VIEW IF EXISTS gpt_safe.predictions;
 DROP VIEW IF EXISTS gpt_safe.matches;
@@ -224,6 +225,22 @@ LEFT JOIN (
 WHERE u.is_admin = 0 AND (t.is_active = 0 OR COALESCE(u.is_deleted, 0) = 0)
 GROUP BY t.id, u.id, u.username;
 
+CREATE VIEW gpt_safe.match_events AS
+SELECT m.id AS match_id, m.tournament_id,
+       CASE
+           WHEN LOWER(COALESCE(m.match_category, '')) = 'supercup' THEN 'supercup'
+           WHEN LOWER(COALESCE(m.match_category, '')) = 'national_team' THEN 'national'
+           WHEN COALESCE(m.home_team, '') ~* '(^|[^[:alpha:]])(россия|russia)([^[:alpha:]]|$)'
+             OR COALESCE(m.away_team, '') ~* '(^|[^[:alpha:]])(россия|russia)([^[:alpha:]]|$)' THEN 'national'
+           WHEN COALESCE(m.playoff_stage, '') ~* '(суперкуб|super.?cup)' THEN 'supercup'
+       END AS event_kind
+FROM public.matches m
+WHERE m.league = 'rpl' AND m.kickoff_time IS NOT NULL
+  AND (LOWER(COALESCE(m.match_category, '')) IN ('national_team', 'supercup')
+       OR COALESCE(m.home_team, '') ~* '(^|[^[:alpha:]])(россия|russia)([^[:alpha:]]|$)'
+       OR COALESCE(m.away_team, '') ~* '(^|[^[:alpha:]])(россия|russia)([^[:alpha:]]|$)'
+       OR COALESCE(m.playoff_stage, '') ~* '(суперкуб|super.?cup)');
+
 -- ============================================================
 -- READER ACCESS
 --
@@ -240,7 +257,8 @@ GRANT SELECT ON
     gpt_safe.matches,
     gpt_safe.predictions,
     gpt_safe.calendar_rounds,
-    gpt_safe.tournament_rankings
+    gpt_safe.tournament_rankings,
+    gpt_safe.match_events
 TO totish_gpt_reader;
 
 COMMIT;

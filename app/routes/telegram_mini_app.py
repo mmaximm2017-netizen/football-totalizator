@@ -4,9 +4,9 @@ import os
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
-from app.models.team_data import CLUB_LOGOS
+from app.models.team_data import CLUB_LOGOS, TEAM_FLAGS, TEAM_NAMES
 from app.services.telegram_mini_app import allow_request, question_payload, screen_payload, validate_launch
-from app.services.telegram_mini_app_matches import matches_payload
+from app.services.telegram_mini_app_matches import event_matches_payload, matches_payload
 from app.services.telegram_round_summary import round_summary_payload
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,11 @@ def private_response(response):
 @telegram_mini_app_bp.get("")
 @telegram_mini_app_bp.get("/")
 def index():
-    return render_template("telegram_mini_app.html", release=os.getenv("TOTISH_RELEASE", "development"), club_logos=CLUB_LOGOS)
+    logos = {**CLUB_LOGOS, **{name: f"/static/flags/{code}.svg" for name, code in TEAM_FLAGS.items()}}
+    for alias, name in TEAM_NAMES.items():
+        if name in logos:
+            logos[alias] = logos[name]
+    return render_template("telegram_mini_app.html", release=os.getenv("TOTISH_RELEASE", "development"), club_logos=logos)
 
 
 @telegram_mini_app_bp.post("/api")
@@ -55,6 +59,8 @@ def screen():
             result = question_payload(payload.get("text"), payload.get("state"), uid, current_app.secret_key)
         elif payload.get("action") == "matches":
             result = matches_payload(payload.get("kind"), payload.get("round_number"))
+        elif payload.get("action") == "extra_matches":
+            result = event_matches_payload(payload.get("event"), payload.get("year"))
         elif payload.get("action") == "round_summary":
             result = round_summary_payload(payload.get("kind"), payload.get("round_number"))
         elif payload.get("action", "screen") == "screen":

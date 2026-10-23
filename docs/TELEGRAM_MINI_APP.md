@@ -250,3 +250,34 @@ include local crests from the site's canonical `CLUB_LOGOS` mapping, embedded as
 JSON in the database-free shell. No external image service or extra API read is
 used. Unknown clubs and failed images retain their full text without a broken
 image or invented initials. Images are decorative because the club name is adjacent.
+
+
+### Matches outside calendar rounds
+
+The RPL Matches screen has separate `Туры`, `Суперкубок` and `Сборная России`
+tabs. The Cup screen retains its round picker. Extra matches support a Moscow
+year selector and `Все матчи`; automatic selection uses the year of the nearest
+upcoming/current-day match, or the last match when all fixtures are past.
+Completed matches use the same final-score/forecast accordion as rounds.
+Unfinished, premature, invalid-score or missing-deadline matches never read or
+return forecasts. Site flags (`TEAM_FLAGS` and `TEAM_NAMES` aliases), including
+flag-emoji-decorated Russia names, share the local crest renderer.
+
+`extra_matches` accepts only `national`/`supercup` and a bounded integer year,
+`all` or null. It always resolves the existing RPL tournament, independent of a
+client-supplied kind. Migration `0009_add_safe_match_events.sql` adds only a
+read-only public-metadata classification view keyed by match AND tournament ID.
+It follows the existing calendar exclusions (categories, Russia-name token,
+Supercup stage); it does not classify every non-round match as a Supercup.
+No existing migration, result, calendar round, prediction or scoring rule changes.
+The extra matches keep contributing to the canonical RPL overall standings,
+while remaining outside round wins and round summaries.
+
+Within the national-team tab, `Очки за матчи сборной` shows all current safe
+participants and their sum of stored points for eligible completed matches in
+the selected year/all history. Missing forecasts contribute zero, valid scored
+zeroes remain zero, and forecasts awaiting/containing invalid stored points show
+`—` and `Ожидается начисление`; places are withheld until all subtotals are known.
+No eligible finished matches produces an explanatory empty state. Ties share a
+place. This is a filtered subtotal, not a recalculation. Profile navigation
+restores the tab, selected year, open match, open points table, focus and scroll.
