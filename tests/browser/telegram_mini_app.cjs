@@ -16,7 +16,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   if(b.action==='question'){await r.fulfill({json:{text:'Какой турнир?',state:'signed-state',choices:[{label:'РПЛ',value:'rpl'}]}});return;}
   if(b.action==='round_summary') {
    const final=b.round_number===11;
-   await r.fulfill({json:{type:'round_summary',kind:b.kind,round_number:b.round_number,status:summaryMode||(final?'final':'in_progress'),finished_matches:final?8:3,total_matches:8,movement_available:true,has_scores:true,rows:summaryMode?[]:[{user_id:1,name:'Бек',points:12,place:1,before_place:2,after_place:1,movement:1,winner:final},{user_id:2,name:'Макс Зенит',points:12,place:1,before_place:1,after_place:2,movement:-1,winner:final},{user_id:3,name:'<img src=x onerror=alert(1)>',points:0,place:3,before_place:3,after_place:3,movement:0,winner:false}]}});return;
+   await r.fulfill({json:{type:'round_summary',kind:b.kind,round_number:b.round_number,status:summaryMode||(final?'final':'in_progress'),finished_matches:final?8:3,total_matches:8,movement_available:true,has_scores:true,rows:summaryMode?[]:[{user_id:1,name:'Бек',points:12,place:1,before_place:2,after_place:1,movement:1,winner:final},{user_id:2,name:'Макс Зенит',points:12,place:1,before_place:1,after_place:2,movement:-1,winner:final},{user_id:3,name:'<img src=x onerror=alert(1)>',points:0,place:3,before_place:3,after_place:3,movement:0,winner:false},{user_id:4,name:'Byza-Zenit',points:0,place:3,before_place:4,after_place:4,movement:0,winner:false},{user_id:5,name:'Денис 05',points:0,place:3,before_place:5,after_place:5,movement:0,winner:false},{user_id:6,name:'Bowb',points:0,place:3,before_place:6,after_place:6,movement:0,winner:false}]}});return;
   }
   if(b.action==='matches') {
    const cup=b.kind==='cup';
@@ -32,6 +32,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
    const uid=Number(cb.split(':')[5]);
    const names={1:'Бек',2:'Макс Зенит',3:'<img src=x onerror=alert(1)>',4:'Макс Зенит',8:'Игрок: с двоеточием',9:'Нет начисления'};
    p={text:`👤 ${names[uid]||'Участник'} · ${cup?'Кубок России':'РПЛ'}\nВесь турнир\n\nОчки: ${cup?11:10}\nМесто: 1 из 6`,rows:[]};
+   p.profile={user_id:uid,name:names[uid]||'Участник',active:uid!==9,place:uid===9?null:1,participants:6,points:cup?11:10,round_wins:uid===9?null:2,exact:3,average:'5.25',recent:uid===9?[]:[{home:'Ахмат',away:'Оренбург',kickoff:'2026-10-17T19:30:00+03:00',points:10},{home:'Акрон',away:'Динамо',kickoff:'2026-10-16T19:30:00+03:00',points:0},{home:'Рубин',away:'Зенит',kickoff:'2026-10-15T19:30:00+03:00',points:null}]};
   }
   else if(cb.startsWith('ui:v:') && ['round_wins','average','hits','streak'].includes(cb.split(':')[3])) {
    const metric=cb.split(':')[3];
@@ -92,7 +93,10 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.locator('.ranking-table [data-user-id="1"]').click();
  await page.getByRole('heading',{name:'Профиль',exact:true}).waitFor();
  assert.equal(requests.at(-1).callback,'ui:v:cup:card:all:1:0');
- assert.ok((await page.locator('#content').textContent()).includes('Очки: 11'));
+ assert.equal(await page.locator('.profile-totals > div:last-child strong').textContent(),'11');
+ assert.equal(await page.locator('.profile-metric').count(),3);
+ assert.deepEqual(await page.locator('.recent-points').allTextContents(),['+10','+0','—']);
+ assert.equal(await page.locator('.profile-hero img').count(),0);
  await page.screenshot({path:'test-results/mini-app/profile-from-cup.png',fullPage:true,animations:'disabled'});
  await page.locator('.profile-back').click();
  await page.getByRole('cell',{name:'БЕК125125',exact:false}).waitFor();
@@ -179,7 +183,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('.profile-back').count(),1);
  fail=false;await page.locator('#refresh').click();
  await page.getByRole('heading',{name:'Профиль',exact:true}).waitFor();
- await page.locator('#content .data-card').waitFor();
+ await page.locator('#content .profile-hero').waitFor();
  assert.equal(requests.at(-1).callback,'ui:v:rpl:card:all:1:0');
  await page.locator('.profile-back').click();
  await page.waitForFunction(y=>document.querySelector('details.round-match[open]')?.dataset.matchId==='2' && Math.abs(window.scrollY-y)<=1,matchScroll);
@@ -209,8 +213,9 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('#page-title').textContent(),'Итоги тура 12');
  assert.ok((await page.locator('.summary-status').textContent()).includes('Предварительные'));
  assert.equal(await page.locator('.winner-label').count(),0);
- assert.deepEqual(await page.locator('.summary-points').allTextContents(),['12','12','0']);
- assert.deepEqual(await page.locator('.rank-change').allTextContents(),['↑ 1','↓ 1','Без изменений']);
+ assert.equal(await page.locator('.round-winners').count(),0);
+ assert.deepEqual(await page.locator('.summary-points').allTextContents(),['12','12','0','0','0','0']);
+ assert.deepEqual(await page.locator('.rank-change').allTextContents(),['↑ 1','↓ 1','Без изменений','Без изменений','Без изменений','Без изменений']);
  assert.equal(await page.locator('#content img').count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.getByRole('button',{name:'Матчи тура 12',exact:false}).click();
@@ -221,6 +226,8 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(requests.at(-1).action,'round_summary');
  assert.equal(requests.at(-1).round_number,11);
  assert.equal(await page.locator('.winner-label').count(),2);
+ assert.equal(await page.locator('.winner-names .participant-link').count(),2);
+ assert.equal(await page.locator('.round-summary-table tbody tr').count(),6);
  assert.equal(await page.locator('.summary-status').textContent(),'Тур завершён');
  await page.locator('.round-summary-table [data-user-id="1"]').click();
  await page.getByRole('heading',{name:'Профиль',exact:true}).waitFor();
@@ -229,6 +236,8 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.locator('.round-summary-table').waitFor();
  assert.equal(await page.locator('#page-title').textContent(),'Итоги тура 11');
  assert.equal(await page.locator('.winner-label').count(),2);
+ assert.equal(await page.locator('.winner-names .participant-link').count(),2);
+ assert.equal(await page.locator('.round-summary-table tbody tr').count(),6);
  await page.screenshot({path:'test-results/mini-app/round-summary-old-light.png',fullPage:true,animations:'disabled'});
  await page.locator('#toggle-theme').click();
  await page.screenshot({path:'test-results/mini-app/round-summary-old-dark.png',fullPage:true,animations:'disabled'});
@@ -263,12 +272,24 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   assert.ok(await page.locator('.measurement-table tbody tr').count()>=2);
   assert.notEqual(await page.locator('#page-title').textContent(),'Статистика');
   assert.equal(await page.locator('.method-note').count(),1);
-  if(metric==='round_wins'){assert.equal(await page.locator('.measurement-table tbody tr').count(),6);assert.ok((await page.locator('.measurement-table').textContent()).includes('Bowb'));}
+  if(metric==='round_wins'){assert.equal(await page.locator('.measurement-table tbody tr').count(),6);assert.ok((await page.locator('.measurement-table').textContent()).includes('Bowb'));assert.equal(await page.locator('.comparison-bar').count(),6);assert.equal(await page.locator('.comparison-bar').last().evaluate(e=>e.style.width),'0%');}
   if(metric==='average')assert.deepEqual(await page.locator('.measurement-value').allTextContents(),['5.25','0.00','—']);
   if(metric==='streak')assert.ok((await page.locator('.measurement-note').textContent()).includes('точных счетов в выборке нет'));
   await page.screenshot({path:`test-results/mini-app/measure-${metric}.png`,fullPage:true,animations:'disabled'});
  }
  await page.setViewportSize({width:320,height:740});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.locator('[data-tab=matches]').click();
+ await page.locator('details.round-match').first().locator('summary').click();
+ await page.locator('details.round-match[open] [data-user-id="9"]').click();
+ await page.locator('.profile-hero').waitFor();
+ assert.ok((await page.locator('.profile-kicker').textContent()).includes('АРХИВНЫЙ'));
+ assert.equal(await page.locator('.recent-results').count(),0);
+ await page.locator('.profile-back').click();
+ await page.locator('details.round-match[open] [data-user-id="3"]').click();
+ await page.locator('.profile-hero').waitFor();
+ assert.equal(await page.locator('.profile-name').textContent(),'<img src=x onerror=alert(1)>');
+ assert.equal(await page.locator('#content img').count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.deepEqual(errors,[]);
  console.log('MINI_APP_BROWSER_OK: clickable IDs, duplicate nicks, keyboard, profile error/retry, Telegram back, restored match/scroll/round, historical round summaries, joint winners, movements, pending/no results, whole round fits 320/360px, finished accordion, stored points, hidden unfinished predictions, navigation, dates, XSS, questions, retry, themes');

@@ -217,6 +217,35 @@
     if (!payload.matches.length) list.append(node('p', 'screen-note', 'В этом туре матчей пока нет.'));
     $('content').append(list);
   }
+  function playerProfile(profile) {
+    const hero = node('section', 'profile-hero'); hero.setAttribute('aria-label', 'Участник турнира');
+    hero.append(node('p', 'profile-kicker', profile.active ? 'УЧАСТНИК ТУРНИРА' : 'АРХИВНЫЙ УЧАСТНИК'), node('h2', 'profile-name', profile.name));
+    const totals = node('div', 'profile-totals');
+    const place = node('div'); place.append(node('strong', '', profile.place === null ? '—' : `#${profile.place}`), node('span', '', profile.place === null ? 'Место не определено' : `из ${profile.participants} участников`));
+    const points = node('div'); points.append(node('strong', '', String(profile.points)), node('span', '', 'очков в турнире'));
+    totals.append(place, points); hero.append(totals); $('content').append(hero);
+    const metrics = node('div', 'profile-metrics');
+    for (const [value, label] of [[profile.round_wins, 'Победы в турах'], [profile.exact, 'Точные счета'], [profile.average, 'Средние очки']]) {
+      const item = node('div', 'profile-metric'); item.append(node('strong', '', value === null ? '—' : String(value)), node('span', '', label)); metrics.append(item);
+    }
+    $('content').append(metrics);
+    if (!profile.active) {
+      $('content').append(node('p', 'screen-note', 'Архивный участник. Подробные результаты закрыты.')); return;
+    }
+    if (profile.round_wins === null) $('content').append(node('p', 'profile-note', 'Победы появятся после полностью завершённого тура с начисленными очками.'));
+    $('content').append(node('h2', 'subsection-title', 'Последние результаты'));
+    const list = node('ol', 'recent-results'); list.setAttribute('aria-label', 'Последние завершённые матчи');
+    for (const match of profile.recent) {
+      const row = node('li');
+      const fixture = node('div'); fixture.append(node('span', 'recent-fixture', `${match.home} — ${match.away}`), node('time', 'recent-date', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short', timeZone: 'Europe/Moscow'}).format(new Date(match.kickoff))));
+      const score = node('strong', 'recent-points', match.points === null ? '—' : `+${match.points}`);
+      score.dataset.exact = String(match.points >= 10); score.setAttribute('aria-label', match.points === null ? 'Очки ещё не начислены' : `${match.points} очков`);
+      row.append(fixture, score); list.append(row);
+    }
+    $('content').append(list);
+    if (!profile.recent.length) $('content').append(node('p', 'screen-note', 'Завершённых прогнозов пока нет.'));
+    if (profile.recent.some(match => match.points === null)) $('content').append(node('p', 'profile-note', 'Прочерк: очки ещё не начислены.'));
+  }
   function roundSummary(payload) {
     $('content').replaceChildren(); $('controls').replaceChildren();
     $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
@@ -232,6 +261,14 @@
     };
     $('content').append(node('p', 'summary-status', messages[payload.status] || 'Итоги пока недоступны.'));
     if (!payload.rows.length) return;
+    const winners = payload.status === 'final' ? payload.rows.filter(entry => entry.winner) : [];
+    if (winners.length) {
+      const spotlight = node('section', 'round-winners'); spotlight.setAttribute('aria-label', 'Победители тура');
+      const badge = node('span', 'winner-icon'); badge.append(icon('table')); spotlight.append(badge, node('p', 'winner-kicker', winners.length === 1 ? 'ПОБЕДИТЕЛЬ ТУРА' : 'ПОБЕДИТЕЛИ ТУРА'));
+      const names = node('div', 'winner-names');
+      for (const entry of winners) names.append(participantName(entry.name, entry.user_id));
+      spotlight.append(names, node('p', 'winner-score', `${winners[0].points} очк. за тур`)); $('content').append(spotlight);
+    }
     const table = node('table', 'round-summary-table'); table.setAttribute('aria-label', `Итоги тура ${payload.round_number}`);
     const head = node('thead'), header = node('tr'), body = node('tbody');
     for (const label of ['Участник', 'За тур', 'Место: до → после']) { const th = node('th', '', label); th.scope = 'col'; header.append(th); }
@@ -276,6 +313,7 @@
       else notes.push(line);
     }
     if (!entries.length) return false;
+    const maximum = Math.max(0, ...entries.map(entry => Number(entry.value.replace(',', '.'))).filter(Number.isFinite));
     const table = node('table', 'measurement-table');
     const head = node('thead'), header = node('tr');
     for (const title of ['Участник', labels[metric]]) { const cell = node('th', '', title); cell.scope = 'col'; header.append(cell); }
@@ -285,6 +323,11 @@
       const name = node('div', 'measurement-name');
       if (entry.position) name.append(node('span', 'measurement-position', entry.position.padStart(2, '0')));
       name.append(node('span', '', entry.name)); person.append(name);
+      if (['round_wins', 'hits'].includes(metric) && maximum > 0 && Number.isFinite(Number(entry.value))) {
+        const track = node('span', 'comparison-track'); track.setAttribute('aria-hidden', 'true');
+        const bar = node('span', 'comparison-bar'); bar.style.width = `${Math.max(0, Math.min(100, Number(entry.value) / maximum * 100))}%`;
+        track.append(bar); person.append(track);
+      }
       if (entry.note) person.append(node('span', 'measurement-note', entry.note));
       const value = node('td', 'measurement-value', entry.value);
       if (metric === 'streak') value.append(node('small', '', 'матчей'));
@@ -323,7 +366,9 @@
     expect = payload.expect || null;
     $('date-form').hidden = !expect;
     const isRanking = tab === 'ranking' && /\d+\. .+: .* очк\./.test(body);
-    if (isRanking) {
+    if (metric === 'card' && payload.profile) {
+      playerProfile(payload.profile);
+    } else if (isRanking) {
       const page = heading.match(/Страница \d+\/\d+/);
       if (page) $('content').append(node('p', 'screen-note', page[0]));
       rankingTable(body.split('\n').filter(Boolean), payload.participants);

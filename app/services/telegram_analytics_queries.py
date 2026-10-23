@@ -77,7 +77,22 @@ def _round_wins(cur, q, tid, limit):
     # date slice can turn a partially played round into a completed one.
     if q.teams or q.match_id:
         return ['Победы считаются по целому туру. Уберите фильтр команд или матча.']
-    rows = _rows(cur, f"""
+    rows = round_win_rows(cur, q, tid, limit)
+    lines = ['Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.', 'Туры по соседним датам МСК; один пустой день разделяет туры. Сборная и Суперкубок вне туров.']
+    if q.dates:
+        lines.append('Даты отбирают туры по дате последнего матча (МСК).')
+    if not rows or not rows[0][3]:
+        return lines + ['Завершённых туров с начисленными прогнозами нет.']
+    lines.append(f'Учтено туров с прогнозами: {rows[0][3]}.')
+    lines += [f'{i}. {r[0]}: {r[1]} побед' for i, r in enumerate(rows[:limit], 1)]
+    if len(rows) > limit:
+        lines.append(f'Показаны первые {limit} участников. Уточните игрока.')
+    return lines
+
+
+def round_win_rows(cur, q, tid, limit, user_id=None):
+    """Shared completed-round calculation; optional identity filter is applied after ranking."""
+    return _rows(cur, f"""
         WITH eligible AS (
             SELECT r.tournament_id, r.round_number
             FROM gpt_safe.calendar_rounds r
@@ -115,15 +130,6 @@ def _round_wins(cur, q, tid, limit):
                (SELECT COUNT(DISTINCT round_number) FROM ranked WHERE round_submitted > 0)
         FROM gpt_safe.users u LEFT JOIN wins w ON w.user_id = u.user_id
         WHERE (%s::text IS NULL OR u.username = %s)
+          AND (%s::integer IS NULL OR u.user_id = %s)
         ORDER BY 2 DESC, u.username LIMIT %s
-    """, [tid, q.round_number, q.round_number, q.dates or None, q.dates or None, q.player, q.player, limit + 1])
-    lines = ['Победы в полностью завершённых турах. При равенстве очков победа каждому лидеру.', 'Туры по соседним датам МСК; один пустой день разделяет туры. Сборная и Суперкубок вне туров.']
-    if q.dates:
-        lines.append('Даты отбирают туры по дате последнего матча (МСК).')
-    if not rows or not rows[0][3]:
-        return lines + ['Завершённых туров с начисленными прогнозами нет.']
-    lines.append(f'Учтено туров с прогнозами: {rows[0][3]}.')
-    lines += [f'{i}. {r[0]}: {r[1]} побед' for i, r in enumerate(rows[:limit], 1)]
-    if len(rows) > limit:
-        lines.append(f'Показаны первые {limit} участников. Уточните игрока.')
-    return lines
+    """, [tid, q.round_number, q.round_number, q.dates or None, q.dates or None, q.player, q.player, user_id, user_id, limit + 1])

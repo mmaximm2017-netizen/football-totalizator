@@ -79,6 +79,15 @@ def test_ranking_uses_existing_read_only_renderer(client, monkeypatch, kind):
     assert response.get_json()["text"] == "1. Бек: 10 очк."
 
 
+@pytest.mark.parametrize("kind", ["rpl", "cup"])
+def test_profile_requests_structured_readonly_details(client, monkeypatch, kind):
+    render = MagicMock(return_value={"text": "Профиль", "rows": [], "profile": {"user_id": 42}})
+    monkeypatch.setattr(mini, "render", render)
+    response = post(client, {"callback": f"ui:v:{kind}:card:all:42:0"})
+    assert response.status_code == 200 and response.get_json()["profile"]["user_id"] == 42
+    render.assert_called_once_with(f"ui:v:{kind}:card:all:42:0", text=None, with_players=True, paginate=False)
+
+
 def test_local_navigation_does_not_open_database(client, monkeypatch):
     render = MagicMock()
     monkeypatch.setattr(mini, "render", render)

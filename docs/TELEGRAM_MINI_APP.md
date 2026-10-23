@@ -156,3 +156,24 @@ actual number for the return trip. State and profile cache remain in memory;
 manual tab/tournament changes discard the return context. Existing profile
 actions, archive restrictions, launch validation and forecast privacy gates are
 unchanged. No database writes, account linking or public access is introduced.
+
+
+## Analytics and participant presentation
+
+Statistics use a compact list of metrics. Round wins and exact-score counts have
+relative bars; the numeric value remains authoritative, zero stays zero, and
+missing results have no fabricated bar. Results are not split across pages.
+
+Mini App participant cards include a structured `profile` alongside the existing
+text and navigation. The profile reuses the safe tournament ranking for place,
+points, exact scores and average points per scored forecast. Completed-round
+wins reuse the assistant calculation with an additional bound user-ID filter
+applied after ranking all participants. Up to five recent scored or pending
+forecasts are read only for valid finished matches after both kickoff and deadline.
+A single repeatable-read transaction covers the card. Archived participants get
+no round-win or detailed-result reads. Null values remain unavailable, not zero.
+No new API action, database write, grant or migration is introduced.
+
+Final round summaries highlight every joint winner. Preliminary, pending and
+empty summaries do not show a winner banner. Place movement retains the existing
+before/after calculation and caveats; labels and arrows accompany the colours.
