@@ -473,8 +473,8 @@ def test_special_matches_and_stored_national_points_are_separate_from_rounds(ana
     ]
     for mid, tid, league, category, home, away, stage, status, points in entries:
         source.execute("""INSERT INTO matches(id,tournament_id,league,match_category,home_team,away_team,playoff_stage,
-            kickoff_time,deadline,status,home_score,away_score) VALUES(%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP-interval '3 hours',
-            CURRENT_TIMESTAMP-interval '4 hours',%s,2,1)""", (mid, tid, league, category, home, away, stage, status))
+            kickoff_time,deadline,status,home_score,away_score,round_number) VALUES(%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP-interval '3 hours',
+            CURRENT_TIMESTAMP-interval '4 hours',%s,2,1,99)""", (mid, tid, league, category, home, away, stage, status))
         source.execute('INSERT INTO predictions(user_id,match_id,tournament_id,home_goals,away_goals,points) VALUES(1,%s,%s,2,1,%s)', (mid, tid, points))
     classified = a.read(safe, 'SELECT match_id,event_kind FROM gpt_safe.match_events ORDER BY match_id')
     assert classified == [(501, 'national'), (502, 'national'), (503, 'supercup'), (504, 'supercup'), (506, 'national')]
