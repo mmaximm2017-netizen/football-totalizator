@@ -3,6 +3,7 @@
   'use strict';
   const tg = window.Telegram?.WebApp;
   const $ = id => document.getElementById(id);
+  const clubLogos = JSON.parse($('club-logos').textContent);
   const titles = {ranking: 'Таблица', matches: 'Матчи', stats: 'Статистика'};
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
@@ -196,7 +197,7 @@
     const list = node('ol', 'participant-list'); list.setAttribute('aria-label', 'Участники турнира');
     for (const player of players) {
       const row = node('li'); row.dataset.place = player.place ?? '';
-      const position = node('span', 'place-marker', player.place === null ? '—' : String(player.place).padStart(2, '0'));
+      const position = node('span', 'place-marker', player.place === null ? '—' : String(Number(player.place)));
       const name = participantName(player.name, player.user_id, 'participant-list-name');
       const score = node('span', 'participant-list-score'); score.append(node('strong', '', String(player.points)), node('small', '', 'очк.'));
       row.append(position, name, score);
@@ -263,12 +264,25 @@
       const entry = participants.find(person => person.place === Number(match[1]) && person.name === match[2]);
       player.append(participantName(match[2], entry?.user_id, 'player-label')); name.append(player);
       row.dataset.place = match[1];
-      const place = node('td'); place.append(node('span', 'place-marker', match[1].padStart(2, '0')));
+      const place = node('td'); place.append(node('span', 'place-marker', String(Number(match[1]))));
       row.append(place, name, node('td', '', match[3]));
       body.append(row);
     });
     table.append(body);
     if (body.childElementCount) $('content').append(table);
+  }
+  function clubName(name, className = '') {
+    const label = node('span', `club-name ${className}`.trim());
+    const path = Object.hasOwn(clubLogos, name) ? clubLogos[name] : null;
+    if (typeof path === 'string' && path.startsWith('/static/clubs/')) {
+      const image = node('img', 'club-logo');
+      image.alt = ''; image.width = 20; image.height = 20;
+      image.addEventListener('error', () => image.remove(), {once: true});
+      image.src = path;
+      label.append(image);
+    }
+    label.append(node('span', 'club-label', name));
+    return label;
   }
   function roundMatches(payload) {
     $('content').replaceChildren(); $('controls').replaceChildren();
@@ -312,13 +326,13 @@
       const time = node('time', 'round-time', new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
       time.dateTime = match.kickoff;
       const teams = node('span', 'round-teams');
-      teams.append(node('span', '', match.home), node('span', '', match.away));
+      teams.append(clubName(match.home), clubName(match.away));
       fixture.append(time, teams);
       if (match.finished) {
         const arrow = node('span', 'round-expand'); arrow.append(icon('arrow')); fixture.append(arrow);
         card.append(fixture);
         const result = node('div', 'match-result');
-        result.append(node('span', 'scoreboard-team', match.home), node('strong', '', match.score.join(':')), node('span', 'scoreboard-team', match.away), node('span', 'scoreboard-label', 'Итоговый счёт'));
+        result.append(clubName(match.home, 'scoreboard-team'), node('strong', '', match.score.join(':')), clubName(match.away, 'scoreboard-team'), node('span', 'scoreboard-label', 'Итоговый счёт'));
         const table = node('table', 'match-predictions');
         table.setAttribute('aria-label', `Прогнозы и очки: ${match.home} — ${match.away}`);
         const head = node('thead'), header = node('tr'), body = node('tbody');
@@ -362,7 +376,9 @@
     const list = node('ol', 'recent-results'); list.setAttribute('aria-label', 'Последние завершённые матчи');
     for (const match of profile.recent) {
       const row = node('li');
-      const fixture = node('div'); fixture.append(node('span', 'recent-fixture', `${match.home} — ${match.away}`), node('time', 'recent-date', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short', timeZone: 'Europe/Moscow'}).format(new Date(match.kickoff))));
+      const fixture = node('div'), teams = node('span', 'recent-fixture');
+      teams.append(clubName(match.home), node('span', 'fixture-separator', ' — '), clubName(match.away));
+      fixture.append(teams, node('time', 'recent-date', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short', timeZone: 'Europe/Moscow'}).format(new Date(match.kickoff))));
       const score = node('strong', 'recent-points', match.points === null ? '—' : `+${match.points}`);
       score.dataset.exact = String(match.points >= 10); score.setAttribute('aria-label', match.points === null ? 'Очки ещё не начислены' : `${match.points} очков`);
       row.append(fixture, score); list.append(row);
@@ -446,7 +462,7 @@
     for (const entry of entries) {
       const row = node('tr'), person = node('td');
       const name = node('div', 'measurement-name');
-      if (entry.position) name.append(node('span', 'measurement-position', entry.position.padStart(2, '0')));
+      if (entry.position) name.append(node('span', 'measurement-position', String(Number(entry.position))));
       name.append(node('span', '', entry.name)); person.append(name);
       if (['round_wins', 'hits'].includes(metric) && maximum > 0 && Number.isFinite(Number(entry.value))) {
         const track = node('span', 'comparison-track'); track.setAttribute('aria-hidden', 'true');

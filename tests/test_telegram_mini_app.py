@@ -57,6 +57,8 @@ def test_public_shell_is_database_free_and_has_no_secrets(client, monkeypatch):
         session["user_id"] = 1
     response = client.get("/telegram-app")
     assert response.status_code == 200
+    assert b'id="club-logos"' in response.data
+    assert b"/static/clubs/akhmat-grozny-footballlogos-org.png" in response.data
     assert b"telegram-web-app.js" in response.data
     assert TOKEN.encode() not in response.data
     assert "frame-ancestors" in response.headers["Content-Security-Policy"]
