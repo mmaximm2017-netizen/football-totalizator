@@ -207,3 +207,26 @@ keep the actual reason, including pending round points. Request errors expose
 an explicit retry on the same callback and period; a picker failure leaves the
 existing result in place. App-launch authorization and database privacy rules
 remain unchanged. No new endpoint, migration or production write is introduced.
+
+## Tournament palettes inherited from the site
+
+The Mini App reuses the site's tournament identity, rather than assigning new
+unrelated colours. `templates/table.html` and `templates/base.html` supply RPL's
+blue canvas/hero (`#001B4D`, `#0066D6`, `#0B5CC9`) and red detail (`#D52B1E`).
+`static/css/tournaments/russian-cup.css` supplies the Cup's plum canvas
+(`#260521`), red hero (`#B7002B` to `#E80024`), lime (`#C7F21A`) and dark surfaces.
+Cup light mode adapts this identity to white data cards, and dark mode uses plum
+cards and lime numeric accents. Text colours are adjusted for readable contrast.
+
+`data-tournament` and `data-theme` on the root element drive CSS tokens for the
+canvas, surfaces, text, headers, profile/match hero, comparisons and primary
+buttons. Navigation and profile return synchronize the palette before rendering
+results, including cached/error states. Telegram header/background/bottom-bar
+colours and the browser theme-colour meta tag follow the same tokens. Success,
+place movement and medal meanings remain separate from tournament identity.
+Only the existing appearance preference is stored; no data, requests, scoring,
+authorization or match visibility rules change.
+
+The browser suite checks both tournaments in both appearance modes, major
+text/background contrast pairs (at least 4.5:1), Telegram colour calls, Cup hero
+colour, and the existing compact 320/360px navigation/profile/period scenarios.
