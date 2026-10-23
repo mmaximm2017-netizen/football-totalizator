@@ -138,7 +138,8 @@
       const entry = participants.find(person => person.place === Number(match[1]) && person.name === match[2]);
       player.append(participantName(match[2], entry?.user_id, 'player-label')); name.append(player);
       row.dataset.place = match[1];
-      row.append(node('td', '', match[1].padStart(2, '0')), name, node('td', '', match[3]));
+      const place = node('td'); place.append(node('span', 'place-marker', match[1].padStart(2, '0')));
+      row.append(place, name, node('td', '', match[3]));
       body.append(row);
     });
     table.append(body);
@@ -192,7 +193,7 @@
         const arrow = node('span', 'round-expand'); arrow.append(icon('arrow')); fixture.append(arrow);
         card.append(fixture);
         const result = node('div', 'match-result');
-        result.append(node('span', '', 'Итоговый счёт'), node('strong', '', match.score.join(':')));
+        result.append(node('span', 'scoreboard-team', match.home), node('strong', '', match.score.join(':')), node('span', 'scoreboard-team', match.away), node('span', 'scoreboard-label', 'Итоговый счёт'));
         const table = node('table', 'match-predictions');
         table.setAttribute('aria-label', `Прогнозы и очки: ${match.home} — ${match.away}`);
         const head = node('thead'), header = node('tr'), body = node('tbody');
@@ -200,6 +201,7 @@
         head.append(header);
         for (const prediction of match.predictions) {
           const row = node('tr');
+          if (prediction.points !== null && prediction.score && prediction.score[0] === match.score[0] && prediction.score[1] === match.score[1]) row.dataset.exact = 'true';
           const name = node('td'); name.append(participantName(prediction.name, prediction.user_id));
           row.append(name, node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
           body.append(row);
