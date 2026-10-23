@@ -196,7 +196,7 @@
     const list = node('ol', 'participant-list'); list.setAttribute('aria-label', 'Участники турнира');
     for (const player of players) {
       const row = node('li'); row.dataset.place = player.place ?? '';
-      const position = node('span', 'place-marker', player.place === null ? '—' : String(player.place).padStart(2, '0'));
+      const position = node('span', 'place-marker', player.place === null ? '—' : String(Number(player.place)));
       const name = participantName(player.name, player.user_id, 'participant-list-name');
       const score = node('span', 'participant-list-score'); score.append(node('strong', '', String(player.points)), node('small', '', 'очк.'));
       row.append(position, name, score);
@@ -263,7 +263,7 @@
       const entry = participants.find(person => person.place === Number(match[1]) && person.name === match[2]);
       player.append(participantName(match[2], entry?.user_id, 'player-label')); name.append(player);
       row.dataset.place = match[1];
-      const place = node('td'); place.append(node('span', 'place-marker', match[1].padStart(2, '0')));
+      const place = node('td'); place.append(node('span', 'place-marker', String(Number(match[1]))));
       row.append(place, name, node('td', '', match[3]));
       body.append(row);
     });
@@ -446,7 +446,7 @@
     for (const entry of entries) {
       const row = node('tr'), person = node('td');
       const name = node('div', 'measurement-name');
-      if (entry.position) name.append(node('span', 'measurement-position', entry.position.padStart(2, '0')));
+      if (entry.position) name.append(node('span', 'measurement-position', String(Number(entry.position))));
       name.append(node('span', '', entry.name)); person.append(name);
       if (['round_wins', 'hits'].includes(metric) && maximum > 0 && Number.isFinite(Number(entry.value))) {
         const track = node('span', 'comparison-track'); track.setAttribute('aria-hidden', 'true');
