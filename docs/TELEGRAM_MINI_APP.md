@@ -293,3 +293,9 @@ results and long archived lists keep their normal scrolling behaviour.
 Fixture labels mirror home and away teams: the home crest/flag is left of its
 name, the away crest/flag is right of its name. The visual order uses scoped
 flex layout and preserves complete text, image dimensions and row heights.
+
+Collapsed completed fixtures display their final score in the centre instead of
+kickoff time, with an explicit accessible final-score label. Unfinished fixtures
+retain their Moscow kickoff time and semantic `time` element. This shared renderer
+covers RPL/Cup rounds, Supercup and Russia fixtures; eligibility and forecast
+visibility rules remain unchanged. The expanded result repeats the same score.
