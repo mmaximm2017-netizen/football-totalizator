@@ -299,3 +299,8 @@ kickoff time, with an explicit accessible final-score label. Unfinished fixtures
 retain their Moscow kickoff time and semantic `time` element. This shared renderer
 covers RPL/Cup rounds, Supercup and Russia fixtures; eligibility and forecast
 visibility rules remain unchanged. The expanded result repeats the same score.
+
+Crests and flags have transparent CSS backing in fixture lists, expanded scores
+and recent profile results, including dark mode. Existing PNG/SVG transparency
+and all white details within club artwork are preserved; no images are modified.
+Dimensions, padding and whole-round fit are unchanged.
