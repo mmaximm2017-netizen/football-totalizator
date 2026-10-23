@@ -345,8 +345,9 @@
       const card = node(match.finished ? 'details' : 'article', 'round-match');
       card.dataset.matchId = String(match.id);
       const fixture = node(match.finished ? 'summary' : 'div', 'round-fixture');
-      const time = node('time', 'round-time', new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
-      time.dateTime = match.kickoff;
+      const time = node(match.finished ? 'strong' : 'time', 'round-time', match.finished ? match.score.join(':') : new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
+      if (match.finished) time.setAttribute('aria-label', `Итоговый счёт ${match.score.join(':')}`);
+      else time.dateTime = match.kickoff;
       const teams = node('span', 'round-teams');
       teams.append(clubName(match.home), clubName(match.away));
       fixture.append(time, teams);
