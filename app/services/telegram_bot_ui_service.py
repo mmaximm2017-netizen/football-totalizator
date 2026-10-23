@@ -84,6 +84,8 @@ def render(data, text=None, now=None, with_players=False, paginate=True):
         return local
     dates, rnd, label = _period(period, now)
     with short_gpt_read() as cur:
+        if with_players and metric == "card":
+            cur.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
         tid, _name = choose_tournament(Question(tournament="рпл" if kind == "rpl" else "кубок россии"), read(cur, "SELECT tournament_id, tournament_name FROM gpt_safe.tournaments ORDER BY tournament_id"))
         if stage == "r":
             rounds = read(cur, """
@@ -126,7 +128,11 @@ def render(data, text=None, now=None, with_players=False, paginate=True):
             if not active_users:
                 lines.append("Архивный участник. Доступна итоговая таблица; подробные прогнозы закрыты.")
                 rows = [nav(callback("u", kind, "card"))]
-            return {"text": "\n".join(lines), "rows": rows}
+            result = {"text": "\n".join(lines), "rows": rows}
+            if with_players:
+                from app.services.telegram_player_profile import player_profile
+                result["profile"] = player_profile(cur, tid, ranking, index, bool(active_users))
+            return result
         participants = None
         if metric == "ranking" and with_players:
             ranking = _ranking(cur, tid)

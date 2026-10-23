@@ -219,6 +219,22 @@ def test_round_wins_shared_first_full_round_only_and_tournament_isolation(round_
     assert '2. Макс Зенит: 0 побед' in cup
 
 
+def test_structured_profile_uses_same_round_wins_and_hides_unfinished(round_analytics):
+    from app.services.telegram_player_profile import player_profile
+
+    safe, _ = round_analytics
+    ranking = ui._ranking(safe, 5)
+    index = next(i for i, row in enumerate(ranking) if row[0] == 2)
+    result = player_profile(safe, 5, ranking, index, True)
+    assert result['round_wins'] == 2
+    assert result['user_id'] == 2
+    assert result['average'] == f"{ranking[index][2] / ranking[index][3]:.2f}"
+    assert all(row['points'] != 999 for row in result['recent'])
+    cup = player_profile(safe, 6, ui._ranking(safe, 6), 0, True)
+    assert cup['round_wins'] == 1 and cup['points'] == 11
+    assert len(cup['recent']) == 1 and cup['recent'][0]['points'] == 11
+
+
 def test_round_date_filter_never_completes_partial_round(round_analytics):
     safe, source = round_analytics
     source.execute("SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date - 1")
