@@ -446,3 +446,24 @@ body[data-period="true"] #refresh { width: 34px; height: 34px; }
 .recent-fixture .club-name { flex: 0 1 auto; }
 .recent-fixture .club-logo { width: 18px; height: 18px; flex-basis: 18px; }
 .fixture-separator { flex-shrink: 0; }
+
+.match-sections { display: flex; gap: 3px; margin-bottom: 7px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.match-sections[hidden] { display: none; }
+.match-sections button { flex: 1; min-width: 0; min-height: 30px; padding: 4px 2px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 750; }
+.match-sections button[aria-pressed="true"] { color: var(--primary-ink); background: var(--primary-bg); }
+.event-year { width: 100%; min-height: 38px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 12px; }
+.event-note { margin: 8px 0 12px; font-size: 10px; line-height: 1.5; color: var(--chrome-muted); }
+.national-points { margin-bottom: 14px; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.national-points > summary { cursor: pointer; color: var(--text); font-size: 12px; font-weight: 750; }
+.national-points .event-note { color: var(--muted); }
+.national-standings { margin: 0; box-shadow: none; }
+.national-standings th, .national-standings td { padding: 7px 5px; }
+.national-standings td { height: 44px; }
+.national-standings th:first-child { width: 30px; }
+.national-standings th:first-child, .national-standings td:first-child { padding-left: 6px; }
+.national-standings th:last-child { width: 58px; }
+.national-standings td:last-child { font-size: 22px; padding-right: 8px; }
+.pending-points { display: block; color: var(--muted); font-size: 9px; font-weight: 500; }
+.country-flag { object-fit: contain; }
+body[data-view="matches"] .round-fixture { min-height: 40px; padding-top: 3px; padding-bottom: 3px; }
+body[data-view="matches"] .round-day { margin-top: 4px; margin-bottom: 3px; }

@@ -178,3 +178,21 @@ def test_round_summary_checks_auth_and_keeps_private_cache_policy(client, monkey
     response = post(client, {'action': 'round_summary', 'kind': 'cup', 'round_number': 3})
     assert response.status_code == 200 and response.headers['Cache-Control'] == 'no-store'
     reader.assert_called_once_with('cup', 3)
+
+
+def test_extra_matches_are_authenticated_and_cannot_select_other_tournament(client, monkeypatch):
+    reader = MagicMock(return_value={'type': 'event_matches', 'matches': []})
+    monkeypatch.setattr('app.routes.telegram_mini_app.event_matches_payload', reader)
+    assert post(client, {'action': 'extra_matches', 'event': 'national'}, raw='hash=bad').status_code == 401
+    reader.assert_not_called()
+    response = post(client, {'action': 'extra_matches', 'event': 'national', 'year': 'all', 'kind': 'cup'})
+    assert response.status_code == 200
+    reader.assert_called_once_with('national', 'all')
+    assert response.headers['Cache-Control'] == 'no-store'
+
+
+def test_shell_reuses_site_flags_and_english_aliases(client):
+    html = client.get('/telegram-app').get_data(as_text=True)
+    logos = json.loads(html.split('<script id="club-logos" type="application/json">')[1].split('</script>')[0])
+    assert logos['Россия'] == logos['Russia'] == '/static/flags/ru.svg'
+    assert logos['Иран'] == '/static/flags/ir.svg'

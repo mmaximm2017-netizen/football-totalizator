@@ -8,6 +8,8 @@
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
+  let matchSection = 'round';
+  const eventSelections = new Map();
   let profileReturn = null, periodController = null, periodMode = null, dateEditing = false;
   const periodSelections = new Map();
   const hasAuth = Boolean(tg?.initData);
@@ -28,7 +30,7 @@
     if (text !== undefined) element.textContent = text;
     return element;
   }
-  function root() { return tab === 'matches' ? `round:${kind}:auto` : `ui:t:${tab}:${kind}`; }
+  function root() { return tab === 'matches' ? kind === 'rpl' && matchSection !== 'round' ? eventSelections.get(matchSection) || `event:${matchSection}:auto` : `round:${kind}:auto` : `ui:t:${tab}:${kind}`; }
   function icon(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
@@ -72,9 +74,21 @@
       if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
+    const event = current.match(/^event:(national|supercup):/);
+    if (event) matchSection = event[1];
+    if (kind === 'rpl' && current.startsWith('round:')) matchSection = 'round';
+    $('match-sections').hidden = !(tab === 'matches' && kind === 'rpl' && /^(round|event):/.test(current));
+    $('match-sections').replaceChildren();
+    for (const [section, label] of [['round', 'Туры'], ['supercup', 'Суперкубок'], ['national', 'Сборная России']]) {
+      const button = node('button', '', label); button.type = 'button'; button.dataset.matchSection = section;
+      button.setAttribute('aria-pressed', String(matchSection === section));
+      button.addEventListener('click', () => { matchSection = section; history = []; profileReturn = null; feedback(); load(root()); });
+      $('match-sections').append(button);
+    }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
     $('page-title').textContent = metric === 'card' ? 'Профиль' : metric === 'recent' ? 'Последние результаты' : metricTitles[metric] || titles[tab];
-    if (tab === 'matches' && current.startsWith('round:')) $('page-title').append(node('small', 'match-timezone', 'МСК'));
+    if (event) $('page-title').textContent = event[1] === 'national' ? 'Сборная России' : 'Суперкубок';
+    if (tab === 'matches' && /^(round|event):/.test(current)) $('page-title').append(node('small', 'match-timezone', 'МСК'));
     $('eyebrow').textContent = tab === 'ranking' ? 'ОБЩИЙ ЗАЧЁТ' : kind === 'rpl' ? 'РОССИЙСКАЯ ПРЕМЬЕР-ЛИГА' : 'КУБОК РОССИИ';
     if (tg?.BackButton) {
       if (history.length || profileReturn) tg.BackButton.show(); else tg.BackButton.hide();
@@ -214,9 +228,10 @@
     button.type = 'button'; button.dataset.userId = String(uid);
     button.setAttribute('aria-label', `Открыть профиль: ${name}`);
     button.addEventListener('click', () => {
-      const originCallback = current.startsWith('round:') ? `round:${kind}:${document.querySelector('.round-select').value}` : current;
+      const originCallback = current.startsWith('round:') ? `round:${kind}:${document.querySelector('.round-select').value}` : current.startsWith('event:') ? `event:${matchSection}:${document.querySelector('.event-year').value}` : current;
       profileReturn = {callback: originCallback, text: currentText, kind, tab, history: [...history], scroll: window.scrollY,
         match: $('content').querySelector('details.round-match[open]')?.dataset.matchId,
+        points: $('content').querySelector('.national-points')?.open,
         uid: String(uid), from: $('date-from').value, to: $('date-to').value};
       history = []; feedback(); load(`ui:v:${kind}:card:all:${uid}:0`);
       window.scrollTo(0, 0);
@@ -227,6 +242,7 @@
     if (!origin) return;
     const match = [...$('content').querySelectorAll('details.round-match')].find(card => card.dataset.matchId === origin.match);
     if (match) match.open = true;
+    if (origin.points && $('content').querySelector('.national-points')) $('content').querySelector('.national-points').open = true;
     const button = [...(match || $('content')).querySelectorAll('.participant-link')].find(link => link.dataset.userId === origin.uid);
     button?.focus({preventScroll: true});
     if (origin.from) $('date-from').value = origin.from;
@@ -243,7 +259,7 @@
   }
   function profileBackButton() {
     if (!profileReturn) return;
-    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : profileReturn.tab === 'stats' ? '‹ К статистике' : '‹ К таблице';
+    const label = profileReturn.callback.startsWith('event:') ? '‹ К матчам' : profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : profileReturn.tab === 'stats' ? '‹ К статистике' : '‹ К таблице';
     const button = node('button', 'summary-back profile-back', label); button.type = 'button';
     button.addEventListener('click', () => { feedback(); returnFromProfile(); });
     $('content').append(button);
@@ -273,51 +289,57 @@
   }
   function clubName(name, className = '') {
     const label = node('span', `club-name ${className}`.trim());
-    const path = Object.hasOwn(clubLogos, name) ? clubLogos[name] : null;
-    if (typeof path === 'string' && path.startsWith('/static/clubs/')) {
+    const normalized = String(name).replace(/\p{Regional_Indicator}/gu, '').trim();
+    const path = Object.hasOwn(clubLogos, normalized) ? clubLogos[normalized] : null;
+    if (typeof path === 'string' && /^\/static\/(clubs|flags)\//.test(path)) {
       const image = node('img', 'club-logo');
+      if (path.startsWith('/static/flags/')) image.classList.add('country-flag');
       image.alt = ''; image.width = 20; image.height = 20;
       image.addEventListener('error', () => image.remove(), {once: true});
       image.src = path;
       label.append(image);
     }
-    label.append(node('span', 'club-label', name));
+    label.append(node('span', 'club-label', normalized));
     return label;
   }
   function roundMatches(payload) {
     $('content').replaceChildren(); $('controls').replaceChildren();
     $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
-    if (!payload.rounds.length) {
+    const event = payload.type === 'event_matches';
+    if (!event && !payload.rounds.length) {
       emptyState('Матчей пока нет', 'Расписание появится после добавления матчей в турнир.', 'ball'); return;
     }
-    const picker = node('div', 'round-picker');
-    const index = payload.rounds.findIndex(round => round.number === payload.round_number);
-    const changeRound = number => { feedback(); load(`round:${kind}:${number}`); };
-    const previous = node('button', 'round-step'); previous.type = 'button';
-    previous.setAttribute('aria-label', 'Предыдущий тур'); previous.append(icon('arrow'));
-    previous.disabled = index <= 0;
-    previous.addEventListener('click', () => changeRound(payload.rounds[index - 1].number));
-    const select = node('select', 'round-select'); select.setAttribute('aria-label', 'Выбрать тур');
-    const shortDate = value => new Intl.DateTimeFormat('ru-RU', {day: '2-digit', month: '2-digit', timeZone: 'Europe/Moscow'}).format(new Date(value));
-    for (const round of payload.rounds) {
-      const option = node('option', '', `Тур ${round.number} · ${shortDate(round.start)}–${shortDate(round.end)}.${round.end.slice(0, 4)}`);
-      option.value = round.number; option.selected = round.number === payload.round_number; select.append(option);
+    if (event) eventControls(payload);
+    else {
+      const picker = node('div', 'round-picker');
+      const index = payload.rounds.findIndex(round => round.number === payload.round_number);
+      const changeRound = number => { feedback(); load(`round:${kind}:${number}`); };
+      const previous = node('button', 'round-step'); previous.type = 'button';
+      previous.setAttribute('aria-label', 'Предыдущий тур'); previous.append(icon('arrow'));
+      previous.disabled = index <= 0;
+      previous.addEventListener('click', () => changeRound(payload.rounds[index - 1].number));
+      const select = node('select', 'round-select'); select.setAttribute('aria-label', 'Выбрать тур');
+      const shortDate = value => new Intl.DateTimeFormat('ru-RU', {day: '2-digit', month: '2-digit', timeZone: 'Europe/Moscow'}).format(new Date(value));
+      for (const round of payload.rounds) {
+        const option = node('option', '', `Тур ${round.number} · ${shortDate(round.start)}–${shortDate(round.end)}.${round.end.slice(0, 4)}`);
+        option.value = round.number; option.selected = round.number === payload.round_number; select.append(option);
+      }
+      select.addEventListener('change', () => changeRound(select.value));
+      const next = node('button', 'round-step next'); next.type = 'button';
+      next.setAttribute('aria-label', 'Следующий тур'); next.append(icon('arrow'));
+      next.disabled = index < 0 || index >= payload.rounds.length - 1;
+      next.addEventListener('click', () => changeRound(payload.rounds[index + 1].number));
+      picker.append(previous, select, next); $('content').append(picker);
+      $('open-round-summary').hidden = !payload.matches.length;
+      $('open-round-summary').onclick = () => { feedback(); load(`summary:${kind}:${payload.round_number}`, {push: true}); };
     }
-    select.addEventListener('change', () => changeRound(select.value));
-    const next = node('button', 'round-step next'); next.type = 'button';
-    next.setAttribute('aria-label', 'Следующий тур'); next.append(icon('arrow'));
-    next.disabled = index < 0 || index >= payload.rounds.length - 1;
-    next.addEventListener('click', () => changeRound(payload.rounds[index + 1].number));
-    picker.append(previous, select, next); $('content').append(picker);
-    $('open-round-summary').hidden = !payload.matches.length;
-    $('open-round-summary').onclick = () => { feedback(); load(`summary:${kind}:${payload.round_number}`, {push: true}); };
     const list = node('div', 'round-list');
     let previousDay;
     for (const match of payload.matches) {
       const kickoff = new Date(match.kickoff);
       const day = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow'}).format(kickoff);
       if (previousDay !== day) {
-        const heading = node('h2', 'round-day', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Europe/Moscow'}).format(kickoff));
+        const heading = node('h2', 'round-day', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'long', ...(event ? {year: 'numeric'} : {weekday: 'short'}), timeZone: 'Europe/Moscow'}).format(kickoff));
         list.append(heading); previousDay = day;
       }
       const card = node(match.finished ? 'details' : 'article', 'round-match');
@@ -353,8 +375,37 @@
       } else card.append(fixture);
       list.append(card);
     }
-    if (!payload.matches.length) emptyState('В этом туре матчей пока нет.', 'Попробуйте выбрать другой тур.', 'ball');
+    if (!payload.matches.length) emptyState(event ? 'Матчей пока нет' : 'В этом туре матчей пока нет.', event ? 'Матчи появятся после добавления в расписание.' : 'Попробуйте выбрать другой тур.', 'ball');
     $('content').append(list);
+  }
+  function eventControls(payload) {
+    if (payload.year !== null) eventSelections.set(payload.event, `event:${payload.event}:${payload.year}`);
+    const select = node('select', 'event-year'); select.setAttribute('aria-label', 'Год матчей');
+    for (const value of ['all', ...payload.years]) {
+      const option = node('option', '', value === 'all' ? 'Все матчи' : String(value)); option.value = value;
+      option.selected = String(value) === String(payload.year); select.append(option);
+    }
+    select.addEventListener('change', () => { feedback(); load(`event:${payload.event}:${select.value}`); });
+    $('content').append(select, node('p', 'event-note', 'Вне туров · Очки входят в общий зачёт РПЛ · Время МСК'));
+    if (payload.event !== 'national') return;
+    const details = node('details', 'national-points');
+    details.append(node('summary', '', 'Очки за матчи сборной'));
+    details.append(node('p', 'event-note', `${payload.year === 'all' ? 'Все матчи' : payload.year ?? 'Нет матчей'} · Завершено матчей: ${payload.finished_matches}`));
+    if (payload.standings.length) {
+      const table = node('table', 'ranking-table national-standings');
+      const head = node('thead'), header = node('tr'), body = node('tbody');
+      for (const title of ['№', 'Участник', 'Очки']) { const th = node('th', '', title); th.scope = 'col'; header.append(th); }
+      head.append(header);
+      for (const player of payload.standings) {
+        const row = node('tr'), name = node('td', 'player-name');
+        name.append(participantName(player.name, player.user_id));
+        if (player.pending) name.append(node('small', 'pending-points', 'Ожидается начисление'));
+        row.append(node('td', '', player.place === null ? '—' : String(player.place)), name, node('td', '', player.points === null ? '—' : String(player.points)));
+        body.append(row);
+      }
+      table.append(head, body); details.append(table);
+    } else details.append(node('p', 'event-note', 'Очки появятся после завершения матчей.'));
+    $('content').append(details);
   }
   function playerProfile(profile) {
     const hero = node('section', 'profile-hero'); hero.setAttribute('aria-label', 'Участник турнира');
@@ -495,7 +546,7 @@
     if (data.startsWith('ui:')) return load(data, {push: true});
   }
   function draw(payload) {
-    if (payload.type === 'round_matches') { roundMatches(payload); return; }
+    if (['round_matches', 'event_matches'].includes(payload.type)) { roundMatches(payload); return; }
     if (payload.type === 'round_summary') { roundSummary(payload); return; }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
     if (metric === 'card') $('page-title').textContent = 'Профиль';
@@ -575,13 +626,15 @@
       }
       skeleton();
       const round = callback.match(/^(round|summary):(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
-      const body = round ? {action: round[1] === 'summary' ? 'round_summary' : 'matches', kind: round[2], round_number: round[3] === 'auto' ? null : Number(round[3])} : {action: 'screen', callback, text};
+      const event = callback.match(/^event:(national|supercup):(auto|all|[12][0-9]{3})$/);
+      const body = event ? {action: 'extra_matches', event: event[1], year: ['auto', 'all'].includes(event[2]) ? event[2] === 'auto' ? null : 'all' : Number(event[2])} : round ? {action: round[1] === 'summary' ? 'round_summary' : 'matches', kind: round[2], round_number: round[3] === 'auto' ? null : Number(round[3])} : {action: 'screen', callback, text};
       const payload = await api(body, requestController.signal);
       if (id !== sequence) return;
       const label = (round ? 'Время матчей МСК · ' : '') + 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';
       if (!text && !payload.expect) {
         const entry = {payload, time: Date.now(), label};
         cache.set(callback, entry);
+        if (payload.type === 'event_matches' && payload.year !== null) cache.set(`event:${payload.event}:${payload.year}`, entry);
         if (payload.type === 'round_matches') cache.set(`round:${payload.kind}:${payload.round_number}`, entry);
         while (cache.size > 40) cache.delete(cache.keys().next().value);
       }

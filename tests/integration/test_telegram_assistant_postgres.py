@@ -61,7 +61,7 @@ def analytics(monkeypatch):
         cur.execute("UPDATE matches SET league=CASE WHEN tournament_id=5 THEN 'rpl' ELSE 'rcup' END")
         # Use definitions from the authoritative safe-schema file, not hand-made mocks.
         definitions = re.findall(r'CREATE VIEW gpt_safe\.\w+ AS.*?;', (ROOT / 'docs/totish_gpt_safe_schema.sql').read_text(), re.S)
-        assert len(definitions) == 6
+        assert len(definitions) == 7
         for ddl in definitions:
             cur.execute(ddl.replace('gpt_safe.', f'"{safe}".').replace('public.', f'"{source}".'))
         cursor = SafeCursor(cur, safe)
@@ -457,3 +457,48 @@ def test_mini_ranking_ids_survive_rename_and_profile_remains_tournament_scoped(g
     archive = ui.render('ui:v:rpl:ranking:all:0:0', with_players=True)
     assert any(row['user_id'] == 4 for row in archive['participants'])
     assert 'Архивный участник' in ui.render('ui:v:rpl:card:all:4:0')['text']
+
+
+def test_special_matches_and_stored_national_points_are_separate_from_rounds(analytics, monkeypatch):
+    from app.services import telegram_mini_app_matches as mini_matches
+    safe, source = analytics
+    entries = [
+        (501, 5, 'rpl', 'national_team', 'Россия', 'Иран', None, 'FINISHED', 10),
+        (502, 5, 'rpl', 'rpl', 'Nigeria', 'Russia 🇷🇺', None, 'FINISHED', 0),
+        (503, 5, 'rpl', 'supercup', 'Зенит', 'Спартак', None, 'FINISHED', 11),
+        (504, 5, 'rpl', 'rpl', 'ЦСКА', 'Спартак', 'Суперкубок России', 'FINISHED', 7),
+        (505, 6, 'rcup', 'national_team', 'Россия', 'Иран', None, 'FINISHED', 10),
+        (506, 5, 'rpl', 'national_team', 'Россия', 'Нигерия', None, 'LIVE', 999),
+        (507, 5, 'rpl', 'rpl', 'Россиянка', 'Зенит', None, 'FINISHED', 11),
+    ]
+    for mid, tid, league, category, home, away, stage, status, points in entries:
+        source.execute("""INSERT INTO matches(id,tournament_id,league,match_category,home_team,away_team,playoff_stage,
+            kickoff_time,deadline,status,home_score,away_score) VALUES(%s,%s,%s,%s,%s,%s,%s,CURRENT_TIMESTAMP-interval '3 hours',
+            CURRENT_TIMESTAMP-interval '4 hours',%s,2,1)""", (mid, tid, league, category, home, away, stage, status))
+        source.execute('INSERT INTO predictions(user_id,match_id,tournament_id,home_goals,away_goals,points) VALUES(1,%s,%s,2,1,%s)', (mid, tid, points))
+    classified = a.read(safe, 'SELECT match_id,event_kind FROM gpt_safe.match_events ORDER BY match_id')
+    assert classified == [(501, 'national'), (502, 'national'), (503, 'supercup'), (504, 'supercup'), (506, 'national')]
+    # Categories do not get invented rounds and the similarly named club is not a national team.
+    assert a.read(safe, 'SELECT match_id FROM gpt_safe.calendar_rounds WHERE match_id BETWEEN 501 AND 506') == []
+
+    class SnapshotCursor:
+        def execute(self, sql, params=()):
+            if not sql.startswith('SET TRANSACTION'):
+                safe.execute(sql, params)
+
+        def fetchall(self):
+            return safe.fetchall()
+
+    @contextmanager
+    def reader():
+        yield SnapshotCursor()
+
+    monkeypatch.setattr(mini_matches, 'short_gpt_read', reader)
+    payload = mini_matches.event_matches_payload('national', 'all')
+    assert [m['id'] for m in payload['matches']] == [501, 502, 506]
+    assert payload['matches'][-1]['finished'] is False
+    assert 'predictions' not in payload['matches'][-1]
+    assert [(p['name'], p['points']) for p in payload['standings']] == [('Бек', 10), ('Макс Зенит', 0)]
+    assert [m['id'] for m in mini_matches.event_matches_payload('supercup', 'all')['matches']] == [503, 504]
+    # Canonical standings retain the extra-match points; no recalculation or exclusion.
+    assert _fetch_ranking(source, 5, True)[0]['points'] >= 10 + 10 + 0 + 11 + 7 + 11

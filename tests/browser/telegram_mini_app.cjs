@@ -29,7 +29,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
    assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`${kind}/${theme}: insufficient contrast ${ink}/${background}`);
   }
  };
- let fail=false, delayRpl=false, summaryMode='', roundsFail=false;
+ let fail=false, delayRpl=false, summaryMode='', roundsFail=false, eventsEmpty=false;
  const requests=[];
  await page.route('**/telegram-app/api', async r=>{
   const b=r.request().postDataJSON(); requests.push(b);
@@ -39,6 +39,14 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   if(b.action==='round_summary') {
    const final=b.round_number===11;
    await r.fulfill({json:{type:'round_summary',kind:b.kind,round_number:b.round_number,status:summaryMode||(final?'final':'in_progress'),finished_matches:final?8:3,total_matches:8,movement_available:true,has_scores:true,rows:summaryMode?[]:[{user_id:1,name:'Бек',points:12,place:1,before_place:2,after_place:1,movement:1,winner:final},{user_id:2,name:'Макс Зенит',points:12,place:1,before_place:1,after_place:2,movement:-1,winner:final},{user_id:3,name:'<img src=x onerror=alert(1)>',points:0,place:3,before_place:3,after_place:3,movement:0,winner:false},{user_id:4,name:'Byza-Zenit',points:0,place:3,before_place:4,after_place:4,movement:0,winner:false},{user_id:5,name:'Денис 05',points:0,place:3,before_place:5,after_place:5,movement:0,winner:false},{user_id:6,name:'Bowb',points:0,place:3,before_place:6,after_place:6,movement:0,winner:false}]}});return;
+  }
+  if(b.action==='extra_matches') {
+   const national=b.event==='national',year=b.year??2026;
+   const all=year==='all';
+   const predictions=[{user_id:1,name:'Бек',score:[2,1],points:10},{user_id:2,name:'Макс Зенит',score:[0,0],points:0}];
+   await r.fulfill({json:{type:'event_matches',kind:'rpl',event:b.event,year,years:eventsEmpty?[]:[2026,2025],finished_matches:eventsEmpty?0:1,
+    matches:eventsEmpty?[]:[{id:901,home:national?'Россия 🇷🇺':'Зенит',away:national?'Иран':'ЦСКА',kickoff:`${all?2025:year}-07-12T19:30:00+03:00`,finished:true,score:[2,1],predictions},{id:902,home:national?'Нигерия':'Спартак',away:national?'Russia':'Динамо',kickoff:'2026-11-12T19:30:00+03:00',finished:false}],
+    standings:national&&!eventsEmpty?['Бек','Макс Зенит','Byza-Zenit','БЕК125125','Денис 05','Bowb'].map((name,i)=>({user_id:i+1,name,points:i===0?(all?20:10):i===4?null:0,pending:i===4?1:0,place:null})):[]}});return;
   }
   if(b.action==='matches') {
    const cup=b.kind==='cup';
@@ -411,6 +419,53 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.waitForTimeout(350);delayRpl=false;
  assert.equal(await page.locator('#period-controls').isHidden(),true);
  assert.equal(await page.locator('.period-select').count(),0);
+ // RPL extras are independent tabs; totals and history stay scoped to the chosen year.
+ await page.locator('[data-kind=rpl]').click();await page.locator('[data-tab=matches]').click();
+ await page.locator('.round-select').waitFor();
+ assert.deepEqual(await page.locator('#match-sections button').allTextContents(),['Туры','Суперкубок','Сборная России']);
+ await page.locator('[data-match-section=national]').click();await page.locator('.event-year').waitFor();
+ assert.equal(requests.at(-1).action,'extra_matches');assert.equal(requests.at(-1).event,'national');
+ assert.equal(await page.locator('#open-round-summary').isHidden(),true);
+ assert.equal(await page.locator('.round-select').count(),0);
+ assert.equal(await page.locator('.round-teams .country-flag').count(),4);
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('.round-teams img')).every(img=>img.complete&&img.naturalWidth>0));
+ assert.equal(await page.locator('article.round-match .match-predictions').count(),0);
+ await page.locator('.national-points > summary').click();
+ assert.equal(await page.locator('.national-standings tbody tr').count(),6);
+ assert.deepEqual(await page.locator('.national-standings tbody td:last-child').allTextContents(),['10','0','0','0','—','0']);
+ assert.equal(await page.locator('.pending-points').count(),1);
+ assert.equal(await page.evaluate(()=>document.querySelector('.national-standings tbody tr:last-child').getBoundingClientRect().bottom<=document.querySelector('.bottom-nav').getBoundingClientRect().top),true,'Six national subtotals fit above navigation');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.screenshot({path:'test-results/mini-app/national-points-light.png',fullPage:true,animations:'disabled'});
+ await page.locator('.national-standings .participant-link').first().click();await page.locator('.profile-back').waitFor();
+ await page.locator('.profile-back').click();await page.locator('.national-standings').waitFor({state:'visible'});
+ assert.equal(await page.locator('.event-year').inputValue(),'2026');
+ await page.locator('.event-year').selectOption('all');await page.waitForFunction(()=>document.querySelector('.event-year')?.value==='all'&&document.querySelector('.national-standings td:last-child')?.textContent==='20');
+ await page.locator('.national-points > summary').click();
+ await page.locator('details.round-match summary').click();
+ assert.equal(await page.locator('.scoreboard-team .country-flag').count(),2);
+ await page.locator('.match-predictions .participant-link').first().click();await page.locator('.profile-back').waitFor();
+ await page.evaluate(()=>window.__miniBack());await page.locator('details.round-match[open]').waitFor();
+ assert.equal(await page.locator('.event-year').inputValue(),'all');
+ await page.locator('#toggle-theme').click();
+ await page.screenshot({path:'test-results/mini-app/national-matches-dark.png',fullPage:true,animations:'disabled'});
+ await page.locator('#toggle-theme').click();
+ await page.locator('[data-match-section=supercup]').click();await page.locator('.event-year').waitFor();
+ assert.equal(await page.locator('.national-points').count(),0);
+ assert.equal(await page.locator('.round-teams .country-flag').count(),0);
+ assert.equal(await page.locator('.round-teams .club-logo').count(),4);
+ await page.locator('.event-year').selectOption('2025');await page.waitForFunction(()=>document.querySelector('.round-day')?.textContent.includes('2025'));
+ await page.screenshot({path:'test-results/mini-app/supercup-light.png',fullPage:true,animations:'disabled'});
+ await page.locator('[data-kind=cup]').click();await page.locator('.round-select').waitFor();
+ assert.equal(await page.locator('#match-sections').isHidden(),true);
+ await page.locator('[data-kind=rpl]').click();await page.locator('.event-year').waitFor();
+ assert.equal(await page.locator('.event-year').inputValue(),'2025');
+ eventsEmpty=true;await page.locator('[data-match-section=national]').click();await page.locator('.event-year').waitFor();
+ fail=true;await page.locator('#refresh').click();await page.locator('.retry-button').waitFor();
+ fail=false;await page.locator('.retry-button').click();await page.getByText('Матчей пока нет',{exact:true}).waitFor();
+ assert.equal(await page.locator('.national-standings').count(),0);eventsEmpty=false;
+ await page.locator('[data-match-section=round]').click();await page.locator('.round-select').waitFor();
+ assert.equal(await page.locator('.round-match').count(),8);
  assert.deepEqual(errors,[]);
  console.log('MINI_APP_BROWSER_OK: clickable IDs, duplicate nicks, keyboard, profile error/retry, Telegram back, restored match/scroll/round, historical round summaries, joint winners, movements, pending/no results, whole round fits 320/360px, finished accordion, stored points, hidden unfinished predictions, navigation, dates, XSS, questions, retry, themes');
  await browser.close();
