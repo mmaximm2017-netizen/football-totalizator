@@ -441,6 +441,8 @@ body[data-period="true"] #refresh { width: 34px; height: 34px; }
 .scoreboard-team { flex-direction: column; justify-content: center; }
 .scoreboard-team .club-logo { width: 32px; height: 32px; flex-basis: 32px; padding: 3px; border-radius: 7px; }
 .recent-fixture { display: flex; align-items: center; gap: 4px; }
-.recent-fixture .club-name { flex: 1; }
+.recent-results li > div { flex: 1; min-width: 0; }
+.recent-points { flex-shrink: 0; }
+.recent-fixture .club-name { flex: 0 1 auto; }
 .recent-fixture .club-logo { width: 18px; height: 18px; flex-basis: 18px; }
 .fixture-separator { flex-shrink: 0; }
