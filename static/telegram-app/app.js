@@ -37,13 +37,18 @@
   function theme() {
     const dark = themePreference === 'dark';
     document.documentElement.dataset.theme = themePreference;
+    document.documentElement.dataset.tournament = kind;
+    const colours = getComputedStyle(document.documentElement);
+    const header = colours.getPropertyValue('--tg-header').trim();
+    const background = colours.getPropertyValue('--bg').trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', header);
     $('toggle-theme').setAttribute('aria-label', dark ? 'Включить светлую тему' : 'Включить тёмную тему');
     $('toggle-theme').setAttribute('aria-pressed', String(dark));
     $('toggle-theme').replaceChildren(icon(dark ? 'sun' : 'moon'));
     try {
-      tg?.setHeaderColor?.('#1465e8');
-      tg?.setBackgroundColor?.(dark ? '#09172c' : '#f0f6ff');
-      if (tg?.isVersionAtLeast?.('7.10')) tg.setBottomBarColor?.(dark ? '#09172c' : '#f0f6ff');
+      tg?.setHeaderColor?.(header);
+      tg?.setBackgroundColor?.(background);
+      if (tg?.isVersionAtLeast?.('7.10')) tg.setBottomBarColor?.(background);
     } catch { /* Older Telegram clients still render the app normally. */ }
   }
   function feedback() { tg?.HapticFeedback?.selectionChanged(); }
@@ -58,6 +63,7 @@
     }
   }
   function synchronize() {
+    theme();
     document.body.dataset.view = tab;
     $('open-round-summary').hidden = true;
     document.querySelectorAll('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === kind)));
