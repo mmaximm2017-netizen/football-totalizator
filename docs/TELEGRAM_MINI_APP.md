@@ -244,3 +244,9 @@ Participant nicknames in standings, statistic tables, round totals and finished
 match forecasts use a 15px, heavier type style. Full names wrap instead of being
 truncated; IDs, ranking order and numeric results remain unchanged. Browser
 checks cover the displayed numbering, nickname size and 320/360px compactness.
+
+Club names in fixtures, expanded final scores and recent participant results
+include local crests from the site's canonical `CLUB_LOGOS` mapping, embedded as
+JSON in the database-free shell. No external image service or extra API read is
+used. Unknown clubs and failed images retain their full text without a broken
+image or invented initials. Images are decorative because the club name is adjacent.

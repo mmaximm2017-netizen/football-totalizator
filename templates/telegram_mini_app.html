@@ -10,6 +10,7 @@
   <script src="{{ url_for('static', filename='telegram-app/app.js', v=release) }}" defer></script>
 </head>
 <body>
+  <script id="club-logos" type="application/json">{{ club_logos|tojson }}</script>
   <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <symbol id="i-table" viewBox="0 0 24 24"><path d="M8 3h8v5c0 3-2 5-4 5S8 11 8 8V3ZM8 5H4v3c0 2 2 3 5 3m7-6h4v3c0 2-2 3-5 3M12 13v5m-4 3h8m-6-3h4v3"/></symbol>
     <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 3-2 6H9l-2-6 5-3Zm0-4v4m9 4-4-1m1 9-3-3m-9 3 3-3m-6-5 4-1"/></symbol>

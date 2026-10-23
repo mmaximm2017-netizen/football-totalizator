@@ -4,6 +4,7 @@ import os
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
+from app.models.team_data import CLUB_LOGOS
 from app.services.telegram_mini_app import allow_request, question_payload, screen_payload, validate_launch
 from app.services.telegram_mini_app_matches import matches_payload
 from app.services.telegram_round_summary import round_summary_payload
@@ -29,7 +30,7 @@ def private_response(response):
 @telegram_mini_app_bp.get("")
 @telegram_mini_app_bp.get("/")
 def index():
-    return render_template("telegram_mini_app.html", release=os.getenv("TOTISH_RELEASE", "development"))
+    return render_template("telegram_mini_app.html", release=os.getenv("TOTISH_RELEASE", "development"), club_logos=CLUB_LOGOS)
 
 
 @telegram_mini_app_bp.post("/api")

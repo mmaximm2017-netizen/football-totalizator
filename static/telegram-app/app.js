@@ -3,6 +3,7 @@
   'use strict';
   const tg = window.Telegram?.WebApp;
   const $ = id => document.getElementById(id);
+  const clubLogos = JSON.parse($('club-logos').textContent);
   const titles = {ranking: 'Таблица', matches: 'Матчи', stats: 'Статистика'};
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
@@ -270,6 +271,19 @@
     table.append(body);
     if (body.childElementCount) $('content').append(table);
   }
+  function clubName(name, className = '') {
+    const label = node('span', `club-name ${className}`.trim());
+    const path = Object.hasOwn(clubLogos, name) ? clubLogos[name] : null;
+    if (typeof path === 'string' && path.startsWith('/static/clubs/')) {
+      const image = node('img', 'club-logo');
+      image.alt = ''; image.width = 20; image.height = 20;
+      image.addEventListener('error', () => image.remove(), {once: true});
+      image.src = path;
+      label.append(image);
+    }
+    label.append(node('span', 'club-label', name));
+    return label;
+  }
   function roundMatches(payload) {
     $('content').replaceChildren(); $('controls').replaceChildren();
     $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
@@ -312,13 +326,13 @@
       const time = node('time', 'round-time', new Intl.DateTimeFormat('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow'}).format(kickoff));
       time.dateTime = match.kickoff;
       const teams = node('span', 'round-teams');
-      teams.append(node('span', '', match.home), node('span', '', match.away));
+      teams.append(clubName(match.home), clubName(match.away));
       fixture.append(time, teams);
       if (match.finished) {
         const arrow = node('span', 'round-expand'); arrow.append(icon('arrow')); fixture.append(arrow);
         card.append(fixture);
         const result = node('div', 'match-result');
-        result.append(node('span', 'scoreboard-team', match.home), node('strong', '', match.score.join(':')), node('span', 'scoreboard-team', match.away), node('span', 'scoreboard-label', 'Итоговый счёт'));
+        result.append(clubName(match.home, 'scoreboard-team'), node('strong', '', match.score.join(':')), clubName(match.away, 'scoreboard-team'), node('span', 'scoreboard-label', 'Итоговый счёт'));
         const table = node('table', 'match-predictions');
         table.setAttribute('aria-label', `Прогнозы и очки: ${match.home} — ${match.away}`);
         const head = node('thead'), header = node('tr'), body = node('tbody');
@@ -362,7 +376,9 @@
     const list = node('ol', 'recent-results'); list.setAttribute('aria-label', 'Последние завершённые матчи');
     for (const match of profile.recent) {
       const row = node('li');
-      const fixture = node('div'); fixture.append(node('span', 'recent-fixture', `${match.home} — ${match.away}`), node('time', 'recent-date', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short', timeZone: 'Europe/Moscow'}).format(new Date(match.kickoff))));
+      const fixture = node('div'), teams = node('span', 'recent-fixture');
+      teams.append(clubName(match.home), node('span', 'fixture-separator', ' — '), clubName(match.away));
+      fixture.append(teams, node('time', 'recent-date', new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short', timeZone: 'Europe/Moscow'}).format(new Date(match.kickoff))));
       const score = node('strong', 'recent-points', match.points === null ? '—' : `+${match.points}`);
       score.dataset.exact = String(match.points >= 10); score.setAttribute('aria-label', match.points === null ? 'Очки ещё не начислены' : `${match.points} очков`);
       row.append(fixture, score); list.append(row);
