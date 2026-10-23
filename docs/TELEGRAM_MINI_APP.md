@@ -281,3 +281,11 @@ zeroes remain zero, and forecasts awaiting/containing invalid stored points show
 No eligible finished matches produces an explanatory empty state. Ties share a
 place. This is a filtered subtotal, not a recalculation. Profile navigation
 restores the tab, selected year, open match, open points table, focus and scroll.
+
+
+Fixture readability uses the full card width: home clubs start at the left edge,
+with responsive 13–15px names (previously 11px), 26–32px crests/flags (previously
+20px) and 12–13px kickoff times. Text stays complete and can wrap. The fixture
+row height adapts between 40 and 48px to the viewport height, retaining all eight
+collapsed fixtures on one screen at 320x740, 360x800, 393x740 and 414x896. Expanded
+results and long archived lists keep their normal scrolling behaviour.

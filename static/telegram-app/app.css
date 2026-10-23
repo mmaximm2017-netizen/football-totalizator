@@ -467,3 +467,18 @@ body[data-period="true"] #refresh { width: 34px; height: 34px; }
 .country-flag { object-fit: contain; }
 body[data-view="matches"] .round-fixture { min-height: 40px; padding-top: 3px; padding-bottom: 3px; }
 body[data-view="matches"] .round-day { margin-top: 4px; margin-bottom: 3px; }
+
+/* Use the full fixture width for readable names and crests, while fitting a round. */
+body[data-view="matches"] .round-fixture {
+  grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr) 6px;
+  column-gap: 3px;
+  min-height: clamp(40px, calc((100dvh - 420px) / 8), 48px);
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.round-teams { font-size: clamp(13px, calc(2.5vw + 5px), 15px); line-height: 1.15; font-weight: 750; }
+.round-teams > .club-name { gap: 3px; }
+.round-teams > .club-name:first-child { justify-content: flex-start; text-align: left; }
+.round-teams .club-logo { width: clamp(26px, calc(10vw - 6px), 32px); height: clamp(26px, calc(10vw - 6px), 32px); flex-basis: clamp(26px, calc(10vw - 6px), 32px); padding: 1px; }
+.round-time { font-size: clamp(12px, calc(2.5vw + 3px), 13px); }
+.round-expand svg { width: 10px; height: 12px; }
