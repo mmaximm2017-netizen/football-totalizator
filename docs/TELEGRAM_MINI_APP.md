@@ -289,3 +289,7 @@ with responsive 13–15px names (previously 11px), 26–32px crests/flags (previ
 row height adapts between 40 and 48px to the viewport height, retaining all eight
 collapsed fixtures on one screen at 320x740, 360x800, 393x740 and 414x896. Expanded
 results and long archived lists keep their normal scrolling behaviour.
+
+Fixture labels mirror home and away teams: the home crest/flag is left of its
+name, the away crest/flag is right of its name. The visual order uses scoped
+flex layout and preserves complete text, image dimensions and row heights.
