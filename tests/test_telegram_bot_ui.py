@@ -238,6 +238,40 @@ def test_participant_picker_paginates_without_losing_users():
     assert selected == [name for _, name in users]
 
 
+@pytest.mark.parametrize('kind, tid', [('rpl', 5), ('cup', 6)])
+def test_mini_app_directory_reuses_ranking_identity_points_and_place(kind, tid):
+    cur = MagicMock()
+    ranking = [(42, 'Одинаковый ник', 12, 2, 1, 0, 0), (99, 'Одинаковый ник', 0, 0, 0, 0, 0)]
+    cur.fetchall.side_effect = [[(tid, 'Чемпионат России' if tid == 5 else 'Кубок России')], ranking]
+    with patch.object(ui, 'short_gpt_read', side_effect=lambda: reader(cur)):
+        result = ui.render(callback('u', kind, 'card'), with_players=True, paginate=False)
+    assert result['players'] == [{'user_id': 42, 'name': 'Одинаковый ник', 'points': 12, 'place': 1},
+                                 {'user_id': 99, 'name': 'Одинаковый ник', 'points': 0, 'place': 2}]
+    assert cur.execute.call_count == 3  # Snapshot, tournament, one ranking read.
+    assert cur.execute.call_args.args[1] == (tid,)
+
+
+def test_empty_directory_and_unscored_roster_have_no_invented_places():
+    cur = MagicMock()
+    for ranking in [[], [(42, 'Игрок', 0, 0, 0, 0, 0)]]:
+        cur.fetchall.side_effect = [[(5, 'Чемпионат России')], ranking]
+        with patch.object(ui, 'short_gpt_read', side_effect=lambda: reader(cur)):
+            result = ui.render(callback('u', 'rpl', 'card'), with_players=True, paginate=False)
+        assert all(player['place'] is None for player in result['players'])
+        assert len(result['players']) == len(ranking)
+
+
+def test_inline_round_picker_returns_all_rounds_with_player_and_tournament_scope():
+    cur = MagicMock()
+    cur.fetchall.side_effect = [[(6, 'Кубок России')], [(i, NOW, NOW) for i in range(12, 0, -1)]]
+    with patch.object(ui, 'short_gpt_read', side_effect=lambda: reader(cur)):
+        result = ui.render(callback('r', 'cup', 'hits', user=42, page=1), paginate=False)
+    targets = [b['callback_data'] for row in result['rows'] for b in row if b['callback_data'].startswith('ui:v:')]
+    assert targets == [callback('v', 'cup', 'hits', f'r{i}', 42) for i in range(12, 0, -1)]
+    assert cur.execute.call_args.args[1] == (6,)
+    assert not any(b['text'] in {'Следующие ›', '‹ Предыдущие'} for row in result['rows'] for b in row)
+
+
 def test_mini_app_ranking_attaches_authoritative_ids_without_name_lookup():
     cur = MagicMock()
     # Same visible nickname, different IDs. Place and ID come from one ordered read.

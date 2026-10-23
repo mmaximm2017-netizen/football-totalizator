@@ -39,9 +39,14 @@
     <main id="main">
       <div class="section-heading"><div><p class="eyebrow" id="eyebrow">ОБЩИЙ ЗАЧЁТ</p><h1 id="page-title">Таблица</h1></div><div class="section-actions"><button id="open-round-summary" class="summary-button" hidden>Итоги тура</button><button id="refresh" class="icon-button" aria-label="Обновить данные"><svg><use href="#i-refresh"/></svg></button></div></div>
       <div id="status" class="status" role="status" aria-live="polite"></div>
+      <section id="period-controls" class="period-controls" aria-label="Период статистики" hidden>
+        <div id="period-tabs" class="period-tabs" role="group" aria-label="Выбор периода"></div>
+        <div id="period-options"></div>
+        <form id="date-form" class="date-form" hidden><label>С даты<input id="date-from" type="date" required></label><label>По дату<input id="date-to" type="date" required></label><button class="primary" type="submit">Показать</button></form>
+        <p id="period-applied" class="period-applied"></p>
+      </section>
       <section id="content" aria-label="Данные турнира" aria-busy="false"></section>
       <div id="controls" class="controls"></div>
-      <form id="date-form" class="date-form" hidden><label>С даты<input id="date-from" type="date" required></label><label>По дату<input id="date-to" type="date" required></label><button class="primary" type="submit">Показать</button></form>
       <p class="updated" id="updated"></p>
     </main>
     <nav class="bottom-nav" aria-label="Разделы">
