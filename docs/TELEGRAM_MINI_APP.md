@@ -179,12 +179,18 @@ empty summaries do not show a winner banner. Place movement retains the existing
 before/after calculation and caveats; labels and arrows accompany the colours.
 
 
-## Participant directory and inline periods
+## Navigation, inline periods and legacy participant picker
 
-The participant tab requests the existing card picker with `with_players=True`.
+The bottom navigation contains only standings, matches and statistics. Profiles
+open from nicknames in the standings, finished matches and round summaries;
+the originating tab stays active. Explicit/Telegram Back restores the source
+view, selected round, open match, scroll and focus. Legacy picker navigation
+returns to the standings rather than opening a duplicate directory.
+
+For compatibility, the existing card picker still accepts `with_players=True`.
 It returns a `players` list with authoritative ID, canonical place and points
 from one safe ranking read. No per-player lookup or profile-detail reads are
-performed for the directory. An unscored tournament has no fabricated places;
+performed for this legacy response. An unscored tournament has no fabricated places;
 an empty roster gets a dedicated empty state. The bot picker retains pagination.
 
 Statistics open directly with results. All-tournament, round and date controls

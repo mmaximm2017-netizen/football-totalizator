@@ -7,7 +7,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  const page=await browser.newPage({viewport:{width:360,height:800},deviceScaleFactor:1});
  const errors=[];page.on('pageerror', e=>errors.push(e.message));
  await page.route('https://telegram.org/js/telegram-web-app.js', r=>r.fulfill({contentType:'application/javascript',body:`window.Telegram={WebApp:{initData:'test-signed-launch',colorScheme:'dark',ready(){},expand(){},onEvent(){},BackButton:{show(){},hide(){},onClick(fn){window.__miniBack=fn}},HapticFeedback:{selectionChanged(){}}}};`}));
- let fail=false, delayRpl=false, summaryMode='', roundsFail=false, emptyRoster=false;
+ let fail=false, delayRpl=false, summaryMode='', roundsFail=false;
  const requests=[];
  await page.route('**/telegram-app/api', async r=>{
   const b=r.request().postDataJSON(); requests.push(b);
@@ -33,14 +33,10 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
    const parts=cb.split(':');
    await r.fulfill({json:{text:'Выберите тур.',rows:Array.from({length:12},(_,i)=>[{text:`${12-i} тур · 01.10–03.10.2026`,callback_data:`ui:v:${kind}:${parts[3]}:r${12-i}:${parts[5]}:0`}])}});return;
   }
-  if(cb.startsWith('ui:t:player:')||cb.startsWith('ui:u:')) {
-   const names=['Бек','Макс Зенит','<img src=x onerror=alert(1)>','Макс Зенит','Byza-Zenit','Bowb'];
-   await r.fulfill({json:{text:'Участники',rows:[],players:emptyRoster?[]:names.map((name,i)=>({user_id:i+1,name,place:i+1,points:100-i}))}});return;
-  }
   if(/^ui:v:(rpl|cup):card:all:[0-9]+:0$/.test(cb)) {
    const uid=Number(cb.split(':')[5]);
    const names={1:'Бек',2:'Макс Зенит',3:'<img src=x onerror=alert(1)>',4:'Макс Зенит',8:'Игрок: с двоеточием',9:'Нет начисления'};
-   p={text:`👤 ${names[uid]||'Участник'} · ${cup?'Кубок России':'РПЛ'}\nВесь турнир\n\nОчки: ${cup?11:10}\nМесто: 1 из 6`,rows:[]};
+   p={text:`👤 ${names[uid]||'Участник'} · ${cup?'Кубок России':'РПЛ'}\nВесь турнир\n\nОчки: ${cup?11:10}\nМесто: 1 из 6`,rows:[[{text:'Последние матчи',callback_data:`ui:v:${kind}:recent:all:${uid}:0`}],[{text:'‹ Назад',callback_data:`ui:u:${kind}:card:all:0:0`}]]};
    p.profile={user_id:uid,name:names[uid]||'Участник',active:uid!==9,place:uid===9?null:1,participants:6,points:cup?11:10,round_wins:uid===9?null:2,exact:3,average:'5.25',recent:uid===9?[]:[{home:'Ахмат',away:'Оренбург',kickoff:'2026-10-17T19:30:00+03:00',points:10},{home:'Акрон',away:'Динамо',kickoff:'2026-10-16T19:30:00+03:00',points:0},{home:'Рубин',away:'Зенит',kickoff:'2026-10-15T19:30:00+03:00',points:null}]};
   }
   else if(cb.startsWith('ui:v:') && ['round_wins','average','hits','streak'].includes(cb.split(':')[3])) {
@@ -63,6 +59,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.getByRole('cell',{name:'Макс Зенит',exact:false}).first().waitFor();
  assert.equal(await page.locator('table img').count(),0);
  assert.equal(await page.locator('table tr').count(),7);
+ assert.deepEqual(await page.locator('.bottom-nav [data-tab]').evaluateAll(buttons=>buttons.map(button=>button.dataset.tab)),['ranking','matches','stats']);
  await page.setViewportSize({width:320,height:740});
  assert.equal(await page.evaluate(()=>document.querySelector('.ranking-table tbody tr:last-child').getBoundingClientRect().bottom<=document.querySelector('.bottom-nav').getBoundingClientRect().top),true,'All six participants remain above navigation');
  await page.setViewportSize({width:360,height:800});
@@ -73,6 +70,14 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await firstNick.focus();await firstNick.press('Enter');
  await page.getByRole('heading',{name:'Профиль',exact:true}).waitFor();
  assert.equal(requests.at(-1).callback,'ui:v:rpl:card:all:2:0');
+ assert.equal(await page.locator('[data-tab=ranking]').getAttribute('aria-current'),'page');
+ assert.equal(await page.locator('[data-tab=player]').count(),0);
+ assert.equal(await page.getByRole('button',{name:'‹ Назад',exact:true}).count(),0);
+ await page.getByRole('button',{name:'Последние матчи',exact:true}).click();
+ await page.getByRole('heading',{name:'Последние результаты',exact:true}).waitFor();
+ assert.equal(await page.locator('[data-tab=ranking]').getAttribute('aria-current'),'page');
+ await page.evaluate(()=>window.__miniBack());
+ await page.locator('.profile-hero').waitFor();
  await page.locator('.profile-back').click();
  await page.locator('.ranking-table').waitFor();
  assert.equal(await page.locator('[data-tab=ranking]').getAttribute('aria-current'),'page');
@@ -300,6 +305,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.locator('details.round-match').first().locator('summary').click();
  await page.locator('details.round-match[open] [data-user-id="9"]').click();
  await page.locator('.profile-hero').waitFor();
+ assert.equal(await page.locator('[data-tab=matches]').getAttribute('aria-current'),'page');
  assert.ok((await page.locator('.profile-kicker').textContent()).includes('АРХИВНЫЙ'));
  assert.equal(await page.locator('.recent-results').count(),0);
  await page.locator('.profile-back').click();
@@ -308,31 +314,21 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('.profile-name').textContent(),'<img src=x onerror=alert(1)>');
  assert.equal(await page.locator('#content img').count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- // Participant directory keeps all six, opens the selected ID and restores focus.
- await page.locator('[data-tab=player]').click();
- await page.locator('.participant-list').waitFor();
- assert.equal(await page.locator('.participant-list li').count(),6);
- assert.equal(await page.locator('.participant-list img').count(),0);
- assert.equal(await page.locator('#period-controls').isHidden(),true);
- await page.locator('.participant-list [data-user-id="2"]').press('Enter');
+ // Profiles are reached from standings; there is no separate participant tab.
+ await page.locator('[data-tab=ranking]').click();
+ await page.locator('.ranking-table').waitFor();
+ await page.locator('.ranking-table [data-user-id="1"]').press('Enter');
  await page.locator('.profile-hero').waitFor();
- assert.equal(requests.at(-1).callback,'ui:v:cup:card:all:2:0');
- await page.getByRole('button',{name:'К участникам',exact:false}).click();
- await page.locator('.participant-list').waitFor();
- assert.equal(await page.evaluate(()=>document.activeElement.dataset.userId),'2');
- await page.screenshot({path:'test-results/mini-app/participants-light.png',fullPage:true,animations:'disabled'});
- emptyRoster=true;await page.locator('#refresh').click();
- await page.getByRole('heading',{name:'Участников пока нет',exact:true}).waitFor();
- assert.equal(await page.locator('.participant-list').count(),0);
- await page.screenshot({path:'test-results/mini-app/empty-participants.png',fullPage:true,animations:'disabled'});
- emptyRoster=false;
- // A slower request exposes the six-row loading state rather than old data.
- await page.locator('[data-kind=rpl]').click();
- await page.locator('.participant-list').waitFor();
- delayRpl=true;await page.locator('#refresh').click();
- await page.locator('.loading-list').waitFor();
+ assert.equal(await page.locator('.profile-name').textContent(),'Бек');
+ assert.equal(await page.locator('[data-tab=ranking]').getAttribute('aria-current'),'page');
+ await page.getByRole('button',{name:'К таблице',exact:false}).click();
+ await page.locator('.ranking-table').waitFor();
+ assert.equal(await page.evaluate(()=>document.activeElement.dataset.userId),'1');
+ // A slower request still exposes the six-row loading state.
+ await page.locator('[data-kind=rpl]').click();await page.locator('.ranking-table').waitFor();
+ delayRpl=true;await page.locator('#refresh').click();await page.locator('.loading-list').waitFor();
  assert.equal(await page.locator('.loading-list .skeleton').count(),6);
- await page.locator('.participant-list').waitFor();delayRpl=false;
+ await page.locator('.ranking-table').waitFor();delayRpl=false;
  await page.locator('[data-tab=stats]').click();
  await page.locator('[data-metric=round_wins]').click();
  await page.locator('.measurement-table').waitFor();
