@@ -214,6 +214,12 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('.round-day').count(),3);
  assert.equal(await page.locator('.round-teams .club-logo').count(),16);
  assert.equal(await page.locator('.round-match[open]').count(),0);
+ const mirroredCrests=()=>page.locator('.round-teams').evaluateAll(fixtures=>fixtures.every(teams=>[...teams.children].every((team,index)=>{
+  const image=team.querySelector('img'),label=team.querySelector('.club-label');
+  if(!image) return true;
+  const a=image.getBoundingClientRect(),b=label.getBoundingClientRect();
+  return index===0?a.right<=b.left+1:b.right<=a.left+1;
+ })));
  const readableWords=()=>page.locator('.round-teams .club-label').evaluateAll(labels=>labels.filter(el=>['Краснодар','Локомотив'].includes(el.textContent)).every(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)+1));
  const fits=()=>page.evaluate(()=>{
   const last=document.querySelector('.round-match:last-child').getBoundingClientRect();
@@ -223,12 +229,14 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit above navigation at 360x800');
  assert.equal(await readableWords(),true,'Long club names fit without splitting a word');
+ assert.equal(await mirroredCrests(),true,'Home crest precedes name; away crest follows name');
  const teamStyle=await page.locator('.round-teams .club-name').first().evaluate(el=>({font:parseFloat(getComputedStyle(el).fontSize),crest:el.querySelector('img').getBoundingClientRect().width,left:el.getBoundingClientRect().left-el.closest('.round-match').getBoundingClientRect().left}));
  assert.ok(teamStyle.font>=14 && teamStyle.crest>=30 && teamStyle.left<=12,'Larger teams use the free space at the card edge');
  await page.screenshot({path:'test-results/mini-app/round-compact-light.png',fullPage:true,animations:'disabled'});
  for(const viewport of [{width:393,height:740},{width:414,height:896}]) {
   await page.setViewportSize(viewport);
   assert.equal(await fits(),true,`Whole round fits ${viewport.width}x${viewport.height}`);
+  assert.equal(await mirroredCrests(),true,'Mirrored crests retain their position at each viewport');
   assert.equal(await page.locator('.round-teams .club-label').evaluateAll(labels=>labels.every(el=>el.scrollWidth<=el.clientWidth+1)),true,'Team labels wrap without clipping');
   await page.screenshot({path:`test-results/mini-app/round-readable-${viewport.width}.png`,fullPage:true,animations:'disabled'});
  }
@@ -289,6 +297,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit at 320x740');
  assert.equal(await readableWords(),true,'Long club names remain whole at 320px');
+ assert.equal(await mirroredCrests(),true,'Mirrored crests also work at 320px');
  await page.screenshot({path:'test-results/mini-app/round-compact-320.png',fullPage:true,animations:'disabled'});
  await page.setViewportSize({width:360,height:800});
  await page.locator('[data-kind=rpl]').click();
@@ -440,6 +449,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  assert.equal(await page.locator('#open-round-summary').isHidden(),true);
  assert.equal(await page.locator('.round-select').count(),0);
  assert.equal(await page.locator('.round-teams .country-flag').count(),4);
+ assert.equal(await mirroredCrests(),true,'National-team flags use the same home/away order');
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.round-teams img')).every(img=>img.complete&&img.naturalWidth>0));
  assert.equal(await page.locator('article.round-match .match-predictions').count(),0);
  await page.locator('.national-points > summary').click();
