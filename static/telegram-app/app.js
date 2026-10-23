@@ -3,7 +3,7 @@
   'use strict';
   const tg = window.Telegram?.WebApp;
   const $ = id => document.getElementById(id);
-  const titles = {ranking: 'Таблица', matches: 'Матчи', stats: 'Статистика', player: 'Участники'};
+  const titles = {ranking: 'Таблица', matches: 'Матчи', stats: 'Статистика'};
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
@@ -65,8 +65,9 @@
       if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
-    $('page-title').textContent = titles[tab];
-    if (tab === 'matches') $('page-title').append(node('small', 'match-timezone', 'МСК'));
+    const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
+    $('page-title').textContent = metric === 'card' ? 'Профиль' : metric === 'recent' ? 'Последние результаты' : metricTitles[metric] || titles[tab];
+    if (tab === 'matches' && current.startsWith('round:')) $('page-title').append(node('small', 'match-timezone', 'МСК'));
     $('eyebrow').textContent = tab === 'ranking' ? 'ОБЩИЙ ЗАЧЁТ' : kind === 'rpl' ? 'РОССИЙСКАЯ ПРЕМЬЕР-ЛИГА' : 'КУБОК РОССИИ';
     if (tg?.BackButton) {
       if (history.length || profileReturn) tg.BackButton.show(); else tg.BackButton.hide();
@@ -210,7 +211,7 @@
       profileReturn = {callback: originCallback, text: currentText, kind, tab, history: [...history], scroll: window.scrollY,
         match: $('content').querySelector('details.round-match[open]')?.dataset.matchId,
         uid: String(uid), from: $('date-from').value, to: $('date-to').value};
-      tab = 'player'; history = []; feedback(); load(`ui:v:${kind}:card:all:${uid}:0`);
+      history = []; feedback(); load(`ui:v:${kind}:card:all:${uid}:0`);
       window.scrollTo(0, 0);
     });
     return button;
@@ -235,7 +236,7 @@
   }
   function profileBackButton() {
     if (!profileReturn) return;
-    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : profileReturn.tab === 'player' ? '‹ К участникам' : profileReturn.tab === 'stats' ? '‹ К статистике' : '‹ К таблице';
+    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : profileReturn.tab === 'stats' ? '‹ К статистике' : '‹ К таблице';
     const button = node('button', 'summary-back profile-back', label); button.type = 'button';
     button.addEventListener('click', () => { feedback(); returnFromProfile(); });
     $('content').append(button);
@@ -459,6 +460,9 @@
     return true;
   }
   function follow(data) {
+    if (/^ui:(?:u:(?:rpl|cup):|t:player:|s:player$)/.test(data)) {
+      tab = 'ranking'; history = []; profileReturn = null; return load(root());
+    }
     if (/^ui:[pvrud]:(rpl|cup):predictions:/.test(data)) {
       tab = 'matches'; history = []; profileReturn = null; return load(root());
     }
@@ -473,7 +477,8 @@
     if (payload.type === 'round_summary') { roundSummary(payload); return; }
     const metric = current.match(/^ui:[pvrud]:(?:rpl|cup):([a-z_]+):/)?.[1];
     if (metric === 'card') $('page-title').textContent = 'Профиль';
-    if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
+    else if (metric === 'recent') $('page-title').textContent = 'Последние результаты';
+    else if (tab === 'stats') $('page-title').textContent = metricTitles[metric] || titles.stats;
     const text = payload.text || '';
     const divider = text.indexOf('\n\n');
     const heading = divider >= 0 ? text.slice(0, divider) : '';
@@ -512,6 +517,7 @@
         const target = action.callback_data;
         // Refresh is always available in the heading, the app menu is the tab bar.
         if (!target || target === 'adm:main' || action.text.includes('Обновить')) continue;
+        if (/^ui:u:/.test(target) && profileReturn) continue;
         if (periodConfig() && /^ui:p:/.test(target) && metrics[target.split(':')[3]]) continue;
         if (target.startsWith('ui:s:') || (target === root() && history.length === 0)) continue;
         const button = node('button', '', action.text);
