@@ -7,7 +7,8 @@
   let kind = 'rpl', tab = 'ranking', current = '', expect = null, history = [];
   let sequence = 0, controller = null, currentText = null, questionState = null, asking = false;
   const cache = new Map();
-  let profileReturn = null;
+  let profileReturn = null, periodController = null, periodMode = null, dateEditing = false;
+  const periodSelections = new Map();
   const hasAuth = Boolean(tg?.initData);
   let themePreference = 'light';
   try { if (localStorage.getItem('totish-mini-theme') === 'dark') themePreference = 'dark'; } catch { /* Appearance storage is optional. */ }
@@ -46,9 +47,15 @@
     } catch { /* Older Telegram clients still render the app normally. */ }
   }
   function feedback() { tg?.HapticFeedback?.selectionChanged(); }
-  function setStatus(message = '', error = false) {
-    $('status').textContent = message;
+  function setStatus(message = '', error = false, retry = false) {
+    $('status').replaceChildren();
+    if (message) $('status').append(node('p', '', message));
     $('status').classList.toggle('error', error);
+    if (retry && hasAuth) {
+      const button = node('button', 'retry-button', 'Повторить'); button.type = 'button';
+      button.addEventListener('click', () => load(current || root(), {force: true, text: currentText}));
+      $('status').append(button);
+    }
   }
   function synchronize() {
     document.body.dataset.view = tab;
@@ -76,10 +83,121 @@
     if (!response.ok) throw new Error(data.error || 'Не удалось загрузить данные. Повторите запрос.');
     return data;
   }
-  function skeleton() {
-    $('content').replaceChildren(...Array.from({length: 5}, () => node('div', 'skeleton')));
-    $('controls').replaceChildren();
+  function periodConfig(callback = current) {
+    const match = callback.match(/^ui:v:(rpl|cup):([a-z_]+):([^:]+):([0-9]+):[0-9]+$/);
+    return match && metrics[match[2]] ? {kind: match[1], metric: match[2], period: match[3], user: match[4], key: `${match[1]}:${match[2]}:${match[4]}`} : null;
+  }
+  function normalizePeriod(callback) {
+    const match = callback.match(/^ui:p:(rpl|cup):([a-z_]+):[^:]+:([0-9]+):[0-9]+$/);
+    if (!match || !metrics[match[2]]) {
+      const config = periodConfig(callback);
+      return config ? periodTarget(config, config.period) : callback;
+    }
+    return periodSelections.get(`${match[1]}:${match[2]}:${match[3]}`) || `ui:v:${match[1]}:${match[2]}:all:${match[3]}:0`;
+  }
+  function periodTarget(config, period) { return `ui:v:${config.kind}:${config.metric}:${period}:${config.user}:0`; }
+  function configurePeriod() {
+    periodController?.abort();
+    const config = periodConfig();
+    document.body.dataset.period = String(Boolean(config)); dateEditing = false;
+    if (config) $('page-title').textContent = metricTitles[config.metric];
+    $('period-controls').hidden = !config; $('period-tabs').replaceChildren(); $('period-options').replaceChildren();
     $('date-form').hidden = true;
+    if (!config) { periodMode = null; return; }
+    periodSelections.set(config.key, current);
+    while (periodSelections.size > 40) periodSelections.delete(periodSelections.keys().next().value);
+    const period = config.period;
+    periodMode = period.startsWith('r') ? 'round' : period.startsWith('d') || ['today', 'yesterday'].includes(period) ? 'dates' : 'all';
+    for (const [mode, label] of [['all', 'Весь турнир'], ['round', 'Тур'], ['dates', 'Даты']]) {
+      const button = node('button', '', label); button.type = 'button'; button.dataset.periodMode = mode;
+      button.addEventListener('click', () => {
+        feedback(); periodController?.abort(); periodMode = mode; dateEditing = mode === 'dates'; setStatus();
+        if (mode === 'all') return load(periodTarget(config, 'all'));
+        showPeriodOptions(config);
+      }); $('period-tabs').append(button);
+    }
+    const label = period === 'all' ? 'Весь турнир' : period.startsWith('r') ? `Тур ${period.slice(1)}` : period.startsWith('d') ? period.slice(1).split('-').map(value => `${value.slice(6, 8)}.${value.slice(4, 6)}.${value.slice(0, 4)}`).join(' – ') : period === 'today' ? 'Сегодня' : 'Вчера';
+    $('period-applied').textContent = `Показано: ${label} · МСК`;
+    if (/^d[0-9]{8}-[0-9]{8}$/.test(period)) {
+      const values = period.slice(1).split('-').map(value => `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`);
+      $('date-from').value = values[0]; $('date-to').value = values[1];
+    }
+    showPeriodOptions(config);
+  }
+  function showPeriodOptions(config) {
+    $('period-tabs').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.periodMode === periodMode)));
+    $('period-options').replaceChildren(); $('date-form').hidden = periodMode !== 'dates' || !dateEditing;
+    if (periodMode === 'dates' && !$('date-from').value) {
+      const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow'}).format(new Date());
+      $('date-from').value = today; $('date-to').value = today;
+    }
+    if (periodMode === 'dates' && !dateEditing) {
+      const edit = node('button', 'period-edit', 'Изменить даты'); edit.type = 'button';
+      edit.addEventListener('click', () => { dateEditing = true; showPeriodOptions(config); }); $('period-options').append(edit);
+    }
+    if (periodMode === 'round') loadPeriodRounds(config);
+  }
+  async function loadPeriodRounds(config) {
+    const origin = current, request = new AbortController(); periodController = request;
+    const callback = `ui:r:${config.kind}:${config.metric}:all:${config.user}:0`;
+    const timer = setTimeout(() => request.abort(), 25000);
+    $('period-options').append(node('p', 'period-hint', 'Загрузка туров…'));
+    try {
+      const cached = cache.get(callback);
+      const payload = cached && Date.now() - cached.time < 30000 ? cached.payload : await api({action: 'screen', callback}, request.signal);
+      if (request.signal.aborted || current !== origin || periodMode !== 'round') return;
+      cache.set(callback, {payload, time: Date.now()});
+      while (cache.size > 40) cache.delete(cache.keys().next().value);
+      const choices = (payload.rows || []).flat().filter(button => {
+        const target = periodConfig(button.callback_data || '');
+        return target && target.kind === config.kind && target.metric === config.metric && target.user === config.user && /^r[1-9][0-9]*$/.test(target.period);
+      });
+      $('period-options').replaceChildren();
+      if (!choices.length) { $('period-options').append(node('p', 'period-hint', 'Туров пока нет. Выберите весь турнир или даты.')); return; }
+      const select = node('select', 'period-select'); select.setAttribute('aria-label', 'Тур статистики');
+      const placeholder = node('option', '', 'Выберите тур'); placeholder.value = ''; select.append(placeholder);
+      for (const choice of choices) {
+        const option = node('option', '', choice.text); option.value = choice.callback_data; select.append(option);
+      }
+      select.value = choices.some(choice => choice.callback_data === current) ? current : '';
+      select.addEventListener('change', () => { if (select.value) { feedback(); load(select.value); } });
+      $('period-options').append(select);
+    } catch (error) {
+      if (current !== origin || periodMode !== 'round' || periodController !== request) return;
+      $('period-options').replaceChildren(node('p', 'period-hint', 'Не удалось загрузить туры. Результаты ниже сохранены.'));
+      const retry = node('button', 'retry-button', 'Повторить загрузку туров'); retry.type = 'button';
+      retry.addEventListener('click', () => { $('period-options').replaceChildren(); loadPeriodRounds(config); }); $('period-options').append(retry);
+    } finally { clearTimeout(timer); }
+  }
+  function emptyState(title, description, symbol = 'chart') {
+    const section = node('div', 'empty-state'); const badge = node('span', 'empty-icon'); badge.append(icon(symbol));
+    section.append(badge, node('h2', '', title), node('p', '', description)); $('content').append(section);
+  }
+  function skeleton() {
+    const roster = /^ui:(?:t:player:|u:)/.test(current);
+    const count = tab === 'matches' ? 8 : roster || tab === 'ranking' || periodConfig() ? 6 : 3;
+    const shell = node('div', `loading-view ${tab === 'matches' ? 'loading-matches' : 'loading-list'}`); shell.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < count; i++) {
+      const row = node('div', 'skeleton'); row.append(node('span', 'skeleton-name'), node('span', 'skeleton-value')); shell.append(row);
+    }
+    $('content').replaceChildren(node('span', 'sr-only', 'Загрузка данных…'), shell);
+    $('controls').replaceChildren();
+    if (!periodConfig()) $('date-form').hidden = true;
+  }
+  function participantList(players) {
+    if (!players.length) { emptyState('Участников пока нет', 'Для этого турнира пока нет доступных участников.', 'user'); return; }
+    const list = node('ol', 'participant-list'); list.setAttribute('aria-label', 'Участники турнира');
+    for (const player of players) {
+      const row = node('li'); row.dataset.place = player.place ?? '';
+      const position = node('span', 'place-marker', player.place === null ? '—' : String(player.place).padStart(2, '0'));
+      const name = participantName(player.name, player.user_id, 'participant-list-name');
+      const score = node('span', 'participant-list-score'); score.append(node('strong', '', String(player.points)), node('small', '', 'очк.'));
+      row.append(position, name, score);
+      if (name.tagName === 'BUTTON') row.addEventListener('click', event => { if (!event.target.closest('button')) name.click(); });
+      list.append(row);
+    }
+    $('content').append(list);
+    if (players.every(player => player.place === null)) $('content').append(node('p', 'profile-note', 'Места появятся после первых завершённых прогнозов.'));
   }
   function participantName(name, uid, className = '') {
     const valid = /^[1-9][0-9]{0,9}$/.test(String(uid));
@@ -117,7 +235,7 @@
   }
   function profileBackButton() {
     if (!profileReturn) return;
-    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : '‹ К таблице';
+    const label = profileReturn.callback.startsWith('summary:') ? '‹ К итогам тура' : profileReturn.tab === 'matches' ? '‹ К матчам тура' : profileReturn.tab === 'player' ? '‹ К участникам' : profileReturn.tab === 'stats' ? '‹ К статистике' : '‹ К таблице';
     const button = node('button', 'summary-back profile-back', label); button.type = 'button';
     button.addEventListener('click', () => { feedback(); returnFromProfile(); });
     $('content').append(button);
@@ -149,7 +267,7 @@
     $('content').replaceChildren(); $('controls').replaceChildren();
     $('controls').classList.remove('metric-grid'); $('date-form').hidden = true; expect = null;
     if (!payload.rounds.length) {
-      $('content').append(node('p', 'screen-note', 'Туров пока нет.')); return;
+      emptyState('Матчей пока нет', 'Расписание появится после добавления матчей в турнир.', 'ball'); return;
     }
     const picker = node('div', 'round-picker');
     const index = payload.rounds.findIndex(round => round.number === payload.round_number);
@@ -214,7 +332,7 @@
       } else card.append(fixture);
       list.append(card);
     }
-    if (!payload.matches.length) list.append(node('p', 'screen-note', 'В этом туре матчей пока нет.'));
+    if (!payload.matches.length) emptyState('В этом туре матчей пока нет.', 'Попробуйте выбрать другой тур.', 'ball');
     $('content').append(list);
   }
   function playerProfile(profile) {
@@ -243,7 +361,7 @@
       row.append(fixture, score); list.append(row);
     }
     $('content').append(list);
-    if (!profile.recent.length) $('content').append(node('p', 'screen-note', 'Завершённых прогнозов пока нет.'));
+    if (!profile.recent.length) emptyState('Завершённых прогнозов пока нет.', 'Последние результаты появятся после завершения матчей.', 'ball');
     if (profile.recent.some(match => match.points === null)) $('content').append(node('p', 'profile-note', 'Прочерк: очки ещё не начислены.'));
   }
   function roundSummary(payload) {
@@ -260,7 +378,7 @@
       pending_points: 'Очки за завершённые матчи ещё не начислены полностью. Обновите итоги позже.'
     };
     $('content').append(node('p', 'summary-status', messages[payload.status] || 'Итоги пока недоступны.'));
-    if (!payload.rows.length) return;
+    if (!payload.rows.length) { emptyState(payload.status === 'pending_points' ? 'Ждём начисления очков' : 'Результатов пока нет', payload.status === 'pending_points' ? 'Итоги появятся после завершения расчёта.' : 'Итоги появятся после завершения матчей тура.', 'table'); return; }
     const winners = payload.status === 'final' ? payload.rows.filter(entry => entry.winner) : [];
     if (winners.length) {
       const spotlight = node('section', 'round-winners'); spotlight.setAttribute('aria-label', 'Победители тура');
@@ -364,9 +482,11 @@
     profileBackButton();
     $('controls').classList.toggle('metric-grid', current.startsWith('ui:t:stats:'));
     expect = payload.expect || null;
-    $('date-form').hidden = !expect;
+    if (!periodConfig()) { $('date-form').hidden = !expect; if (expect) $('period-controls').hidden = false; }
     const isRanking = tab === 'ranking' && /\d+\. .+: .* очк\./.test(body);
-    if (metric === 'card' && payload.profile) {
+    if (Array.isArray(payload.players)) {
+      participantList(payload.players);
+    } else if (metric === 'card' && payload.profile) {
       playerProfile(payload.profile);
     } else if (isRanking) {
       const page = heading.match(/Страница \d+\/\d+/);
@@ -376,10 +496,13 @@
       // Keep trusted result text intact; never interpret names or answers as HTML.
       const enhanced = ['matches', 'predictions', 'points', 'round_wins', 'average', 'hits', 'streak'].includes(metric);
       const context = enhanced && heading.includes('\n') ? heading.split('\n').slice(1).join('\n') : heading;
-      if (context && !current.startsWith('ui:t:stats:')) $('content').append(node('p', enhanced ? 'context-strip' : 'screen-note', context));
+      if (context && !current.startsWith('ui:t:stats:') && !periodConfig()) $('content').append(node('p', enhanced ? 'context-strip' : 'screen-note', context));
       if (!expect && !current.startsWith('ui:t:stats:')) {
         const rendered = measurementTable(body, metric);
-        if (!rendered) body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
+        if (!rendered) {
+          if (/^(Матчей пока нет\.|Завершённых прогнозов пока нет\.|Подходящих завершённых матчей нет\.|Завершённых туров с начисленными прогнозами нет\.)/m.test(body)) emptyState('Пока нет результатов', body);
+          else body.split('\n\n').filter(Boolean).forEach(block => $('content').append(node('div', 'data-card', block)));
+        }
       }
       else if (expect) $('content').append(node('p', 'screen-note', 'Выберите один день или диапазон дат. Время МСК.'));
     }
@@ -389,6 +512,7 @@
         const target = action.callback_data;
         // Refresh is always available in the heading, the app menu is the tab bar.
         if (!target || target === 'adm:main' || action.text.includes('Обновить')) continue;
+        if (periodConfig() && /^ui:p:/.test(target) && metrics[target.split(':')[3]]) continue;
         if (target.startsWith('ui:s:') || (target === root() && history.length === 0)) continue;
         const button = node('button', '', action.text);
         const metric = target.split(':')[3];
@@ -409,11 +533,12 @@
     }
   }
   async function load(callback, {push = false, force = false, text = null, restore = null} = {}) {
+    callback = normalizePeriod(callback);
     if (push && current && current !== callback) history.push(current);
-    current = callback; currentText = text; synchronize();
+    current = callback; currentText = text; synchronize(); configurePeriod();
     const id = ++sequence;
-    controller?.abort(); controller = new AbortController();
-    const timer = setTimeout(() => controller?.abort(), 25000);
+    controller?.abort(); const requestController = new AbortController(); controller = requestController;
+    const timer = setTimeout(() => requestController.abort(), 25000);
     const cached = !text && !force ? cache.get(callback) : null;
     setStatus(); $('content').setAttribute('aria-busy', 'true'); $('updated').textContent = '';
     try {
@@ -423,7 +548,7 @@
       skeleton();
       const round = callback.match(/^(round|summary):(rpl|cup):(auto|[1-9][0-9]{0,3})$/);
       const body = round ? {action: round[1] === 'summary' ? 'round_summary' : 'matches', kind: round[2], round_number: round[3] === 'auto' ? null : Number(round[3])} : {action: 'screen', callback, text};
-      const payload = await api(body, controller.signal);
+      const payload = await api(body, requestController.signal);
       if (id !== sequence) return;
       const label = (round ? 'Время матчей МСК · ' : '') + 'Обновлено в ' + new Intl.DateTimeFormat('ru-RU', {timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit'}).format(new Date()) + ' МСК';
       if (!text && !payload.expect) {
@@ -437,7 +562,7 @@
       if (id !== sequence) return;
       $('content').replaceChildren(); $('controls').replaceChildren();
       profileBackButton();
-      setStatus(error.name === 'AbortError' ? 'Загрузка заняла слишком много времени. Нажмите обновление.' : error.message, true);
+      setStatus(error.name === 'AbortError' ? 'Загрузка заняла слишком много времени. Попробуйте ещё раз.' : error.message, true, true);
     } finally {
       clearTimeout(timer);
       if (id === sequence) $('content').setAttribute('aria-busy', 'false');
@@ -462,6 +587,8 @@
     const start = $('date-from').value, end = $('date-to').value;
     if (start > end) return setStatus('Дата окончания должна быть не раньше начала.', true);
     if ((Date.parse(end) - Date.parse(start)) / 86400000 > 366) return setStatus('Период не должен превышать 366 дней.', true);
+    const config = periodConfig();
+    if (config) return load(periodTarget(config, `d${start.replaceAll('-', '')}-${end.replaceAll('-', '')}`), {force: true});
     const format = date => date.split('-').reverse().join('.');
     load(expect, {text: `с ${format(start)} по ${format(end)}`, force: true});
   });

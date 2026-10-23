@@ -94,11 +94,19 @@ def render(data, text=None, now=None, with_players=False, paginate=True):
                   ON m.match_id = r.match_id AND m.tournament_id = r.tournament_id
                 WHERE r.tournament_id = %s GROUP BY r.round_number ORDER BY r.round_number DESC
             """, (tid,))
-            count = max(1, (len(rounds) + PAGE_SIZE - 1) // PAGE_SIZE)
+            count = max(1, (len(rounds) + PAGE_SIZE - 1) // PAGE_SIZE) if paginate else 1
             page = min(page, count - 1)
-            rows = [[button(f"{number} тур · {start.astimezone(MSK):%d.%m}–{end.astimezone(MSK):%d.%m.%Y}", callback("v", kind, metric, f"r{number}", user))] for number, start, end in rounds[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]]
+            selected_rounds = rounds[page * PAGE_SIZE:(page + 1) * PAGE_SIZE] if paginate else rounds
+            rows = [[button(f"{number} тур · {start.astimezone(MSK):%d.%m}–{end.astimezone(MSK):%d.%m.%Y}", callback("v", kind, metric, f"r{number}", user))] for number, start, end in selected_rounds]
             return {"text": f"📅 Туры · {KINDS[kind]}\n\nВыберите тур." + ("\nТуров пока нет." if not rounds else "") + "\nСборная и Суперкубок вне туров.", "rows": rows + _pagination(stage, kind, metric, period, user, page, count) + [nav(callback("p", kind, metric, user=user))]}
         if stage == "u":
+            if with_players:
+                ranking = _ranking(cur, tid)
+                ranked = any(row[3] for row in ranking)
+                return {"text": f"👤 Участники · {KINDS[kind]}", "rows": [],
+                        "players": [{"user_id": row[0], "name": row[1], "points": row[2],
+                                     "place": i if ranked else None}
+                                    for i, row in enumerate(ranking, 1)]}
             users = read(cur, "SELECT user_id, username FROM gpt_safe.tournament_rankings WHERE tournament_id = %s ORDER BY username", (tid,))
             count = max(1, (len(users) + PAGE_SIZE - 1) // PAGE_SIZE)
             page = min(page, count - 1)

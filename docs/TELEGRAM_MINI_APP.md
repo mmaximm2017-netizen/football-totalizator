@@ -177,3 +177,27 @@ No new API action, database write, grant or migration is introduced.
 Final round summaries highlight every joint winner. Preliminary, pending and
 empty summaries do not show a winner banner. Place movement retains the existing
 before/after calculation and caveats; labels and arrows accompany the colours.
+
+
+## Participant directory and inline periods
+
+The participant tab requests the existing card picker with `with_players=True`.
+It returns a `players` list with authoritative ID, canonical place and points
+from one safe ranking read. No per-player lookup or profile-detail reads are
+performed for the directory. An unscored tournament has no fabricated places;
+an empty roster gets a dedicated empty state. The bot picker retains pagination.
+
+Statistics open directly with results. All-tournament, round and date controls
+stay above the result; the applied period remains visible while another period
+is being edited. Applying dates uses the existing validated date callback,
+collapses the editor and preserves values for refresh/retry. Recent selections
+are kept only in memory, bounded to 40 tournament/metric/player keys. The round
+selector uses the existing read-only callback and returns all rounds for the
+Mini App without Telegram message pagination. It makes no background polling
+requests. Late/aborted picker responses cannot cross navigation or tournaments.
+
+Loading placeholders match participant/result lists or match rows. Empty states
+keep the actual reason, including pending round points. Request errors expose
+an explicit retry on the same callback and period; a picker failure leaves the
+existing result in place. App-launch authorization and database privacy rules
+remain unchanged. No new endpoint, migration or production write is introduced.

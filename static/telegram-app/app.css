@@ -290,3 +290,49 @@ body[data-view="matches"] .tournaments button { min-height: 34px; }
 .rank-change.down { background: #fce9ed; color: #a72a45; }
 :root[data-theme="dark"] .rank-change.up { background: #123a31; color: #69dfb1; }
 :root[data-theme="dark"] .rank-change.down { background: #432330; color: #ffadc1; }
+
+/* Inline filters and clear navigation states. */
+.period-controls { margin: 0 0 18px; }
+.period-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--soft); }
+.period-tabs button { flex: 1; min-height: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 700; }
+.period-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 2px 5px #103f850b; }
+.period-applied { margin: 10px 1px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.period-select { width: 100%; min-height: 44px; padding: 10px; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.period-hint { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; }
+.period-controls .date-form { margin-top: 10px; padding: 12px; border-radius: 12px; box-shadow: none; }
+.period-controls .date-form label { font-size: 11px; }
+.period-controls .date-form input { font-size: 12px; }
+.period-controls .date-form .primary { min-height: 40px; padding: 10px; font-size: 12px; }
+.participant-list { padding: 0; margin: 0; list-style: none; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); }
+.participant-list li { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 7px 13px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.participant-list li:last-child { border-bottom: 0; }
+.participant-list .place-marker { flex-shrink: 0; color: var(--muted); font-size: 10px; font-weight: 750; }
+.participant-list li[data-place="1"] { background: var(--soft); }
+.participant-list li[data-place="1"] .place-marker { color: #7e5204; background: #ffe6a7; }
+.participant-list li[data-place="2"] .place-marker { color: #42536b; background: #e4eaf2; }
+.participant-list li[data-place="3"] .place-marker { color: #895035; background: #f4dfd0; }
+.participant-list-name { flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 700; }
+.participant-list-score { flex-shrink: 0; text-align: right; }
+.participant-list-score strong { display: block; font-size: 23px; letter-spacing: -.7px; }
+.participant-list-score small { display: block; font-size: 8px; color: var(--muted); }
+.status p { margin: 0; }
+.retry-button { min-height: 42px; padding: 9px 15px; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--accent); font-size: 12px; font-weight: 750; }
+.status.error { border-color: var(--line); background: var(--surface); }
+.empty-state { text-align: center; padding: 24px 14px; background: var(--surface); border: 1px dashed var(--line); border-radius: 16px; margin: 10px 0; }
+.empty-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: var(--accent); background: var(--soft); margin-bottom: 12px; }
+.empty-state h2 { font-size: 16px; letter-spacing: -.3px; }
+.empty-state p { white-space: pre-line; font-size: 12px; line-height: 1.7; color: var(--muted); margin: 9px 0 0; }
+.loading-view .skeleton { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 14px; height: 56px; border-radius: 10px; }
+.skeleton-name, .skeleton-value { display: block; background: var(--soft); height: 10px; border-radius: 4px; }
+.skeleton-name { width: 58%; }
+.skeleton-value { width: 28px; height: 20px; }
+.loading-matches .skeleton { height: 44px; margin-bottom: 4px; }
+.period-edit { min-height: 36px; margin-top: 6px; padding: 6px 1px; border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; }
+body[data-period="true"] .brand-bar { min-height: 40px; }
+body[data-period="true"] .brand small { display: none; }
+body[data-period="true"] .tournaments { margin: 6px 0 10px; }
+body[data-period="true"] .tournaments button { min-height: 34px; }
+body[data-period="true"] .section-heading { margin-bottom: 12px; }
+body[data-period="true"] .eyebrow { display: none; }
+body[data-period="true"] h1 { font-size: 24px; }
+body[data-period="true"] #refresh { width: 34px; height: 34px; }
