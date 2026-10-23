@@ -418,3 +418,14 @@ body[data-period="true"] #refresh { width: 34px; height: 34px; }
 .period-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
 .chat-feed { background: var(--raised); }
 .round-match .screen-note, .chat-header .eyebrow { color: var(--muted); }
+
+/* RPL red must be visible on entry, not only inside an opened profile/result. */
+:root[data-tournament="rpl"] .tournaments button[aria-pressed="true"] {
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 9px 9px 0 0;
+  background: var(--hero-mark);
+  color: #ffffff;
+}
+:root[data-tournament="rpl"] .tournaments button[aria-pressed="true"]::after { background: var(--hero-mark); }
+:root[data-tournament="rpl"] :is(.ranking-table, .measurement-table, .round-summary-table) th { box-shadow: inset 0 4px var(--hero-mark); }
