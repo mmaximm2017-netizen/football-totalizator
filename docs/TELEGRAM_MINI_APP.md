@@ -230,3 +230,10 @@ authorization or match visibility rules change.
 The browser suite checks both tournaments in both appearance modes, major
 text/background contrast pairs (at least 4.5:1), Telegram colour calls, Cup hero
 colour, and the existing compact 320/360px navigation/profile/period scenarios.
+
+
+RPL's red `#D52B1E` is visible on the initial screen: the selected tournament
+label has a red background and table headings carry an inset red top stripe.
+These selectors are scoped to `data-tournament="rpl"`; Cup rendering is unchanged.
+Existing profile/result red stripes remain. Inset table accents preserve row
+heights and the compact six-participant layout.
