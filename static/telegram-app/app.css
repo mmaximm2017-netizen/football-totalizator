@@ -575,3 +575,10 @@ body[data-view="matches"] .match-predictions td:first-child {
   body[data-view="matches"] .round-match,
   body[data-view="matches"] .round-expand svg { transition: none; }
 }
+
+/* Short phones: preserve the eight-fixture viewport without shrinking crests or type. */
+@media (max-height: 780px) and (min-width: 351px) {
+  body[data-view="matches"] .round-fixture { min-height: 40px; padding-top: 2px; padding-bottom: 2px; }
+  body[data-view="matches"] .round-match { margin-bottom: 2px; }
+  body[data-view="matches"] .round-day { margin-top: 3px; margin-bottom: 2px; }
+}
