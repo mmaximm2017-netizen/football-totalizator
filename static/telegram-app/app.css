@@ -502,7 +502,7 @@ body[data-view="matches"] .round-fixture {
   padding: 4px 6px;
 }
 body[data-view="matches"] .round-teams {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 16px;
   font-weight: 700;
 }
@@ -511,9 +511,9 @@ body[data-view="matches"] .round-teams > .club-name {
   min-width: 0;
 }
 body[data-view="matches"] .round-teams .club-logo {
-  width: 28px;
-  height: 28px;
-  flex-basis: 28px;
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
   padding: 0;
   background: transparent;
 }
