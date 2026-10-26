@@ -561,9 +561,9 @@ body[data-view="matches"] .match-predictions td:first-child {
     padding-left: 4px;
     padding-right: 4px;
   }
-  body[data-view="matches"] .round-teams { font-size: 12px; line-height: 15px; }
-  body[data-view="matches"] .round-teams .club-logo { width: 24px; height: 24px; flex-basis: 24px; }
-  body[data-view="matches"] .round-time { font-size: 12px; }
+  body[data-view="matches"] .round-teams { font-size: 13px; line-height: 15px; }
+  body[data-view="matches"] .round-teams .club-logo { width: 26px; height: 26px; flex-basis: 26px; }
+  body[data-view="matches"] .round-time { font-size: 13px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   body[data-view="matches"] details[open] .match-result,
