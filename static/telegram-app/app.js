@@ -354,8 +354,6 @@
       if (match.finished) {
         const arrow = node('span', 'round-expand'); arrow.append(icon('arrow')); fixture.append(arrow);
         card.append(fixture);
-        const result = node('div', 'match-result');
-        result.append(clubName(match.home, 'scoreboard-team'), node('strong', '', match.score.join(':')), clubName(match.away, 'scoreboard-team'), node('span', 'scoreboard-label', 'Итоговый счёт'));
         const table = node('table', 'match-predictions');
         table.setAttribute('aria-label', `Прогнозы и очки: ${match.home} — ${match.away}`);
         const head = node('thead'), header = node('tr'), body = node('tbody');
@@ -368,7 +366,7 @@
           row.append(name, node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
           body.append(row);
         }
-        table.append(head, body); card.append(result, table);
+        table.append(head, body); card.append(table);
         if (!match.predictions.length) card.append(node('p', 'screen-note result-empty', 'Прогнозов нет.'));
         card.addEventListener('toggle', () => {
           if (card.open) list.querySelectorAll('details[open]').forEach(other => { if (other !== card) other.open = false; });
