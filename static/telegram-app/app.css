@@ -551,8 +551,8 @@ body[data-view="matches"] .round-expand svg {
   transition: transform 300ms cubic-bezier(.2,.8,.2,1);
 }
 body[data-view="matches"] .match-predictions td:first-child {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 @media (max-width: 350px) {
   body[data-view="matches"] .round-fixture {

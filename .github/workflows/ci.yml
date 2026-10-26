@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -179,7 +180,7 @@ jobs:
 
   publish:
     name: Publish Docker image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs:
       - test
       - mini-app-ui
@@ -235,3 +236,45 @@ jobs:
           path: image-reference.txt
           if-no-files-found: error
           retention-days: 1
+
+  # One-time, explicitly authorized release of the reviewed Mini App PR.
+  # GITHUB_TOKEN merges do not generate a push workflow, so dispatch CI explicitly.
+  merge-mini-app:
+    name: Merge verified Mini App PR 116
+    needs: [test, mini-app-ui, lint, security, docker]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 116 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'design/telegram-mini-app-skills' &&
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Merge only the tested head and base, then start main CI
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const expected = context.payload.pull_request;
+            const {owner, repo} = context.repo;
+            const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: 116});
+            const {data: base} = await github.rest.repos.getBranch({owner, repo, branch: 'main'});
+            if (pr.state !== 'open' || pr.draft ||
+                pr.head.sha !== expected.head.sha ||
+                pr.head.ref !== 'design/telegram-mini-app-skills' ||
+                pr.head.repo.full_name !== context.payload.repository.full_name ||
+                pr.base.ref !== 'main' || base.commit.sha !== expected.base.sha) {
+              throw new Error('Refusing merge: PR state or tested head/base changed. Run CI on the current revision.');
+            }
+            // The merge API still enforces repository protection and required checks.
+            const {data: merged} = await github.rest.pulls.merge({
+              owner, repo, pull_number: 116, sha: expected.head.sha, merge_method: 'squash'
+            });
+            if (!merged.merged) throw new Error('GitHub refused the verified merge');
+            core.notice(`Merged PR 116 as ${merged.sha}`);
+            await github.rest.actions.createWorkflowDispatch({owner, repo, workflow_id: 'ci.yml', ref: 'main'});
+            core.notice('Main CI dispatched; successful publication triggers existing production deploy.');
