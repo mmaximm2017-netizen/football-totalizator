@@ -483,3 +483,103 @@ body[data-view="matches"] .round-fixture {
 .round-teams .club-logo { width: clamp(26px, calc(10vw - 6px), 32px); height: clamp(26px, calc(10vw - 6px), 32px); flex-basis: clamp(26px, calc(10vw - 6px), 32px); padding: 1px; }
 .round-time { font-size: clamp(12px, calc(2.5vw + 3px), 13px); }
 .round-expand svg { width: 10px; height: 12px; }
+
+
+/* Design skills pass: compact, legible fixture rows without changing match data. */
+body[data-view="matches"] .round-list {
+  display: grid;
+  gap: 1px;
+}
+body[data-view="matches"] .round-match {
+  margin-bottom: 0;
+  border-radius: 10px;
+  transition: border-color 300ms cubic-bezier(.2,.8,.2,1), box-shadow 300ms cubic-bezier(.2,.8,.2,1);
+}
+body[data-view="matches"] .round-fixture {
+  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 12px;
+  column-gap: 4px;
+  min-height: 40px;
+  padding: 2px 4px;
+}
+body[data-view="matches"] .round-teams {
+  font-size: 14px;
+  line-height: 16px;
+  font-weight: 700;
+}
+body[data-view="matches"] .round-teams > .club-name {
+  gap: 4px;
+  min-width: 0;
+}
+body[data-view="matches"] .round-teams .club-logo {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  padding: 0;
+  background: transparent;
+}
+body[data-view="matches"] .round-teams .club-label {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+body[data-view="matches"] .round-time {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+body[data-view="matches"] .round-match:has(> summary) .round-time {
+  color: var(--text);
+}
+body[data-view="matches"] .round-match[open] {
+  border-color: var(--accent);
+}
+body[data-view="matches"] .round-fixture:active {
+  background: var(--soft);
+}
+body[data-view="matches"] .round-fixture:focus-visible,
+body[data-view="matches"] .round-select:focus-visible,
+body[data-view="matches"] .round-step:focus-visible,
+body[data-view="matches"] .match-sections button:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+body[data-view="matches"] .round-expand svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 300ms cubic-bezier(.2,.8,.2,1);
+}
+body[data-view="matches"] .match-predictions td:first-child {
+  font-size: 15px;
+  font-weight: 700;
+}
+@media (max-width: 350px) {
+  body[data-view="matches"] .round-fixture {
+    grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr) 6px;
+    column-gap: 3px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  body[data-view="matches"] .round-teams > .club-name { gap: 3px; }
+  body[data-view="matches"] .round-teams { font-size: 13px; line-height: 15px; }
+  body[data-view="matches"] .round-teams .club-logo { width: 26px; height: 26px; flex-basis: 26px; }
+  body[data-view="matches"] .round-time { font-size: 13px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body[data-view="matches"] details[open] .match-result,
+  body[data-view="matches"] details[open] .match-predictions {
+    animation: reveal-result 300ms cubic-bezier(.2,.8,.2,1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-view="matches"] .round-match,
+  body[data-view="matches"] .round-expand svg { transition: none; }
+}
+
+/* Short phones: preserve the eight-fixture viewport without shrinking crests or type. */
+@media (max-height: 780px) and (min-width: 351px) {
+  body[data-view="matches"] .round-fixture { min-height: 40px; padding-top: 2px; padding-bottom: 2px; }
+  body[data-view="matches"] .round-match { margin-bottom: 0; }
+  body[data-view="matches"] .round-day { margin-top: 3px; margin-bottom: 2px; }
+}

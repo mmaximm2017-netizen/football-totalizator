@@ -251,7 +251,16 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
   assert.equal(await fits(),true,`Whole round fits ${viewport.width}x${viewport.height}`);
   assert.equal(await mirroredCrests(),true,'Mirrored crests retain their position at each viewport');
   assert.equal(await page.locator('.round-teams .club-label').evaluateAll(labels=>labels.every(el=>el.scrollWidth<=el.clientWidth+1)),true,'Team labels wrap without clipping');
-  await page.screenshot({path:`test-results/mini-app/round-readable-${viewport.width}.png`,fullPage:true,animations:'disabled'});
+  for(const theme of ['light','dark']) {
+   if(await page.locator('html').getAttribute('data-theme')!==theme) await page.locator('#toggle-theme').click();
+   assert.equal(await fits(),true,`Whole round fits ${viewport.width}x${viewport.height}/${theme}`);
+   assert.equal(await readableWords(),true,'Long club words stay readable in both themes');
+   assert.equal(await transparentCrests(),true,'Crests stay transparent in both themes');
+   const sizes=await page.locator('.round-teams .club-name').evaluateAll(teams=>teams.every(team=>parseFloat(getComputedStyle(team).fontSize)>=14&&team.querySelector('img').getBoundingClientRect().width>=30));
+   assert.equal(sizes,true,'Compact chrome preserves 14px names and 30px crests');
+   await page.screenshot({path:`test-results/mini-app/round-readable-${viewport.width}-${theme}.png`,fullPage:true,animations:'disabled'});
+  }
+  await page.locator('#toggle-theme').click();
  }
  await page.setViewportSize({width:360,height:800});
  await page.locator('.round-teams .club-logo').first().evaluate(img=>img.dispatchEvent(new Event('error')));
@@ -311,6 +320,8 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit at 320x740');
  assert.equal(await readableWords(),true,'Long club names remain whole at 320px');
+ assert.equal(await page.locator('.round-teams .club-label').evaluateAll(labels=>labels.every(el=>el.scrollWidth<=el.clientWidth+1)),true,'320px team labels do not overflow into the score');
+ assert.equal(await page.locator('.round-teams .club-name').evaluateAll(teams=>teams.every(team=>parseFloat(getComputedStyle(team).fontSize)>=13&&(!team.querySelector('img')||team.querySelector('img').getBoundingClientRect().width>=26))),true,'320px preserves the original 13px names and 26px crests');
  assert.equal(await mirroredCrests(),true,'Mirrored crests also work at 320px');
  await page.screenshot({path:'test-results/mini-app/round-compact-320.png',fullPage:true,animations:'disabled'});
  await page.setViewportSize({width:360,height:800});
