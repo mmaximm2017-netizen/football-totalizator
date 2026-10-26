@@ -44,7 +44,8 @@ def asset(release, filename):
     # Bypass nginx's long-lived /static/ cache for this small private app shell.
     # The version is a URL namespace, never a filesystem path. Old namespaces
     # intentionally receive current files so an old document can recover.
-    allowed = {"app.js", "app.css", "design.css", "fonts/manrope-variable.woff"}
+    allowed = {"app.js", "app.css", "design.css", "fonts/manrope-variable.woff",
+               "brand.svg", "brand-icon-192.png", "brand-icon-512.png"}
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", release) or filename not in allowed:
         abort(404)
     return send_from_directory(os.path.join(current_app.static_folder, "telegram-app"),
