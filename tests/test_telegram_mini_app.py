@@ -207,7 +207,7 @@ def test_versioned_assets_bypass_legacy_cache_without_database(client, monkeypat
     assert '/telegram-app/assets/' + "a" * 40 + '/app.js' in html
     assert '/static/telegram-app/app.js' not in html
     for release in ("a" * 40, "b" * 40):
-        for filename in ("app.js", "app.css", "design.css", "fonts/manrope-variable.woff"):
+        for filename in ("app.js", "app.css", "design.css", "fonts/manrope-variable.woff", "brand.svg", "brand-icon-192.png", "brand-icon-512.png"):
             response = client.get(f"/telegram-app/assets/{release}/{filename}",
                                   headers={"If-None-Match": '"old-cached-etag"'})
             assert response.status_code == 200

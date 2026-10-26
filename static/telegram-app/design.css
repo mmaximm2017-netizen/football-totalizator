@@ -58,7 +58,7 @@ body { background: var(--bg); color: var(--text); }
 .app-shell { max-width: 580px; padding: 16px 16px calc(84px + var(--safe-bottom)); }
 .brand-bar { min-height: 48px; }
 .brand { gap: 8px; font-size: 24px; letter-spacing: -1px; font-weight: 700; }
-.brand-mark { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-gradient); font-size: 30px; font-weight: 700; font-style: normal; box-shadow: none; }
+.brand-mark { display: block; width: 40px; height: 40px; object-fit: contain; border-radius: 0; background: transparent; box-shadow: none; }
 .brand small { font-size: 8px; font-weight: 600; letter-spacing: 2px; margin-top: 0; }
 .header-actions { gap: 8px; }
 .brand-bar .icon-button, .icon-button { border-radius: 12px; border: 0; background: var(--surface); color: var(--text); box-shadow: none; }
@@ -154,17 +154,25 @@ body[data-period="true"] .period-applied { margin-top: 4px; }
 body[data-view="matches"] .app-shell { padding: 12px 12px calc(76px + var(--safe-bottom)); }
 body[data-view="matches"] .brand-bar { min-height: 40px; }
 body[data-view="matches"] .brand { font-size: 20px; }
-body[data-view="matches"] .brand-mark { width: 32px; height: 32px; font-size: 24px; border-radius: 8px; }
+body[data-view="matches"] .brand-mark { width: 32px; height: 32px; }
 body[data-view="matches"] .brand-bar .icon-button { width: 32px; height: 32px; border-radius: 8px; }
 body[data-view="matches"] .tournaments { margin: 4px 0 8px; border-radius: 12px; }
 body[data-view="matches"] .tournaments button { min-height: 32px; padding: 4px 12px; border-radius: 8px; }
 body[data-view="matches"] .section-heading { margin-bottom: 8px; }
 body[data-view="matches"] h1 { font-size: 24px; line-height: 32px; }
 .summary-button { border: 0; border-radius: 12px; padding: 8px 12px; font-size: 12px; background: var(--surface); }
-.match-sections { border: 0; border-radius: 12px; padding: 4px; margin-bottom: 4px; gap: 4px; }
-.match-sections button { min-height: 32px; padding: 4px; font-size: 12px; font-weight: 600; border-radius: 8px; }
+.match-sections { border: 0; border-radius: 0; padding: 4px; margin-bottom: 4px; gap: 4px; background: transparent; }
+.match-sections button { position: relative; min-height: 32px; padding: 4px; font-size: 12px; font-weight: 600; border-radius: 0; }
+.match-sections button[aria-pressed="true"] { background: transparent; color: var(--accent); }
+.match-sections button[aria-pressed="true"]::after { content: ""; position: absolute; height: 2px; bottom: 0; left: 12px; right: 12px; background: currentColor; }
 .round-picker { border: 0; border-radius: 12px; padding: 4px; background: var(--surface); }
-.round-select { font-size: 14px; min-height: 32px; font-weight: 600; }
+.round-choice { position: relative; flex: 1; min-width: 0; height: 32px; border-radius: 8px; }
+.round-caption { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 32px; padding: 0 16px; }
+.round-number { font-size: 14px; line-height: 16px; font-weight: 700; }
+.round-dates { color: var(--muted); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; }
+.round-caption svg { position: absolute; right: 4px; top: 10px; width: 12px; height: 12px; transform: rotate(-90deg); color: var(--muted); }
+.round-select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 32px; min-height: 32px; font-size: 16px; cursor: pointer; }
+.round-choice:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .round-step { width: 32px; min-height: 32px; border-radius: 8px; background: var(--soft); }
 body[data-view="matches"] .round-day { display: flex; align-items: center; gap: 8px; margin: 4px 4px 0; font-size: 12px; line-height: 16px; font-weight: 500; }
 body[data-view="matches"] .round-day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -203,3 +211,19 @@ body[data-view="matches"] .match-predictions td:first-child { font-size: 16px; f
 @media (prefers-reduced-motion: no-preference) {
   details[open] .match-predictions { animation: reveal-result 300ms var(--motion); }
 }
+
+/* Scores use the stored points only; the display does not recalculate scoring. */
+.match-predictions tr[data-points-state="exact"] td { background: #e4f5ed; }
+:root[data-theme="dark"] .match-predictions tr[data-points-state="exact"] td { background: #123a31; }
+.match-predictions tr[data-points-state="zero"] td:last-child,
+.match-predictions tr[data-points-state="pending"] td:last-child { color: var(--muted); }
+.match-predictions tr[data-points-state="partial"] td:last-child { color: var(--accent); }
+.participant-link { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; text-decoration: none; }
+.participant-caption { min-width: 0; overflow-wrap: anywhere; }
+.participant-link > svg { width: 12px; height: 12px; flex: 0 0 12px; transform: rotate(180deg); opacity: .65; }
+.ranking-table .participant-link { width: 100%; justify-content: space-between; }
+.participant-link:hover { text-decoration: none; }
+.participant-link:active { background: var(--soft); text-decoration: none; }
+:is(.ranking-table, .match-predictions, .round-summary-table) tr:has(.participant-link:active) td { background: var(--soft); }
+.participant-list li:has(.participant-link:active) { background: var(--soft); }
+.round-winners .participant-link:active { background: #ffffff20; }

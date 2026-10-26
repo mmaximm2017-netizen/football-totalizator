@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>ТОТИШ</title>
+  <path fill="#0066d6" d="M13 4h38a9 9 0 0 1 9 9v21c0 12-11 21-28 27C15 55 4 46 4 34V13a9 9 0 0 1 9-9Z"/>
+  <path fill="#fff" d="M15 17h34v8H36v24l-8-4V25H15Z"/>
+  <circle cx="46" cy="43" r="11" fill="#fff" stroke="#0066d6" stroke-width="3"/>
+  <path fill="#0066d6" d="m46 37 5 4-2 6h-6l-2-6Z"/>
+  <path fill="none" stroke="#0066d6" stroke-width="1.5" d="M46 33v4m10 3-5 1m1 11-3-5m-9 5 3-5m-7-7 5 1"/>
+</svg>

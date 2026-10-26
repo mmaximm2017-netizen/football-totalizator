@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0039a6">
   <title>ТОТИШ · Мини-приложение</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('telegram_mini_app.asset', release=release, filename='brand.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('telegram_mini_app.asset', release=release, filename='brand-icon-192.png') }}">
   <link rel="stylesheet" href="{{ url_for('telegram_mini_app.asset', release=release, filename='app.css') }}">
   <link rel="stylesheet" href="{{ url_for('telegram_mini_app.asset', release=release, filename='design.css') }}">
   <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
@@ -28,7 +30,7 @@
   </svg>
   <div class="app-shell">
     <header class="brand-bar">
-      <div class="brand"><span class="brand-mark">Т</span><span>ТОТИШ<small>ФУТБОЛ В ЦИФРАХ</small></span></div>
+      <div class="brand"><img class="brand-mark" src="{{ url_for('telegram_mini_app.asset', release=release, filename='brand.svg') }}" width="40" height="40" alt=""><span>ТОТИШ<small>ФУТБОЛ В ЦИФРАХ</small></span></div>
       <div class="header-actions">
         <button class="icon-button" id="toggle-theme" aria-label="Включить тёмную тему" aria-pressed="false"><svg><use href="#i-moon"/></svg></button>
         <button class="icon-button" id="open-chat" aria-label="Задать вопрос"><svg><use href="#i-chat"/></svg></button>

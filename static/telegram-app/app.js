@@ -224,7 +224,8 @@
   function participantName(name, uid, className = '') {
     const valid = /^[1-9][0-9]{0,9}$/.test(String(uid));
     if (!valid) return node('span', className, name);
-    const button = node('button', `participant-link ${className}`, name);
+    const button = node('button', `participant-link ${className}`);
+    button.append(node('span', 'participant-caption', name), icon('arrow'));
     button.type = 'button'; button.dataset.userId = String(uid);
     button.setAttribute('aria-label', `Открыть профиль: ${name}`);
     button.addEventListener('click', () => {
@@ -329,7 +330,13 @@
       next.setAttribute('aria-label', 'Следующий тур'); next.append(icon('arrow'));
       next.disabled = index < 0 || index >= payload.rounds.length - 1;
       next.addEventListener('click', () => changeRound(payload.rounds[index + 1].number));
-      picker.append(previous, select, next); $('content').append(picker);
+      const choice = node('div', 'round-choice');
+      const caption = node('div', 'round-caption'); caption.setAttribute('aria-hidden', 'true');
+      const selectedRound = payload.rounds[index] || payload.rounds[0];
+      caption.append(node('span', 'round-number', `Тур ${payload.round_number}`),
+        node('span', 'round-dates', `${shortDate(selectedRound.start)}–${shortDate(selectedRound.end)}.${selectedRound.end.slice(0, 4)}`), icon('arrow'));
+      choice.append(caption, select);
+      picker.append(previous, choice, next); $('content').append(picker);
       $('open-round-summary').hidden = !payload.matches.length;
       $('open-round-summary').onclick = () => { feedback(); load(`summary:${kind}:${payload.round_number}`, {push: true}); };
     }
@@ -361,7 +368,8 @@
         head.append(header);
         for (const prediction of match.predictions) {
           const row = node('tr');
-          if (prediction.points !== null && prediction.score && prediction.score[0] === match.score[0] && prediction.score[1] === match.score[1]) row.dataset.exact = 'true';
+          if (prediction.points === 10 || prediction.points === 11) row.dataset.exact = 'true';
+          row.dataset.pointsState = prediction.points === null ? 'pending' : row.dataset.exact === 'true' ? 'exact' : prediction.points > 0 ? 'partial' : 'zero';
           const name = node('td'); name.append(participantName(prediction.name, prediction.user_id));
           row.append(name, node('td', prediction.score ? '' : 'missing-score', prediction.score ? prediction.score.join(':') : 'Нет прогноза'), node('td', '', prediction.points === null ? '—' : String(prediction.points)));
           body.append(row);
