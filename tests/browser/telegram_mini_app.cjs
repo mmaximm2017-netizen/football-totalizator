@@ -320,6 +320,7 @@ fs.mkdirSync('test-results/mini-app', {recursive:true});
  await page.evaluate(()=>window.scrollTo(0,0));
  assert.equal(await fits(),true,'All 8 collapsed matches must fit at 320x740');
  assert.equal(await readableWords(),true,'Long club names remain whole at 320px');
+ assert.equal(await page.locator('.round-teams .club-label').evaluateAll(labels=>labels.every(el=>el.scrollWidth<=el.clientWidth+1)),true,'320px team labels do not overflow into the score');
  assert.equal(await page.locator('.round-teams .club-name').evaluateAll(teams=>teams.every(team=>parseFloat(getComputedStyle(team).fontSize)>=13&&(!team.querySelector('img')||team.querySelector('img').getBoundingClientRect().width>=26))),true,'320px preserves the original 13px names and 26px crests');
  assert.equal(await mirroredCrests(),true,'Mirrored crests also work at 320px');
  await page.screenshot({path:'test-results/mini-app/round-compact-320.png',fullPage:true,animations:'disabled'});
