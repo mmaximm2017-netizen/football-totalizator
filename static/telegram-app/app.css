@@ -488,18 +488,18 @@ body[data-view="matches"] .round-fixture {
 /* Design skills pass: compact, legible fixture rows without changing match data. */
 body[data-view="matches"] .round-list {
   display: grid;
-  gap: 3px;
+  gap: 1px;
 }
 body[data-view="matches"] .round-match {
   margin-bottom: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   transition: border-color 300ms cubic-bezier(.2,.8,.2,1), box-shadow 300ms cubic-bezier(.2,.8,.2,1);
 }
 body[data-view="matches"] .round-fixture {
   grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 12px;
   column-gap: 4px;
-  min-height: 44px;
-  padding: 4px 6px;
+  min-height: 40px;
+  padding: 2px 4px;
 }
 body[data-view="matches"] .round-teams {
   font-size: 14px;
@@ -579,6 +579,6 @@ body[data-view="matches"] .match-predictions td:first-child {
 /* Short phones: preserve the eight-fixture viewport without shrinking crests or type. */
 @media (max-height: 780px) and (min-width: 351px) {
   body[data-view="matches"] .round-fixture { min-height: 40px; padding-top: 2px; padding-bottom: 2px; }
-  body[data-view="matches"] .round-match { margin-bottom: 2px; }
+  body[data-view="matches"] .round-match { margin-bottom: 0; }
   body[data-view="matches"] .round-day { margin-top: 3px; margin-bottom: 2px; }
 }
