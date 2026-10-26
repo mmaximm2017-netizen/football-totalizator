@@ -1,8 +1,9 @@
 """Admin-only Telegram Mini App; the shell is public, every data read is signed."""
 import logging
 import os
+import re
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, abort, current_app, jsonify, render_template, request, send_from_directory
 
 from app.models.team_data import CLUB_LOGOS, TEAM_FLAGS, TEAM_NAMES
 from app.services.telegram_mini_app import allow_request, question_payload, screen_payload, validate_launch
@@ -16,6 +17,7 @@ telegram_mini_app_bp = Blueprint("telegram_mini_app", __name__, url_prefix="/tel
 @telegram_mini_app_bp.after_request
 def private_response(response):
     response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Totish-Release"] = os.getenv("TOTISH_RELEASE", "development")
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Content-Security-Policy"] = (
@@ -35,6 +37,18 @@ def index():
         if name in logos:
             logos[alias] = logos[name]
     return render_template("telegram_mini_app.html", release=os.getenv("TOTISH_RELEASE", "development"), club_logos=logos)
+
+
+@telegram_mini_app_bp.get("/assets/<release>/<path:filename>")
+def asset(release, filename):
+    # Bypass nginx's long-lived /static/ cache for this small private app shell.
+    # The version is a URL namespace, never a filesystem path. Old namespaces
+    # intentionally receive current files so an old document can recover.
+    allowed = {"app.js", "app.css", "design.css", "fonts/manrope-variable.woff"}
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", release) or filename not in allowed:
+        abort(404)
+    return send_from_directory(os.path.join(current_app.static_folder, "telegram-app"),
+                               filename, conditional=False, etag=False, max_age=0)
 
 
 @telegram_mini_app_bp.post("/api")

@@ -156,7 +156,7 @@ def test_bot_launch_button_is_private_chat_only(monkeypatch):
         web = [b for b in buttons if "web_app" in b]
         assert bool(web) == (chat_id == "123")
         if web:
-            assert web[0]["web_app"]["url"] == "https://totish.ru/telegram-app"
+            assert web[0]["web_app"]["url"] == bot.mini_app_url()
 
 
 def test_round_matches_requires_signed_launch_before_database_access(client, monkeypatch):
@@ -196,3 +196,39 @@ def test_shell_reuses_site_flags_and_english_aliases(client):
     logos = json.loads(html.split('<script id="club-logos" type="application/json">')[1].split('</script>')[0])
     assert logos['Россия'] == logos['Russia'] == '/static/flags/ru.svg'
     assert logos['Иран'] == '/static/flags/ir.svg'
+
+
+def test_versioned_assets_bypass_legacy_cache_without_database(client, monkeypatch):
+    monkeypatch.setenv("TOTISH_RELEASE", "a" * 40)
+    primary = MagicMock()
+    monkeypatch.setattr("app.get_db", primary)
+    html = client.get("/telegram-app?build=" + "a" * 40).get_data(as_text=True)
+    assert 'data-release="' + "a" * 40 + '"' in html
+    assert '/telegram-app/assets/' + "a" * 40 + '/app.js' in html
+    assert '/static/telegram-app/app.js' not in html
+    for release in ("a" * 40, "b" * 40):
+        for filename in ("app.js", "app.css", "design.css", "fonts/manrope-variable.woff"):
+            response = client.get(f"/telegram-app/assets/{release}/{filename}",
+                                  headers={"If-None-Match": '"old-cached-etag"'})
+            assert response.status_code == 200
+            assert response.headers["Cache-Control"] == "no-store"
+            assert response.headers["X-Totish-Release"] == "a" * 40
+            assert "ETag" not in response.headers
+            assert response.data
+    js = client.get('/telegram-app/assets/' + "a" * 40 + '/app.js').get_data(as_text=True)
+    assert "const result = node('div', 'match-result')" not in js
+    for path in ("private.env", "../app.js", "%2e%2e/app.js", "fonts/../../app.js"):
+        assert client.get('/telegram-app/assets/' + "a" * 40 + '/' + path).status_code == 404
+    primary.assert_not_called()
+
+
+def test_bot_launcher_uses_verified_release_marker(monkeypatch, tmp_path):
+    monkeypatch.setattr(bot, "ROOT", tmp_path)
+    marker = tmp_path / ".totish-managed-release"
+    marker.write_text("b" * 40 + "\n")
+    assert bot.mini_app_url() == "https://totish.ru/telegram-app?build=" + "b" * 40
+    marker.write_text("bad&injected=value")
+    assert bot.mini_app_url().endswith("?build=fresh-ui-20261026")
+    marker.unlink()
+    monkeypatch.setenv("TOTISH_RELEASE", "c" * 40)
+    assert bot.mini_app_url().endswith("?build=" + "c" * 40)
