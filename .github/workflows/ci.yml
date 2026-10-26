@@ -180,6 +180,8 @@ jobs:
 
   publish:
     name: Publish Docker image
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs:
       - test
@@ -278,3 +280,29 @@ jobs:
             core.notice(`Merged PR 116 as ${merged.sha}`);
             await github.rest.actions.createWorkflowDispatch({owner, repo, workflow_id: 'ci.yml', ref: 'main'});
             core.notice('Main CI dispatched; successful publication triggers existing production deploy.');
+
+  dispatch-production:
+    name: Deploy explicitly dispatched main CI
+    needs: publish
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch existing deployment with the published immutable image
+        uses: actions/github-script@v7
+        env:
+          IMAGE_DIGEST: ${{ needs.publish.outputs.image_digest }}
+        with:
+          script: |
+            const digest = process.env.IMAGE_DIGEST;
+            if (!/^sha256:[0-9a-f]{64}$/.test(digest) || !/^[0-9a-f]{40}$/.test(context.sha)) {
+              throw new Error('Refusing deployment: invalid image digest or release SHA');
+            }
+            const {owner, repo} = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id: 'deploy.yml', ref: 'main',
+              inputs: {image_reference: `ghcr.io/${owner}/${repo}@${digest}`, release_sha: context.sha}
+            });
+            core.notice(`Deployment dispatched for ${context.sha}@${digest}`);
