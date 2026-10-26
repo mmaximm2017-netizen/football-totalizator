@@ -77,7 +77,7 @@ jobs:
 
   mini-app-ui:
     name: Test Telegram Mini App UI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       API_KEY: ci-test-api-key
@@ -99,7 +99,10 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           npm install --prefix "$RUNNER_TEMP/totish-ui" playwright@1.62.1
-          node "$RUNNER_TEMP/totish-ui/node_modules/playwright/cli.js" install --with-deps chromium
+          # Hosted Ubuntu 24.04 already has browser libraries. Avoid re-installing
+          # system/font packages through the slow apt mirror; browser launch and
+          # the full UI suite still fail if any runtime library is missing.
+          node "$RUNNER_TEMP/totish-ui/node_modules/playwright/cli.js" install chromium
       - name: Exercise mobile screens with fixture API responses
         run: |
           python -m flask --app app:create_app run --host 127.0.0.1 --port 8765 > /tmp/totish-ui-server.log 2>&1 &

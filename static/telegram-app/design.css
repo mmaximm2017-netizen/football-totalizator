@@ -55,7 +55,7 @@
   --shadow: none;
 }
 body { background: var(--bg); color: var(--text); }
-.app-shell { max-width: 580px; padding: 16px 16px calc(96px + var(--safe-bottom)); }
+.app-shell { max-width: 580px; padding: 16px 16px calc(84px + var(--safe-bottom)); }
 .brand-bar { min-height: 48px; }
 .brand { gap: 8px; font-size: 24px; letter-spacing: -1px; font-weight: 700; }
 .brand-mark { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-gradient); font-size: 30px; font-weight: 700; font-style: normal; box-shadow: none; }
@@ -82,10 +82,10 @@ h1, h2 { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -
 h2 { font-size: 24px; line-height: 32px; }
 .eyebrow { font-size: 12px; line-height: 16px; letter-spacing: 0; font-weight: 500; margin-bottom: 4px; }
 .updated { font-size: 12px; line-height: 16px; margin-top: 16px; }
-.bottom-nav { bottom: calc(8px + var(--safe-bottom)); width: calc(100% - 32px); max-width: 548px; border-radius: 24px; padding: 8px; border: 1px solid var(--line); box-shadow: 0 8px 24px #10274414; }
-.bottom-nav button { min-height: 48px; gap: 4px; border-radius: 16px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.bottom-nav { bottom: calc(8px + var(--safe-bottom)); width: calc(100% - 32px); max-width: 548px; border-radius: 20px; padding: 4px; border: 1px solid var(--line); box-shadow: 0 8px 24px #10274414; }
+.bottom-nav button { min-height: 44px; gap: 0; border-radius: 12px; font-size: 12px; line-height: 16px; font-weight: 500; }
 .bottom-nav button[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-.bottom-nav svg { width: 24px; height: 24px; padding: 0; border-radius: 0; }
+.bottom-nav svg { width: 20px; height: 20px; padding: 0; border-radius: 0; }
 .bottom-nav button[aria-current="page"] svg { background: none; }
 .ranking-table, .measurement-table, .round-summary-table { border: 0; border-radius: 24px; background: var(--surface); box-shadow: none; }
 .ranking-table th, .measurement-table th, .round-summary-table th { padding-top: 16px; padding-bottom: 16px; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0; }
@@ -151,7 +151,7 @@ body[data-period="true"] .period-applied { margin-top: 4px; }
 #suggestions button, .choice, .bubble, #question { border-radius: 16px; font-size: 14px; }
 .primary { border-radius: 16px; padding: 8px 12px; font-size: 16px; font-weight: 600; }
 /* Fixture chrome is compact so the content, rather than the header, gets space. */
-body[data-view="matches"] .app-shell { padding: 12px 12px calc(88px + var(--safe-bottom)); }
+body[data-view="matches"] .app-shell { padding: 12px 12px calc(76px + var(--safe-bottom)); }
 body[data-view="matches"] .brand-bar { min-height: 40px; }
 body[data-view="matches"] .brand { font-size: 20px; }
 body[data-view="matches"] .brand-mark { width: 32px; height: 32px; font-size: 24px; border-radius: 8px; }
@@ -166,23 +166,20 @@ body[data-view="matches"] h1 { font-size: 24px; line-height: 32px; }
 .round-picker { border: 0; border-radius: 12px; padding: 4px; background: var(--surface); }
 .round-select { font-size: 14px; min-height: 32px; font-weight: 600; }
 .round-step { width: 32px; min-height: 32px; border-radius: 8px; background: var(--soft); }
-body[data-view="matches"] .round-day { margin: 4px 4px 0; font-size: 12px; line-height: 16px; font-weight: 500; }
+body[data-view="matches"] .round-day { display: flex; align-items: center; gap: 8px; margin: 4px 4px 0; font-size: 12px; line-height: 16px; font-weight: 500; }
+body[data-view="matches"] .round-day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 body[data-view="matches"] .round-list { gap: 2px; }
 body[data-view="matches"] .round-match { border: 1px solid var(--line); border-radius: 12px; margin: 0; box-shadow: none; transition: none; }
 body[data-view="matches"] .round-fixture { min-height: 40px; padding: 4px; column-gap: 4px; grid-template-columns: minmax(0,1fr) 40px minmax(0,1fr) 8px; }
 body[data-view="matches"] .round-teams { font-size: 14px; line-height: 16px; font-weight: 700; }
 body[data-view="matches"] .round-teams > .club-name { gap: 4px; }
 body[data-view="matches"] .round-time { font-size: 14px; font-weight: 600; }
-body[data-view="matches"] details.round-match .round-time { background: var(--soft); color: var(--accent); border-radius: 8px; padding: 4px 0; }
+body[data-view="matches"] details.round-match .round-time { background: var(--soft); color: var(--text); font-weight: 700; border-radius: 8px; padding: 4px 0; }
 body[data-view="matches"] .round-match[open] { border-color: var(--accent); }
-.match-result { background: var(--hero); box-shadow: none; padding: 16px 12px; }
-.match-result strong { font-weight: 700; font-size: 36px; }
 .match-predictions th { font-size: 12px; line-height: 16px; font-weight: 500; }
 .match-predictions td { font-size: 14px; line-height: 20px; }
 body[data-view="matches"] .match-predictions td:first-child { font-size: 16px; font-weight: 600; }
 .match-predictions td:last-child { font-size: 16px; font-weight: 700; }
-.scoreboard-team { font-size: 14px; font-weight: 600; }
-.scoreboard-label { font-size: 12px; letter-spacing: 0; }
 .national-standings { border-radius: 16px; }
 .national-standings th, .national-standings td { padding: 4px 8px; }
 .national-standings td { height: 44px; }
@@ -204,5 +201,5 @@ body[data-view="matches"] .match-predictions td:first-child { font-size: 16px; f
   .match-sections button { font-size: 10px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  details[open] .match-result, details[open] .match-predictions { animation: reveal-result 300ms var(--motion); }
+  details[open] .match-predictions { animation: reveal-result 300ms var(--motion); }
 }
