@@ -1,0 +1,208 @@
+/* Shared Mini App design system. Layout/data behaviour remains in app.css. */
+@font-face {
+  font-family: Manrope;
+  src: url('./fonts/manrope-variable.woff') format('woff');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --bg: #edf5ff;
+  --canvas: var(--bg);
+  --surface: #ffffff;
+  --raised: #edf5ff;
+  --text: #102744;
+  --muted: #4b6688;
+  --chrome-text: var(--text);
+  --chrome-muted: var(--muted);
+  --chrome-accent: #0066d6;
+  --line: #d5e2f2;
+  --hero: #0066d6;
+  --brand-gradient: #0066d6;
+  --nav: #fffffff2;
+  --shadow: 0 8px 24px #1f69bb0b;
+  --tg-header: #edf5ff;
+  --motion: cubic-bezier(.22,1,.36,1);
+  font-family: Manrope, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+:root[data-tournament="cup"] {
+  --bg: #fff0f4;
+  --canvas: var(--bg);
+  --chrome-text: var(--text);
+  --chrome-muted: var(--muted);
+  --chrome-accent: #c50025;
+  --hero: #c50025;
+  --brand-gradient: #c50025;
+  --tg-header: #fff0f4;
+  --line: #eedbe7;
+}
+:root[data-theme="dark"], :root[data-tournament="cup"][data-theme="dark"] {
+  --bg: #000000;
+  --canvas: var(--bg);
+  --surface: #181818;
+  --raised: #272727;
+  --soft: #272727;
+  --text: #ffffff;
+  --muted: #b5b5b5;
+  --line: #313131;
+  --chrome-text: var(--text);
+  --chrome-muted: var(--muted);
+  --chrome-accent: var(--accent);
+  --nav: #181818f2;
+  --table-head: #272727;
+  --tg-header: #000000;
+  --shadow: none;
+}
+body { background: var(--bg); color: var(--text); }
+.app-shell { max-width: 580px; padding: 16px 16px calc(96px + var(--safe-bottom)); }
+.brand-bar { min-height: 48px; }
+.brand { gap: 8px; font-size: 24px; letter-spacing: -1px; font-weight: 700; }
+.brand-mark { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-gradient); font-size: 30px; font-weight: 700; font-style: normal; box-shadow: none; }
+.brand small { font-size: 8px; font-weight: 600; letter-spacing: 2px; margin-top: 0; }
+.header-actions { gap: 8px; }
+.brand-bar .icon-button, .icon-button { border-radius: 12px; border: 0; background: var(--surface); color: var(--text); box-shadow: none; }
+.brand-bar .icon-button { width: 40px; height: 40px; }
+button { transition: transform 300ms var(--motion), background-color 300ms var(--motion), color 300ms var(--motion); }
+button:active { transform: scale(.98); }
+button:focus-visible, summary:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tournaments, body[data-view="matches"] .tournaments, body[data-period="true"] .tournaments {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 16px 0 24px;
+  padding: 4px; background: var(--surface); border: 0; border-radius: 16px;
+}
+.tournaments button, body[data-view="matches"] .tournaments button, body[data-period="true"] .tournaments button { min-height: 40px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--muted); padding: 8px 12px; }
+:root .tournaments button[aria-pressed="true"], :root[data-tournament="rpl"] .tournaments button[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 8px 12px;
+}
+.tournaments button[aria-pressed="true"]::after { display: none; }
+.league-dot, .cup-dot { display: none; }
+:root[data-tournament="rpl"] .league-dot { display: block; width: 8px; height: 8px; background: #d52b1e; opacity: 1; }
+.section-heading { margin-bottom: 16px; }
+h1, h2 { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -1px; text-wrap: balance; }
+h2 { font-size: 24px; line-height: 32px; }
+.eyebrow { font-size: 12px; line-height: 16px; letter-spacing: 0; font-weight: 500; margin-bottom: 4px; }
+.updated { font-size: 12px; line-height: 16px; margin-top: 16px; }
+.bottom-nav { bottom: calc(8px + var(--safe-bottom)); width: calc(100% - 32px); max-width: 548px; border-radius: 24px; padding: 8px; border: 1px solid var(--line); box-shadow: 0 8px 24px #10274414; }
+.bottom-nav button { min-height: 48px; gap: 4px; border-radius: 16px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.bottom-nav button[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.bottom-nav svg { width: 24px; height: 24px; padding: 0; border-radius: 0; }
+.bottom-nav button[aria-current="page"] svg { background: none; }
+.ranking-table, .measurement-table, .round-summary-table { border: 0; border-radius: 24px; background: var(--surface); box-shadow: none; }
+.ranking-table th, .measurement-table th, .round-summary-table th { padding-top: 16px; padding-bottom: 16px; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0; }
+:root[data-tournament="rpl"] :is(.ranking-table, .measurement-table, .round-summary-table) th { box-shadow: none; }
+.ranking-table th { background: var(--surface); color: var(--muted); }
+.ranking-table th:first-child { width: 56px; padding-left: 16px; }
+.ranking-table th:last-child { width: 80px; padding-right: 16px; }
+.ranking-table td { height: 64px; padding: 12px 8px; }
+.ranking-table td:first-child { padding-left: 16px; }
+.ranking-table td:last-child { font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -1px; padding-right: 16px; }
+.ranking-table .player-name { font-size: 16px; line-height: 24px; font-weight: 600; }
+.ranking-table tr[data-place="1"] td { background: var(--soft); }
+.place-marker { width: 32px; height: 32px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.controls.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border: 0; }
+.metric-grid button.metric-card, .metric-grid button.metric-card[data-metric="streak"] { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; min-height: 160px; padding: 16px; border: 0; border-radius: 24px; background: var(--surface); text-align: left; box-shadow: none; }
+.metric-grid button.metric-card[data-metric="streak"] { grid-column: 1 / -1; min-height: 112px; padding-left: 80px; justify-content: center; }
+.metric-card .metric-icon { width: 40px; height: 40px; border-radius: 12px; margin-bottom: 16px; }
+.metric-card[data-metric="streak"] .metric-icon { position: absolute; left: 24px; top: 32px; }
+.metric-grid .metric-title { align-self: auto; font-size: 16px; line-height: 24px; font-weight: 600; color: var(--text); letter-spacing: 0; }
+.metric-grid .metric-description { align-self: auto; font-size: 12px; line-height: 16px; margin-top: 4px; color: var(--muted); }
+.metric-grid .metric-arrow { display: none; }
+.measurement-table td { height: 64px; padding: 12px 16px; }
+.measurement-name, .participant-list-name, .summary-name, .participant-link.summary-name { font-size: 16px; line-height: 24px; font-weight: 600; }
+.measurement-value, .summary-points { font-size: 24px; font-weight: 700; }
+.measurement-note, .measurement-value small, .winner-label, .rank-change, .profile-note, .recent-date { font-size: 12px; line-height: 16px; }
+.comparison-track { height: 4px; margin-top: 8px; background: var(--raised); }
+.comparison-bar { background: var(--accent); }
+.context-strip, .method-note { padding: 12px 16px; border: 0; border-radius: 16px; font-size: 12px; line-height: 20px; }
+.profile-hero { background: var(--hero); border-radius: 24px; padding: 24px; box-shadow: none; }
+.profile-name { font-size: 30px; line-height: 36px; font-weight: 700; }
+.profile-kicker, .winner-kicker { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0; }
+.profile-totals { gap: 16px; margin-top: 24px; }
+.profile-totals strong { font-size: 36px; line-height: 40px; font-weight: 700; }
+.profile-totals span, .profile-metric span { font-size: 12px; line-height: 16px; }
+.profile-metrics { background: var(--surface); border-radius: 24px; border: 0; padding: 16px 8px; margin: 16px 0; }
+.profile-metric strong { color: var(--accent); font-size: 24px; font-weight: 700; }
+.profile-metric span { color: var(--muted); }
+.recent-results { background: var(--surface); padding: 4px 16px; border-radius: 24px; }
+.recent-results li:last-child { border: 0; }
+.recent-fixture { font-size: 14px; line-height: 20px; }
+.recent-points { border-radius: 12px; padding: 8px; font-size: 18px; font-weight: 600; }
+.round-winners { background: var(--hero); border: 0; border-radius: 24px; padding: 16px; color: #ffffff; }
+.winner-kicker, .winner-score, .winner-icon { color: #ffffff; }
+.winner-names { font-size: 18px; line-height: 28px; font-weight: 600; }
+.round-winners .participant-link { color: #ffffff; }
+.summary-status { font-size: 12px; line-height: 20px; }
+.round-summary-table th { background: var(--surface); color: var(--muted); }
+.period-tabs { background: var(--surface); padding: 4px; border-radius: 16px; }
+.period-tabs button { color: var(--muted); font-size: 12px; line-height: 16px; border-radius: 12px; }
+.period-tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+body[data-period="true"] .tournaments { margin: 8px 0 12px; }
+body[data-period="true"] .tournaments button { min-height: 32px; padding-top: 4px; padding-bottom: 4px; }
+body[data-period="true"] .measurement-table td { height: 56px; padding-top: 8px; padding-bottom: 8px; }
+body[data-period="true"] .measurement-table th { padding-top: 8px; padding-bottom: 8px; }
+body[data-period="true"] .period-controls { margin-bottom: 8px; }
+body[data-period="true"] .period-applied { margin-top: 4px; }
+.status:not(:empty), .data-card, .empty-state, .date-form { border-radius: 24px; border: 0; padding: 24px; }
+.empty-state h2 { font-size: 20px; line-height: 28px; }
+.empty-state p, .screen-note { font-size: 14px; line-height: 20px; }
+.skeleton { animation: breathe 1200ms var(--motion) infinite alternate; }
+.chat-header { padding: 16px; }
+.chat-feed { padding: 16px; }
+#suggestions button, .choice, .bubble, #question { border-radius: 16px; font-size: 14px; }
+.primary { border-radius: 16px; padding: 8px 12px; font-size: 16px; font-weight: 600; }
+/* Fixture chrome is compact so the content, rather than the header, gets space. */
+body[data-view="matches"] .app-shell { padding: 12px 12px calc(88px + var(--safe-bottom)); }
+body[data-view="matches"] .brand-bar { min-height: 40px; }
+body[data-view="matches"] .brand { font-size: 20px; }
+body[data-view="matches"] .brand-mark { width: 32px; height: 32px; font-size: 24px; border-radius: 8px; }
+body[data-view="matches"] .brand-bar .icon-button { width: 32px; height: 32px; border-radius: 8px; }
+body[data-view="matches"] .tournaments { margin: 4px 0 8px; border-radius: 12px; }
+body[data-view="matches"] .tournaments button { min-height: 32px; padding: 4px 12px; border-radius: 8px; }
+body[data-view="matches"] .section-heading { margin-bottom: 8px; }
+body[data-view="matches"] h1 { font-size: 24px; line-height: 32px; }
+.summary-button { border: 0; border-radius: 12px; padding: 8px 12px; font-size: 12px; background: var(--surface); }
+.match-sections { border: 0; border-radius: 12px; padding: 4px; margin-bottom: 4px; gap: 4px; }
+.match-sections button { min-height: 32px; padding: 4px; font-size: 12px; font-weight: 600; border-radius: 8px; }
+.round-picker { border: 0; border-radius: 12px; padding: 4px; background: var(--surface); }
+.round-select { font-size: 14px; min-height: 32px; font-weight: 600; }
+.round-step { width: 32px; min-height: 32px; border-radius: 8px; background: var(--soft); }
+body[data-view="matches"] .round-day { margin: 4px 4px 0; font-size: 12px; line-height: 16px; font-weight: 500; }
+body[data-view="matches"] .round-list { gap: 2px; }
+body[data-view="matches"] .round-match { border: 1px solid var(--line); border-radius: 12px; margin: 0; box-shadow: none; transition: none; }
+body[data-view="matches"] .round-fixture { min-height: 40px; padding: 4px; column-gap: 4px; grid-template-columns: minmax(0,1fr) 40px minmax(0,1fr) 8px; }
+body[data-view="matches"] .round-teams { font-size: 14px; line-height: 16px; font-weight: 700; }
+body[data-view="matches"] .round-teams > .club-name { gap: 4px; }
+body[data-view="matches"] .round-time { font-size: 14px; font-weight: 600; }
+body[data-view="matches"] details.round-match .round-time { background: var(--soft); color: var(--accent); border-radius: 8px; padding: 4px 0; }
+body[data-view="matches"] .round-match[open] { border-color: var(--accent); }
+.match-result { background: var(--hero); box-shadow: none; padding: 16px 12px; }
+.match-result strong { font-weight: 700; font-size: 36px; }
+.match-predictions th { font-size: 12px; line-height: 16px; font-weight: 500; }
+.match-predictions td { font-size: 14px; line-height: 20px; }
+body[data-view="matches"] .match-predictions td:first-child { font-size: 16px; font-weight: 600; }
+.match-predictions td:last-child { font-size: 16px; font-weight: 700; }
+.scoreboard-team { font-size: 14px; font-weight: 600; }
+.scoreboard-label { font-size: 12px; letter-spacing: 0; }
+.national-standings { border-radius: 16px; }
+.national-standings th, .national-standings td { padding: 4px 8px; }
+.national-standings td { height: 44px; }
+.national-standings td:last-child { font-size: 20px; line-height: 28px; padding-right: 8px; }
+.national-standings .place-marker { width: 24px; height: 24px; border-radius: 8px; }
+.national-standings .player-name { font-size: 14px; line-height: 20px; }
+@media (max-width: 350px) {
+  .app-shell { padding-left: 12px; padding-right: 12px; }
+  .ranking-table td { height: 56px; }
+  .ranking-table .player-name { font-size: 16px; }
+  .national-standings td { height: 44px; }
+  .national-standings .player-name { font-size: 14px; }
+  .bottom-nav button { font-size: 12px; }
+  body[data-view="matches"] .round-fixture { grid-template-columns: minmax(0,1fr) 36px minmax(0,1fr) 6px; column-gap: 2px; padding: 4px; }
+  body[data-view="matches"] .round-teams { font-size: 13px; line-height: 16px; }
+  body[data-view="matches"] .round-teams > .club-name { gap: 2px; }
+  body[data-view="matches"] .round-teams .club-logo { width: 26px; height: 26px; flex-basis: 26px; }
+  .round-select { font-size: 12px; }
+  .match-sections button { font-size: 10px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  details[open] .match-result, details[open] .match-predictions { animation: reveal-result 300ms var(--motion); }
+}
