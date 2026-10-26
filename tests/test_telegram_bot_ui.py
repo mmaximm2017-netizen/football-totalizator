@@ -302,7 +302,7 @@ def test_retired_bot_buttons_offer_app_without_helper_or_database(data, monkeypa
     query.assert_not_called()
     assert 'теперь в приложении' in deliver.call_args.args[2]
     buttons = [b for row in json.loads(deliver.call_args.args[3])['inline_keyboard'] for b in row]
-    assert any(b.get('web_app', {}).get('url') == 'https://totish.ru/telegram-app' for b in buttons)
+    assert any(b.get('web_app', {}).get('url') == bot.mini_app_url() for b in buttons)
     assert not any(b.get('callback_data', '').startswith('ui:') and b.get('callback_data') != 'ui:tools' for b in buttons)
 
 

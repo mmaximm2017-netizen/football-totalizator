@@ -238,6 +238,19 @@ def _dashboard_keyboard(refresh_callback, extra_rows=()):
     return _keyboard(rows)
 
 
+
+def mini_app_url():
+    # The host marker is updated by the existing deployment after verification.
+    # A distinct launch URL prevents Telegram from reusing an old app document.
+    try:
+        release = (ROOT / ".totish-managed-release").read_text().strip()
+    except OSError:
+        release = os.getenv("TOTISH_RELEASE", "")
+    if not re.fullmatch(r"[a-f0-9]{40}", release):
+        release = "fresh-ui-20261026"
+    return "https://totish.ru/telegram-app?build=" + release
+
+
 def main_keyboard():
     rows = [
         [{"text": "❓ Спросить бота", "callback_data": "adm:help"}],
@@ -247,7 +260,7 @@ def main_keyboard():
     values = load_env()
     chat_id = str(values.get("TELEGRAM_ERROR_CHAT_ID") or os.getenv("TELEGRAM_ERROR_CHAT_ID", ""))
     if chat_id.isdigit() and int(chat_id) > 0:
-        rows.insert(0, [{"text": "📱 Открыть приложение", "web_app": {"url": "https://totish.ru/telegram-app"}}])
+        rows.insert(0, [{"text": "📱 Открыть приложение", "web_app": {"url": mini_app_url()}}])
     return _keyboard(rows)
 
 
