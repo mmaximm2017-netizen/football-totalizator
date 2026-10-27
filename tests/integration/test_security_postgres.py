@@ -36,6 +36,7 @@ def security_app(monkeypatch):
                 cur.execute(statement)
             from scripts.migrate_push_test_cooldown import DDL as COOLDOWN_DDL
             cur.execute(COOLDOWN_DDL)
+            cur.execute("INSERT INTO tournaments(id,name,is_active) VALUES(5,'RPL',1)")
         conn.commit()
         db.close_db(conn)
         app = create_app()
@@ -84,7 +85,6 @@ def test_export_and_anonymization_preserve_points_but_remove_access(security_app
     cur = conn.cursor()
     try:
         cur.execute("INSERT INTO users(username,password) VALUES('someone-else','private')")
-        cur.execute("INSERT INTO tournaments(id,name,is_active) VALUES(5,'RPL',1)")
         cur.execute("INSERT INTO matches(id,tournament_id,home_team,away_team,status,home_score,away_score) VALUES(10,5,'Home','Away','FINISHED',2,1)")
         cur.execute("INSERT INTO predictions(user_id,match_id,tournament_id,home_goals,away_goals,points) VALUES(%s,10,5,2,1,10)", (uid,))
         cur.execute("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth) VALUES(%s,'https://fcm.googleapis.com/private-endpoint','PRIVATE-KEY','PRIVATE-AUTH')", (uid,))
