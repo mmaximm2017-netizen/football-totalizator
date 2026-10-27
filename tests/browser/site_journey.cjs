@@ -11,12 +11,16 @@ const {execFileSync} = require('node:child_process');
       const fixture = JSON.parse(fs.readFileSync('test-results/site-journey/fixture.json'));
       const context = await browser.newContext({viewport:{width,height}});
       const page = await context.newPage();
-      const ready = () => page.waitForFunction(() => ['app-splash','page-transition'].every(id => {
-        const el=document.getElementById(id);
-        if(!el) return true;
-        const style=getComputedStyle(el);
-        return style.display==='none' || style.visibility==='hidden' || Number(style.opacity)===0;
-      }));
+      const ready = () => page.waitForFunction(() => {
+        const splash=document.getElementById('app-splash');
+        const hidden=!splash || (() => {
+          const style=getComputedStyle(splash);
+          return style.display==='none' || style.visibility==='hidden' || Number(style.opacity)===0;
+        })();
+        // page-transition is the content container, not an overlay.
+        const content=document.getElementById('page-transition');
+        return hidden && (!content || Number(getComputedStyle(content).opacity)>=0.99);
+      });
       const errors=[];
       page.on('pageerror', e=>errors.push(e.message));
       await page.goto('http://localhost:8766/register');
