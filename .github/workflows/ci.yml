@@ -196,8 +196,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Plant fake private files to verify image exclusions
+        run: |
+          mkdir -p runtime/telegram-outbox
+          printf 'CI_CANARY_NOT_A_REAL_SECRET' > security-canary.txt
+          printf 'CI_CANARY_NOT_A_REAL_DUMP' > security-canary.sql
+          printf 'CI_CANARY_NOT_A_REAL_DATABASE' > security-canary.db
+          printf 'CI_CANARY_NOT_A_REAL_TOKEN' > runtime/telegram-outbox/canary.msg
+
       - name: Build Docker image
         run: docker build --progress=plain --build-arg TOTISH_RELEASE="$GITHUB_SHA" -t totish-ci .
+
+      - name: Verify private canaries cannot enter the image
+        run: |
+          docker run --rm --entrypoint python totish-ci -c "from pathlib import Path; paths=('security-canary.txt','security-canary.sql','security-canary.db','runtime/telegram-outbox/canary.msg'); assert all(not (Path('/app') / p).exists() for p in paths); assert (Path('/app/migrations/0010_add_revocable_sessions.sql')).is_file()"
 
       - name: Verify automatic-result runtime is contained in image
         run: |
