@@ -43,6 +43,16 @@ def test_request_limiter_bounds_identity_and_total_without_database():
     assert limiter.allow('register', 'a', 2, 3, now=71)
 
 
+def test_denied_rotating_identities_cannot_grow_limiter_memory():
+    from app.services.request_limits import RequestLimiter
+    limiter = RequestLimiter(capacity=4)
+    assert limiter.allow('register', 'a', 1, 2, now=1)
+    assert limiter.allow('register', 'b', 1, 2, now=1)
+    for index in range(1000):
+        assert not limiter.allow('register', str(index), 1, 2, now=2)
+    assert len(limiter.buckets) <= 4
+
+
 def test_analytics_drops_excess_work_without_starting_more_workers():
     from app.services.product_analytics import AnalyticsDispatcher
     import threading

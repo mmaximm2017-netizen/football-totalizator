@@ -20,17 +20,19 @@ class RequestLimiter:
         identity = hashlib.sha256(str(identity).encode()).hexdigest()
         keys = [(scope, '*'), (scope, identity)]
         with self.lock:
-            for key in keys:
+            counts = []
+            # Reject before allocating identity state. Otherwise rotating IPs
+            # could grow memory precisely while the global bucket is full.
+            for key, limit in zip(keys, (total_limit, personal_limit)):
                 start, count = self.buckets.get(key, (now, 0))
                 if now - start >= 60:
                     start, count = now, 0
-                self.buckets[key] = (start, count)
-                self.buckets.move_to_end(key)
-            if any(self.buckets[key][1] >= limit for key, limit in zip(keys, (total_limit, personal_limit))):
-                return False
-            for key in keys:
-                start, count = self.buckets[key]
+                if count >= limit:
+                    return False
+                counts.append((start, count))
+            for key, (start, count) in zip(keys, counts):
                 self.buckets[key] = (start, count + 1)
+                self.buckets.move_to_end(key)
             while len(self.buckets) > self.capacity:
                 self.buckets.popitem(last=False)
             return True
