@@ -65,6 +65,27 @@ counts, application login and the recovered runtime/configuration. Do not extrac
 over a live server or overwrite production for a drill. The checked-in local
 restore script tests the local dump; it is not proof of an external full restore.
 
+For the encrypted archive downloaded from the remote, run on an independent
+verification machine with Python 3.12, age and Docker:
+
+```bash
+python3 scripts/verify_offsite_backup_restore.py downloaded-backup.tar.gz.age \
+  --identity-file /private/backup-identity \
+  --evidence /private/restore-evidence.json
+```
+
+The verifier decrypts into a private temporary directory, rejects traversal,
+symlinks, unexpected paths and oversized payloads, checks database SHA-256 and
+configuration-file presence, and restores PostgreSQL into a disposable container
+with no network or host mounts. It never reads DATABASE_URL from the backup or
+executes its files. Evidence is created only after success. This proves database
+restore and configuration-file presence, not a complete restored application
+login; the application recovery drill described above still needs actual access.
+
+CI now tests real age encryption, an rclone local-backend copy, rejection of a
+wrong key, and isolated PostgreSQL restoration. This validates the tools/procedure
+on synthetic data; the local backend is not proof of a production offsite copy.
+
 The independent GitHub Actions monitor checks HTTPS from outside the VPS every
 15 minutes (GitHub scheduling can be delayed). It needs an `operations`
 environment with TELEGRAM_ERROR_BOT_TOKEN and TELEGRAM_ERROR_CHAT_ID secrets.
@@ -99,6 +120,26 @@ backup; retain only the identifiers and date needed for this reconciliation.
 
 ## Release gates still requiring actual access/configuration
 
+Read-only VPS receipt (run from the reviewed PR checkout on the server):
+
+```bash
+python3 scripts/production_readiness.py --root /opt/football-totalizator --probe-db
+```
+
+The receipt contains booleans/statuses, never .env values, nginx config, SQL data
+or credentials. It checks file permissions, nginx syntax, public HTTPS headers,
+tool/configuration presence, recent backup/restore receipts and the reader role
+using the running application's actual connection. A denied nginx read or missing
+tool fails the check; it is not treated as success. `--probe-db` performs only
+read-only queries. Without it, reader access remains explicitly not probed.
+
+In this Work session there is no local SSH key, SSH credential environment,
+remote-terminal connector or secret-management tool for GitHub environment
+secrets. Existing PROD_SSH secrets are usable by deployment Actions, not readable
+through the connected GitHub tools. Do not paste private keys into chat.
+Therefore actual VPS setup, offsite credentials/recipient and independent
+Telegram-secret configuration are not claimed completed by this PR.
+
 1. Review nginx forwarding/HTTPS configuration and apply/test shared edge limits.
 2. Configure the independent backup remote and encryption recipient; complete the
    external restore drill. A local success marker alone is insufficient.
@@ -108,6 +149,12 @@ backup; retain only the identifiers and date needed for this reconciliation.
 5. Check Neon and PostHog billing dashboards; set owner-approved limits/alerts.
    No provider spending limit is created or implied by request admission limits.
 6. Review main-site mobile journey artifacts and do a real TalkBack pass on Android.
+
+Automated accessibility coverage now includes WCAG 2.0/2.1 level A axe checks for
+registration, login, predictions, result and the open tournament dialog at both
+mobile sizes. Keyboard assertions cover dialog focus entry, Tab/Shift+Tab wrap,
+Escape, focus restoration and day disclosures. Reports are CI artifacts. This is
+not a claim of WCAG AA conformance or a substitute for actual Android TalkBack.
 
 ## Work log
 
@@ -127,3 +174,7 @@ backup; retain only the identifiers and date needed for this reconciliation.
   skipped without installing companion tools.
 - Final validation and CI results are recorded in the PR, including any remaining
   operational release gates. No external setup is represented as completed.
+- Follow-up: kept all changes in PR 122, added the encrypted restore verifier,
+  network-isolated recovery roundtrip, private readiness receipt, axe checks and
+  keyboard-safe tournament dialog. Traversal/checksum tests were added before the restore implementation; focused
+  checks subsequently passed.

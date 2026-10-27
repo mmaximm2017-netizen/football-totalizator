@@ -43,7 +43,7 @@ def export_backup(root=ROOT, state=STATE_DIR):
         with tarfile.open(archive, "w:gz", dereference=False) as tar:
             tar.add(dump, arcname="database.dump")
             tar.add(checksum, arcname="database.sha256")
-            for relative in (".env", "docker-compose.yml", "deploy", "runtime"):
+            for relative in (".env", "docker-compose.yml", ".totish-managed-release", "deploy", "runtime"):
                 path = root / relative
                 if path.exists():
                     tar.add(path, arcname=relative)

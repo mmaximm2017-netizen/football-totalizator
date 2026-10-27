@@ -81,7 +81,7 @@ jobs:
           node-version: '22'
       - name: Install browser for actual main-site journey
         run: |
-          npm install --prefix "$RUNNER_TEMP/totish-site-ui" playwright@1.62.1
+          npm install --prefix "$RUNNER_TEMP/totish-site-ui" playwright@1.62.1 @axe-core/playwright@4.14.0
           node "$RUNNER_TEMP/totish-site-ui/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Registration, prediction, result and revoked-cookie replay on mobile
         run: |
@@ -94,7 +94,7 @@ jobs:
         if: always()
         with:
           name: main-site-mobile-journey
-          path: test-results/site-journey/*.png
+          path: test-results/site-journey/
           if-no-files-found: ignore
 
   mini-app-ui:
@@ -215,6 +215,13 @@ jobs:
         run: |
           docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py','auto_result_policy.py'); assert all((Path('/app/scripts') / name).is_file() for name in names); from scripts.auto_result_runtime import _source_urls; from app.services.auto_result_finalization_service import finalize_auto_result; assert 'sportbox_rpl' in _source_urls()"
           docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from app.services.telegram_bot_ui_service import render; assert render('ui:p:rpl:points:all:0:0')['rows']"
+
+      - name: Install isolated recovery test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y age rclone
+      - name: Verify encrypted offsite recovery roundtrip without production access
+        run: bash tests/integration/recovery_roundtrip.sh
 
   publish:
     name: Publish Docker image

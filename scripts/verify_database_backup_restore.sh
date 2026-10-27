@@ -44,7 +44,7 @@ latest="$(
     sha256sum --check "$(basename "$latest").sha256"
 ) >/dev/null
 
-container="totish-restore-check-$$"
+container="${TOTISH_DB_RESTORE_CONTAINER:-totish-restore-check-$$}"
 cleanup() {
     docker rm -f "$container" >/dev/null 2>&1 || true
 }
@@ -52,6 +52,7 @@ trap cleanup EXIT
 
 docker run -d \
     --name "$container" \
+    --network none \
     -e POSTGRES_HOST_AUTH_METHOD=trust \
     "$POSTGRES_IMAGE" >/dev/null
 
