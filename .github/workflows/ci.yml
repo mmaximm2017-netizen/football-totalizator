@@ -17,7 +17,7 @@ permissions:
 jobs:
   test:
     name: Test application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
@@ -82,7 +82,9 @@ jobs:
       - name: Install browser for actual main-site journey
         run: |
           npm install --prefix "$RUNNER_TEMP/totish-site-ui" playwright@1.62.1 @axe-core/playwright@4.14.0
-          node "$RUNNER_TEMP/totish-site-ui/node_modules/playwright/cli.js" install --with-deps chromium
+          # Same hosted image and preinstalled browser libraries as mini-app-ui.
+          # The actual browser launch and full journey remain mandatory checks.
+          node "$RUNNER_TEMP/totish-site-ui/node_modules/playwright/cli.js" install chromium
       - name: Registration, prediction, result and revoked-cookie replay on mobile
         run: |
           python -m flask --app app:create_app run --host 127.0.0.1 --port 8766 > /tmp/totish-site-ui.log 2>&1 &
