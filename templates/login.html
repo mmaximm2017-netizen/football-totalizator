@@ -229,22 +229,26 @@
         <form method="post" class="auth-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-            <label>Логин</label>
+            <label for="login-username">Логин</label>
 
             <input
                 class="auth-input"
                 type="text"
                 name="username"
+                id="login-username"
+                autocomplete="username"
                 required
                 placeholder="Введите логин"
             >
 
-            <label>Пароль</label>
+            <label for="login-password">Пароль</label>
 
             <input
                 class="auth-input"
                 type="password"
                 name="password"
+                id="login-password"
+                autocomplete="current-password"
                 required
                 placeholder="Введите пароль"
             >

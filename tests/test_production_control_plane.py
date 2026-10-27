@@ -49,7 +49,6 @@ def test_production_cron_contains_expected_jobs_once():
     disabled_for_cu_conservation = [
         "run_deadline_pushes.sh",
         "run_match_result_pushes.sh",
-        "verify_database_backup_restore.sh",
     ]
     for name in disabled_for_cu_conservation:
         assert name not in cron
@@ -57,7 +56,7 @@ def test_production_cron_contains_expected_jobs_once():
     # Auto-result worker gate plus the hourly full-monitor gate.
     assert cron.count("db_activity_gate.py") == 2
     assert "0 * * * *" in cron
-    assert "30 3 */4 * *" in cron
+    assert "30 3 * * *" in cron
     digest_entries = [line for line in cron.splitlines() if "run_morning_digest.sh" in line]
     assert digest_entries[0].split()[:5] == ["0", "5", "*", "*", "*"]
 

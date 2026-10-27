@@ -1,0 +1,25 @@
+name: Independent production monitor
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: independent-production-monitor
+  cancel-in-progress: false
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: operations
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check public availability and notify owner on failure
+        env:
+          TELEGRAM_ERROR_BOT_TOKEN: ${{ secrets.TELEGRAM_ERROR_BOT_TOKEN }}
+          TELEGRAM_ERROR_CHAT_ID: ${{ secrets.TELEGRAM_ERROR_CHAT_ID }}
+        run: python scripts/external_health_monitor.py

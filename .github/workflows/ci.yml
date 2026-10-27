@@ -17,7 +17,7 @@ permissions:
 jobs:
   test:
     name: Test application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
@@ -43,6 +43,7 @@ jobs:
       SECRET_KEY: ci-test-secret-key-not-for-production
       PYTHONUNBUFFERED: "1"
       PYTHONPATH: .
+      POSTHOG_DISABLED: "1"
 
     steps:
       - name: Check out repository
@@ -57,7 +58,7 @@ jobs:
       - name: Install application and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install --require-hashes -r requirements.lock
           python -m pip install pytest
 
       - name: Apply migrations to fresh database
@@ -75,6 +76,29 @@ jobs:
       - name: Run test suite
         run: pytest -q
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser for actual main-site journey
+        run: |
+          npm install --prefix "$RUNNER_TEMP/totish-site-ui" playwright@1.62.1 @axe-core/playwright@4.14.0
+          # Same hosted image and preinstalled browser libraries as mini-app-ui.
+          # The actual browser launch and full journey remain mandatory checks.
+          node "$RUNNER_TEMP/totish-site-ui/node_modules/playwright/cli.js" install chromium
+      - name: Registration, prediction, result and revoked-cookie replay on mobile
+        run: |
+          python -m flask --app app:create_app run --host 127.0.0.1 --port 8766 > /tmp/totish-site-ui.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://localhost:8766/health
+          NODE_PATH="$RUNNER_TEMP/totish-site-ui/node_modules" node tests/browser/site_journey.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: main-site-mobile-journey
+          path: test-results/site-journey/
+          if-no-files-found: ignore
+
   mini-app-ui:
     name: Test Telegram Mini App UI
     runs-on: ubuntu-24.04
@@ -87,6 +111,7 @@ jobs:
       DATABASE_URL: postgresql://invalid.invalid/ci-mini-app
       SECRET_KEY: ci-test-secret-key-not-for-production
       PYTHONPATH: .
+      POSTHOG_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -97,7 +122,7 @@ jobs:
           node-version: "22"
       - name: Install UI test dependencies
         run: |
-          python -m pip install -r requirements.txt
+          python -m pip install --require-hashes -r requirements.lock
           npm install --prefix "$RUNNER_TEMP/totish-ui" playwright@1.62.1
           # Hosted Ubuntu 24.04 already has browser libraries. Avoid re-installing
           # system/font packages through the slow apt mirror; browser launch and
@@ -161,7 +186,7 @@ jobs:
         run: python -m pip install pip-audit
 
       - name: Audit known dependency vulnerabilities
-        run: pip-audit -r requirements.txt
+        run: pip-audit --require-hashes -r requirements.lock
 
   docker:
     name: Build Docker image
@@ -173,13 +198,32 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Plant fake private files to verify image exclusions
+        run: |
+          mkdir -p runtime/telegram-outbox
+          printf 'CI_CANARY_NOT_A_REAL_SECRET' > security-canary.txt
+          printf 'CI_CANARY_NOT_A_REAL_DUMP' > security-canary.sql
+          printf 'CI_CANARY_NOT_A_REAL_DATABASE' > security-canary.db
+          printf 'CI_CANARY_NOT_A_REAL_TOKEN' > runtime/telegram-outbox/canary.msg
+
       - name: Build Docker image
         run: docker build --progress=plain --build-arg TOTISH_RELEASE="$GITHUB_SHA" -t totish-ci .
+
+      - name: Verify private canaries cannot enter the image
+        run: |
+          docker run --rm --entrypoint python totish-ci -c "from pathlib import Path; paths=('security-canary.txt','security-canary.sql','security-canary.db','runtime/telegram-outbox/canary.msg'); assert all(not (Path('/app') / p).exists() for p in paths); assert (Path('/app/migrations/0010_add_revocable_sessions.sql')).is_file()"
 
       - name: Verify automatic-result runtime is contained in image
         run: |
           docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py','auto_result_policy.py'); assert all((Path('/app/scripts') / name).is_file() for name in names); from scripts.auto_result_runtime import _source_urls; from app.services.auto_result_finalization_service import finalize_auto_result; assert 'sportbox_rpl' in _source_urls()"
           docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from app.services.telegram_bot_ui_service import render; assert render('ui:p:rpl:points:all:0:0')['rows']"
+
+      - name: Install isolated recovery test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y age rclone
+      - name: Verify encrypted offsite recovery roundtrip without production access
+        run: bash tests/integration/recovery_roundtrip.sh
 
   publish:
     name: Publish Docker image

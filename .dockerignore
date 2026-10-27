@@ -6,6 +6,28 @@
 __pycache__/
 *.py[cod]
 *.log
+*.log.*
+runtime/
+backups/
+*.dump
+*.sql
+**/*.sql
+!migrations/*.sql
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*.bak
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.pem
+*.key
+*.age
 .cache/
 .pytest_cache/
 .vscode/
@@ -31,3 +53,6 @@ dist/
 !scripts/telegram_bot_ui.py
 
 !scripts/telegram_http.py
+!scripts/log_redaction.py
+!scripts/user_data.py
+!scripts/check_reader_permissions.py

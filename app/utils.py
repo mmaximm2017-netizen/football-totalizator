@@ -62,6 +62,13 @@ def parse_utc_time(utc_str):
     return parse_datetime(utc_str)
 
 
+def has_deadline_passed(match, now=None):
+    """Publication fails closed when the deadline or current time is unknown."""
+    deadline = parse_datetime(match.get("deadline"))
+    current = parse_datetime(now) if now is not None else utc_now()
+    return bool(deadline and current and current >= deadline)
+
+
 def is_before_deadline(match, now=None):
     try:
         if isinstance(match, dict):

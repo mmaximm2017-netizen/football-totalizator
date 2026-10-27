@@ -13,6 +13,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.config import INVITE_CODE
+from app.services.auth_sessions import create_session, revoke_session
 from app.db import close_db, get_db
 from app.services.auth_user_service import create_user, get_auth_user, upgrade_user_password_hash
 from app.services.login_rate_limit_service import (
@@ -89,6 +90,8 @@ def login():
                 selected_tournament_id = get_session_start_tournament_id(cur)
             session.clear()
             session['user_id'] = user_id
+            session['auth_token'] = create_session(cur, user_id)
+            conn.commit()
             session['analytics_username'] = username
             # Associate the existing pseudonymous analytics ID with this player.
             # This runs once per login, without a database lookup on page views.
@@ -130,6 +133,10 @@ def register():
             flash("Введите логин и пароль", "error")
             return redirect(url_for('auth.register'))
 
+        if len(username) > 80 or len(password) > 256:
+            flash("Логин: не более 80 символов. Пароль: не более 256 символов.", "error")
+            return redirect(url_for('auth.register'))
+
         password_hash = generate_password_hash(password)
 
         conn = get_db()
@@ -151,6 +158,16 @@ def register():
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
+    token = session.get('auth_token')
+    if token:
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            revoke_session(cur, token)
+            conn.commit()
+        finally:
+            close_db(conn, cur)
+    session.clear()
     session.pop('user_id', None)
     session.pop('analytics_username', None)
     session.pop('selected_tournament_id', None)

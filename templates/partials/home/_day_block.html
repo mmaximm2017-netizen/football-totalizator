@@ -1,9 +1,9 @@
         <div class="day-block">
-            <div class="day-header-v2 {{ day.type }}" onclick="toggleDay('{{ month_idx }}_{{ day_idx }}')">
-                <div class="day-left">
+            <button type="button" class="day-header-v2 {{ day.type }}" aria-controls="day-content-{{ month_idx }}_{{ day_idx }}" aria-expanded="{{ 'true' if day_is_open else 'false' }}" onclick="toggleDay('{{ month_idx }}_{{ day_idx }}')">
+                <span class="day-left">
                     <span id="arrow-day-{{ month_idx }}_{{ day_idx }}" class="day-arrow" {% if day_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
 
-                    <div class="day-title">
+                    <span class="day-title">
                         {% if current_tournament_name == 'Чемпионат России 🇷🇺' %}
                             {% set rpl_day_parts = day.label.split(' ', 1) %}
                             <span class="rpl-day-number">{{ rpl_day_parts[0] }}</span>
@@ -15,11 +15,11 @@
                         {% if day.type == 'today' %}
                             <span class="today-pill">СЕГОДНЯ</span>
                         {% endif %}
-                    </div>
-                </div>
+                    </span>
+                </span>
 
                 <span class="day-count" data-match-count="{{ day.count }}"></span>
-            </div>
+            </button>
 
             <div id="day-content-{{ month_idx }}_{{ day_idx }}" class="day-content {% if day_is_open %}open{% endif %}">
                 {% for match in day.matches %}

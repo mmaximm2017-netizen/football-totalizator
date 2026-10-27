@@ -14,7 +14,7 @@ from app.utils import (
     cached_to_msk,
     get_club_logo,
     get_flag,
-    is_before_deadline,
+    has_deadline_passed,
     parse_datetime,
 )
 
@@ -74,7 +74,7 @@ def match_predictions(match_id):
             return redirect(url_for('main.index'))
 
         # Прогнозы открываются для просмотра только после дедлайна.
-        deadline_passed = not is_before_deadline({
+        deadline_passed = has_deadline_passed({
             "deadline": m[4]
         })
 

@@ -160,14 +160,14 @@
 
         <form method="post" class="auth-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label>Логин</label>
-            <input class="auth-input" type="text" name="username" required placeholder="Придумайте логин">
+            <label for="register-username">Логин</label>
+            <input id="register-username" class="auth-input" type="text" name="username" maxlength="80" autocomplete="username" required placeholder="Придумайте логин">
 
-            <label>Пароль</label>
-            <input class="auth-input" type="password" name="password" required placeholder="Придумайте пароль">
+            <label for="register-password">Пароль</label>
+            <input id="register-password" class="auth-input" type="password" name="password" maxlength="256" autocomplete="new-password" required placeholder="Придумайте пароль">
 
-            <label>Инвайт-код</label>
-            <input class="auth-input" type="text" name="invite_code" required placeholder="Введите инвайт-код">
+            <label for="register-invite">Инвайт-код</label>
+            <input id="register-invite" class="auth-input" type="text" name="invite_code" required placeholder="Введите инвайт-код">
 
             <button type="submit" class="auth-btn">
                 Зарегистрироваться

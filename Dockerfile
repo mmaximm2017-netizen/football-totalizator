@@ -19,10 +19,17 @@ RUN apt-get update \
         tesseract-ocr-rus \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
-RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+COPY requirements.txt requirements.lock ./
+RUN python -m pip install --require-hashes -r requirements.lock
 
-COPY --chown=app:app . ./
+# Only application sources enter the image. Untracked root files, runtime state,
+# local exports and backup archives can never be included by a broad COPY.
+COPY --chown=app:app app/ ./app/
+COPY --chown=app:app templates/ ./templates/
+COPY --chown=app:app static/ ./static/
+COPY --chown=app:app migrations/ ./migrations/
+COPY --chown=app:app scripts/ ./scripts/
+COPY --chown=app:app wsgi.py ./
 
 USER app
 

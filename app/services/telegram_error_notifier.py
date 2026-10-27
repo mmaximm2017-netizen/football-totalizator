@@ -1,10 +1,10 @@
 import hashlib
 import logging
 import os
-import re
 import threading
 import time
 import traceback
+from scripts.log_redaction import redact
 from datetime import datetime
 import uuid
 from pathlib import Path
@@ -32,13 +32,7 @@ def telegram_monitor_configured():
     return bool(os.getenv("TELEGRAM_ERROR_BOT_TOKEN") and os.getenv("TELEGRAM_ERROR_CHAT_ID"))
 
 def _redact(value):
-    text = str(value or "")
-    for env_name in ("TELEGRAM_ERROR_BOT_TOKEN","DATABASE_URL","TOTISH_AGENT_TOKEN","SECRET_KEY"):
-        secret = os.getenv(env_name)
-        if secret:
-            text = text.replace(secret, "[REDACTED]")
-    text = re.sub(r"(?i)(postgres(?:ql)?://[^:\s/]+:)[^@\s]+@", r"\1[REDACTED]@", text)
-    return text
+    return redact(value)
 
 def _fingerprint(exc, source, method, path):
     raw = "|".join((str(source or ""), str(method or ""), str(path or ""), type(exc).__name__, str(exc)))

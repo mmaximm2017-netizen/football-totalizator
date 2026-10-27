@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 17408)
+Total output lines: 1954
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -926,343 +929,7 @@ body {
         .tournament-sheet-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            color: #063b73;
-            font-size: 16px;
-            font-weight: 800;
-        }
-
-        .tournament-sheet-close {
-            width: 34px;
-            height: 34px;
-            border: 0;
-            border-radius: 10px;
-            background: rgba(0,119,200,0.10);
-            color: #0077c8;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .tournament-sheet-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: min(52vh, 420px);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .tournament-section-label {
-            margin: 8px 4px 2px;
-            color: rgba(93,120,148,0.82);
-            font-size: 11px;
-            font-weight: 1000;
-            letter-spacing: 0.35px;
-            text-transform: uppercase;
-        }
-
-        .tournament-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(0,119,200,0.10);
-            background: rgba(255,255,255,0.84);
-            text-decoration: none;
-            color: #063b73;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .tournament-item.active {
-            background: #e3f2fd;
-            color: #1565c0;
-            border-color: rgba(21,101,192,0.24);
-        }
-
-        .active-badge {
-            font-size: 10px;
-            background: #4caf50;
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: var(--radius-round);
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .archive-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px 7px;
-            border-radius: var(--radius-round);
-            background: rgba(93,120,148,0.14);
-            color: rgba(93,120,148,0.94);
-            border: 1px solid rgba(93,120,148,0.18);
-            font-size: 10px;
-            font-weight: 900;
-            line-height: 1.15;
-            flex-shrink: 0;
-        }
-
-        .tournament-trigger .archive-badge {
-            margin-left: 6px;
-            vertical-align: middle;
-        }
-
-        /* TYPOGRAPHY SYSTEM: MONTSERRAT */
-        h1, h2, h3, .card-header, .month-header span, .btn {
-            font-weight: 700;
-        }
-
-        .final-score,
-        .points-v2,
-        .points-pill,
-        .month-count,
-        .day-count,
-        .deadline-timer {
-            font-weight: 800;
-        }
-
-        .month-title {
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-
-        .day-title {
-            font-weight: 800;
-        }
-
-        .team-name-v2 {
-            font-weight: 700;
-        }
-
-        .center-score .score-input-row {
-            font-weight: 700;
-        }
-
-        .league-label {
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .my-prediction-v2 {
-            font-weight: 500;
-        }
-
-        .bottom-nav a {
-            font-weight: 600;
-        }
-
-        td:first-child {
-            font-weight: 600;
-        }
-
-        td:last-child,
-        .points-cell {
-            font-weight: 800;
-        }
-
-        .match-info,
-        .deadline-label,
-        .status-pill-v2,
-        .center-sub {
-            font-weight: 500;
-        }
-
-        .bottom-nav a.active .nav-icon {
-            opacity: 1;
-
-            transform: translateY(-1px);
-
-            filter:
-                brightness(0)
-                invert(34%)
-                sepia(84%)
-                saturate(1722%)
-                hue-rotate(181deg)
-                brightness(92%)
-                contrast(101%);
-        }
-
-        /* ============================================= */
-        /* TOURNAMENT VISUAL MODES */
-        /* ============================================= */
-
-        body.tournament-cup {
-            background: linear-gradient(
-                to bottom,
-                #f0f0f0 0%, #f0f0f0 33.33%,
-                #d0d8f0 33.33%, #d0d8f0 66.66%,
-                #f0d0d0 66.66%, #f0d0d0 100%
-            );
-            background-attachment: fixed;
-        }
-
-        body.tournament-wc2026 {
-            background: linear-gradient(135deg, #0a0a2a, #1a1a4a, #2a1a3a);
-            background-attachment: fixed;
-        }
-
-        .tournament-cup .match-card-v2 {
-            background:
-                radial-gradient(circle at 18% 8%, rgba(42,168,255,0.24), transparent 36%),
-                linear-gradient(140deg, rgba(230,245,255,0.96), rgba(212,236,255,0.90));
-            border-left: 4px solid #2aa8ff;
-            box-shadow:
-                0 12px 26px rgba(18,98,152,0.18),
-                inset 0 1px 0 rgba(255,255,255,0.56);
-        }
-
-        .tournament-cup .save-btn-v2 {
-            background: linear-gradient(135deg, #1a5c9e, #2a7faa);
-        }
-
-        .tournament-wc2026 .points-number {
-            color: #c9a03d !important;
-            font-weight: 800;
-        }
-
-        .tournament-wc2026 .points-v2 {
-            background: #ffd700;
-            color: #1a1a2e;
-        }
-
-        /* Accordion visual identity per tournament */
-        .tournament-cup .month-header,
-        .tournament-cup .day-header {
-            background:
-                linear-gradient(135deg, rgba(7,119,200,0.12), rgba(42,168,255,0.08)),
-                rgba(255,255,255,0.82);
-            border: 1px solid rgba(0,119,200,0.22);
-            box-shadow: 0 8px 16px rgba(0,78,140,0.10);
-        }
-
-        .tournament-cup .month-title,
-        .tournament-cup .day-title {
-            color: #0a4f8a;
-        }
-
-        .tournament-cup .month-count,
-        .tournament-cup .day-count {
-            color: #16679f;
-        }
-
-        body.dark.tournament-wc2026 .match-card-v2 {
-            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(30,30,40,0.9));
-            border-left: 4px solid #ffd700;
-        }
-
-        body.dark.tournament-wc2026 .points-number {
-            color: #ffd700 !important;
-        }
-
-        body.dark.tournament-cup .match-card-v2 {
-            background: linear-gradient(135deg, rgba(42,168,255,0.1), rgba(30,30,40,0.9));
-            border-left: 4px solid #2aa8ff;
-        }
-
-        @media (max-width: 430px) {
-            body {
-                padding-bottom: calc(112px + env(safe-area-inset-bottom));
-            }
-
-            .container {
-                padding: 12px 10px 24px;
-            }
-
-            .card {
-                padding: 14px;
-                border-radius: 20px;
-            }
-
-            input,
-            select {
-                font-size: 15px;
-                padding: 11px;
-            }
-
-            .app-title {
-                font-size: 18px;
-            }
-
-            .app-title-icon {
-                width: 28px;
-                height: 28px;
-            }
-
-            body.admin-user .admin-label {
-                display: none;
-            }
-
-            .bottom-nav {
-                left: 10px;
-                right: 10px;
-                bottom: 10px;
-            }
-        }
-    .flag-icon {
-    display: block;
-}
-
-    /* WC2026 V2 shell skin: scoped visual layer only */
-    body.tournament-wc2026 {
-        --wc26-display: 'IBM Plex Sans Condensed', 'Inter', sans-serif;
-        --wc26-bg-deep: #02083e;
-        --wc26-card-top: #0a2f7e;
-        --wc26-card-bottom: #031126;
-        --wc26-blue: #0614c8;
-        --wc26-blue-deep: #000b78;
-        --wc26-cyan: #1fe7ff;
-        --wc26-aqua: #26f0c8;
-        --wc26-lime: #d8ff22;
-        --wc26-coral: #ff5f50;
-        --wc26-magenta: #b832ff;
-        --wc26-purple: #6f2bd1;
-        --wc26-gold: #f4c84a;
-        --wc26-ink: #07112c;
-        --wc26-text: #ffffff;
-        --wc26-text-muted: rgba(255,255,255,0.68);
-        --wc26-radius-sm: 12px;
-        --wc26-radius-md: 18px;
-        --wc26-radius-lg: 26px;
-        --wc26-radius-pill: 999px;
-        --wc26-shadow-card-soft: 0 18px 38px rgba(0,5,28,0.34);
-        --wc26-shadow-elevated: 0 14px 32px rgba(0,5,22,0.42);
-        --wc26-shadow-control-inner: inset 0 1px 0 rgba(255,255,255,0.10);
-        --wc26-shadow-nav-floating: 0 14px 32px rgba(0,5,22,0.42), inset 0 1px 0 rgba(255,255,255,0.08);
-        --wc26-motion-fast: 120ms;
-        --wc26-motion-normal: 170ms;
-        --wc26-motion-slow: 240ms;
-        --wc26-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-
-        background:
-            radial-gradient(circle at 88% 10%, rgba(255,95,80,0.16) 0 12%, transparent 28%),
-            radial-gradient(circle at 94% 36%, rgba(216,255,34,0.14) 0 10%, transparent 25%),
-            radial-gradient(circle at 4% 74%, rgba(184,50,255,0.14) 0 15%, transparent 34%),
-            radial-gradient(circle at 16% 22%, rgba(31,231,255,0.18), transparent 30%),
-            linear-gradient(165deg, var(--wc26-bg-deep) 0%, #0614a8 42%, #000834 100%);
-        background-attachment: fixed;
-        color: #ffffff;
-    }
-
-    body.tournament-wc2026 .header {
-        overflow: hidden;
-        background:
-            radial-gradient(circle at 88% -40%, rgba(31,231,255,0.14), transparent 40%),
-            linear-gradient(135deg, rgba(2,8,62,0.98), rgba(1,9,55,0.96));
-        border-bottom: 1px solid rgba(31,231,255,0.14);
-        box-shadow: 0 10px 24px rgba(0,5,28,0.28);
-        color: #ffffff;
-    }
-
-    body.tournament-wc2026 .app-title,
-    body.tournament-wc2026 .tournament-trigger {
-        font-family: var(--wc26-display);
-        letter-spacing: 0;
+            align-items: …2408 tokens truncated…      letter-spacing: 0;
     }
 
     body.tournament-wc2026 .app-title {
@@ -1527,7 +1194,7 @@ body {
                 </div>
 
                 {% if tournament_items %}
-                <button type="button" class="tournament-trigger" data-tournament-sheet-open>
+                <button type="button" class="tournament-trigger" data-tournament-sheet-open aria-haspopup="dialog" aria-expanded="false" aria-controls="tournament-dialog">
                     🏆 {{ current_t_name }}{% if current_archive.value %} <span class="archive-badge">Архив</span>{% endif %} ▼
                 </button>
                 {% endif %}
@@ -1559,7 +1226,7 @@ body {
             href="/{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/' %}active{% endif %}"
         >
-            <img src="/static/icons/matches.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
+            <img src="/static/icons/matches.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low" alt="">
             Матчи
         </a>
 
@@ -1567,7 +1234,7 @@ body {
             href="/table{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path == '/table' %}active{% endif %}"
         >
-            <img src="/static/icons/table.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
+            <img src="/static/icons/table.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low" alt="">
             Таблица
         </a>
 
@@ -1576,7 +1243,7 @@ body {
             href="/admin"
             class="{% if request.path.startswith('/admin') %}active{% endif %}"
         >
-            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
+            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low" alt="">
             Админ
         </a>
         {% else %}
@@ -1584,7 +1251,7 @@ body {
             href="/profile{% if current_tournament_id %}?tid={{ current_tournament_id }}{% endif %}"
             class="{% if request.path.startswith('/profile') and (is_own_profile|default(false)) %}active{% endif %}"
         >
-            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
+            <img src="/static/icons/profile.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low" alt="">
             Профиль
         </a>
         {% endif %}
@@ -1592,7 +1259,7 @@ body {
         <form method="post" action="{{ url_for('auth.logout') }}" class="nav-logout-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="nav-logout-btn">
-                <img src="/static/icons/logout.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low">
+                <img src="/static/icons/logout.svg" class="nav-icon" width="30" height="30" loading="lazy" decoding="async" fetchpriority="low" alt="">
                 Выход
             </button>
         </form>
@@ -1602,10 +1269,10 @@ body {
 
     {% if tournament_items %}
     <div class="tournament-sheet-overlay" data-tournament-sheet-overlay></div>
-    <div class="tournament-sheet" data-tournament-sheet-panel aria-hidden="true">
+    <div id="tournament-dialog" class="tournament-sheet" data-tournament-sheet-panel role="dialog" aria-modal="true" aria-labelledby="tournament-dialog-title" aria-hidden="true" inert>
         <div class="tournament-sheet-handle"></div>
         <div class="tournament-sheet-header">
-            <span>Выбрать турнир</span>
+            <span id="tournament-dialog-title">Выбрать турнир</span>
             <button type="button" class="tournament-sheet-close" data-tournament-sheet-close aria-label="Закрыть выбор турнира">✕</button>
         </div>
         <div class="tournament-sheet-list">
@@ -1661,16 +1328,27 @@ body {
 
         function openTournamentSheet() {
             if (!tournamentOverlay || !tournamentPanel) return;
+            tournamentPanel.inert = false;
             tournamentOverlay.classList.add('open');
             tournamentPanel.classList.add('open');
             tournamentPanel.setAttribute('aria-hidden', 'false');
+            tournamentTrigger?.setAttribute('aria-expanded', 'true');
+            document.querySelector('.app-shell')?.setAttribute('inert', '');
+            document.querySelector('.bottom-nav')?.setAttribute('inert', '');
+            tournamentClose?.focus();
         }
 
         function closeTournamentSheet() {
             if (!tournamentOverlay || !tournamentPanel) return;
+            const wasOpen = tournamentPanel.getAttribute('aria-hidden') === 'false';
+            document.querySelector('.app-shell')?.removeAttribute('inert');
+            document.querySelector('.bottom-nav')?.removeAttribute('inert');
+            if (wasOpen) tournamentTrigger?.focus();
             tournamentOverlay.classList.remove('open');
             tournamentPanel.classList.remove('open');
             tournamentPanel.setAttribute('aria-hidden', 'true');
+            tournamentPanel.inert = true;
+            tournamentTrigger?.setAttribute('aria-expanded', 'false');
         }
 
         if (tournamentTrigger) {
@@ -1684,6 +1362,14 @@ body {
         }
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') closeTournamentSheet();
+            if (event.key !== 'Tab' || !tournamentPanel || tournamentPanel.inert) return;
+            const controls = Array.from(tournamentPanel.querySelectorAll('button, a[href]'));
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault(); last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault(); first?.focus();
+            }
         });
 
         (function persistTournamentSelection() {

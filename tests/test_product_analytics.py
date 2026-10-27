@@ -100,6 +100,9 @@ def test_logout_and_next_account_have_separate_analytics_identity():
         client.post("/__analytics/event", headers=headers, json=payload)
         first_id = enqueue.call_args.args[1]
         assert client.post("/logout", headers=headers).status_code == 302
+        client.get("/login")
+        with client.session_transaction() as current_session:
+            headers["X-CSRF-Token"] = current_session["csrf_token"]
         client.post("/__analytics/event", headers=headers, json=payload)
         anonymous_id = enqueue.call_args.args[1]
         assert "totish_username" not in enqueue.call_args.args[2]
@@ -204,7 +207,8 @@ def test_csrf_is_required_for_analytics_endpoint():
     enqueue.assert_not_called()
 
 
-def test_server_delivery_uses_posthog_ingestion_endpoint():
+def test_server_delivery_uses_posthog_ingestion_endpoint(monkeypatch):
+    monkeypatch.delenv("POSTHOG_DISABLED", raising=False)
     fake_response = type("Response", (), {"raise_for_status": lambda self: None})()
 
     with patch.object(product_analytics.requests, "post", return_value=fake_response) as post:
@@ -223,7 +227,8 @@ def test_server_delivery_uses_posthog_ingestion_endpoint():
     assert payload["properties"]["$process_person_profile"] is False
 
 
-def test_identified_player_has_profile_and_username():
+def test_identified_player_has_profile_and_username(monkeypatch):
+    monkeypatch.delenv("POSTHOG_DISABLED", raising=False)
     fake_response = type("Response", (), {"raise_for_status": lambda self: None})()
     with patch.object(product_analytics.requests, "post", return_value=fake_response) as post:
         product_analytics._deliver_posthog_event(

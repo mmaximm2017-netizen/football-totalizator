@@ -367,7 +367,8 @@ def check_database_backup():
     # The directory is created by the backup job itself. Before the first
     # scheduled run after rollout, do not emit a false alert or recovery.
     if not backup_dir.exists():
-        return True
+        alert("backup:missing", "Резервные копии ещё не созданы: каталог отсутствует.")
+        return False
 
     backups = sorted(backup_dir.glob("totish-daily-*.dump"), reverse=True)
     if not backups:
@@ -390,14 +391,14 @@ def check_database_backup():
         )
         return False
 
-    max_age_seconds = 108 * 60 * 60  # Four days plus a 12-hour delay allowance.
+    max_age_seconds = 36 * 60 * 60  # Daily backup plus twelve hours of grace.
     if age_seconds > max_age_seconds:
         age_hours = age_seconds // 3600
         alert(
             "backup:stale",
             "Что именно произошло:\n"
             "Последняя плановая резервная копия базы слишком старая.\n\n"
-            f"Возраст копии: {age_hours} ч. Допустимо: не более 108 ч.",
+            f"Возраст копии: {age_hours} ч. Допустимо: не более 36 ч.",
         )
         return False
 
@@ -410,7 +411,22 @@ def check_database_backup():
         )
         return False
 
+    if not check_recovery_evidence():
+        return False
     recover("backup")
+    return True
+
+
+def check_recovery_evidence():
+    try:
+        offsite = json.loads((STATE_DIR / "offsite-backup.json").read_text())
+        offsite_age = time.time() - float(offsite["completed_at"])
+        restored_age = time.time() - float((STATE_DIR / "restore-verified.timestamp").read_text())
+        if not 0 <= offsite_age <= 36 * 3600 or not 0 <= restored_age <= 8 * 86400:
+            raise ValueError("stale_recovery_evidence")
+    except (OSError, ValueError, TypeError, KeyError):
+        alert("backup:recovery_unverified", "Нет свежего подтверждения внешней копии или проверки восстановления. Проверьте настройку резервного копирования.")
+        return False
     return True
 
 
