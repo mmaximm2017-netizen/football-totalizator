@@ -140,16 +140,18 @@ class EmergencyBackupTests(unittest.TestCase):
             dump.write_text('dump')
             dump.with_suffix('.dump.sha256').write_text('checksum')
             now = 1000000
+            (root / "offsite-backup.json").write_text(json.dumps({"completed_at": now}))
+            (root / "restore-verified.timestamp").write_text(str(now))
             with patch.object(monitor, 'STATE_DIR', root), patch.object(monitor.time, 'time', return_value=now), \
                  patch.object(monitor, 'alert') as alert, patch.object(monitor, 'recover') as recover:
-                for age in (36 * 3600 + 1, 96 * 3600, 108 * 3600):
+                for age in (0, 24 * 3600, 36 * 3600):
                     os.utime(dump, (now - age, now - age))
                     self.assertTrue(monitor.check_database_backup())
                 alert.assert_not_called()
-                os.utime(dump, (now - 108 * 3600 - 1, now - 108 * 3600 - 1))
+                os.utime(dump, (now - 36 * 3600 - 1, now - 36 * 3600 - 1))
                 self.assertFalse(monitor.check_database_backup())
                 self.assertEqual(alert.call_args.args[0], 'backup:stale')
-                self.assertIn('108', alert.call_args.args[1])
+                self.assertIn('36', alert.call_args.args[1])
                 self.assertNotIn('ежеднев', alert.call_args.args[1])
                 os.utime(dump, (now, now))
                 self.assertTrue(monitor.check_database_backup())

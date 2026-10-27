@@ -141,7 +141,7 @@ class WebPushTests(unittest.TestCase):
         with self.assertRaises(SubscriptionValidationError):
             normalize_endpoint("javascript:alert(1)")
         with self.assertRaises(SubscriptionValidationError):
-            upsert_subscription(Cursor(), 7, {"endpoint": "https://push.example/sub"})
+            upsert_subscription(Cursor(), 7, {"endpoint": "https://fcm.googleapis.com/sub"})
 
     def test_push_endpoint_rejects_localhost_and_private_literal_addresses(self):
         blocked = [
@@ -167,7 +167,7 @@ class WebPushTests(unittest.TestCase):
             return_value=[(2, 1, 6, "", ("192.168.50.10", 443))],
         ):
             with self.assertRaises(UnsafePushEndpointError):
-                validate_endpoint_target("https://push.example/sub")
+                validate_endpoint_target("https://fcm.googleapis.com/sub")
 
     def test_push_endpoint_rejects_mixed_public_and_private_dns_answers(self):
         with patch(
@@ -178,18 +178,18 @@ class WebPushTests(unittest.TestCase):
             ],
         ):
             with self.assertRaises(UnsafePushEndpointError):
-                validate_endpoint_target("https://push.example/sub")
+                validate_endpoint_target("https://fcm.googleapis.com/sub")
 
     def test_push_endpoint_accepts_public_dns_target(self):
         self.assertEqual(
-            validate_endpoint_target("https://push.example/sub"),
-            "https://push.example/sub",
+            validate_endpoint_target("https://fcm.googleapis.com/sub"),
+            "https://fcm.googleapis.com/sub",
         )
 
     def test_push_delivery_session_does_not_follow_redirects(self):
         session = _NoRedirectSession()
         with patch.object(session._session, "post", return_value="response") as post:
-            result = session.post("https://push.example/sub", timeout=10, data=b"x")
+            result = session.post("https://fcm.googleapis.com/sub", timeout=10, data=b"x")
         self.assertEqual(result, "response")
         self.assertFalse(post.call_args.kwargs["allow_redirects"])
 
@@ -209,7 +209,7 @@ class WebPushTests(unittest.TestCase):
         client, headers = self.client(user_id=7)
         payload = {
             "user_id": 999,
-            "endpoint": "https://push.example/sub",
+            "endpoint": "https://fcm.googleapis.com/sub",
             "keys": {"p256dh": "p-key", "auth": "a-key"},
             "device_label": "phone",
         }
@@ -225,7 +225,7 @@ class WebPushTests(unittest.TestCase):
             upsert_subscription(
                 Cursor(existing=(8,)),
                 7,
-                {"endpoint": "https://push.example/sub", "keys": {"p256dh": "p", "auth": "a"}},
+                {"endpoint": "https://fcm.googleapis.com/sub", "keys": {"p256dh": "p", "auth": "a"}},
             )
 
     def test_unsubscribe_is_scoped_to_session_user(self):
@@ -235,17 +235,17 @@ class WebPushTests(unittest.TestCase):
         with patch("app.routes.push.get_db", return_value=conn), patch("app.routes.push.close_db"):
             response = client.post(
                 "/api/push/unsubscribe",
-                json={"endpoint": "https://push.example/sub", "user_id": 999},
+                json={"endpoint": "https://fcm.googleapis.com/sub", "user_id": 999},
                 headers=headers,
             )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(cursor.executed[-1][1], (7, "https://push.example/sub"))
+        self.assertEqual(cursor.executed[-1][1], (7, "https://fcm.googleapis.com/sub"))
         self.assertEqual(conn.commits, 1)
 
     def test_same_endpoint_upsert_updates_keys_and_multiple_endpoints_are_supported(self):
         cursor = Cursor()
-        first = {"endpoint": "https://push.example/a", "keys": {"p256dh": "p1", "auth": "a1"}}
-        second = {"endpoint": "https://push.example/b", "keys": {"p256dh": "p2", "auth": "a2"}}
+        first = {"endpoint": "https://fcm.googleapis.com/a", "keys": {"p256dh": "p1", "auth": "a1"}}
+        second = {"endpoint": "https://fcm.googleapis.com/b", "keys": {"p256dh": "p2", "auth": "a2"}}
         upsert_subscription(cursor, 7, first)
         upsert_subscription(cursor, 7, second)
         self.assertEqual(len([q for q, _ in cursor.executed if q.lstrip().startswith("INSERT")]), 2)
@@ -255,7 +255,7 @@ class WebPushTests(unittest.TestCase):
 
     def test_test_endpoint_uses_fixed_payload_and_session_user(self):
         subscription = {
-            "endpoint": "https://push.example/sub",
+            "endpoint": "https://fcm.googleapis.com/sub",
             "keys": {"p256dh": "p", "auth": "a"},
         }
         cursor = DeliveryCursor([subscription])
@@ -296,7 +296,7 @@ class WebPushTests(unittest.TestCase):
         cursor = DeliveryCursor([], cooldown_row=(datetime.now(timezone.utc),), reservation_granted=False)
         # The route checks active subscriptions before cooldown, so provide one.
         cursor.subscriptions = [{
-            "endpoint": "https://push.example/sub",
+            "endpoint": "https://fcm.googleapis.com/sub",
             "keys": {"p256dh": "p", "auth": "a"},
         }]
         conn = Connection(cursor)

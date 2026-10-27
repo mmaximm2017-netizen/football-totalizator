@@ -5,6 +5,8 @@ scripts/run_match_result_pushes.sh
 scripts/run_auto_results.sh
 scripts/run_morning_digest.sh
 scripts/run_database_backup.sh
+scripts/export_offsite_backup.py
+scripts/check_backup_readiness.py
 scripts/verify_database_backup_restore.sh
 scripts/send_deadline_pushes.py
 scripts/send_match_result_pushes.py

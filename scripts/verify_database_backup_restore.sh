@@ -101,3 +101,5 @@ done
 }
 
 echo "RESTORE VERIFY OK: backup=$(basename "$latest") users=$users_count matches=$matches_count predictions=$predictions_count tournaments=$tournaments_count migration=$migration_version"
+date +%s > "$STATE_DIR/restore-verified.timestamp.tmp"
+mv "$STATE_DIR/restore-verified.timestamp.tmp" "$STATE_DIR/restore-verified.timestamp"

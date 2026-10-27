@@ -197,6 +197,8 @@ jobs:
             export TOTISH_IMAGE="$expected_image"
 
             echo "PRE-DEPLOY: applying versioned database migrations"
+            bash scripts/run_database_backup.sh
+            python3 "$release_source/scripts/check_backup_readiness.py" --max-age-hours 1
             docker compose run --rm --no-deps --entrypoint python app scripts/run_migrations.py
 
             set +e

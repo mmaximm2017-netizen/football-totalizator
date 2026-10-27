@@ -7,14 +7,12 @@ TOTISH uses two independent recovery layers:
 
 ## Automatic backup
 
-The managed VPS cron runs:
+The managed VPS cron now runs (on deployment of the hardening change):
 
-- During the emergency CU policy through September 2026, backup uses
-  `30 3 */4 * *`: dates 1, 5, 9, 13, 17, 21, 25, 29 at 03:30 host time
-  (production uses Moscow time). This is not a fixed 96-hour interval;
-  month boundaries may shorten it.
-- Scheduled restore verification is temporarily disabled. Restore its cron
-  explicitly after October 1; the script remains available.
+- `30 3 * * *`: daily database backup, followed by encrypted offsite export.
+- `15 4 * * 1`: weekly isolated local restore verification.
+- These schedules use VPS time. See SECURITY_HARDENING.md for required offsite
+  credentials/encryption setup and the independent external restore drill.
 
 Backups are written to:
 
@@ -26,7 +24,7 @@ The directory is mode 0700. Dump and checksum files are mode 0600.
 
 Retention:
 
-- 7 scheduled dumps (the `totish-daily-*` filename is retained for compatibility);
+- 7 daily dumps;
 - 4 weekly dumps.
 
 The dump is created with PostgreSQL 17 `pg_dump` using the official
@@ -45,10 +43,9 @@ week's snapshot from the same dump, without another pg_dump or Neon connection.
 Later backups preserve it; an incomplete snapshot without a checksum is repaired.
 Weekly retention remains four snapshots.
 
-The production monitor alerts if an initialized backup directory has no scheduled
-dump, the newest dump is older than 108 hours (96 hours plus 12 hours of grace),
-or its checksum file is missing. A missed run alerts after this grace rather
-than waiting another four days. Both light and full monitors use this policy.
+The production monitor alerts for a missing directory/dump, a dump older than
+36 hours, missing checksum or stale/missing offsite and restore evidence.
+Both light and full monitors use this policy.
 
 ## Restore verification
 

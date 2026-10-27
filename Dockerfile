@@ -19,8 +19,8 @@ RUN apt-get update \
         tesseract-ocr-rus \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
-RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+COPY requirements.txt requirements.lock ./
+RUN python -m pip install --require-hashes -r requirements.lock
 
 COPY --chown=app:app . ./
 

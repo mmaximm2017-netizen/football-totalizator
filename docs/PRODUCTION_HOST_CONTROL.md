@@ -40,9 +40,10 @@ The morning digest is restored for October at 05:00 UTC (08:00 Moscow) daily.
 Its wrapper retains the lock and per-Moscow-date state to prevent duplicate
 delivery. It uses the existing Telegram outbox and host relay.
 
-Result pushes, deadline pushes and scheduled restore verification remain absent
-from the managed cron. Backups run on day-of-month `*/4`; see
-`BACKUP_RECOVERY.md` for freshness and weekly retention.
+Result pushes and deadline pushes remain absent from managed cron. The
+pre-launch hardening release restores daily backups and weekly local restore
+verification; see BACKUP_RECOVERY.md and SECURITY_HARDENING.md for the required
+independent offsite configuration, delivery evidence and external restore drill.
 
 The light monitor and Telegram relay remain host-local. Every hour, monitor-due
 checks local gate/recovery files before allowing the DB-aware monitor. Every

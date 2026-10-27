@@ -13,6 +13,7 @@
         if (!content || !arrow) return;
 
         var isClosed = content.style.display === 'none' || content.style.display === '';
+        document.querySelector('[aria-controls="month-content-' + monthId + '"]')?.setAttribute('aria-expanded', String(isClosed));
 
         if (isClosed) {
             if (!content.querySelector('.day-block')) {
@@ -28,6 +29,7 @@
             var openedDays = content.querySelectorAll('.day-content.open');
             openedDays.forEach(function(dayContent) {
                 dayContent.classList.remove('open');
+                document.querySelector('[aria-controls="' + dayContent.id + '"]')?.setAttribute('aria-expanded', 'false');
             });
 
             var dayArrows = content.querySelectorAll('[id^="arrow-day-"]');
@@ -47,6 +49,7 @@
 
         if (!content || !arrow) return;
 
+        document.querySelector('[aria-controls="day-content-' + dayId + '"]')?.setAttribute('aria-expanded', String(!content.classList.contains('open')));
         if (content.classList.contains('open')) {
             content.classList.remove('open');
             arrow.style.transform = 'rotate(0deg)';

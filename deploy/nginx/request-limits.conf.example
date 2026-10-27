@@ -1,0 +1,13 @@
+# Include the zones once in nginx's http {} context.
+limit_req_zone $binary_remote_addr zone=totish_login:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=totish_register:10m rate=3r/m;
+limit_req_zone $binary_remote_addr zone=totish_analytics:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=totish_api:10m rate=60r/m;
+
+# Add the matching limit_req to the EXISTING proxy locations in the HTTPS
+# virtual host. Preserve proxy_pass and the existing trusted forwarding headers.
+# location = /login { limit_req zone=totish_login burst=10 nodelay; ... }
+# location = /register { limit_req zone=totish_register burst=3 nodelay; ... }
+# location = /__analytics/event { limit_req zone=totish_analytics burst=30 nodelay; ... }
+# location /api/ { limit_req zone=totish_api burst=30 nodelay; ... }
+# Set limit_req_status 429; in that server. Do not replace the live virtual host.

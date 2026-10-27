@@ -21,8 +21,12 @@ from app.services.tournament_service import (
     get_active_tournament_id,
 )
 from app.services.telegram_error_notifier import notify_exception
+from app.services.auth_sessions import token_digest
+from app.services.request_limits import RequestLimiter
+from scripts.log_redaction import install_log_redaction
 
 logging.basicConfig(level=logging.INFO)
+install_log_redaction()
 logger = logging.getLogger(__name__)
 
 CSRF_SESSION_KEY = "csrf_token"
@@ -211,6 +215,29 @@ def create_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.secret_key = SECRET_KEY
+    limiter = RequestLimiter()
+
+    @app.before_request
+    def limit_expensive_requests():
+        policies = {
+            "auth.login": (20, 120),
+            "auth.register": (5, 30),
+            "client_analytics": (60, 600),
+            "client_diagnostics": (20, 120),
+            "main.index": (30, 300),
+        }
+        scope = request.endpoint
+        policy = policies.get(scope) if request.method == "POST" else None
+        if request.blueprint in {"agent_api", "gpt_api", "push"}:
+            scope = request.blueprint
+            policy = (60, 300)
+        elif request.blueprint and request.blueprint.startswith("admin") and request.method == "POST":
+            scope, policy = "admin", (30, 120)
+        if policy and not limiter.allow(scope, request.remote_addr, *policy):
+            response = jsonify(ok=False, error="rate_limit", message="Слишком много запросов. Повторите через минуту.")
+            response.status_code = 429
+            response.headers["Retry-After"] = "60"
+            return response
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
@@ -349,6 +376,22 @@ def create_app():
 
     @app.after_request
     def prevent_auth_caching(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
+        if request.is_secure:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        # Existing main-site templates use inline handlers/styles; retain them
+        # while blocking other script origins, framing, plugins and foreign forms.
+        response.headers.setdefault("Content-Security-Policy", (
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; "
+            "connect-src 'self'; object-src 'none'; base-uri 'self'; "
+            "form-action 'self'; frame-ancestors 'self'"
+        ))
+        if session.get("user_id"):
+            response.headers["Cache-Control"] = "no-store"
         if request.path in {"/login", "/logout"}:
             response.headers["Cache-Control"] = "no-store"
         return response
@@ -466,11 +509,18 @@ def create_app():
 
         try:
             cur.execute(
-                "SELECT is_admin, last_seen, COALESCE(is_deleted, 0), username FROM users WHERE id = %s",
-                (session['user_id'],)
+                """SELECT is_admin, last_seen, COALESCE(is_deleted, 0), username
+                   FROM users WHERE id = %s AND EXISTS (
+                       SELECT 1 FROM auth_sessions s
+                       WHERE s.user_id = users.id AND s.token_hash = %s AND s.expires_at > NOW()
+                   )""",
+                (session['user_id'], token_digest(session.get('auth_token')))
             )
 
             user = cur.fetchone()
+            if not user:
+                session.clear()
+                return
 
             if user:
                 if user[2] == 1:

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 MAX_ENDPOINT_LENGTH = 2048
 MAX_KEY_LENGTH = 512
 TEST_PUSH_COOLDOWN_SECONDS = 60
+PUSH_PROVIDER_DOMAINS = ("fcm.googleapis.com", "updates.push.services.mozilla.com", "push.apple.com", "notify.windows.com")
 
 
 class SubscriptionValidationError(ValueError):
@@ -76,6 +77,12 @@ def validate_endpoint_target(endpoint, *, resolver=None):
     normalized = normalize_endpoint(endpoint)
     parsed = urlsplit(normalized)
     hostname = (parsed.hostname or "").rstrip(".").lower()
+    # Only browser vendors can choose a destination. User-owned DNS is never used.
+    if parsed.port not in (None, 443) or not any(
+        hostname == domain or hostname.endswith("." + domain)
+        for domain in PUSH_PROVIDER_DOMAINS
+    ):
+        raise UnsafePushEndpointError("endpoint provider is not supported")
     if not hostname:
         raise UnsafePushEndpointError("endpoint host is invalid")
     if hostname == "localhost" or hostname.endswith(".localhost"):

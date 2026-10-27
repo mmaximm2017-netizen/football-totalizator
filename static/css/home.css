@@ -1,3 +1,15 @@
+/* Native disclosure buttons retain the established card geometry. */
+button.day-header-v2, button.month-header-v2 {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    appearance: none;
+}
+button.day-header-v2:focus-visible, button.month-header-v2:focus-visible {
+    outline: 3px solid #1672d4;
+    outline-offset: 3px;
+}
 /* =========================================================
    TOTISH HOME CSS — STRUCTURE MAP
    IMPORTANT: sections below are ordered by cascade history.

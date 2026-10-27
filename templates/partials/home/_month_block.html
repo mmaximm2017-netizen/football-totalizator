@@ -1,12 +1,12 @@
 <div class="month-block">
-    <div class="month-header-v2" onclick="toggleMonth('{{ month_idx }}', '{{ month.key }}')">
-        <div class="month-left">
+    <button type="button" class="month-header-v2" aria-controls="month-content-{{ month_idx }}" aria-expanded="{{ 'true' if month_is_open else 'false' }}" onclick="toggleMonth('{{ month_idx }}', '{{ month.key }}')">
+        <span class="month-left">
             <span id="arrow-month-{{ month_idx }}" class="month-arrow" {% if month_is_open %}style="transform: rotate(90deg);"{% endif %}>▶</span>
             <span class="month-title">{{ month.label }}</span>
-        </div>
+        </span>
 
         <span class="month-count" data-match-count="{{ month.count }}"></span>
-    </div>
+    </button>
 
     <div id="month-content-{{ month_idx }}" class="month-content" style="display: {% if month_is_open %}block{% else %}none{% endif %};">
         {% if month_is_open %}
