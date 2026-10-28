@@ -57,10 +57,31 @@ def test_offsite_encrypts_before_upload_and_records_only_success(tmp_path, monke
     assert not (state / "offsite-backup.json").exists()
 
 
-def test_external_monitor_cannot_claim_success_without_alert_credentials(monkeypatch):
-    monkeypatch.delenv("TELEGRAM_ERROR_BOT_TOKEN", raising=False)
-    monkeypatch.delenv("TELEGRAM_ERROR_CHAT_ID", raising=False)
-    assert external_health_monitor.main() == 2
+@pytest.mark.parametrize("healthy, expected_code, expected_message", [
+    (True, 0, "EXTERNAL HEALTH OK"),
+    (False, 2, "EXTERNAL HEALTH FAILED; Telegram alerting unconfigured"),
+])
+@pytest.mark.parametrize("missing_credentials", [
+    ("TELEGRAM_ERROR_BOT_TOKEN",),
+    ("TELEGRAM_ERROR_CHAT_ID",),
+    ("TELEGRAM_ERROR_BOT_TOKEN", "TELEGRAM_ERROR_CHAT_ID"),
+])
+def test_external_monitor_checks_health_without_alert_credentials(
+    monkeypatch, capsys, healthy, expected_code, expected_message, missing_credentials
+):
+    monkeypatch.setenv("TELEGRAM_ERROR_BOT_TOKEN", "test-secret")
+    monkeypatch.setenv("TELEGRAM_ERROR_CHAT_ID", "123")
+    for name in missing_credentials:
+        monkeypatch.delenv(name, raising=False)
+    health_check = Mock(return_value=healthy)
+    monkeypatch.setattr(external_health_monitor, "healthy", health_check)
+    send = Mock(side_effect=AssertionError("Unexpected network request"))
+    monkeypatch.setattr(external_health_monitor, "urlopen", send)
+
+    assert external_health_monitor.main() == expected_code
+    assert capsys.readouterr().out.strip() == expected_message
+    health_check.assert_called_once_with()
+    send.assert_not_called()
 
 
 def test_external_monitor_checks_outside_vps_and_alerts_when_down(monkeypatch):

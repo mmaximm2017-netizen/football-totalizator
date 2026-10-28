@@ -22,12 +22,12 @@ def healthy():
 def main():
     token = os.getenv("TELEGRAM_ERROR_BOT_TOKEN", "")
     chat = os.getenv("TELEGRAM_ERROR_CHAT_ID", "")
-    if not token or not chat:
-        print("EXTERNAL MONITOR UNCONFIGURED: add Telegram secrets to the operations environment")
-        return 2
     if healthy():
         print("EXTERNAL HEALTH OK")
         return 0
+    if not token or not chat:
+        print("EXTERNAL HEALTH FAILED; Telegram alerting unconfigured")
+        return 2
     payload = json.dumps({"chat_id": chat, "text": "🚨 ТОТИШ не отвечает снаружи. Три проверки https://totish.ru/health не прошли. Проверьте VPS, DNS и HTTPS."}).encode()
     try:
         request = Request(f"https://api.telegram.org/bot{token}/sendMessage", data=payload, headers={"Content-Type": "application/json"})
