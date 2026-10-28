@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = Path.home() / ".local" / "state" / "totish"
 STATE_FILE = STATE_DIR / "production-monitor-dedupe.json"
 RECOVERY_STATE_FILE = STATE_DIR / "production-monitor-recovery.json"
+RECOVERY_REMINDER_SECONDS = 24 * 60 * 60
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from host_telegram_notifier import send_message
@@ -135,6 +136,9 @@ def recover(family):
     send_message(message)
     state.pop(family, None)
     save_recovery_state(state)
+    dedupe = load_state()
+    dedupe.pop(hashlib.sha256(previous_key.encode("utf-8")).hexdigest(), None)
+    save_state(dedupe)
     print(f"RECOVERY SENT: {family}")
     return True
 
@@ -145,7 +149,8 @@ def alert(key, details):
     fingerprint = hashlib.sha256(key.encode("utf-8")).hexdigest()
     previous = int(state.get(fingerprint, 0) or 0)
 
-    if previous and now - previous < 300:
+    reminder_seconds = RECOVERY_REMINDER_SECONDS if key == "backup:recovery_unverified" else 300
+    if previous and now - previous < reminder_seconds:
         print(f"DEDUPED: {key}")
         return False
 
@@ -169,6 +174,12 @@ def alert(key, details):
         "control_plane:": (
             "🚨 ТОТИШ: служебные файлы VPS не совпадают с версией сайта",
             "Служебные production-файлы на VPS рассинхронизированы с запущенной версией ТОТИШа.",
+        ),
+        "backup:recovery_unverified": (
+            "⚠️ ТОТИШ: внешняя копия и восстановление не подтверждены",
+            "Локальная копия базы свежая, файл контрольной суммы на месте. "
+            "Но нет свежего подтверждения отправки копии во внешнее хранилище "
+            "или проверки восстановления. Напоминание: не чаще раза в сутки.",
         ),
         "backup:": (
             "🚨 ТОТИШ: проблема с резервной копией базы",
@@ -199,7 +210,7 @@ def alert(key, details):
     mark_failure(key)
 
     state[fingerprint] = now
-    cutoff = now - 3600
+    cutoff = now - max(3600, RECOVERY_REMINDER_SECONDS)
     state = {
         k: v
         for k, v in state.items()
@@ -364,8 +375,7 @@ def check_db_health():
 def check_database_backup():
     backup_dir = STATE_DIR / "backups"
 
-    # The directory is created by the backup job itself. Before the first
-    # scheduled run after rollout, do not emit a false alert or recovery.
+    # The directory is created by the backup job itself; absence is a failure.
     if not backup_dir.exists():
         alert("backup:missing", "Резервные копии ещё не созданы: каталог отсутствует.")
         return False

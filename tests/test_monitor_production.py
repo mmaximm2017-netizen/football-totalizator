@@ -3,6 +3,51 @@ from unittest.mock import Mock
 from scripts import monitor_production as monitor
 
 
+def configure_alert_state(monkeypatch, tmp_path):
+    monkeypatch.setattr(monitor, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(monitor, "STATE_FILE", tmp_path / "alerts.json")
+    monkeypatch.setattr(monitor, "RECOVERY_STATE_FILE", tmp_path / "recovery.json")
+    send = Mock()
+    monkeypatch.setattr(monitor, "send_message", send)
+    clock = [100_000]
+    monkeypatch.setattr(monitor.time, "time", lambda: clock[0])
+    return send, clock
+
+
+def test_unverified_recovery_reminds_daily_even_with_other_alerts(monkeypatch, tmp_path):
+    send, clock = configure_alert_state(monkeypatch, tmp_path)
+    key = "backup:recovery_unverified"
+    assert monitor.alert(key, "evidence missing")
+    assert "Ежедневная резервная копия базы отсутствует" not in send.call_args.args[0]
+    assert "не подтверждены" in send.call_args.args[0]
+    clock[0] += 300
+    assert not monitor.alert(key, "evidence missing")
+    clock[0] += 7200
+    assert monitor.alert("health:public", "offline")
+    assert not monitor.alert(key, "evidence missing")
+    clock[0] = 100_000 + 86400
+    assert monitor.alert(key, "evidence missing")
+    assert send.call_count == 3
+
+
+def test_actual_backup_failure_keeps_urgent_reminders(monkeypatch, tmp_path):
+    _, clock = configure_alert_state(monkeypatch, tmp_path)
+    assert monitor.alert("backup:missing", "no dump")
+    clock[0] += 299
+    assert not monitor.alert("backup:missing", "no dump")
+    clock[0] += 1
+    assert monitor.alert("backup:missing", "no dump")
+
+
+def test_recovery_allows_immediate_alert_for_new_incident(monkeypatch, tmp_path):
+    send, clock = configure_alert_state(monkeypatch, tmp_path)
+    assert monitor.alert("backup:recovery_unverified", "missing")
+    clock[0] += 60
+    assert monitor.recover("backup")
+    assert monitor.alert("backup:recovery_unverified", "missing again")
+    assert send.call_count == 3
+
+
 def test_db_health_success_uses_ten_second_timeout_without_retry(monkeypatch):
     fetch_json = Mock(return_value={"db": "ok", "active_tournament": "ok", "ranking": "ok"})
     sleep = Mock()
