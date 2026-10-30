@@ -99,3 +99,20 @@ def test_db_health_alerts_only_after_second_failure(monkeypatch):
     key, details = alert.call_args.args
     assert key == "health:db:connection"
     assert "RuntimeError: second" in details
+
+
+def test_stale_backup_is_logged_without_telegram_reminders(monkeypatch, tmp_path, capsys):
+    send, clock = configure_alert_state(monkeypatch, tmp_path)
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    dump = backup_dir / "totish-daily-2026-10-28.dump"
+    dump.write_bytes(b"test dump")
+    clock[0] = dump.stat().st_mtime + 36 * 3600 + 1
+
+    assert monitor.check_database_backup() is False
+    clock[0] += 300
+    assert monitor.check_database_backup() is False
+
+    send.assert_not_called()
+    assert "backup:stale" in capsys.readouterr().out
+    assert not monitor.RECOVERY_STATE_FILE.exists()
