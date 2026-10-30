@@ -196,6 +196,21 @@ jobs:
 
             export TOTISH_IMAGE="$expected_image"
 
+            # BEGIN BACKUP IMAGE BOOTSTRAP
+            if ! docker image inspect postgres:17 >/dev/null 2>&1; then
+              if ! docker pull postgres:17; then
+                echo "BACKUP IMAGE: Docker Hub unavailable; using Docker's ECR mirror"
+                docker pull public.ecr.aws/docker/library/postgres:17
+                docker tag public.ecr.aws/docker/library/postgres:17 postgres:17
+              fi
+            fi
+            docker run --rm --entrypoint pg_dump postgres:17 --version | grep -Eq '^pg_dump \(PostgreSQL\) 17\.'
+            # A stopped holder preserves tools through image prune --all. The
+            # tmpfs mount avoids creating an unused anonymous database volume.
+            docker rm -f totish-backup-tools-image >/dev/null 2>&1 || true
+            docker create --name totish-backup-tools-image --mount type=tmpfs,destination=/var/lib/postgresql/data --entrypoint /bin/true postgres:17 >/dev/null
+            # END BACKUP IMAGE BOOTSTRAP
+
             echo "PRE-DEPLOY: applying versioned database migrations"
             bash scripts/run_database_backup.sh
             python3 "$release_source/scripts/check_backup_readiness.py" --max-age-hours 1
