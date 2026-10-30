@@ -404,12 +404,8 @@ def check_database_backup():
     max_age_seconds = 36 * 60 * 60  # Daily backup plus twelve hours of grace.
     if age_seconds > max_age_seconds:
         age_hours = age_seconds // 3600
-        alert(
-            "backup:stale",
-            "Что именно произошло:\n"
-            "Последняя плановая резервная копия базы слишком старая.\n\n"
-            f"Возраст копии: {age_hours} ч. Допустимо: не более 36 ч.",
-        )
+        # The owner disabled Telegram reminders for stale backups.
+        print(f"backup:stale: age={age_hours}h; maximum=36h; Telegram notification disabled")
         return False
 
     checksum = latest.with_name(latest.name + ".sha256")
