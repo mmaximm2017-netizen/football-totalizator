@@ -2302,9 +2302,52 @@
             height: 26px;
         }
     }
+    .standings-table .player-line--shirt {
+        flex-wrap: wrap;
+    }
+
+    .standings-table .player-line--shirt .player-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex: 0 0 auto;
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .player-shirt {
+        flex: 0 0 28px;
+        width: 28px;
+        height: 26px;
+    }
+
+    .player-shirt-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
 </style>
 
+{% macro standings_player_name(username, colors) -%}
+    {%- if colors -%}
+        <svg class="player-shirt" viewBox="0 0 32 29" aria-hidden="true" focusable="false">
+            <path fill="{{ colors[0] }}" d="M11 2 5 5 1 12 7 16 8 13 8 27 24 27 24 13 25 16 31 12 27 5 21 2 Q16 8 11 2Z"/>
+            <path fill="{{ colors[1] }}" d="M16 5 Q19 5 21 2 L27 5 31 12 25 16 24 13 24 27 16 27Z"/>
+            <path fill="none" stroke="#101d35" stroke-width="1.6" stroke-linejoin="round" d="M11 2 5 5 1 12 7 16 8 13 8 27 24 27 24 13 25 16 31 12 27 5 21 2 Q16 8 11 2Z"/>
+        </svg><span class="player-shirt-name">{{ username }}</span>
+    {%- else -%}
+        {{ username }}
+    {%- endif -%}
+{%- endmacro %}
+
 {% if table %}
+{% set shirt_colors = {
+    'Макс Зенит': ('#121820', '#1461c9'),
+    'Алексей конь': ('#ffdd19', '#ff831b'),
+    'Byza-Zenit': ('#121820', '#ffffff'),
+    'БЕК125125': ('#ed2938', '#ffffff'),
+    'Bowb': ('#1762d0', '#63cef4'),
+    'Денис 05': ('#ffdf15', '#169549')
+} %}
 <div class="table-shell">
     <table class="standings-table">
         <tbody>
@@ -2323,11 +2366,12 @@
                     {% if row.shared %}<span class="shared-place">делят место</span>{% endif %}
                 </td>
                 <td class="player-cell">
-                    <div class="player-line{% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %} player-line--rpl-champion{% endif %}">
+                    {% set colors = shirt_colors.get(row.username) %}
+                    <div class="player-line{% if colors %} player-line--shirt{% endif %}{% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %} player-line--rpl-champion{% endif %}">
                         {% if row.user_id is defined %}
-                        <a href="{{ url_for('profile.public_profile', user_id=row.user_id, tid=selected_tid) }}" class="player-name">{{ row.username }}</a>
+                        <a href="{{ url_for('profile.public_profile', user_id=row.user_id, tid=selected_tid) }}" class="player-name">{{ standings_player_name(row.username, colors) }}</a>
                         {% else %}
-                        <span class="player-name">{{ row.username }}</span>
+                        <span class="player-name">{{ standings_player_name(row.username, colors) }}</span>
                         {% endif %}
                         {% if selected_name == 'Чемпионат России 🇷🇺' and row.username == 'Макс Зенит' %}
                             <span class="rpl-champion-shield" role="img" aria-label="Действующий чемпион России" title="Действующий чемпион России"></span>
