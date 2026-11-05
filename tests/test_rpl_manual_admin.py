@@ -110,6 +110,27 @@ class RplManualAdminTests(unittest.TestCase):
         self.assertEqual(params[5], "rpl")
         self.assertEqual(params[6], 5)
         self.assertEqual(params[7], "")
+        self.assertEqual(params[8], "rpl")
+
+    def test_create_russia_away_match_infers_national_team_without_round(self):
+        cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])
+        response, conn, _ = self.post(
+            "/admin/russia_2027_add",
+            {
+                "home_team": "Узбекистан",
+                "away_team": "Россия",
+                "match_date": "2026-11-13",
+                "match_time": "19:00",
+            },
+            cursor,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conn.commits, 1)
+        _, params = cursor.executed[-1]
+        self.assertEqual(params[:2], ("Узбекистан", "Россия"))
+        self.assertEqual(params[5:7], ("rpl", 5))
+        self.assertEqual(params[8:], ("national_team", None))
 
     def test_rpl_create_uses_same_day_1100_msk_deadline_in_utc(self):
         cursor = Cursor([(5, "Чемпионат России 🇷🇺", 1, None), None, (42,)])

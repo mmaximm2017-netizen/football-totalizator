@@ -7,6 +7,7 @@ from app.routes.admin_common import admin_required
 from app.services.rpl_admin_service import (
     RPL_TOURNAMENT_NAME,
     get_rpl_tournament,
+    infer_rpl_match_category,
     normalize_rpl_match_category,
 )
 from app.services.russian_cup_admin_service import (
@@ -295,7 +296,9 @@ def admin_russia_2027_add():
         match_date = (request.form.get("match_date") or "").strip()
         match_time = (request.form.get("match_time") or "").strip()
         stage = (request.form.get("stage") or "").strip()
-        match_category = normalize_rpl_match_category(request.form.get("match_category"))
+        match_category = infer_rpl_match_category(
+            home_team, away_team, stage, request.form.get("match_category")
+        )
         status = normalize_manual_match_status(request.form.get("status"), "SCHEDULED")
         manual_deadline = request.form.get("manual_deadline") == "1"
         deadline_date = (request.form.get("deadline_date") or "").strip() if manual_deadline else ""
