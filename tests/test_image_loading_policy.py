@@ -30,6 +30,13 @@ class ImageLoadingPolicyTests(unittest.TestCase):
             self.assertIn(f'alt="{team}"', image)
             self.assertTrue((ROOT / "static" / "flags" / f"{code}.svg").is_file())
 
+    def test_venezuela_flag_is_available_for_russian_and_english_names(self):
+        for name in ("Венесуэла", "Venezuela"):
+            image = get_flag(name)
+            self.assertIn('src="/static/flags/ve.svg"', image)
+            self.assertIn('alt="Венесуэла"', image)
+        self.assertTrue((ROOT / "static" / "flags" / "ve.svg").is_file())
+
     def test_match_tournament_and_cup_logos_are_lazy(self):
         league = (ROOT / "templates" / "partials" / "home" / "_match_league.html").read_text(encoding="utf-8")
         day_block = (ROOT / "templates" / "partials" / "home" / "_day_block.html").read_text(encoding="utf-8")
