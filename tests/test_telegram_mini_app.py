@@ -196,6 +196,7 @@ def test_shell_reuses_site_flags_and_english_aliases(client):
     logos = json.loads(html.split('<script id="club-logos" type="application/json">')[1].split('</script>')[0])
     assert logos['Россия'] == logos['Russia'] == '/static/flags/ru.svg'
     assert logos['Иран'] == '/static/flags/ir.svg'
+    assert logos['Венесуэла'] == logos['Venezuela'] == '/static/flags/ve.svg'
 
 
 def test_versioned_assets_bypass_legacy_cache_without_database(client, monkeypatch):
