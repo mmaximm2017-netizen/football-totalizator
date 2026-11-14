@@ -56,3 +56,4 @@ dist/
 !scripts/log_redaction.py
 !scripts/user_data.py
 !scripts/check_reader_permissions.py
+!scripts/send_morning_digest.py

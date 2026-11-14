@@ -120,7 +120,6 @@ printf '%s START morning digest%s\n' "$(date -Is)" "$([[ "$DRY_RUN" == 1 ]] && e
 set +e
 timeout --signal=TERM --kill-after=10s "${TIMEOUT_SECONDS}s" \
     "$DOCKER_BIN" compose run --rm -T --interactive=false \
-        -v "$PROJECT_ROOT/scripts:/app/scripts:ro" \
         -e "MORNING_DIGEST_LOCAL_HEALTH_JSON=$LOCAL_HEALTH_JSON" \
         -e "MORNING_DIGEST_DB_HEALTH_JSON=$DB_HEALTH_JSON" \
         -e "TOTISH_DIGEST_HOST_NOW_EPOCH=$HOST_NOW_EPOCH" \
