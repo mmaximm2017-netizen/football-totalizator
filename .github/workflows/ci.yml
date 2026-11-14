@@ -213,6 +213,9 @@ jobs:
         run: |
           docker run --rm --entrypoint python totish-ci -c "from pathlib import Path; paths=('security-canary.txt','security-canary.sql','security-canary.db','runtime/telegram-outbox/canary.msg'); assert all(not (Path('/app') / p).exists() for p in paths); assert (Path('/app/migrations/0010_add_revocable_sessions.sql')).is_file()"
 
+      - name: Verify morning digest starts from the release image
+        run: docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci scripts/send_morning_digest.py --help
+
       - name: Verify automatic-result runtime is contained in image
         run: |
           docker run --rm -e API_KEY=ci-import -e INVITE_CODE=ci-import -e ADMIN_USERNAME=ci-import -e ADMIN_PASSWORD=ci-import -e SECRET_KEY=ci-import -e DATABASE_URL=postgresql://invalid.invalid/ci-import --entrypoint python totish-ci -c "from pathlib import Path; names=('auto_result_runtime.py','auto_result_worker.py','auto_result_sources.py','auto_result_policy.py'); assert all((Path('/app/scripts') / name).is_file() for name in names); from scripts.auto_result_runtime import _source_urls; from app.services.auto_result_finalization_service import finalize_auto_result; assert 'sportbox_rpl' in _source_urls()"

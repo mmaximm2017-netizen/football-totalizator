@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = Path.home() / ".local" / "state" / "totish"
 STATE_FILE = STATE_DIR / "production-monitor-dedupe.json"
 RECOVERY_STATE_FILE = STATE_DIR / "production-monitor-recovery.json"
-RECOVERY_REMINDER_SECONDS = 24 * 60 * 60
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from host_telegram_notifier import send_message
@@ -149,8 +148,7 @@ def alert(key, details):
     fingerprint = hashlib.sha256(key.encode("utf-8")).hexdigest()
     previous = int(state.get(fingerprint, 0) or 0)
 
-    reminder_seconds = RECOVERY_REMINDER_SECONDS if key == "backup:recovery_unverified" else 300
-    if previous and now - previous < reminder_seconds:
+    if previous and now - previous < 300:
         print(f"DEDUPED: {key}")
         return False
 
@@ -174,12 +172,6 @@ def alert(key, details):
         "control_plane:": (
             "🚨 ТОТИШ: служебные файлы VPS не совпадают с версией сайта",
             "Служебные production-файлы на VPS рассинхронизированы с запущенной версией ТОТИШа.",
-        ),
-        "backup:recovery_unverified": (
-            "⚠️ ТОТИШ: внешняя копия и восстановление не подтверждены",
-            "Локальная копия базы свежая, файл контрольной суммы на месте. "
-            "Но нет свежего подтверждения отправки копии во внешнее хранилище "
-            "или проверки восстановления. Напоминание: не чаще раза в сутки.",
         ),
         "backup:": (
             "🚨 ТОТИШ: проблема с резервной копией базы",
@@ -210,7 +202,7 @@ def alert(key, details):
     mark_failure(key)
 
     state[fingerprint] = now
-    cutoff = now - max(3600, RECOVERY_REMINDER_SECONDS)
+    cutoff = now - 3600
     state = {
         k: v
         for k, v in state.items()
@@ -417,10 +409,12 @@ def check_database_backup():
         )
         return False
 
-    if not check_recovery_evidence():
-        return False
+    state = load_recovery_state()
+    if state.get("backup", {}).get("key") == "backup:recovery_unverified":
+        del state["backup"]
+        save_recovery_state(state)
     recover("backup")
-    return True
+    return check_recovery_evidence()
 
 
 def check_recovery_evidence():
@@ -431,7 +425,7 @@ def check_recovery_evidence():
         if not 0 <= offsite_age <= 36 * 3600 or not 0 <= restored_age <= 8 * 86400:
             raise ValueError("stale_recovery_evidence")
     except (OSError, ValueError, TypeError, KeyError):
-        alert("backup:recovery_unverified", "Нет свежего подтверждения внешней копии или проверки восстановления. Проверьте настройку резервного копирования.")
+        print("backup:recovery_unverified")
         return False
     return True
 

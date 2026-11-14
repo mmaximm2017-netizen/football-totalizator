@@ -14,20 +14,11 @@ def configure_alert_state(monkeypatch, tmp_path):
     return send, clock
 
 
-def test_unverified_recovery_reminds_daily_even_with_other_alerts(monkeypatch, tmp_path):
-    send, clock = configure_alert_state(monkeypatch, tmp_path)
-    key = "backup:recovery_unverified"
-    assert monitor.alert(key, "evidence missing")
-    assert "Ежедневная резервная копия базы отсутствует" not in send.call_args.args[0]
-    assert "не подтверждены" in send.call_args.args[0]
-    clock[0] += 300
-    assert not monitor.alert(key, "evidence missing")
-    clock[0] += 7200
-    assert monitor.alert("health:public", "offline")
-    assert not monitor.alert(key, "evidence missing")
-    clock[0] = 100_000 + 86400
-    assert monitor.alert(key, "evidence missing")
-    assert send.call_count == 3
+def test_unverified_recovery_is_logged_without_telegram(monkeypatch, tmp_path, capsys):
+    send, _ = configure_alert_state(monkeypatch, tmp_path)
+    assert not monitor.check_recovery_evidence()
+    assert "backup:recovery_unverified" in capsys.readouterr().out
+    send.assert_not_called()
 
 
 def test_actual_backup_failure_keeps_urgent_reminders(monkeypatch, tmp_path):
@@ -41,10 +32,10 @@ def test_actual_backup_failure_keeps_urgent_reminders(monkeypatch, tmp_path):
 
 def test_recovery_allows_immediate_alert_for_new_incident(monkeypatch, tmp_path):
     send, clock = configure_alert_state(monkeypatch, tmp_path)
-    assert monitor.alert("backup:recovery_unverified", "missing")
+    assert monitor.alert("backup:missing", "missing")
     clock[0] += 60
     assert monitor.recover("backup")
-    assert monitor.alert("backup:recovery_unverified", "missing again")
+    assert monitor.alert("backup:missing", "missing again")
     assert send.call_count == 3
 
 
