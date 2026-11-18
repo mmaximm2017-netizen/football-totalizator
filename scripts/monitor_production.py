@@ -143,6 +143,12 @@ def recover(family):
 
 
 def alert(key, details):
+    if key == "health:public:unavailable":
+        incident = load_recovery_state().get("health_public")
+        if isinstance(incident, dict) and incident.get("key") == key:
+            print(f"DEDUPED: {key}")
+            return False
+
     now = int(time.time())
     state = load_state()
     fingerprint = hashlib.sha256(key.encode("utf-8")).hexdigest()
