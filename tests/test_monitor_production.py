@@ -107,3 +107,23 @@ def test_stale_backup_is_logged_without_telegram_reminders(monkeypatch, tmp_path
     send.assert_not_called()
     assert "backup:stale" in capsys.readouterr().out
     assert not monitor.RECOVERY_STATE_FILE.exists()
+
+
+def test_public_health_unavailable_alerts_once_until_recovery(monkeypatch, tmp_path):
+    send, clock = configure_alert_state(monkeypatch, tmp_path)
+    failure = OSError("certificate hostname mismatch")
+    fetch = Mock(side_effect=[failure, failure, failure, {"status": "ok"}, failure])
+    monkeypatch.setattr(monitor, "fetch_json", fetch)
+
+    assert not monitor.check_public_health()
+    send.assert_called_once()
+    for elapsed in (300, 3600):
+        clock[0] += elapsed
+        assert not monitor.check_public_health()
+        send.assert_called_once()
+
+    assert monitor.check_public_health()
+    assert "recovered_from=health:public:unavailable" in send.call_args.args[0]
+    assert not monitor.check_public_health()
+    assert send.call_count == 3
+    assert "health:public:unavailable" in send.call_args.args[0]
