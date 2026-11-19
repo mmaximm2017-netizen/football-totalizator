@@ -259,21 +259,11 @@ def collect_digest(
     container_state=None,
     local_health=None,
     db_health=None,
-    host_now_epoch=None,
-    deadline_worker_mtime=None,
-    result_worker_mtime=None,
     fetch_json=_fetch_json,
     outbox_dir=None,
 ):
     today = _today_msk(now)
     issues = collect_health_issues(container_state, local_health, db_health, fetch_json)
-    issues.extend(
-        collect_worker_issues(
-            host_now_epoch,
-            deadline_worker_mtime,
-            result_worker_mtime,
-        )
-    )
     conn = cur = None
     today_matches = []
     tomorrow_matches = []
