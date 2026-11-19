@@ -63,6 +63,9 @@ def candidate(**overrides):
 
 
 class MatchResultPushTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch("app.config.WEB_PUSH_ENABLED", True))
+
     def test_normalize_now_requires_timezone(self):
         with self.assertRaises(ValueError):
             service.normalize_now(datetime(2026, 8, 15, 10, 0))

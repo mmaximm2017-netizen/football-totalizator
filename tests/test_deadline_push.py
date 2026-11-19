@@ -51,6 +51,9 @@ class Connection:
 
 
 class DeadlinePushTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch("app.config.WEB_PUSH_ENABLED", True))
+
     def test_normalize_now_converts_to_utc(self):
         value = datetime(2026, 8, 15, 13, 0, tzinfo=timezone(timedelta(hours=3)))
         self.assertEqual(service.normalize_now(value), datetime(2026, 8, 15, 10, 0, tzinfo=timezone.utc))

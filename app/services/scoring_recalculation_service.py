@@ -1,3 +1,4 @@
+from app import config
 from app.db import close_db, get_db
 import logging
 
@@ -144,7 +145,7 @@ def recalc_match_points(match_id, tournament_id=None, conn=None, cur=None, *, em
         ]
 
         _update_prediction_points(cur, match_id, match[4], scored_predictions)
-        if emit_result_event:
+        if config.WEB_PUSH_ENABLED and emit_result_event:
             _enqueue_result_events(cur, [p[0] for p in predictions], match_id)
         updated = len(scored_predictions)
 

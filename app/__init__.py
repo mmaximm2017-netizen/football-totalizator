@@ -228,7 +228,7 @@ def create_app():
         }
         scope = request.endpoint
         policy = policies.get(scope) if request.method == "POST" else None
-        if request.blueprint in {"agent_api", "gpt_api", "push"}:
+        if request.blueprint in {"agent_api", "gpt_api"}:
             scope = request.blueprint
             policy = (60, 300)
         elif request.blueprint and request.blueprint.startswith("admin") and request.method == "POST":
@@ -269,7 +269,6 @@ def create_app():
     from app.routes.profile import profile_bp
     from app.routes.table import table_bp
     from app.routes.predictions import predictions_bp
-    from app.routes.push import push_bp
     from app.routes.agent_api import agent_api_bp
     from app.routes.gpt_api import gpt_api_bp
     from app.routes.telegram_mini_app import telegram_mini_app_bp
@@ -283,7 +282,6 @@ def create_app():
     app.register_blueprint(profile_bp)
     app.register_blueprint(table_bp)
     app.register_blueprint(predictions_bp)
-    app.register_blueprint(push_bp)
     app.register_blueprint(agent_api_bp)
     app.register_blueprint(gpt_api_bp)
     app.register_blueprint(telegram_mini_app_bp)

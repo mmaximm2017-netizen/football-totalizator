@@ -84,14 +84,14 @@ def test_score_correction_and_finish_transition_keep_notification_semantics(pg):
     sql('DELETE FROM push_delivery_log', write=True)
     invoke(admin.admin_fix_result, {'home_score': '1', 'away_score': '1'})
     assert_points(2)
-    assert len(sql('SELECT * FROM push_delivery_log')) == 1
+    assert sql('SELECT * FROM push_delivery_log') == []
     edit_status('SCHEDULED')
     assert_points(0)
     sql('DELETE FROM push_delivery_log', write=True)
     edit_status('FINISHED')
     assert_points(2)
     before = sql('SELECT * FROM push_delivery_log ORDER BY id')
-    assert len(before) == 1
+    assert before == []
     for _ in range(3):
         scoring.recalc_match_points(401)
     assert_points(2)
@@ -133,4 +133,4 @@ def test_specialized_metadata_edits_only_notify_for_changed_result(pg, monkeypat
     })
     assert sql('SELECT home_team FROM matches WHERE id=401') == [('Спартак',)]
     assert_points(2 if correct else 10)
-    assert len(sql('SELECT * FROM push_delivery_log')) == int(correct)
+    assert sql('SELECT * FROM push_delivery_log') == []

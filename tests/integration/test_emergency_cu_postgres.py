@@ -53,6 +53,7 @@ def test_unsupported_tournament_never_activates_gate(pg):
 
 @pytest.mark.parametrize('status', ['ready', 'pending', 'failed'])
 def test_paused_outbox_does_not_replay_with_old_deployed_since(pg, monkeypatch, status):
+    monkeypatch.setattr("app.config.WEB_PUSH_ENABLED", True)
     for statement in SUBSCRIPTIONS_DDL:
         sql(statement, write=True)
     sql("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth) VALUES (1,'https://example.invalid/push','unused','unused')", write=True)

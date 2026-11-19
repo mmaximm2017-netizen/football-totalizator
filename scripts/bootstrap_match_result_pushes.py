@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app import config
 from app.db import close_db, get_db
 
 
@@ -16,6 +17,8 @@ def parse_datetime(value):
 
 
 def bootstrap(since):
+    if not config.WEB_PUSH_ENABLED:
+        return {"inserted": 0, "suppressed": 0}
     if since.tzinfo is None:
         raise ValueError("--since must include a timezone offset")
     conn = get_db()

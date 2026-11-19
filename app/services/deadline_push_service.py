@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
+from app import config
 from app.db import close_db, get_db
 from app.services.web_push_service import (
     delivery_error_status,
@@ -165,6 +166,9 @@ def build_deadline_payload(candidate):
 
 
 def run_once(*, now=None, dry_run=False, sender=send_push):
+    if not config.WEB_PUSH_ENABLED:
+        return {"candidates": [], "matches": 0, "users": 0, "would_send": 0,
+                "claimed": 0, "sent": 0, "expired": 0, "failed": 0}
     now = normalize_now(now)
     conn = get_db()
     cur = conn.cursor()
