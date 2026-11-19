@@ -243,7 +243,7 @@ def test_healthy_workers_keep_normal_digest_status():
     assert "✅ Всё работает штатно." in message
 
 
-def test_collect_digest_adds_worker_issues_to_attention_block():
+def test_collect_digest_ignores_retired_push_workers():
     conn = MagicMock()
     cur = MagicMock()
     conn.cursor.return_value = cur
@@ -259,13 +259,10 @@ def test_collect_digest_adds_worker_issues_to_attention_block():
     ):
         data = digest.collect_digest(
             now=datetime(2026, 8, 28, 5, 0, tzinfo=timezone.utc),
-            host_now_epoch=10_000,
-            deadline_worker_mtime=9_100,
-            result_worker_mtime=9_700,
         )
 
-    assert data["issues"] == ["🟠 Worker дедлайнов не запускался 15 минут."]
-    assert "🚨 Требует внимания" in digest.render_digest(data)
+    assert data["issues"] == []
+    assert "✅ Всё работает штатно." in digest.render_digest(data)
 
 
 def test_dry_run_never_enqueues(monkeypatch, capsys):
@@ -290,17 +287,11 @@ def test_cli_reads_host_checked_health_json(monkeypatch, capsys):
     )
     monkeypatch.setenv("MORNING_DIGEST_LOCAL_HEALTH_JSON", '{"status":"ok"}')
     monkeypatch.setenv("MORNING_DIGEST_DB_HEALTH_JSON", '{"db":"ok"}')
-    monkeypatch.setenv("TOTISH_DIGEST_HOST_NOW_EPOCH", "10000")
-    monkeypatch.setenv("TOTISH_DEADLINE_WORKER_MTIME", "9700")
-    monkeypatch.setenv("TOTISH_RESULT_WORKER_MTIME", "9700")
     monkeypatch.setattr("sys.argv", ["send_morning_digest.py", "--dry-run", "--container-state", "running|true|false"])
 
     assert cli.main() == 0
     assert captured["local_health"] == {"status": "ok"}
     assert captured["db_health"] == {"db": "ok"}
-    assert captured["host_now_epoch"] == "10000"
-    assert captured["deadline_worker_mtime"] == "9700"
-    assert captured["result_worker_mtime"] == "9700"
     assert capsys.readouterr().out.strip() == "preview"
 
 
@@ -333,11 +324,8 @@ def test_runner_checks_health_inside_named_production_container():
     assert "http://app:8000" not in source
     assert "MORNING_DIGEST_LOCAL_HEALTH_JSON" in source
     assert "MORNING_DIGEST_DB_HEALTH_JSON" in source
-    assert "stat -c %Y /var/log/totish-deadline-push.log" in source
-    assert "stat -c %Y /var/log/totish-match-result-push.log" in source
-    assert "TOTISH_DIGEST_HOST_NOW_EPOCH" in source
-    assert "TOTISH_DEADLINE_WORKER_MTIME" in source
-    assert "TOTISH_RESULT_WORKER_MTIME" in source
+    assert "totish-deadline-push.log" not in source
+    assert "totish-match-result-push.log" not in source
 
 
 def test_runner_uses_production_image_fallback_when_primary_container_is_missing():
