@@ -183,6 +183,6 @@ def test_public_templates_keep_themes_and_hide_notification_controls():
 
     for theme in ("body.tournament-rpl", "body.tournament-rcup", "body.tournament-wc2026"):
         assert theme in profile or theme in history
-    assert "data-web-push" in profile
+    assert "data-web-push" not in profile
     assert "{% if is_own_profile %}" in profile
     assert "is_public_history|default(false)" in history

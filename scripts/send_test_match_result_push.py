@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app import config
 from app.db import close_db, get_db
 from app.services.match_result_push_service import build_match_result_payload
 from app.services.web_push_service import (
@@ -120,6 +121,9 @@ def main(argv=None):
     parser.add_argument("--user-id", required=True, type=parse_user_id)
     args = parser.parse_args(argv)
 
+    if not config.WEB_PUSH_ENABLED:
+        print("Web Push disabled")
+        return 0
     result = run_test(args.user_id)
     print("TEST MATCH RESULT PUSH")
     print(f"user_id={result['user_id']}")

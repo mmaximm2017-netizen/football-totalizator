@@ -8,6 +8,7 @@ import socket
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
+from app import config
 from app.config import (
     WEB_PUSH_VAPID_PRIVATE_KEY,
     WEB_PUSH_VAPID_SUBJECT,
@@ -299,6 +300,8 @@ def delivery_error_status(error):
 
 def send_push(subscription, payload, *, ttl=300):
     """Send one JSON Web Push payload using the configured VAPID credentials."""
+    if not config.WEB_PUSH_ENABLED:
+        raise RuntimeError("push_disabled")
     if not WEB_PUSH_VAPID_PRIVATE_KEY or not WEB_PUSH_VAPID_SUBJECT:
         raise RuntimeError("push_not_configured")
 

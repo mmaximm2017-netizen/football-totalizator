@@ -104,7 +104,7 @@ def test_readonly_pool_to_real_for_update_score_and_push(pg):
     assert finalize(m) == 'saved'  # real FOR UPDATE + UPDATE + scoring + commit
     assert sql('SELECT status,home_score,away_score FROM matches') == [('FINISHED',2,1)]
     assert sql('SELECT points FROM predictions') == [(10,)]
-    assert sql("SELECT status FROM push_delivery_log WHERE event_type='match_result'") == [('ready',)]
+    assert sql("SELECT status FROM push_delivery_log WHERE event_type='match_result'") == []
     assert len(sql('SELECT event_key FROM auto_result_notifications')) == 1
 
 
@@ -182,7 +182,7 @@ def test_commit_survives_notification_failure_and_next_run_never_refinalizes(pg,
     assert len(list((tmp_path / 'outbox').glob('*.msg'))) == 1
     assert sql('SELECT home_score,away_score FROM matches') == [(2,1)]
     assert sql('SELECT points FROM predictions') == [(10,)]
-    assert sql('SELECT count(*) FROM push_delivery_log') == [(1,)]
+    assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]
 
 
 def test_real_failed_transaction_retries_with_fresh_consensus(pg, monkeypatch, tmp_path):
@@ -275,7 +275,7 @@ def test_lost_commit_acknowledgement_does_not_request_manual_input(pg, monkeypat
     assert all('внесите' not in r[0] and 'Нужен ручной' not in r[0]
                for r in sql('SELECT message FROM auto_result_notifications'))
     runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
-    assert sql('SELECT count(*) FROM push_delivery_log') == [(1,)]
+    assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]
 
 
 def test_actual_process_exit_immediately_after_commit(pg, tmp_path):
@@ -360,7 +360,7 @@ def test_v2_quorum_after_old_deadline_real_atomic_score_points_and_diagnostics(p
         assert entry['write_outcome']=='saved'
         assert sql('SELECT status,home_score,away_score FROM matches') == [('FINISHED',2,2)]
         assert sql('SELECT points FROM predictions') == [(2,)]
-        assert sql('SELECT count(*) FROM push_delivery_log') == [(1,)]
+        assert sql('SELECT count(*) FROM push_delivery_log') == [(0,)]
         with patch.object(finalizer,'finalize_auto_result',side_effect=AssertionError('duplicate')):
             runtime.run_live(datetime.now(timezone.utc),state_path=tmp_path/'state',outbox=None)
     else:

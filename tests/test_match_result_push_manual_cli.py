@@ -46,6 +46,9 @@ class HttpError(Exception):
 
 
 class ManualMatchResultPushCliTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch("app.config.WEB_PUSH_ENABLED", True))
+
     def test_user_id_is_required(self):
         with self.assertRaises(SystemExit) as raised:
             cli.main([])

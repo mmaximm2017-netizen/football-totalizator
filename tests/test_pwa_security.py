@@ -154,26 +154,3 @@ class PwaSecurityTests(unittest.TestCase):
         self.assertEqual(manifest["start_url"], "/")
         self.assertEqual(manifest["scope"], "/")
         self.assertEqual(manifest["display"], "standalone")
-
-    def test_worker_hardens_push_payload_and_notification_urls(self):
-        worker = (ROOT / "static" / "service-worker.js").read_text(encoding="utf-8")
-        self.assertIn("function safeInternalUrl(value)", worker)
-        self.assertIn("parsed.origin !== self.location.origin", worker)
-        self.assertIn("data = event.data ? event.data.json() : {};", worker)
-        self.assertIn("catch (error)", worker)
-        self.assertIn("'totish-default'", worker)
-        self.assertIn("includeUncontrolled: true", worker)
-
-    def test_worker_uses_separate_android_notification_badge(self):
-        worker = (ROOT / "static" / "service-worker.js").read_text(encoding="utf-8")
-        badge = ROOT / "static" / "notification-badge.png"
-
-        self.assertIn("const CACHE_NAME = `${CACHE_PREFIX}__TOTISH_RELEASE__`;", worker)
-        self.assertIn("icon: '/static/icon-192-new.png'", worker)
-        self.assertIn("badge: '/static/notification-badge.png?v=20260815-circular'", worker)
-        self.assertNotIn("badge: '/static/icon-192-new.png'", worker)
-        self.assertNotEqual(
-            "/static/icon-192-new.png",
-            "/static/notification-badge.png?v=20260815-circular",
-        )
-        self.assertTrue(badge.is_file())

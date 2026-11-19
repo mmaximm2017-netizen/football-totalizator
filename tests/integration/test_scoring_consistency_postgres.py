@@ -162,9 +162,11 @@ def test_rollback_after_points_update_reverts_result_and_every_prediction(pg, mo
     sql("INSERT INTO users(id,username,password) VALUES(2,'second','unused')", write=True)
     sql('INSERT INTO predictions VALUES(2,401,5,1,1,0)', write=True)
     finish()
+    update_points = scoring._update_prediction_points
     def fail(cur, *args):
+        update_points(cur, *args)
         cur.execute('SELECT 1/0')
-    monkeypatch.setattr(scoring, '_enqueue_result_events', fail)
+    monkeypatch.setattr(scoring, '_update_prediction_points', fail)
     with pytest.raises(Exception):
         finish(1, 1)
     assert sql('SELECT home_score,away_score FROM matches WHERE id=401') == [(2, 1)]
@@ -189,7 +191,7 @@ def test_two_recalcs_are_idempotent_and_other_match_is_not_locked(pg):
         for task in tasks:
             task.result(timeout=5)
     assert_points(10)
-    assert sql("SELECT count(*) FROM push_delivery_log WHERE event_type='match_result'") == [(1,)]
+    assert sql("SELECT count(*) FROM push_delivery_log WHERE event_type='match_result'") == [(0,)]
 
 
 def test_auto_and_manual_result_produce_same_derived_stats(pg):

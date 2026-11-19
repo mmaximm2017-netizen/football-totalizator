@@ -198,7 +198,8 @@ class WebPushTests(unittest.TestCase):
             "endpoint": "https://127.0.0.1/push",
             "keys": {"p256dh": "p", "auth": "a"},
         }
-        with patch("app.services.web_push_service.WEB_PUSH_VAPID_PRIVATE_KEY", "private"), \
+        with patch("app.config.WEB_PUSH_ENABLED", True), \
+             patch("app.services.web_push_service.WEB_PUSH_VAPID_PRIVATE_KEY", "private"), \
              patch("app.services.web_push_service.WEB_PUSH_VAPID_SUBJECT", "mailto:test@example.com"):
             with self.assertRaises(UnsafePushEndpointError):
                 send_push(subscription, {"title": "ТОТИШ"})

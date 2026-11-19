@@ -63,22 +63,6 @@
     .titles-list { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; min-width: 0; }
     .title-item { border: 1px solid rgba(0,119,200,0.16); border-radius: 12px; padding: 7px 11px; background: linear-gradient(160deg, rgba(255,255,255,0.58), rgba(232,246,255,0.36)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.46); color: #063b73; font-size: 12px; font-weight: 900; line-height: 1.3; word-break: break-word; }
     .titles-inline-empty { margin-top: 8px; color: rgba(93,120,148,0.86); font-size: 12px; font-weight: 700; word-break: break-word; }
-    .web-push-card { display: grid; gap: 10px; }
-    .web-push-message { color: #5d7894; font-size: 13px; font-weight: 700; line-height: 1.35; }
-    .push-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; min-width: 0; cursor: pointer; }
-    .push-toggle-label { min-width: 0; color: #063b73; font-size: 14px; font-weight: 900; line-height: 1.2; }
-    .push-toggle-input { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-    .push-toggle-track { position: relative; display: inline-flex; flex: 0 0 51px; align-items: center; width: 51px; height: 31px; padding: 2px; border-radius: 999px; background: #aeb8c2; box-shadow: inset 0 1px 2px rgba(0,35,70,0.18); transition: background-color 0.22s ease, box-shadow 0.22s ease; }
-    .push-toggle-thumb { display: block; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,35,70,0.24); transform: translateX(0); transition: transform 0.22s ease; }
-    .push-toggle-input:checked + .push-toggle-track { background: #35b86b; box-shadow: inset 0 1px 2px rgba(0,75,35,0.18), 0 0 0 2px rgba(53,184,107,0.12); }
-    .push-toggle-input:checked + .push-toggle-track .push-toggle-thumb { transform: translateX(20px); }
-    .push-toggle-input:focus-visible + .push-toggle-track { outline: 3px solid rgba(0,119,200,0.28); outline-offset: 3px; }
-    .push-toggle:has(.push-toggle-input:disabled) { cursor: not-allowed; }
-    .push-toggle:has(.push-toggle-input:disabled) .push-toggle-track, .web-push-card.is-busy .push-toggle-track { opacity: 0.55; }
-    .web-push-card.is-busy .push-toggle { cursor: wait; }
-    .web-push-button { width: 100%; min-height: 44px; border: 1px solid rgba(0,119,200,.28); border-radius: 14px; padding: 0 16px; background: linear-gradient(145deg, #087dcc, #00569e); color: #fff; font: inherit; font-weight: 900; cursor: pointer; }
-    .web-push-button-secondary { background: rgba(255,255,255,.55); color: #07558d; }
-    .web-push-button:disabled { cursor: wait; opacity: .65; }
     .profile-actions { display: grid; gap: 9px; }
     .profile-action-link, .back-btn { min-height: 50px; padding: 13px 16px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0077c8, var(--wc-accent-blue)); box-shadow: 0 12px 26px rgba(0,119,200,0.18); color: #fff; font-size: 14px; font-weight: 1000; text-align: center; text-decoration: none; }
     .profile-action-link-secondary { border: 1px solid rgba(0,119,200,0.18); background: rgba(255,255,255,0.62); box-shadow: 0 8px 18px rgba(0,78,140,0.10); color: #07558d; }
@@ -97,7 +81,7 @@
     body.tournament-wc2026 .profile-screen::after { bottom: 52px; left: -32%; width: min(390px,76vw); height: min(390px,76vw); border-radius: 56% 44% 48% 52%; background: radial-gradient(circle at 72% 20%, #b832ff 0 27%, transparent 27.5%), radial-gradient(circle at 26% 62%, #0614c8 0 30%, transparent 30.5%), radial-gradient(circle at 66% 82%, #d8ff22 0 19%, transparent 19.5%); opacity: .58; }
     body.tournament-wc2026 .profile-hero, body.tournament-wc2026 .section-card { border-color: var(--wc-border-light); background: radial-gradient(circle at 94% 8%, rgba(255,95,80,.40) 0 13%, transparent 13.5%), radial-gradient(circle at 6% 26%, rgba(216,255,34,.26) 0 10%, transparent 10.5%), linear-gradient(150deg,var(--wc-bg-gradient-start),var(--wc-bg-gradient-end)); box-shadow: var(--shadow-wc-card); backdrop-filter: none; -webkit-backdrop-filter: none; }
     body.tournament-wc2026 .profile-name, body.tournament-wc2026 .section-title { color: var(--wc-text-primary); text-shadow: 0 2px 10px rgba(0,0,0,.30); }
-    body.tournament-wc2026 .profile-subtitle, body.tournament-wc2026 .web-push-message, body.tournament-wc2026 .titles-inline-empty { color: rgba(255,255,255,.78); }
+    body.tournament-wc2026 .profile-subtitle, body.tournament-wc2026 .titles-inline-empty { color: rgba(255,255,255,.78); }
     body.tournament-wc2026 .place-pill { border-color: rgba(255,255,255,.40); background: linear-gradient(135deg,#d8ff22,#26f0c8); color: #06102d; }
     body.tournament-wc2026 .profile-position-metric { border-color: rgba(31,231,255,.18); background: linear-gradient(145deg,rgba(1,12,118,.52),rgba(3,9,58,.34)); color: rgba(255,255,255,.78); }
     body.tournament-wc2026 .profile-position-metric-value { color: #fff; }
@@ -107,7 +91,7 @@
     body.tournament-rpl .profile-hero, body.tournament-rpl .section-card { border-color: rgba(0,102,214,.18); background: rgba(255,255,255,.92); box-shadow: 0 12px 30px rgba(0,43,122,.18), inset 0 1px 0 rgba(255,255,255,.86); }
     body.tournament-rpl .profile-hero { box-shadow: inset 3px 0 0 #d52b1e, 0 12px 30px rgba(0,43,122,.18), inset 0 1px 0 rgba(255,255,255,.86); }
     body.tournament-rpl .profile-name, body.tournament-rpl .section-title { color: #001b4d; }
-    body.tournament-rpl .profile-subtitle, body.tournament-rpl .web-push-message, body.tournament-rpl .titles-inline-empty { color: rgba(0,27,77,.66); }
+    body.tournament-rpl .profile-subtitle, body.tournament-rpl .titles-inline-empty { color: rgba(0,27,77,.66); }
     body.tournament-rpl .place-pill, body.tournament-rpl .profile-position-metric { border-color: rgba(0,102,214,.20); background: rgba(0,102,214,.10); color: #0039a6; }
     body.tournament-rpl .profile-position-metric-value { color: #0066d6; }
     body.tournament-rpl .title-item { border-color: rgba(0,102,214,.18); background: rgba(255,255,255,.96); color: #001b4d; }
@@ -118,7 +102,7 @@
     body.tournament-rcup .profile-hero, body.tournament-rcup .section-card { border-color: rgba(232,0,36,.56); background: #310027; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
     body.tournament-rcup .profile-hero { border-radius: 18px; padding: 16px; }
     body.tournament-rcup .profile-name, body.tournament-rcup .section-title { color: #fff; }
-    body.tournament-rcup .profile-subtitle, body.tournament-rcup .web-push-message, body.tournament-rcup .titles-inline-empty { color: rgba(255,255,255,.66); }
+    body.tournament-rcup .profile-subtitle, body.tournament-rcup .titles-inline-empty { color: rgba(255,255,255,.66); }
     body.tournament-rcup .place-pill { min-height: 38px; margin-top: 10px; border-color: #E80024; background: #E80024; color: #fff; box-shadow: none; }
     body.tournament-rcup .profile-position-metric { border-color: rgba(232,0,36,.34); background: linear-gradient(145deg,rgba(232,0,36,.18),rgba(58,10,50,.92)); color: rgba(255,255,255,.66); }
     body.tournament-rcup .profile-position-metric-value, body.tournament-rcup .title-item { color: #fff; }
@@ -141,15 +125,6 @@
         {% if titles %}<div class="titles-list">{% for t in titles %}<div class="title-item">{{ t.title }}</div>{% endfor %}</div>{% else %}<div class="titles-inline-empty">Пока без титулов</div>{% endif %}
     </section>
 
-    {% if is_own_profile %}
-    <section class="section-card web-push-card" data-web-push data-subscribe-url="{{ url_for('push.subscribe') }}" data-unsubscribe-url="{{ url_for('push.unsubscribe') }}" data-test-url="{{ url_for('push.test_push') }}" data-vapid-url="{{ url_for('push.vapid_public_key') }}">
-        <div class="section-title">🔔 Уведомления</div>
-        <p class="web-push-message" data-push-message>Проверяем поддержку уведомлений…</p>
-        <label class="push-toggle"><span class="push-toggle-label">Получать уведомления</span><input class="push-toggle-input" type="checkbox" data-push-toggle role="switch" aria-label="Уведомления"><span class="push-toggle-track" aria-hidden="true"><span class="push-toggle-thumb"></span></span></label>
-        <button type="button" class="web-push-button web-push-button-secondary" data-push-test hidden>Отправить тестовое уведомление</button>
-    </section>
-    {% endif %}
-
     <section class="profile-actions" aria-label="Разделы профиля">
         {% if is_own_profile %}
         <a class="profile-action-link" href="{{ url_for('profile.profile_stats', tid=current_tournament_id) }}">📊 Расширенная статистика</a>
@@ -167,5 +142,4 @@
     {% endif %}
 </div>
 
-{% if is_own_profile %}<script src="{{ url_for('static', filename='js/web-push.js', v='20260817-notification-toggle') }}" defer></script>{% endif %}
 {% endblock %}

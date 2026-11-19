@@ -33,7 +33,9 @@ DATABASE_URL = require_env("DATABASE_URL")
 
 SECRET_KEY = require_env("SECRET_KEY")
 
-# Web Push configuration is intentionally optional during the staged rollout.
+WEB_PUSH_ENABLED = False
+
+# Retained credentials do not enable delivery.
 # Public key can be exposed by the API; the private key must remain server-side.
 WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
 WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")

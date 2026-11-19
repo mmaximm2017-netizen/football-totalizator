@@ -1,62 +1,47 @@
-import unittest
 from pathlib import Path
+import subprocess
+from unittest.mock import patch
+
+import pytest
+
+from app import create_app
+from app.services import deadline_push_service, match_result_push_service, web_push_service
+from scripts import bootstrap_match_result_pushes, send_test_match_result_push
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class WebPushUiTests(unittest.TestCase):
-    def test_push_controls_are_only_rendered_for_own_profile(self):
-        template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
-        self.assertIn('{% if is_own_profile %}\n    <section class="section-card web-push-card" data-web-push', template)
-        self.assertIn('data-subscribe-url="{{ url_for(\'push.subscribe\') }}"', template)
-        self.assertIn('data-unsubscribe-url="{{ url_for(\'push.unsubscribe\') }}"', template)
-        self.assertIn('data-test-url="{{ url_for(\'push.test_push\') }}"', template)
-        self.assertIn("web-push.js", template)
-
-    def test_client_uses_existing_api_and_csrf_header(self):
-        script = (ROOT / "static" / "js" / "web-push.js").read_text(encoding="utf-8")
-        for value in (
-            "Notification.requestPermission()",
-            "registration.pushManager.getSubscription()",
-            "registration.pushManager.subscribe({",
-            "applicationServerKey",
-            "X-CSRF-Token",
-            "card.dataset.subscribeUrl",
-            "card.dataset.unsubscribeUrl",
-            "card.dataset.testUrl",
-            "subscription.unsubscribe()",
-        ):
-            self.assertIn(value, script)
-        self.assertIn("toggle.addEventListener('change'", script)
-        self.assertIn("toggle.checked", script)
-        self.assertIn("setState('active')", script)
-        self.assertIn("setState('inactive')", script)
-        self.assertIn("setState('denied')", script)
-        self.assertIn("setState('unsupported')", script)
-        self.assertIn("setState('ios-guidance')", script)
-        self.assertIn("setBusy(true)", script)
-        self.assertIn("testButton.addEventListener('click', sendTest)", script)
-        self.assertIn("async function enable()", script)
-        self.assertIn("async function disable()", script)
-        self.assertIn("body: '{}'", script)
-
-    def test_profile_uses_one_accessible_notification_toggle(self):
-        template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
-        self.assertIn('data-push-toggle', template)
-        self.assertIn('role="switch"', template)
-        self.assertIn('class="push-toggle-track"', template)
-        self.assertNotIn('data-push-enable', template)
-        self.assertNotIn('data-push-disable', template)
-        self.assertNotIn('Включить уведомления</button>', template)
-        self.assertNotIn('Отключить уведомления</button>', template)
-        self.assertIn("v='20260817-notification-toggle'", template)
-
-    def test_foreign_profile_has_no_push_controls(self):
-        template = (ROOT / "templates" / "profile.html").read_text(encoding="utf-8")
-        self.assertIn("{% if is_own_profile %}", template)
-        self.assertIn("data-web-push", template)
+def test_web_push_is_absent_from_profile_and_production_routes():
+    profile = (ROOT / "templates/profile.html").read_text()
+    assert "data-web-push" not in profile
+    assert "web-push.js" not in profile
+    assert not any(rule.rule.startswith("/api/push/") for rule in create_app().url_map.iter_rules())
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_old_workers_only_remove_existing_subscriptions():
+    for path in ("static/push-worker.js", "static/service-worker.js"):
+        script = (ROOT / path).read_text()
+        assert "subscription.unsubscribe()" in script
+        assert "showNotification" not in script
+        assert "addEventListener('push'" not in script
+    assert "requestPermission" not in (ROOT / "static/js/web-push.js").read_text()
+
+
+def test_disabled_push_workers_exit_before_database_access():
+    for worker in (deadline_push_service, match_result_push_service):
+        with patch.object(worker, "get_db", side_effect=AssertionError):
+            for dry_run in (False, True):
+                assert worker.run_once(dry_run=dry_run)["sent"] == 0
+    with patch.object(bootstrap_match_result_pushes, "get_db", side_effect=AssertionError):
+        assert bootstrap_match_result_pushes.bootstrap(None)["inserted"] == 0
+    with patch.object(send_test_match_result_push, "run_test", side_effect=AssertionError):
+        assert send_test_match_result_push.main(["--user-id", "1"]) == 0
+    with pytest.raises(RuntimeError, match="push_disabled"):
+        web_push_service.send_push({}, {})
+
+
+def test_legacy_cron_wrappers_exit_without_invoking_docker(tmp_path):
+    for name in ("run_deadline_pushes.sh", "run_match_result_pushes.sh"):
+        subprocess.run(["/bin/bash", str(ROOT / "scripts" / name)], check=True,
+                       cwd=tmp_path, env={"PATH": str(tmp_path)})
